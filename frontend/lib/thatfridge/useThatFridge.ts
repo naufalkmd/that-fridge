@@ -163,6 +163,10 @@ export interface ThatFridgeState {
   expiryPhotoLoading: boolean;
   expiryPhotoError: string | null;
   expiryScanNote: string | null;
+  // Which expiry-date input the camera-scan step (addStep 6) should write its result into -
+  // "manual" for the manual-add form's date field, or a DetectedItem id for the
+  // barcode/receipt/photo review flows. Also determines which addStep to return to.
+  expiryPhotoTargetId: string | "manual" | null;
   scanImageLoading: boolean;
   scanImageError: string | null;
   manualAutoFillLoading: boolean;
@@ -249,6 +253,7 @@ export function initialState(): ThatFridgeState {
     expiryPhotoLoading: false,
     expiryPhotoError: null,
     expiryScanNote: null,
+    expiryPhotoTargetId: null,
     scanImageLoading: false,
     scanImageError: null,
     manualAutoFillLoading: false,
@@ -823,8 +828,29 @@ export function useThatFridge() {
 
         // Fire-and-forget: extracts/updates remembered facts from this exchange. Never
         // awaited, so a slow or failed extraction can never delay the reply already shown.
+        const prevFacts = state.memoryFacts;
         extractMemory(trimmed, res.agent_response)
-          .then((facts) => patch({ memoryFacts: facts }))
+          .then((facts) => {
+            patch({ memoryFacts: facts });
+            const newlyAdded = facts.filter((f) => !prevFacts.includes(f));
+            if (!newlyAdded.length) return;
+
+            // Silently inferring and storing facts about someone deserves a beat of
+            // visibility - surfaced the same way every other undoable action in this app
+            // is (item moves, removals, notification dismissals), not a new interruptive
+            // confirm dialog.
+            scheduleUndo(`Remembered: ${newlyAdded.join(", ")}`, () => {
+              patch({ memoryFacts: prevFacts });
+              // Undo has to un-persist server-side too, unlike lighter-weight undos
+              // elsewhere - a future message would otherwise still read the "undone" fact
+              // back out of the DB. Delete highest-index-first so indices don't shift out
+              // from under the next delete in the same batch.
+              newlyAdded
+                .map((f) => facts.indexOf(f))
+                .sort((a, b) => b - a)
+                .forEach((i) => deleteMemoryFactApi(i).catch(() => {}));
+            });
+          })
           .catch(() => {});
       })
       .catch((err) => {
@@ -1324,13 +1350,44 @@ export function useThatFridge() {
         expiryDate: toISODate(target),
         location: product.location || guessLocation(product.name),
       };
-      patch({ addStep: 6, detected: [detected], barcodeLoading: false, barcodeInput: "" });
+      patch({ addStep: 6, detected: [detected], barcodeLoading: false, barcodeInput: "", expiryPhotoTargetId: detected.id });
     } catch (err) {
       patch({ barcodeLoading: false, barcodeError: describeError(err, "Couldn't look up that barcode.") });
     }
   };
+  // Grounds the "guess from the name" flows (manual add, detected-items review) in the same
+  // real-date camera scan the barcode flow already used - captureExpiryPhoto/skipExpiryPhoto
+  // below route by expiryPhotoTargetId instead of assuming a single barcode-detected item.
+  const startExpiryScanForDetected = (id: string) => {
+    patch({ expiryPhotoTargetId: id, addStep: 6, expiryPhotoError: null });
+  };
+  const startExpiryScanForManual = async () => {
+    try {
+      let fridgeIndex = state.addFridgeIndex;
+      let fridge = state.fridges[fridgeIndex];
+      if (!fridge) {
+        // Brand-new users start with zero fridges — create one on the fly, same as manual add.
+        fridge = await createFridge("My Fridge");
+        fridgeIndex = state.fridges.length;
+        patch((s) => ({ fridges: [...s.fridges, fridge], activeFridge: fridgeIndex, addFridgeIndex: fridgeIndex }));
+      }
+      let sectionId = state.manualSectionId || fridge.sections[0]?.id;
+      if (!sectionId) {
+        // Brand-new fridges start with zero sections — create one on the fly, same as manual add.
+        const section = await createSection(fridge.id, "General");
+        sectionId = section.id;
+        patch((s) => ({
+          fridges: s.fridges.map((f, i) => (i === fridgeIndex ? { ...f, sections: [...f.sections, section] } : f)),
+        }));
+      }
+      patch({ expiryPhotoTargetId: "manual", manualSectionId: sectionId, addStep: 6, expiryPhotoError: null });
+    } catch (err) {
+      patch({ syncError: describeError(err, "Couldn't start the expiry scan.") });
+    }
+  };
   const captureExpiryPhoto = async (file: File) => {
-    const sectionId = state.detected[0]?.section;
+    const targetId = state.expiryPhotoTargetId;
+    const sectionId = targetId === "manual" ? state.manualSectionId : state.detected.find((d) => d.id === targetId)?.section;
     if (!sectionId) return;
     patch({ expiryPhotoLoading: true, expiryPhotoError: null });
     try {
@@ -1339,19 +1396,31 @@ export function useThatFridge() {
         patch({ expiryPhotoLoading: false, expiryPhotoError: result.message || "Couldn't read a date on that photo." });
         return;
       }
-      const note = `AI read the expiry date as ${result.date}${result.confidence ? ` (${result.confidence} confidence)` : ""} — double-check before adding.`;
-      patch((s) => ({
-        detected: s.detected.map((d, i) => (i === 0 ? { ...d, expiryDate: result.date! } : d)),
-        expiryPhotoLoading: false,
-        expiryPhotoError: null,
-        expiryScanNote: note,
-        addStep: 2,
-      }));
+      if (targetId === "manual") {
+        patch({
+          manualExpiryDate: result.date!,
+          expiryPhotoLoading: false,
+          expiryPhotoError: null,
+          addStep: 3,
+        });
+      } else {
+        const note = `AI read the expiry date as ${result.date}${result.confidence ? ` (${result.confidence} confidence)` : ""} — double-check before adding.`;
+        patch((s) => ({
+          detected: s.detected.map((d) => (d.id === targetId ? { ...d, expiryDate: result.date! } : d)),
+          expiryPhotoLoading: false,
+          expiryPhotoError: null,
+          expiryScanNote: note,
+          addStep: 2,
+        }));
+      }
     } catch (err) {
       patch({ expiryPhotoLoading: false, expiryPhotoError: describeError(err, "Couldn't read a date on that photo.") });
     }
   };
-  const skipExpiryPhoto = () => patch({ addStep: 2, expiryPhotoError: null, expiryScanNote: null });
+  const skipExpiryPhoto = () => {
+    const returnStep = state.expiryPhotoTargetId === "manual" ? 3 : 2;
+    patch({ addStep: returnStep, expiryPhotoError: null, expiryScanNote: null });
+  };
   const toggleDetected = (id: string) =>
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, checked: !d.checked } : d)) }));
   const onDetectedNameChange = (id: string, name: string) =>
@@ -1590,6 +1659,8 @@ export function useThatFridge() {
     selectAddFridge,
     onBarcodeInputChange,
     lookupBarcode,
+    startExpiryScanForDetected,
+    startExpiryScanForManual,
     captureExpiryPhoto,
     captureReceiptOrPhoto,
     skipExpiryPhoto,

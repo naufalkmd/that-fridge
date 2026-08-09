@@ -346,3 +346,140 @@ describe("useThatFridge memory", () => {
     expect(result.current.state.memoryFacts).toEqual([]);
   });
 });
+
+describe("useThatFridge expiry scan routing", () => {
+  it("startExpiryScanForManual creates a fridge/section on the fly and routes to the camera step", async () => {
+    vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "My Fridge", sections: [] });
+    vi.mocked(api.createSection).mockResolvedValue({ id: "s1", name: "General", items: [] });
+
+    const { result } = renderHook(() => useThatFridge());
+
+    await act(async () => {
+      await result.current.actions.startExpiryScanForManual();
+    });
+
+    expect(result.current.state.addStep).toBe(6);
+    expect(result.current.state.expiryPhotoTargetId).toBe("manual");
+    expect(result.current.state.manualSectionId).toBe("s1");
+  });
+
+  it("captureExpiryPhoto for the manual target fills manualExpiryDate and returns to the manual form", async () => {
+    vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "My Fridge", sections: [] });
+    vi.mocked(api.createSection).mockResolvedValue({ id: "s1", name: "General", items: [] });
+    vi.mocked(api.scanExpiryPhoto).mockResolvedValue({ found: true, date: "2026-09-01", confidence: "high" });
+
+    const { result } = renderHook(() => useThatFridge());
+    await act(async () => {
+      await result.current.actions.startExpiryScanForManual();
+    });
+
+    const file = new File(["x"], "label.jpg", { type: "image/jpeg" });
+    await act(async () => {
+      await result.current.actions.captureExpiryPhoto(file);
+    });
+
+    expect(result.current.state.manualExpiryDate).toBe("2026-09-01");
+    expect(result.current.state.addStep).toBe(3);
+  });
+
+  it("captureExpiryPhoto for a detected item updates just that item and returns to the review step", async () => {
+    vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "My Fridge", sections: [{ id: "s1", name: "General", items: [] }] });
+    vi.mocked(api.scanBarcode).mockResolvedValue({
+      name: "Milk",
+      icon: "milk",
+      category: null,
+      default_shelf_life_days: 7,
+      location: "fridge",
+      barcode: "123",
+      image_url: null,
+    });
+    vi.mocked(api.scanExpiryPhoto).mockResolvedValue({ found: true, date: "2026-08-20", confidence: "high" });
+
+    const { result } = renderHook(() => useThatFridge());
+    await act(async () => {
+      await result.current.actions.lookupBarcode("123");
+    });
+    expect(result.current.state.addStep).toBe(6);
+    const detectedId = result.current.state.detected[0].id;
+
+    const file = new File(["x"], "label.jpg", { type: "image/jpeg" });
+    await act(async () => {
+      await result.current.actions.captureExpiryPhoto(file);
+    });
+
+    expect(result.current.state.detected[0].id).toBe(detectedId);
+    expect(result.current.state.detected[0].expiryDate).toBe("2026-08-20");
+    expect(result.current.state.addStep).toBe(2);
+  });
+
+  it("skipExpiryPhoto returns to the manual form when the scan was started from there", async () => {
+    vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "My Fridge", sections: [] });
+    vi.mocked(api.createSection).mockResolvedValue({ id: "s1", name: "General", items: [] });
+
+    const { result } = renderHook(() => useThatFridge());
+    await act(async () => {
+      await result.current.actions.startExpiryScanForManual();
+    });
+
+    act(() => result.current.actions.skipExpiryPhoto());
+
+    expect(result.current.state.addStep).toBe(3);
+  });
+});
+
+describe("useThatFridge memory undo", () => {
+  const mockChatReply = () => {
+    vi.mocked(api.sendChatMessage).mockResolvedValue({
+      agent: "Chef",
+      user_message: "hi",
+      agent_response: "hello!",
+      session_id: "session-1",
+      mocked: false,
+    });
+  };
+
+  it("shows an undo toast naming only the newly added facts, not ones already known", async () => {
+    mockChatReply();
+    vi.mocked(api.extractMemory).mockResolvedValueOnce(["Vegetarian"]);
+
+    const { result } = renderHook(() => useThatFridge());
+    act(() => result.current.actions.askQuick("I'm vegetarian"));
+    await waitFor(() => expect(result.current.state.memoryFacts).toEqual(["Vegetarian"]));
+
+    vi.mocked(api.extractMemory).mockResolvedValueOnce(["Vegetarian", "Dislikes cilantro"]);
+    act(() => result.current.actions.askQuick("also I dislike cilantro"));
+    await waitFor(() => expect(result.current.state.memoryFacts).toEqual(["Vegetarian", "Dislikes cilantro"]));
+
+    expect(result.current.state.undoMessage).toBe("Remembered: Dislikes cilantro");
+  });
+
+  it("does not show a toast when nothing new was extracted", async () => {
+    mockChatReply();
+    vi.mocked(api.extractMemory).mockResolvedValueOnce([]);
+
+    const { result } = renderHook(() => useThatFridge());
+    act(() => result.current.actions.askQuick("hi"));
+    await waitFor(() => expect(result.current.state.isTyping).toBe(false));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.state.undoMessage).toBeNull();
+  });
+
+  it("undo restores the previous facts locally and deletes the new ones server-side", async () => {
+    mockChatReply();
+    vi.mocked(api.extractMemory).mockResolvedValueOnce(["Vegetarian", "Dislikes cilantro"]);
+    vi.mocked(api.deleteMemoryFactApi).mockResolvedValue([]);
+
+    const { result } = renderHook(() => useThatFridge());
+    act(() => result.current.actions.askQuick("I'm vegetarian and dislike cilantro"));
+    await waitFor(() => expect(result.current.state.memoryFacts).toEqual(["Vegetarian", "Dislikes cilantro"]));
+
+    act(() => result.current.actions.undoLastRemoval());
+
+    expect(result.current.state.memoryFacts).toEqual([]);
+    expect(api.deleteMemoryFactApi).toHaveBeenCalledWith(0);
+    expect(api.deleteMemoryFactApi).toHaveBeenCalledWith(1);
+  });
+});

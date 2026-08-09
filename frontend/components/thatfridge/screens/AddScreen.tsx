@@ -66,6 +66,34 @@ function AutoFillButton({ onClick, loading }: { onClick: () => void; loading?: b
   );
 }
 
+const SCAN_EXPIRY_COLOR = "#2f6fb0";
+
+// Sits next to AutoFillButton wherever it appears - reading the real printed date off the
+// package is strictly more accurate than guessing from the item's name alone, so both are
+// offered as equally-reachable one-tap options rather than only ever guessing.
+function ScanExpiryButton({ onClick }: { onClick: () => void }) {
+  return (
+    <div
+      onClick={onClick}
+      title="Scan the printed expiry date instead of guessing"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 30,
+        padding: "0 8px",
+        borderRadius: 10,
+        background: `${SCAN_EXPIRY_COLOR}1a`,
+        color: SCAN_EXPIRY_COLOR,
+        cursor: "pointer",
+        flex: "none",
+      }}
+    >
+      <Camera size={13} strokeWidth={2.2} />
+    </div>
+  );
+}
+
 function LocationPicker({ value, onChange }: { value: StorageLocation; onChange: (loc: StorageLocation) => void }) {
   return (
     <div style={{ display: "flex", gap: 4, flex: "none" }}>
@@ -701,6 +729,7 @@ export default function AddScreen() {
                     style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "#eaf6ff", borderRadius: 10, padding: "8px 10px", fontSize: 12.5, color: "#16325c" }}
                   />
                   <LocationPicker value={d.location} onChange={(loc) => actions.onDetectedLocationChange(d.id, loc)} />
+                  <ScanExpiryButton onClick={() => actions.startExpiryScanForDetected(d.id)} />
                   <AutoFillButton onClick={() => actions.suggestDetectedDetails(d.id)} loading={state.detectedAutoFillLoadingId === d.id} />
                 </div>
               </div>
@@ -809,6 +838,7 @@ export default function AddScreen() {
                   onChange={(e) => actions.onManualExpiryDateChange(e.target.value)}
                   style={{ ...fieldStyle, flex: 1 }}
                 />
+                <ScanExpiryButton onClick={actions.startExpiryScanForManual} />
                 <AutoFillButton onClick={actions.suggestManualDetails} loading={state.manualAutoFillLoading} />
               </div>
             </div>
