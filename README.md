@@ -42,6 +42,17 @@
    php artisan serve
    ```
 
+   In a second terminal, run the scheduler so expiry/low-stock notifications actually get
+   generated (`app:check-item-freshness` is registered in `routes/console.php` but nothing
+   fires it otherwise — there's no cron/supervisor process in this repo's Docker setup):
+
+   ```bash
+   php artisan schedule:work
+   ```
+
+   To populate notifications immediately instead of waiting for the schedule, run
+   `php artisan app:check-item-freshness` directly at any time.
+
    `--seed` creates 4 test accounts (all password `password123`) so you can log in without registering your own:
 
    | Email                 | Password    |
