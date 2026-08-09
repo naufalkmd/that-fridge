@@ -353,3 +353,25 @@ export function deleteUsageHistoryEntryApi(id: string): Promise<void> {
 export function clearUsageHistoryApi(): Promise<void> {
   return apiFetch<void>("/usage-history", { method: "DELETE" });
 }
+
+export function fetchMemoryFacts(): Promise<string[]> {
+  return apiFetch<{ facts: string[] }>("/memory").then((res) => res.facts);
+}
+
+// Fired after a real chat reply is already shown (see sendChat in useThatFridge.ts) -
+// asks the model to extract/update durable facts (preferences, restrictions, habits) from
+// that one exchange. Never awaited by the caller, so it can never delay the chat reply.
+export function extractMemory(userMessage: string, agentResponse: string): Promise<string[]> {
+  return apiFetch<{ facts: string[] }>("/memory/extract", {
+    method: "POST",
+    body: JSON.stringify({ user_message: userMessage, agent_response: agentResponse }),
+  }).then((res) => res.facts);
+}
+
+export function deleteMemoryFactApi(index: number): Promise<string[]> {
+  return apiFetch<{ facts: string[] }>(`/memory/facts/${index}`, { method: "DELETE" }).then((res) => res.facts);
+}
+
+export function clearMemoryFactsApi(): Promise<void> {
+  return apiFetch<void>("/memory", { method: "DELETE" });
+}

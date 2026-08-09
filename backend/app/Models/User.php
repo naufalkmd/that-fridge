@@ -57,4 +57,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(UsageHistory::class);
     }
+
+    public function userMemory(): HasOne
+    {
+        return $this->hasOne(UserMemory::class);
+    }
 }

@@ -9,6 +9,10 @@ beforeEach(() => {
   vi.restoreAllMocks();
   vi.clearAllMocks();
   window.localStorage.clear();
+  // sendChat always fires this fire-and-forget after a reply lands - give every test a
+  // sane default so tests that don't care about memory extraction don't hit an unhandled
+  // rejection from calling .then() on the auto-mock's default `undefined` return value.
+  vi.mocked(api.extractMemory).mockResolvedValue([]);
 });
 
 describe("routeChatAgent", () => {
@@ -247,5 +251,98 @@ describe("useThatFridge Organizer suggested moves", () => {
     const moved = result.current.state.fridges[0].sections[0].items.find((i) => i.id === "i1");
     expect(moved?.location).toBe("freezer");
     expect(result.current.state.undoMessage).toContain("Frozen Peas");
+  });
+});
+
+describe("useThatFridge memory", () => {
+  it("shows the chat reply without waiting for memory extraction to finish", async () => {
+    vi.mocked(api.sendChatMessage).mockResolvedValue({
+      agent: "Chef",
+      user_message: "What can I cook?",
+      agent_response: "Try pasta!",
+      session_id: "session-1",
+      mocked: false,
+    });
+
+    let resolveExtraction!: (facts: string[]) => void;
+    const extractionPromise = new Promise<string[]>((resolve) => {
+      resolveExtraction = resolve;
+    });
+    vi.mocked(api.extractMemory).mockReturnValueOnce(extractionPromise);
+
+    const { result } = renderHook(() => useThatFridge());
+
+    act(() => result.current.actions.askQuick("What can I cook?"));
+
+    // The reply is already shown and typing has stopped, even though the extraction call
+    // triggered alongside it is still unresolved - it must never block the reply.
+    await waitFor(() => expect(result.current.state.isTyping).toBe(false));
+    expect(result.current.state.chatMessages.some((m) => m.text === "Try pasta!")).toBe(true);
+    expect(result.current.state.memoryFacts).toEqual([]);
+
+    await act(async () => {
+      resolveExtraction(["Vegetarian"]);
+      await extractionPromise;
+    });
+
+    await waitFor(() => expect(result.current.state.memoryFacts).toEqual(["Vegetarian"]));
+  });
+
+  it("does not update memoryFacts when extraction fails", async () => {
+    vi.mocked(api.sendChatMessage).mockResolvedValue({
+      agent: "Chef",
+      user_message: "hi",
+      agent_response: "hello!",
+      session_id: "session-1",
+      mocked: false,
+    });
+    vi.mocked(api.extractMemory).mockRejectedValueOnce(new Error("network error"));
+
+    const { result } = renderHook(() => useThatFridge());
+    act(() => result.current.actions.askQuick("hi"));
+
+    await waitFor(() => expect(result.current.state.isTyping).toBe(false));
+    // Give the rejected extraction promise a tick to settle (silently, via .catch(() => {})).
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.state.memoryFacts).toEqual([]);
+    expect(result.current.state.syncError).toBeNull(); // best-effort - must not surface as a user-facing error
+  });
+
+  const seedTwoFacts = async () => {
+    vi.mocked(api.sendChatMessage).mockResolvedValue({
+      agent: "Chef",
+      user_message: "hi",
+      agent_response: "hello!",
+      session_id: "session-1",
+      mocked: false,
+    });
+    vi.mocked(api.extractMemory).mockResolvedValueOnce(["Vegetarian", "Dislikes cilantro"]);
+
+    const { result } = renderHook(() => useThatFridge());
+    act(() => result.current.actions.askQuick("hi"));
+    await waitFor(() => expect(result.current.state.memoryFacts).toEqual(["Vegetarian", "Dislikes cilantro"]));
+    return result;
+  };
+
+  it("deleteMemoryFact removes one fact by index", async () => {
+    const result = await seedTwoFacts();
+    vi.mocked(api.deleteMemoryFactApi).mockResolvedValue(["Dislikes cilantro"]);
+
+    act(() => result.current.actions.deleteMemoryFact(0));
+
+    expect(result.current.state.memoryFacts).toEqual(["Dislikes cilantro"]);
+    expect(api.deleteMemoryFactApi).toHaveBeenCalledWith(0);
+  });
+
+  it("clearMemoryFacts clears everything", async () => {
+    const result = await seedTwoFacts();
+    vi.mocked(api.clearMemoryFactsApi).mockResolvedValue(undefined);
+
+    act(() => result.current.actions.clearMemoryFacts());
+
+    expect(result.current.state.memoryFacts).toEqual([]);
   });
 });

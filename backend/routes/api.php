@@ -1,16 +1,17 @@
 <?php
 
-use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\IngestionController;
-use App\Http\Controllers\BarcodeController;
-use App\Http\Controllers\ReceiptController;
-use App\Http\Controllers\PhotoController;
-use App\Http\Controllers\ExpiryScanController;
 use App\Http\Controllers\AgentController;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\BarcodeController;
+use App\Http\Controllers\ExpiryScanController;
 use App\Http\Controllers\FridgeController;
+use App\Http\Controllers\IngestionController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\MemoryController;
 use App\Http\Controllers\NotificationEventController;
 use App\Http\Controllers\NotificationPrefController;
+use App\Http\Controllers\PhotoController;
+use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\ShoppingItemController;
 use App\Http\Controllers\UsageHistoryController;
@@ -46,26 +47,26 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('/items/suggest-details', [AgentController::class, 'suggestItemDetails']);
-    
+
     Route::get('/fridges', [FridgeController::class, 'index']);
     Route::post('/fridges', [FridgeController::class, 'store']);
     Route::get('/fridges/{fridge}', [FridgeController::class, 'show']);
     Route::patch('/fridges/{fridge}', [FridgeController::class, 'update']);
     Route::delete('/fridges/{fridge}', [FridgeController::class, 'destroy']);
-    
+
     Route::post('/fridges/{fridge}/sections', [SectionController::class, 'store']);
     Route::patch('/sections/{section}', [SectionController::class, 'update']);
     Route::delete('/sections/{section}', [SectionController::class, 'destroy']);
-    
+
     Route::post('/sections/{section}/items', [ItemController::class, 'store']);
     Route::patch('/items/{item}', [ItemController::class, 'update']);
     Route::delete('/items/{item}', [ItemController::class, 'destroy']);
-    
+
     Route::get('/shopping-items', [ShoppingItemController::class, 'index']);
     Route::post('/shopping-items', [ShoppingItemController::class, 'store']);
     Route::patch('/shopping-items/{shoppingItem}', [ShoppingItemController::class, 'update']);
     Route::delete('/shopping-items/{shoppingItem}', [ShoppingItemController::class, 'destroy']);
-    
+
     Route::get('/notification-prefs', [NotificationPrefController::class, 'show']);
     Route::patch('/notification-prefs', [NotificationPrefController::class, 'update']);
 
@@ -76,4 +77,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/usage-history', [UsageHistoryController::class, 'store']);
     Route::delete('/usage-history', [UsageHistoryController::class, 'clear']);
     Route::delete('/usage-history/{usageHistory}', [UsageHistoryController::class, 'destroy']);
+
+    Route::get('/memory', [MemoryController::class, 'show']);
+    Route::post('/memory/extract', [MemoryController::class, 'extract']);
+    Route::delete('/memory', [MemoryController::class, 'destroy']);
+    Route::delete('/memory/facts/{index}', [MemoryController::class, 'destroyFact']);
 });

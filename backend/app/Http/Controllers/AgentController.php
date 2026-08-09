@@ -124,12 +124,19 @@ class AgentController extends Controller
             'compact' => 'nullable|boolean',
         ]);
 
+        // Read directly from the DB rather than having the client fetch-and-forward these
+        // on every message like inventory/usage_history - facts exist only to serve
+        // prompts, are already persisted server-side (see MemoryController::extract), and
+        // this way they can't drift or go stale on the client.
+        $memory = $request->user()->userMemory?->facts ?? [];
+
         $result = $this->agentService->chat(
             $request->input('message'),
             $request->input('agent'),
             $request->input('inventory'),
             $request->input('usage_history'),
-            $request->boolean('compact')
+            $request->boolean('compact'),
+            $memory
         );
 
         if (! $result) {

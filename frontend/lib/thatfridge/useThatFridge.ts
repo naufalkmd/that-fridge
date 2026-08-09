@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FOOD_ICON_KEYS, FOOD_TAB_ORDER, ICON_SECTION, STORAGE_LOCATIONS, guessIcon, guessLocation, suggestShelfLifeDays } from "./data";
 import {
+  clearMemoryFactsApi,
   clearUsageHistoryApi,
   createFridge,
   createItem,
@@ -11,13 +12,16 @@ import {
   deleteChatSession,
   deleteFridge as apiDeleteFridge,
   deleteItem,
+  deleteMemoryFactApi,
   deleteShoppingItem,
   deleteUsageHistoryEntryApi,
+  extractMemory,
   fetchChatHistory,
   fetchChatSessionMessages,
   fetchChatSessions,
   fetchFridges,
   fetchMe,
+  fetchMemoryFacts,
   fetchNotificationEvents,
   fetchNotificationPrefs,
   fetchRecipes,
@@ -172,6 +176,10 @@ export interface ThatFridgeState {
   manualExpiryDate: string;
   manualNote: string;
   usageHistory: UsageHistoryEntry[];
+  // Durable facts (preferences, restrictions, habits) MemoryService has extracted from
+  // past real chat messages - distinct from usageHistory's item-frequency tally. Shown on
+  // the AI Data & Memory screen; read server-side into every agent prompt.
+  memoryFacts: string[];
   searchQuery: string;
   foodSubtab: FoodSubtab;
   selectedRecipeId: string | null;
@@ -254,6 +262,7 @@ export function initialState(): ThatFridgeState {
     manualExpiryDate: defaultExpiryDate(),
     manualNote: "",
     usageHistory: [],
+    memoryFacts: [],
     searchQuery: "",
     foodSubtab: "recipes",
     selectedRecipeId: null,
@@ -407,8 +416,9 @@ export function useThatFridge() {
       fetchNotificationEvents(),
       fetchChatHistory(),
       fetchUsageHistory(),
+      fetchMemoryFacts(),
     ]).then(
-      ([fridges, recipes, shoppingList, notificationPrefs, notificationEvents, chatHistory, usageHistory]) => {
+      ([fridges, recipes, shoppingList, notificationPrefs, notificationEvents, chatHistory, usageHistory, memoryFacts]) => {
         if (cancelled) return;
         const restoredChatMessages: ChatMessage[] = chatHistory.messages.flatMap((row) => [
           { id: `u${row.id}`, from: "user" as const, text: row.user_message },
@@ -424,6 +434,7 @@ export function useThatFridge() {
           currentSessionId: chatHistory.session_id,
           notificationEvents: notificationEvents.slice().sort((a, b) => b.createdAt - a.createdAt),
           usageHistory,
+          memoryFacts,
           ...(restoredChatMessages.length ? { chatMessages: restoredChatMessages } : {}),
         });
       }
@@ -592,6 +603,14 @@ export function useThatFridge() {
   const clearUsageHistory = () => {
     patch({ usageHistory: [] });
     clearUsageHistoryApi().catch((err) => patch({ syncError: describeError(err, "Couldn't clear personalization memory.") }));
+  };
+  const deleteMemoryFact = (index: number) => {
+    patch((s) => ({ memoryFacts: s.memoryFacts.filter((_, i) => i !== index) }));
+    deleteMemoryFactApi(index).catch((err) => patch({ syncError: describeError(err, "Couldn't remove that memory.") }));
+  };
+  const clearMemoryFacts = () => {
+    patch({ memoryFacts: [] });
+    clearMemoryFactsApi().catch((err) => patch({ syncError: describeError(err, "Couldn't clear memory.") }));
   };
 
   const openStylePicker = (i: number) => patch({ stylingFridgeIndex: i, screen: "fridgeStyle" });
@@ -801,6 +820,12 @@ export function useThatFridge() {
       .then((res) => {
         const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: res.agent_response, mocked: res.mocked };
         patch((s) => ({ chatMessages: [...s.chatMessages, reply], isTyping: false, currentSessionId: res.session_id }));
+
+        // Fire-and-forget: extracts/updates remembered facts from this exchange. Never
+        // awaited, so a slow or failed extraction can never delay the reply already shown.
+        extractMemory(trimmed, res.agent_response)
+          .then((facts) => patch({ memoryFacts: facts }))
+          .catch(() => {});
       })
       .catch((err) => {
         const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: describeError(err, "Sorry, I couldn't reach the assistant right now.") };
@@ -1521,6 +1546,8 @@ export function useThatFridge() {
     clearAllChatData,
     deleteUsageHistoryEntry,
     clearUsageHistory,
+    deleteMemoryFact,
+    clearMemoryFacts,
     openStylePicker,
     closeStylePicker,
     selectFridgeStyle,

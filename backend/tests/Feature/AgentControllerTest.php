@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ChatHistory;
 use App\Models\User;
+use App\Models\UserMemory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -71,6 +72,26 @@ class AgentControllerTest extends TestCase
             $systemPrompt = collect($request->data()['messages'])->firstWhere('role', 'system')['content'];
 
             return str_contains($systemPrompt, 'ONE short, plain sentence');
+        });
+    }
+
+    public function test_chat_reads_the_users_remembered_facts_from_the_database(): void
+    {
+        $user = User::factory()->create();
+        UserMemory::create(['user_id' => $user->id, 'facts' => ['Vegetarian']]);
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'ok']]],
+        ], 200)]);
+
+        // Note: unlike inventory/usage_history, memory is never sent by the client - the
+        // controller reads it straight from the DB.
+        $this->actingAs($user)->postJson('/api/chat', ['message' => 'hi', 'agent' => 'Chef'])->assertStatus(200);
+
+        Http::assertSent(function ($request) {
+            $systemPrompt = collect($request->data()['messages'])->firstWhere('role', 'system')['content'];
+
+            return str_contains($systemPrompt, 'Vegetarian');
         });
     }
 
