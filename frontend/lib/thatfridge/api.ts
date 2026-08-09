@@ -1,14 +1,48 @@
-import type { CurrentUser, Fridge, NotificationEvent, NotificationPrefs, Recipe, Section, ShoppingItem, StorageLocation, UsageHistoryEntry } from "./types";
-import { RECIPES } from "./data";
+import type {
+  CurrentUser,
+  Fridge,
+  NotificationEvent,
+  NotificationPrefs,
+  Recipe,
+  RecipeCategory,
+  RecipeIngredient,
+  Section,
+  ShoppingItem,
+  StorageLocation,
+  UsageHistoryEntry,
+} from "./types";
 import { apiFetch, setToken, type RawItem, toClientItem } from "./apiClient";
 
-function resolveAfter<T>(value: T): Promise<T> {
-  return new Promise((resolve) => setTimeout(() => resolve(value), 250));
+export function fetchRecipes(): Promise<Recipe[]> {
+  return apiFetch<Recipe[]>("/recipes");
 }
 
-// Recipes have no backend endpoint yet — stays mock.
-export function fetchRecipes(): Promise<Recipe[]> {
-  return resolveAfter(RECIPES);
+export interface RecipeInput {
+  name: string;
+  minutes: number;
+  category?: RecipeCategory | null;
+  ingredients: RecipeIngredient[];
+  steps: string[];
+}
+
+export function createRecipe(data: RecipeInput): Promise<Recipe> {
+  return apiFetch<Recipe>("/recipes", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateRecipe(id: string, data: Partial<RecipeInput>): Promise<Recipe> {
+  return apiFetch<Recipe>(`/recipes/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export function deleteRecipe(id: string): Promise<void> {
+  return apiFetch<void>(`/recipes/${id}`, { method: "DELETE" });
+}
+
+export function favoriteRecipe(id: string): Promise<Recipe> {
+  return apiFetch<Recipe>(`/recipes/${id}/favorite`, { method: "POST" });
+}
+
+export function unfavoriteRecipe(id: string): Promise<Recipe> {
+  return apiFetch<Recipe>(`/recipes/${id}/favorite`, { method: "DELETE" });
 }
 
 interface RawSection {

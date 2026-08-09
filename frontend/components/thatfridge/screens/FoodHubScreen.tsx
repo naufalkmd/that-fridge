@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
-import { MapPin, Plus, Refrigerator, RefreshCw, Sparkles, X } from "lucide-react";
-import { FOOD_TAB_ORDER, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
+import { Heart, MapPin, Plus, Refrigerator, RefreshCw, Sparkles, X } from "lucide-react";
+import { FOOD_TAB_ORDER, RECIPE_CATEGORIES, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
 import {
   getExpiringOwnedItems,
   getRecipesView,
@@ -15,7 +16,7 @@ import {
 } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import type { ChatAgentName } from "@/lib/thatfridge/api";
-import type { FoodSubtab } from "@/lib/thatfridge/types";
+import type { FoodSubtab, RecipeCategory } from "@/lib/thatfridge/types";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 import LocationIcon from "../LocationIcon";
@@ -91,7 +92,14 @@ export default function FoodHubScreen() {
   const activeIndex = FOOD_TAB_ORDER.indexOf(activeTab);
   const activeMeta = TAB_META[activeTab];
 
+  const [recipeFilter, setRecipeFilter] = useState<"all" | "favorites" | RecipeCategory>("all");
   const recipesView = getRecipesView(state);
+  const filteredRecipesView =
+    recipeFilter === "all"
+      ? recipesView
+      : recipeFilter === "favorites"
+        ? recipesView.filter((r) => r.isFavorite)
+        : recipesView.filter((r) => r.category === recipeFilter);
   const tonightPick = getTonightPick(recipesView);
   const expiringOwned = getExpiringOwnedItems(state, 5);
   const recommendations = getShoppingRecommendations(state, 6);
@@ -308,20 +316,76 @@ export default function FoodHubScreen() {
               </div>
             )}
 
-            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>ALL RECIPES</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)" }}>ALL RECIPES</div>
+              <div
+                onClick={() => actions.openNewRecipeForm()}
+                style={{ display: "flex", alignItems: "center", gap: 4, color: "#2f6fb0", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
+              >
+                <Plus size={14} strokeWidth={2.4} />
+                Add recipe
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 14, paddingBottom: 2 }}>
+              {[
+                { key: "all" as const, label: "All" },
+                { key: "favorites" as const, label: "Favorites" },
+                ...RECIPE_CATEGORIES,
+              ].map((opt) => {
+                const active = recipeFilter === opt.key;
+                return (
+                  <div
+                    key={opt.key}
+                    onClick={() => setRecipeFilter(opt.key)}
+                    style={{
+                      flex: "none",
+                      whiteSpace: "nowrap",
+                      padding: "7px 14px",
+                      borderRadius: 14,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      background: active ? "#16325c" : "#fff",
+                      color: active ? "#fff" : "#16325c",
+                      boxShadow: "0 4px 10px rgba(22,50,92,0.08)",
+                    }}
+                  >
+                    {opt.label}
+                  </div>
+                );
+              })}
+            </div>
+
             <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden" }}>
-              {recipesView.map((r) => (
-                <div key={r.id} onClick={() => actions.openRecipeDetail(r.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}>
-                  <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
-                    <FoodIcon icon={r.icon} />
+              {filteredRecipesView.length === 0 && (
+                <div style={{ padding: "24px 14px", textAlign: "center", fontSize: 12.5, color: "rgba(22,50,92,0.45)" }}>No recipes here yet.</div>
+              )}
+              {filteredRecipesView.map((r) => {
+                const categoryLabel = RECIPE_CATEGORIES.find((c) => c.key === r.category)?.label;
+                return (
+                  <div key={r.id} onClick={() => actions.openRecipeDetail(r.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}>
+                    <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
+                      <FoodIcon icon={r.icon} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{r.name}</div>
+                        {r.isFavorite && <Heart size={11} color="#c1452e" fill="#c1452e" strokeWidth={0} />}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.45)", display: "flex", alignItems: "center", gap: 6 }}>
+                        {r.minutes} min
+                        {categoryLabel && (
+                          <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 0.3, color: "#2f6fb0", background: "#2f6fb01a", padding: "2px 7px", borderRadius: 8 }}>
+                            {categoryLabel.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: r.ratioColor, background: r.ratioBg, padding: "5px 10px", borderRadius: 11 }}>{r.ratioLabel}</div>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{r.name}</div>
-                    <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.45)" }}>{r.minutes} min</div>
-                  </div>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, color: r.ratioColor, background: r.ratioBg, padding: "5px 10px", borderRadius: 11 }}>{r.ratioLabel}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

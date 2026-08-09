@@ -12,6 +12,7 @@ use App\Http\Controllers\NotificationEventController;
 use App\Http\Controllers\NotificationPrefController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\ShoppingItemController;
 use App\Http\Controllers\UsageHistoryController;
@@ -82,4 +83,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/memory/extract', [MemoryController::class, 'extract']);
     Route::delete('/memory', [MemoryController::class, 'destroy']);
     Route::delete('/memory/facts/{index}', [MemoryController::class, 'destroyFact']);
+
+    Route::get('/recipes', [RecipeController::class, 'index']);
+    Route::post('/recipes', [RecipeController::class, 'store']);
+    Route::patch('/recipes/{recipe}', [RecipeController::class, 'update']);
+    Route::delete('/recipes/{recipe}', [RecipeController::class, 'destroy']);
+    Route::post('/recipes/{recipe}/favorite', [RecipeController::class, 'favorite']);
+    Route::delete('/recipes/{recipe}/favorite', [RecipeController::class, 'unfavorite']);
 });

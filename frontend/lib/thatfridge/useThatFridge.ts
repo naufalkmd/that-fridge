@@ -7,15 +7,18 @@ import {
   clearUsageHistoryApi,
   createFridge,
   createItem,
+  createRecipe,
   createSection,
   createShoppingItem,
   deleteChatSession,
   deleteFridge as apiDeleteFridge,
   deleteItem,
   deleteMemoryFactApi,
+  deleteRecipe as apiDeleteRecipe,
   deleteShoppingItem,
   deleteUsageHistoryEntryApi,
   extractMemory,
+  favoriteRecipe,
   fetchChatHistory,
   fetchChatSessionMessages,
   fetchChatSessions,
@@ -38,10 +41,12 @@ import {
   sendChatMessage,
   suggestItemDetails,
   type ChatAgentName,
+  unfavoriteRecipe,
   updateFridge,
   updateItem,
   updateNotificationEvent,
   updateNotificationPrefs,
+  updateRecipe,
   updateShoppingItem,
 } from "./api";
 import { ApiError, clearToken, getToken } from "./apiClient";
@@ -59,6 +64,8 @@ import type {
   NotificationEvent,
   NotificationPrefs,
   Recipe,
+  RecipeCategory,
+  RecipeIngredient,
   Screen,
   ScanMethod,
   ShoppingItem,
@@ -187,6 +194,13 @@ export interface ThatFridgeState {
   searchQuery: string;
   foodSubtab: FoodSubtab;
   selectedRecipeId: string | null;
+  // null id = creating a new recipe; a set id = editing an existing custom one.
+  recipeFormId: string | null;
+  recipeFormName: string;
+  recipeFormMinutes: string;
+  recipeFormCategory: RecipeCategory | null;
+  recipeFormIngredients: RecipeIngredient[];
+  recipeFormSteps: string[];
   newShoppingText: string;
   shoppingList: ShoppingItem[];
   shoppingSeeded: boolean;
@@ -271,6 +285,12 @@ export function initialState(): ThatFridgeState {
     searchQuery: "",
     foodSubtab: "recipes",
     selectedRecipeId: null,
+    recipeFormId: null,
+    recipeFormName: "",
+    recipeFormMinutes: "20",
+    recipeFormCategory: null,
+    recipeFormIngredients: [],
+    recipeFormSteps: [],
     newShoppingText: "",
     shoppingList: [],
     shoppingSeeded: false,
@@ -721,6 +741,109 @@ export function useThatFridge() {
 
   const openRecipeDetail = (id: string) => patch({ screen: "recipeDetail", selectedRecipeId: id });
   const closeRecipeDetail = () => patch({ screen: "foodHub" });
+
+  const toggleFavoriteRecipe = (id: string) => {
+    const recipe = state.recipes.find((r) => r.id === id);
+    if (!recipe) return;
+    const nextFavorite = !recipe.isFavorite;
+    patch((s) => ({ recipes: s.recipes.map((r) => (r.id === id ? { ...r, isFavorite: nextFavorite } : r)) }));
+    (nextFavorite ? favoriteRecipe(id) : unfavoriteRecipe(id)).catch((err) => {
+      patch((s) => ({ recipes: s.recipes.map((r) => (r.id === id ? { ...r, isFavorite: !nextFavorite } : r)) }));
+      patch({ syncError: describeError(err, "Couldn't update favorites.") });
+    });
+  };
+
+  const openNewRecipeForm = () =>
+    patch({
+      screen: "recipeForm",
+      recipeFormId: null,
+      recipeFormName: "",
+      recipeFormMinutes: "20",
+      recipeFormCategory: null,
+      recipeFormIngredients: [{ icon: "leftovers", name: "" }],
+      recipeFormSteps: [""],
+    });
+
+  const openEditRecipeForm = (id: string) => {
+    const recipe = state.recipes.find((r) => r.id === id);
+    if (!recipe || !recipe.isCustom) return;
+    patch({
+      screen: "recipeForm",
+      recipeFormId: id,
+      recipeFormName: recipe.name,
+      recipeFormMinutes: String(recipe.minutes),
+      recipeFormCategory: recipe.category,
+      recipeFormIngredients: recipe.ingredients.map((ing) => ({ ...ing })),
+      recipeFormSteps: [...recipe.steps],
+    });
+  };
+
+  const closeRecipeForm = () => patch({ screen: state.recipeFormId ? "recipeDetail" : "foodHub" });
+
+  const onRecipeFormNameChange = (value: string) => patch({ recipeFormName: value });
+  const onRecipeFormMinutesChange = (value: string) => patch({ recipeFormMinutes: value });
+  const onRecipeFormCategoryChange = (value: RecipeCategory | null) => patch({ recipeFormCategory: value });
+
+  const addRecipeFormIngredient = () =>
+    patch((s) => ({ recipeFormIngredients: [...s.recipeFormIngredients, { icon: "leftovers", name: "" }] }));
+  const removeRecipeFormIngredient = (index: number) =>
+    patch((s) => ({ recipeFormIngredients: s.recipeFormIngredients.filter((_, i) => i !== index) }));
+  const onRecipeFormIngredientNameChange = (index: number, value: string) =>
+    patch((s) => ({
+      recipeFormIngredients: s.recipeFormIngredients.map((ing, i) =>
+        i === index ? { name: value, icon: guessIcon(value) || ing.icon } : ing
+      ),
+    }));
+
+  const addRecipeFormStep = () => patch((s) => ({ recipeFormSteps: [...s.recipeFormSteps, ""] }));
+  const removeRecipeFormStep = (index: number) =>
+    patch((s) => ({ recipeFormSteps: s.recipeFormSteps.filter((_, i) => i !== index) }));
+  const onRecipeFormStepChange = (index: number, value: string) =>
+    patch((s) => ({ recipeFormSteps: s.recipeFormSteps.map((step, i) => (i === index ? value : step)) }));
+
+  const isRecipeFormValid = () =>
+    !!state.recipeFormName.trim() &&
+    state.recipeFormIngredients.some((ing) => ing.name.trim()) &&
+    state.recipeFormSteps.some((s) => s.trim());
+
+  const saveRecipeForm = async () => {
+    const name = state.recipeFormName.trim();
+    if (!name) return;
+    const minutes = Math.max(1, parseInt(state.recipeFormMinutes, 10) || 1);
+    const ingredients = state.recipeFormIngredients
+      .map((ing) => ({ ...ing, name: ing.name.trim() }))
+      .filter((ing) => ing.name);
+    const steps = state.recipeFormSteps.map((s) => s.trim()).filter(Boolean);
+    if (!ingredients.length || !steps.length) return;
+
+    const payload = { name, minutes, category: state.recipeFormCategory, ingredients, steps };
+
+    try {
+      if (state.recipeFormId) {
+        const updated = await updateRecipe(state.recipeFormId, payload);
+        patch((s) => ({
+          recipes: s.recipes.map((r) => (r.id === updated.id ? updated : r)),
+          screen: "recipeDetail",
+          selectedRecipeId: updated.id,
+        }));
+      } else {
+        const created = await createRecipe(payload);
+        patch((s) => ({ recipes: [...s.recipes, created], screen: "recipeDetail", selectedRecipeId: created.id }));
+      }
+    } catch (err) {
+      patch({ syncError: describeError(err, "Couldn't save the recipe.") });
+    }
+  };
+
+  const deleteCustomRecipe = (id: string) => {
+    const recipe = state.recipes.find((r) => r.id === id);
+    if (!recipe || !recipe.isCustom) return;
+    patch({ recipes: state.recipes.filter((r) => r.id !== id), screen: "foodHub", selectedRecipeId: null });
+    apiDeleteRecipe(id).catch((err) => {
+      patch((s) => ({ recipes: [...s.recipes, recipe] }));
+      patch({ syncError: describeError(err, "Couldn't delete the recipe.") });
+    });
+  };
 
   const onNewShoppingChange = (value: string) => patch({ newShoppingText: value });
   const addShoppingItem = async () => {
@@ -1634,6 +1757,22 @@ export function useThatFridge() {
     onSwipeEnd,
     openRecipeDetail,
     closeRecipeDetail,
+    toggleFavoriteRecipe,
+    openNewRecipeForm,
+    openEditRecipeForm,
+    closeRecipeForm,
+    onRecipeFormNameChange,
+    onRecipeFormMinutesChange,
+    onRecipeFormCategoryChange,
+    addRecipeFormIngredient,
+    removeRecipeFormIngredient,
+    onRecipeFormIngredientNameChange,
+    addRecipeFormStep,
+    removeRecipeFormStep,
+    onRecipeFormStepChange,
+    isRecipeFormValid,
+    saveRecipeForm,
+    deleteCustomRecipe,
     onNewShoppingChange,
     onNewShoppingKeyDown,
     addShoppingItem,

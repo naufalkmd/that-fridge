@@ -11,6 +11,7 @@ import HomeScreen from "./screens/HomeScreen";
 import InventoryScreen from "./screens/InventoryScreen";
 import FoodHubScreen from "./screens/FoodHubScreen";
 import RecipeDetailSheet from "./screens/RecipeDetailSheet";
+import RecipeFormSheet from "./screens/RecipeFormSheet";
 import FridgeStyleSheet from "./screens/FridgeStyleSheet";
 import ItemDetailSheet from "./screens/ItemDetailSheet";
 import AddScreen from "./screens/AddScreen";
@@ -34,6 +35,8 @@ function Screens() {
       return <FoodHubScreen />;
     case "recipeDetail":
       return <RecipeDetailSheet />;
+    case "recipeForm":
+      return <RecipeFormSheet />;
     case "fridgeStyle":
       return <FridgeStyleSheet />;
     case "itemDetail":

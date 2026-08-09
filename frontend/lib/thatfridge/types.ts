@@ -39,12 +39,17 @@ export interface RecipeIngredient {
   name: string;
 }
 
+export type RecipeCategory = "breakfast" | "lunch" | "dinner" | "dessert" | "snack" | "quick";
+
 export interface Recipe {
   id: string;
   name: string;
   minutes: number;
+  category: RecipeCategory | null;
   ingredients: RecipeIngredient[];
   steps: string[];
+  isFavorite: boolean;
+  isCustom: boolean;
 }
 
 export interface FridgeStyleDef {
@@ -102,6 +107,7 @@ export type Screen =
   | "inventory"
   | "foodHub"
   | "recipeDetail"
+  | "recipeForm"
   | "fridgeStyle"
   | "itemDetail"
   | "add"

@@ -1,4 +1,4 @@
-import type { Agent, FoodSubtab, FridgeStyleDef, IconData, Recipe, Section, StorageLocation } from "./types";
+import type { Agent, FoodSubtab, FridgeStyleDef, IconData, RecipeCategory, Section, StorageLocation } from "./types";
 import foodIconManifest from "@/public/images/thatfridge/food-icons/manifest.json";
 
 export const FOOD_TAB_ORDER: FoodSubtab[] = ["recipes", "shopping", "guardian", "organizer"];
@@ -94,102 +94,6 @@ export const SECTIONS: Section[] = [
       { id: "l1", name: "Roast veggies", icon: "leftovers", freshness: 30, days: 2, note: "From Sunday", qty: 1 },
       { id: "l2", name: "Pasta bake", icon: "leftovers", freshness: 12, days: 1, note: "Last portion", qty: 1 },
       { id: "l3", name: "Soup", icon: "leftovers", freshness: 66, days: 4, note: "Quart jar", qty: 1 },
-    ],
-  },
-];
-
-export const RECIPES: Recipe[] = [
-  {
-    id: "rc1",
-    name: "Veggie Stir-Fry",
-    minutes: 20,
-    ingredients: [
-      { icon: "carrot", name: "Carrots" },
-      { icon: "spinach", name: "Spinach" },
-      { icon: "eggs", name: "Eggs" },
-      { icon: "meat", name: "Chicken or beef" },
-    ],
-    steps: [
-      "Heat oil in a wok over high heat.",
-      "Add carrots and stir-fry 2 minutes.",
-      "Add spinach and protein, cook until done.",
-      "Season with soy sauce and serve over rice.",
-    ],
-  },
-  {
-    id: "rc2",
-    name: "Creamy Veggie Soup",
-    minutes: 30,
-    ingredients: [
-      { icon: "spinach", name: "Spinach" },
-      { icon: "carrot", name: "Carrots" },
-      { icon: "cheese", name: "Cheese" },
-      { icon: "milk", name: "Milk" },
-    ],
-    steps: [
-      "Sauté carrots until soft.",
-      "Add spinach and cook until wilted.",
-      "Pour in milk and simmer.",
-      "Stir in cheese until melted and creamy.",
-    ],
-  },
-  {
-    id: "rc3",
-    name: "Veggie Omelet",
-    minutes: 12,
-    ingredients: [
-      { icon: "eggs", name: "Eggs" },
-      { icon: "cheese", name: "Cheese" },
-      { icon: "spinach", name: "Spinach" },
-    ],
-    steps: [
-      "Whisk eggs in a bowl.",
-      "Pour into a hot buttered pan.",
-      "Add spinach and cheese, fold once set.",
-      "Cook until golden and serve.",
-    ],
-  },
-  {
-    id: "rc4",
-    name: "Berry Oat Bowl",
-    minutes: 8,
-    ingredients: [
-      { icon: "berries", name: "Berries" },
-      { icon: "yogurt", name: "Yogurt" },
-      { icon: "milk", name: "Milk" },
-    ],
-    steps: ["Combine oats and milk, let sit 5 minutes.", "Top with yogurt.", "Finish with fresh berries."],
-  },
-  {
-    id: "rc5",
-    name: "Leftover Fried Rice",
-    minutes: 15,
-    ingredients: [
-      { icon: "leftovers", name: "Leftovers" },
-      { icon: "eggs", name: "Eggs" },
-      { icon: "carrot", name: "Carrots" },
-    ],
-    steps: [
-      "Scramble eggs in a hot pan, set aside.",
-      "Stir-fry carrots for 2 minutes.",
-      "Add chopped leftovers and rice, toss well.",
-      "Fold in eggs and season to taste.",
-    ],
-  },
-  {
-    id: "rc6",
-    name: "Apple Crumble",
-    minutes: 35,
-    ingredients: [
-      { icon: "apple", name: "Apples" },
-      { icon: "cheese", name: "Butter" },
-      { icon: "milk", name: "Milk" },
-    ],
-    steps: [
-      "Slice apples into a baking dish.",
-      "Rub butter into a crumble topping.",
-      "Scatter topping over apples.",
-      "Bake until golden, serve with milk.",
     ],
   },
 ];
@@ -397,6 +301,15 @@ export const STORAGE_LOCATIONS: { key: StorageLocation; label: string; short: st
   { key: "fridge", label: "Fridge", short: "Fr", blurb: "Everyday chilled items", color: "#2f6fb0" },
   { key: "freezer", label: "Freezer", short: "Fz", blurb: "Long-term frozen items", color: "#3f5c85" },
   { key: "pantry", label: "Pantry", short: "Pa", blurb: "Shelf-stable, room temp", color: "#b5702f" },
+];
+
+export const RECIPE_CATEGORIES: { key: RecipeCategory; label: string }[] = [
+  { key: "breakfast", label: "Breakfast" },
+  { key: "lunch", label: "Lunch" },
+  { key: "dinner", label: "Dinner" },
+  { key: "dessert", label: "Dessert" },
+  { key: "snack", label: "Snack" },
+  { key: "quick", label: "Quick meal" },
 ];
 
 const FREEZER_KEYWORDS = ["frozen", "ice cream", "popsicle", "gelato", "freezer"];
