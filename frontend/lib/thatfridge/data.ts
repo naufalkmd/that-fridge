@@ -370,6 +370,12 @@ export function guessIcon(name: string): string | null {
   return best?.key ?? null;
 }
 
+// Mirrors AgentService::fallbackItemSuggestion's table in the backend (backend/app/Services/AgentService.php) -
+// keep both in sync if you change one. This client-side copy exists only for paths that need an instant,
+// offline default (as-you-type icon preview, and the first pass on receipt/photo-scanned items before the
+// user reviews them) where a network round-trip per item isn't appropriate. The barcode-scan path and the
+// explicit "Auto-fill" button both call the real AgentService::suggestItemDetails endpoint instead and only
+// reach this table if that call fails.
 const DEFAULT_SHELF_LIFE_DAYS: Record<string, number> = {
   milk: 7,
   yogurt: 14,
@@ -449,18 +455,5 @@ export const AGENTS: Agent[] = [
   { id: "organizer", name: "Organizer", icon: "agentOrganizer", summary: "Tells you where to store each item and keeps fridge, freezer and pantry tidy." },
   { id: "shopkeeper", name: "Shopkeeper", icon: "agentShopkeeper", summary: "Builds your next grocery list and tells you what not to rebuy." },
 ];
-
-export const RECIPE_BY_ICON: Record<string, string> = {
-  spinach: "Creamy veggie soup",
-  carrot: "Creamy veggie soup",
-  meat: "Skillet stir-fry",
-  eggs: "Veggie omelet",
-  leftovers: "Leftover fried rice",
-  milk: "Simple breakfast bowl",
-  cheese: "Cheesy veggie bake",
-  yogurt: "Yogurt parfait",
-  berries: "Berry oat bowl",
-  apple: "Apple crumble",
-};
 
 export const EMPTY_ICON: IconData = { cells: [], cols: 1, rows: 1 };

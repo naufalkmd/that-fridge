@@ -654,7 +654,7 @@ export function useThatFridge() {
       if (s.shoppingSeeded) return {};
       const lowStock = (s.fridges[s.activeFridge]?.sections || [])
         .flatMap((sec) => sec.items)
-        .filter((i) => /left|remaining/i.test(i.note));
+        .filter((i) => i.qty <= 2);
       const seeded: ShoppingItem[] = lowStock.map((i) => ({
         id: "ls-" + i.id,
         name: i.name,
@@ -776,6 +776,7 @@ export function useThatFridge() {
       .catch((err) => patch({ syncError: describeError(err, "Couldn't load that conversation.") }));
   };
   const sendChat = (text: string, attachmentName?: string) => {
+    if (state.isTyping) return;
     const trimmed = (text || "").trim();
     if (!trimmed && !attachmentName) return;
     const userMsg: ChatMessage = { id: "u" + Date.now(), from: "user", text: trimmed, attachmentName };
@@ -791,7 +792,7 @@ export function useThatFridge() {
     const usageSummary = buildUsageSummary(state.usageHistory);
     sendChatMessage(trimmed, routeChatAgent(trimmed), inventory, state.currentSessionId, usageSummary)
       .then((res) => {
-        const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: res.agent_response };
+        const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: res.agent_response, mocked: res.mocked };
         patch((s) => ({ chatMessages: [...s.chatMessages, reply], isTyping: false, currentSessionId: res.session_id }));
       })
       .catch((err) => {
@@ -1242,7 +1243,7 @@ export function useThatFridge() {
         checked: true,
         qty: 1,
         expiryDate: toISODate(target),
-        location: guessLocation(product.name),
+        location: product.location || guessLocation(product.name),
       };
       patch({ addStep: 6, detected: [detected], barcodeLoading: false, barcodeInput: "" });
     } catch (err) {

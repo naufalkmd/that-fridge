@@ -166,6 +166,11 @@ export default function ChatScreen() {
           <div key={m.id} style={{ display: "flex", justifyContent: m.from === "user" ? "flex-end" : "flex-start", animation: "pop .18s ease-out" }}>
             {m.from === "bot" ? (
               <div style={{ maxWidth: "82%", background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.08)", borderRadius: "4px 16px 16px 16px", padding: "11px 14px" }}>
+                {m.mocked && (
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(22,50,92,0.45)", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.4 }}>
+                    Demo reply — no AI key configured
+                  </div>
+                )}
                 <MarkdownText text={m.text} />
               </div>
             ) : (

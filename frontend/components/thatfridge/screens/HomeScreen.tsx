@@ -8,6 +8,7 @@ import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import CrewScene from "../CrewScene";
 import FoodIcon from "../FoodIcon";
+import MarkdownText from "../MarkdownText";
 
 const CLEAR_THRESHOLD = -80;
 const OFFSCREEN_X = -420;
@@ -448,7 +449,7 @@ export default function HomeScreen() {
               </div>
               <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#c1452e", background: "#c1452e1a", padding: "2px 7px", borderRadius: 6 }}>GUARDIAN</div>
             </div>
-            <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{guardianMessage}</div>
+            <MarkdownText text={guardianMessage} style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }} />
           </div>
         </SwipeToClear>
       )}
@@ -464,7 +465,7 @@ export default function HomeScreen() {
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>LOW STOCK</div>
               <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#3f8f5c", background: "#3f8f5c1a", padding: "2px 7px", borderRadius: 6 }}>SHOPKEEPER</div>
             </div>
-            <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{shopkeeperMessage}</div>
+            <MarkdownText text={shopkeeperMessage} style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }} />
           </div>
         </SwipeToClear>
       )}
@@ -483,7 +484,7 @@ export default function HomeScreen() {
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>CHEF&apos;S PICK</div>
               <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#d99a2b", background: "#d99a2b1a", padding: "2px 7px", borderRadius: 6 }}>CHEF</div>
             </div>
-            <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{chefMessage}</div>
+            <MarkdownText text={chefMessage} style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }} />
           </div>
         </SwipeToClear>
       )}
@@ -784,7 +785,7 @@ export default function HomeScreen() {
                   <div style={{ fontSize: 12.5, fontWeight: 800 }}>Chef</div>
                   <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#d99a2b", background: "#d99a2b1a", padding: "2px 7px", borderRadius: 6 }}>PICK</div>
                 </div>
-                <div style={{ fontSize: 12, lineHeight: 1.5, color: "rgba(22,50,92,0.75)" }}>{chefMessage}</div>
+                <MarkdownText text={chefMessage} style={{ fontSize: 12, lineHeight: 1.5, color: "rgba(22,50,92,0.75)" }} />
               </div>
             )}
             {guardianVisible && guardianItem && (
@@ -793,7 +794,7 @@ export default function HomeScreen() {
                   <div style={{ fontSize: 12.5, fontWeight: 800 }}>Guardian</div>
                   <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#c1452e", background: "#c1452e1a", padding: "2px 7px", borderRadius: 6 }}>ALERT</div>
                 </div>
-                <div style={{ fontSize: 12, lineHeight: 1.5, color: "rgba(22,50,92,0.75)" }}>{guardianMessage}</div>
+                <MarkdownText text={guardianMessage} style={{ fontSize: 12, lineHeight: 1.5, color: "rgba(22,50,92,0.75)" }} />
               </div>
             )}
             {lowStockVisible && lowStockItem && (
@@ -802,7 +803,7 @@ export default function HomeScreen() {
                   <div style={{ fontSize: 12.5, fontWeight: 800 }}>Shopkeeper</div>
                   <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#3f8f5c", background: "#3f8f5c1a", padding: "2px 7px", borderRadius: 6 }}>LOW STOCK</div>
                 </div>
-                <div style={{ fontSize: 12, lineHeight: 1.5, color: "rgba(22,50,92,0.75)" }}>{shopkeeperMessage}</div>
+                <MarkdownText text={shopkeeperMessage} style={{ fontSize: 12, lineHeight: 1.5, color: "rgba(22,50,92,0.75)" }} />
               </div>
             )}
           </div>

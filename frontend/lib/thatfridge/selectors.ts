@@ -57,7 +57,7 @@ export function getGuardianItem(state: ThatFridgeState): ItemWithSection | null 
 
 export function getLowStockItem(state: ThatFridgeState): ItemWithSection | null {
   const guardian = getGuardianItem(state);
-  return getScopedItems(state).find((i) => /left|remaining/i.test(i.note) && i.qty <= 2 && i.id !== guardian?.id) || null;
+  return getScopedItems(state).find((i) => i.qty <= 2 && i.id !== guardian?.id) || null;
 }
 
 export interface BuyAgainSuggestion {

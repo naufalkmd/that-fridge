@@ -130,6 +130,7 @@ export interface BarcodeSuggestion {
   icon: string;
   category: string | null;
   default_shelf_life_days: number;
+  location: StorageLocation | null;
   barcode: string;
   image_url: string | null;
 }
@@ -259,6 +260,7 @@ export interface SendChatMessageResult {
   user_message: string;
   agent_response: string;
   session_id: string;
+  mocked: boolean;
 }
 
 export function sendChatMessage(

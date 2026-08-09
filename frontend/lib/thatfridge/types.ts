@@ -74,6 +74,7 @@ export interface ChatMessage {
   from: "bot" | "user";
   text: string;
   attachmentName?: string;
+  mocked?: boolean;
 }
 
 export interface ChatThread {

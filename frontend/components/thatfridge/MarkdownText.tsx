@@ -19,9 +19,9 @@ const markdownComponents = {
   ),
 };
 
-export default function MarkdownText({ text }: { text: string }) {
+export default function MarkdownText({ text, style }: { text: string; style?: React.CSSProperties }) {
   return (
-    <div style={{ fontSize: 13.5, lineHeight: 1.5 }}>
+    <div style={{ fontSize: 13.5, lineHeight: 1.5, ...style }}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
         {text}
       </ReactMarkdown>
