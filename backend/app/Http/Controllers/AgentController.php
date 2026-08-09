@@ -143,6 +143,22 @@ class AgentController extends Controller
             return response()->json(['error' => 'Failed to get agent response'], 500);
         }
 
+        // Compact calls are Home's tip-card auto-fetches (see AGENT_ACTIVATE_PROMPT on the
+        // client), not messages in a real conversation - the client never restores or lists
+        // them. Persisting them would make them win the "most recent session" restore in
+        // history() and clutter the Chat History session list with entries that just come
+        // back on the next page load.
+        if ($request->boolean('compact')) {
+            return response()->json([
+                'session_id' => $request->input('session_id'),
+                'user_message' => $result['user_message'],
+                'agent' => $result['agent'],
+                'agent_response' => $result['agent_response'],
+                'created_at' => now()->toIso8601String(),
+                'mocked' => $result['mocked'] ?? false,
+            ], 200);
+        }
+
         $sessionId = $request->input('session_id') ?: (string) Str::uuid();
 
         $record = $request->user()->chatHistory()->create([

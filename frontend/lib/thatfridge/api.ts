@@ -293,7 +293,9 @@ export interface SendChatMessageResult {
   agent: ChatAgentName;
   user_message: string;
   agent_response: string;
-  session_id: string;
+  // Compact (Home tip-card) calls aren't persisted as a session server-side, so
+  // there's no session_id to hand back - see AgentController::send.
+  session_id: string | null;
   mocked: boolean;
 }
 

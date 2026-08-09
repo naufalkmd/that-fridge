@@ -75,6 +75,27 @@ class AgentControllerTest extends TestCase
         });
     }
 
+    public function test_compact_calls_are_not_persisted_to_chat_history(): void
+    {
+        $user = User::factory()->create();
+        config(['services.openrouter.key' => null]); // forces the mock path
+
+        // Compact calls are Home's tip-card auto-fetches, not real conversation turns -
+        // persisting them would make them win the "most recent session" restore and
+        // clutter the Chat History session list with entries that just come back on
+        // the next page load (see AgentController::send).
+        $response = $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'What should I restock?',
+            'agent' => 'Shopkeeper',
+            'compact' => true,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['agent' => 'Shopkeeper', 'mocked' => true]);
+
+        $this->assertDatabaseCount('chat_history', 0);
+    }
+
     public function test_chat_reads_the_users_remembered_facts_from_the_database(): void
     {
         $user = User::factory()->create();
