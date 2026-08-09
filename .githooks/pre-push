@@ -1,0 +1,16 @@
+#!/bin/sh
+# Runs both test suites before allowing a push, so a regression gets caught locally
+# instead of landing on main unnoticed. Skip once with `git push --no-verify`.
+# One-time setup per machine: git config core.hooksPath .githooks
+
+set -e
+
+repo_root=$(git rev-parse --show-toplevel)
+
+echo "pre-push: running backend tests..."
+(cd "$repo_root/backend" && php artisan test)
+
+echo "pre-push: running frontend tests..."
+(cd "$repo_root/frontend" && npm test)
+
+echo "pre-push: all tests passed."

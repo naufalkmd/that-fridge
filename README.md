@@ -71,6 +71,23 @@ curl http://127.0.0.1:8000/api/me \
   -H "Accept: application/json" -H "Authorization: Bearer <token from above>"
 ```
 
+## Testing
+
+```bash
+cd backend && php artisan test
+cd frontend && npm test
+```
+
+A tracked pre-push hook runs both suites automatically before every `git push`, so a
+regression gets caught locally instead of landing on `main` unnoticed. One-time setup
+per machine:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Skip it for one push with `git push --no-verify`.
+
 ## Requirements
 - PHP 8.2+, Composer
 - Node 18+
