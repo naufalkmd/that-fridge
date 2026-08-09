@@ -12,14 +12,6 @@ import MarkdownText from "../MarkdownText";
 
 const CLEAR_THRESHOLD = -80;
 const OFFSCREEN_X = -420;
-// Same landscape rectangle as the mobile hero card (roughly 420x236), not a square.
-const CAROUSEL_CARD_W = 300;
-const CAROUSEL_CARD_H = 168;
-// Negative: peek cards are scaled down (CAROUSEL_PEEK_SCALE), which already opens up
-// visual whitespace within their slot, so slots need to overlap to sit visually close.
-const CAROUSEL_GAP = -24;
-const CAROUSEL_PEEK_SCALE = 0.68;
-const CAROUSEL_PEEK_OPACITY = 0.38;
 
 function SwipeToClear({ marginBottom, onClear, children }: { marginBottom: number; onClear: () => void; children: React.ReactNode }) {
   const [dragX, setDragX] = useState(0);
@@ -116,7 +108,9 @@ export default function HomeScreen() {
 
   const totalItemCount = scopedItems.length;
   const expiringCount = scopedItems.filter((i) => i.freshness < 50).length;
-  const suggestionCount = getRecipesView(state).filter((r) => r.haveCount > 0).length;
+  const recipesView = getRecipesView(state);
+  const recipeIdeas = recipesView.filter((r) => r.haveCount > 0).sort((a, b) => b.haveCount / b.total - a.haveCount / a.total);
+  const suggestionCount = recipeIdeas.length;
 
   // Only "expiring" events are generated server-side (the daily freshness cron, one per
   // item — see backend/API.md); low-stock and recipe tips have no backend notification
@@ -162,6 +156,31 @@ export default function HomeScreen() {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+  const firstName = state.currentUser?.name?.split(/\s+/)[0];
+
+  // Desktop-only horizontally-scrolling rows (Needs attention / Your fridges / Recipe
+  // ideas) - refs so the row-arrow buttons can scroll the right track.
+  const attnRowRef = useRef<HTMLDivElement>(null);
+  const fridgesRowRef = useRef<HTMLDivElement>(null);
+  const recipesRowRef = useRef<HTMLDivElement>(null);
+  const scrollRowBy = (ref: React.RefObject<HTMLDivElement | null>, delta: number) => ref.current?.scrollBy({ left: delta, behavior: "smooth" });
+  const rowArrowStyle: React.CSSProperties = { width: 28, height: 28, borderRadius: 14, background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" };
+
+  // The right-edge fade only makes sense while there's actually more to scroll to - shown
+  // unconditionally, it sits on top of (and washes out) whatever card lands at the visible
+  // edge, including the "Add another fridge" form when that's the last, fully-visible card.
+  const [attnCanScrollRight, setAttnCanScrollRight] = useState(false);
+  const [fridgesCanScrollRight, setFridgesCanScrollRight] = useState(false);
+  const canScrollRight = (el: HTMLDivElement | null) => !!el && el.scrollWidth - el.clientWidth - el.scrollLeft > 4;
+  useEffect(() => {
+    const check = () => {
+      setAttnCanScrollRight(canScrollRight(attnRowRef.current));
+      setFridgesCanScrollRight(canScrollRight(fridgesRowRef.current));
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [expiringItems.length, fridgesView.length]);
 
   return (
     <>
@@ -492,9 +511,13 @@ export default function HomeScreen() {
 
     {/* ============ Wide layout (>=900px) — see .thatfridge-home-wide in globals.css ============ */}
     <div className="thatfridge-home-wide">
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24, marginBottom: 28 }}>
+      {/* header: title/greeting/fridge-scope toggle on the left, overview stats + bell on the right */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20, marginBottom: 28 }}>
         <div>
-          <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, marginBottom: 6 }}>Home</div>
+          <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: -0.4, marginBottom: 3 }}>Home</div>
+          <div style={{ fontSize: 12.5, color: "rgba(22,50,92,0.55)", marginBottom: 10 }}>
+            Welcome back{firstName ? `, ${firstName}` : ""} — here&apos;s what&apos;s going on in your kitchen.
+          </div>
           <div style={{ position: "relative", width: "fit-content" }}>
             <div
               onClick={() => setShowScopeMenu((v) => !v)}
@@ -525,289 +548,325 @@ export default function HomeScreen() {
             )}
           </div>
         </div>
-        <div
-          onClick={actions.openNotificationHistory}
-          style={{ position: "relative", width: 38, height: 38, borderRadius: 19, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
-        >
-          <Bell size={17} color="#16325c" strokeWidth={2} />
-          {pendingNotifications > 0 && (
-            <div style={{ position: "absolute", top: 4, right: 5, width: 8, height: 8, borderRadius: 4, background: "#c1452e", border: "1.5px solid #fff" }} />
-          )}
-        </div>
-      </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
-        {[
-          { label: "Items tracked", value: totalItemCount, color: "#2f6fb0", bg: "rgba(47,111,176,0.12)", Icon: Package, onClick: () => actions.goTab("inventory") },
-          {
-            label: "Expiring soon",
-            value: expiringCount,
-            color: "#c1452e",
-            bg: "rgba(193,69,46,0.12)",
-            Icon: TriangleAlert,
-            onClick: () => {
-              actions.setInventorySortMode("expiry");
-              actions.goTab("inventory");
-            },
-          },
-          { label: "Suggestions", value: suggestionCount, color: "#3f8f5c", bg: "rgba(63,143,92,0.12)", Icon: Sparkles, onClick: actions.openRecipesHub },
-        ].map((k) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "none" }}>
+          <div style={{ display: "flex", gap: 10 }}>
+            {[
+              { label: "Items tracked", value: totalItemCount, color: "#2f6fb0", bg: "rgba(47,111,176,0.12)", Icon: Package, onClick: () => actions.goTab("inventory") },
+              {
+                label: "Expiring soon",
+                value: expiringCount,
+                color: "#c1452e",
+                bg: "rgba(193,69,46,0.12)",
+                Icon: TriangleAlert,
+                onClick: () => {
+                  actions.setInventorySortMode("expiry");
+                  actions.goTab("inventory");
+                },
+              },
+              { label: "Suggestions", value: suggestionCount, color: "#3f8f5c", bg: "rgba(63,143,92,0.12)", Icon: Sparkles, onClick: actions.openRecipesHub },
+            ].map((k) => (
+              <div
+                key={k.label}
+                onClick={k.onClick}
+                style={{ display: "flex", alignItems: "center", gap: 9, background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 14, padding: "10px 13px", cursor: "pointer" }}
+              >
+                <div style={{ width: 28, height: 28, borderRadius: 9, background: k.bg, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                  <k.Icon size={13} color={k.color} strokeWidth={2.2} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1 }}>{k.value}</div>
+                  <div style={{ fontSize: 9.5, color: "rgba(22,50,92,0.55)", fontWeight: 600, marginTop: 2 }}>{k.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
           <div
-            key={k.label}
-            onClick={k.onClick}
-            style={{ display: "flex", alignItems: "center", gap: 14, background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 22, padding: "18px 20px", cursor: "pointer" }}
+            onClick={actions.openNotificationHistory}
+            style={{ position: "relative", width: 38, height: 38, borderRadius: 19, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
           >
-            <div style={{ width: 42, height: 42, borderRadius: 13, background: k.bg, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-              <k.Icon size={20} color={k.color} strokeWidth={2.2} />
-            </div>
-            <div>
-              <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>{k.value}</div>
-              <div style={{ fontSize: 12, color: "rgba(22,50,92,0.55)", fontWeight: 600, marginTop: 3 }}>{k.label}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 20, marginBottom: 20, alignItems: "start" }}>
-        <div style={{ background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 22, padding: 20, minWidth: 0 }}>
-          <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 14 }}>Your fridges</div>
-
-          <div style={{ position: "relative" }}>
-            {fridgeCount > 1 && (
-              <div
-                onClick={() => carouselIndex > 0 && actions.selectFridgeScope(carouselIndex - 1)}
-                style={{
-                  position: "absolute",
-                  left: -4,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  zIndex: 3,
-                  width: 34,
-                  height: 34,
-                  borderRadius: 17,
-                  background: "#fff",
-                  boxShadow: "0 6px 16px rgba(22,50,92,0.18)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: carouselIndex === 0 ? "default" : "pointer",
-                  opacity: carouselIndex === 0 ? 0.35 : 1,
-                }}
-              >
-                <ChevronLeft size={17} color="#16325c" strokeWidth={2.4} />
-              </div>
+            <Bell size={17} color="#16325c" strokeWidth={2} />
+            {pendingNotifications > 0 && (
+              <div style={{ position: "absolute", top: 4, right: 5, width: 8, height: 8, borderRadius: 4, background: "#c1452e", border: "1.5px solid #fff" }} />
             )}
-
-            <div style={{ overflow: "hidden", height: CAROUSEL_CARD_H + 10 }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  height: "100%",
-                  transform: `translateX(calc(50% - ${carouselIndex * (CAROUSEL_CARD_W + CAROUSEL_GAP) + CAROUSEL_CARD_W / 2}px))`,
-                  transition: "transform .45s cubic-bezier(.22,.9,.34,1)",
-                }}
-              >
-                {fridgesView.map((fr, i) => {
-                  const isActive = i === carouselIndex;
-                  return (
-                    <div
-                      key={fr.id}
-                      onClick={() => actions.selectFridgeScope(i)}
-                      style={{
-                        position: "relative",
-                        flex: `0 0 ${CAROUSEL_CARD_W}px`,
-                        marginRight: CAROUSEL_GAP,
-                        height: CAROUSEL_CARD_H,
-                        borderRadius: 20,
-                        overflow: "hidden",
-                        background: "linear-gradient(160deg,#234b7a,#16325c 70%)",
-                        cursor: "pointer",
-                        transform: `scale(${isActive ? 1 : CAROUSEL_PEEK_SCALE})`,
-                        opacity: isActive ? 1 : CAROUSEL_PEEK_OPACITY,
-                        boxShadow: isActive ? "0 20px 36px rgba(22,50,92,0.28)" : "0 8px 16px rgba(22,50,92,0.12)",
-                        transition: "all .45s cubic-bezier(.22,.9,.34,1)",
-                      }}
-                    >
-                      <img
-                        src={fr.photoSrc}
-                        alt="Fridge preview"
-                        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%" }}
-                      />
-                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(22,50,92,0.1) 0%, rgba(22,50,92,0.5) 100%)" }} />
-                      <div style={{ position: "absolute", top: 12, left: 12, background: "rgba(255,255,255,0.85)", color: "#16325c", fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 14, whiteSpace: "nowrap" }}>
-                        {fr.name}
-                      </div>
-                      <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.85)", color: fr.color, fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
-                        {fr.freshness}%
-                      </div>
-                      {isActive && (
-                        <>
-                          <div style={{ position: "absolute", bottom: 12, left: 14, background: "rgba(22,50,92,0.55)", backdropFilter: "blur(6px)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 20 }}>
-                            {fr.itemCount} items tracked
-                          </div>
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              actions.openStylePicker(i);
-                            }}
-                            style={{
-                              position: "absolute",
-                              right: 10,
-                              bottom: 10,
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 6,
-                              padding: "7px 10px",
-                              borderRadius: 999,
-                              background: "rgba(255,255,255,0.15)",
-                              backdropFilter: "blur(6px)",
-                              border: "1px solid rgba(255,255,255,0.14)",
-                              cursor: "pointer",
-                              boxShadow: "0 8px 16px rgba(10, 30, 60, 0.16)",
-                            }}
-                          >
-                            <Palette size={13} color="#fff" strokeWidth={2.2} />
-                            <div style={{ fontSize: 10.5, fontWeight: 800, color: "#fff" }}>Customize</div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {fridgeCount > 1 && (
-              <div
-                onClick={() => carouselIndex < fridgeCount - 1 && actions.selectFridgeScope(carouselIndex + 1)}
-                style={{
-                  position: "absolute",
-                  right: -4,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  zIndex: 3,
-                  width: 34,
-                  height: 34,
-                  borderRadius: 17,
-                  background: "#fff",
-                  boxShadow: "0 6px 16px rgba(22,50,92,0.18)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: carouselIndex === fridgeCount - 1 ? "default" : "pointer",
-                  opacity: carouselIndex === fridgeCount - 1 ? 0.35 : 1,
-                }}
-              >
-                <ChevronRight size={17} color="#16325c" strokeWidth={2.4} />
-              </div>
-            )}
-          </div>
-
-          {fridgeCount > 1 && (
-            <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 6 }}>
-              {fridgesView.map((fr, i) => (
-                <div
-                  key={fr.id}
-                  onClick={() => actions.selectFridgeScope(i)}
-                  style={{
-                    width: i === carouselIndex ? 18 : 7,
-                    height: 7,
-                    borderRadius: 4,
-                    background: i === carouselIndex ? "#16325c" : "rgba(22,50,92,0.25)",
-                    cursor: "pointer",
-                    transition: "all .3s ease",
-                  }}
-                />
-              ))}
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-            <input
-              value={state.newFridgeName}
-              onChange={(e) => actions.onNewFridgeNameChange(e.target.value)}
-              onKeyDown={(e) => actions.onNewFridgeNameKeyDown(e.key)}
-              placeholder="Add another fridge — e.g. Garage, Office…"
-              style={{ flex: 1, border: "1px solid rgba(22,50,92,0.12)", outline: "none", background: "#f9fbfd", borderRadius: 10, padding: "7px 12px", fontSize: 12.5, color: "#16325c", boxSizing: "border-box" }}
-            />
-            <div onClick={actions.addFridge} style={{ background: "#16325c", color: "#fff", fontSize: 12.5, fontWeight: 700, padding: "7px 16px", borderRadius: 10, cursor: "pointer", flex: "none" }}>
-              Add
-            </div>
           </div>
         </div>
+      </div>
 
-        <div style={{ background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 22, padding: 20 }}>
-          <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 14 }}>Needs attention</div>
-          {expiringItems.length === 0 ? (
-            <div style={{ fontSize: 12.5, color: "rgba(22,50,92,0.5)" }}>Nothing expiring soon — you&apos;re all set.</div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      {/* Needs attention: horizontally-scrolling row */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
+            <div style={{ fontSize: 15.5, fontWeight: 800 }}>Needs attention</div>
+            <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.55)" }}>
+              {expiringItems.length === 0 ? "All caught up" : `${expiringItems.length} item${expiringItems.length === 1 ? "" : "s"} expiring soon`}
+            </div>
+          </div>
+          {expiringItems.length > 0 && (
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => scrollRowBy(attnRowRef, -300)} style={rowArrowStyle}>
+                <ChevronLeft size={14} color="#16325c" strokeWidth={2.4} />
+              </button>
+              <button onClick={() => scrollRowBy(attnRowRef, 300)} style={rowArrowStyle}>
+                <ChevronRight size={14} color="#16325c" strokeWidth={2.4} />
+              </button>
+            </div>
+          )}
+        </div>
+        {expiringItems.length === 0 ? (
+          <div style={{ background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 22, padding: 20, fontSize: 12.5, color: "rgba(22,50,92,0.5)" }}>
+            Nothing expiring soon — you&apos;re all set.
+          </div>
+        ) : (
+          <div style={{ position: "relative" }}>
+            <div
+              ref={attnRowRef}
+              className="thatfridge-scroll-row"
+              onScroll={(e) => setAttnCanScrollRight(canScrollRight(e.currentTarget))}
+              style={{ display: "flex", gap: 14, overflowX: "auto", scrollSnapType: "x proximity", scrollBehavior: "smooth", padding: "4px 4px 6px", margin: "-4px -4px -6px" }}
+            >
               {expiringItems.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => actions.selectItem(item.id)}
-                  style={{ display: "flex", alignItems: "center", gap: 10, padding: 8, borderRadius: 12, cursor: "pointer" }}
+                  style={{ scrollSnapAlign: "start", flex: "none", width: 200, display: "flex", alignItems: "center", gap: 10, background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 16, padding: "10px 12px", cursor: "pointer" }}
                 >
-                  <div style={{ position: "relative", width: 34, height: 34, borderRadius: 10, background: "#eaf6ff", display: "flex", alignItems: "center", justifyContent: "center", flex: "none", padding: 6, boxSizing: "border-box" }}>
+                  <div style={{ position: "relative", width: 36, height: 36, borderRadius: 11, background: "#f9fbfd", display: "flex", alignItems: "center", justifyContent: "center", flex: "none", padding: 6, boxSizing: "border-box" }}>
                     <FoodIcon icon={item.icon} />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-                    <div style={{ fontSize: 11, color: "rgba(22,50,92,0.5)" }}>{item.fridgeName}</div>
-                  </div>
-                  <div style={{ fontSize: 10.5, fontWeight: 700, padding: "3px 8px", borderRadius: 20, flex: "none", color: freshColor(item.freshness), background: `${freshColor(item.freshness)}1a` }}>
-                    {daysLabel(item.days)}
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+                    <div style={{ fontSize: 10, color: "rgba(22,50,92,0.5)", marginBottom: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.fridgeName}</div>
+                    <div style={{ display: "inline-block", fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, color: freshColor(item.freshness), background: `${freshColor(item.freshness)}1a` }}>
+                      {daysLabel(item.days)}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
+            {attnCanScrollRight && (
+              <div style={{ position: "absolute", top: 0, right: 0, bottom: 6, width: 44, background: "linear-gradient(90deg, transparent, #eaf6ff)", pointerEvents: "none" }} />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Your fridges: bigger cards, click to focus (Netflix-style) */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
+            <div style={{ fontSize: 15.5, fontWeight: 800 }}>Your fridges</div>
+            <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.55)" }}>
+              {fridgeCount} space{fridgeCount === 1 ? "" : "s"}
+            </div>
+          </div>
+          {fridgeCount > 1 && (
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => scrollRowBy(fridgesRowRef, -320)} style={rowArrowStyle}>
+                <ChevronLeft size={14} color="#16325c" strokeWidth={2.4} />
+              </button>
+              <button onClick={() => scrollRowBy(fridgesRowRef, 320)} style={rowArrowStyle}>
+                <ChevronRight size={14} color="#16325c" strokeWidth={2.4} />
+              </button>
+            </div>
+          )}
+        </div>
+        <div style={{ position: "relative" }}>
+          <div
+            ref={fridgesRowRef}
+            className="thatfridge-scroll-row"
+            onScroll={(e) => setFridgesCanScrollRight(canScrollRight(e.currentTarget))}
+            style={{ display: "flex", gap: 22, overflowX: "auto", scrollSnapType: "x proximity", scrollBehavior: "smooth", padding: "18px 18px 22px", margin: "-18px -18px -22px" }}
+          >
+            {fridgesView.map((fr, i) => {
+              const isActive = i === carouselIndex;
+              return (
+                <div
+                  key={fr.id}
+                  onClick={() => actions.selectFridgeScope(i)}
+                  style={{
+                    scrollSnapAlign: "start",
+                    flex: "none",
+                    position: "relative",
+                    width: 300,
+                    height: 190,
+                    borderRadius: 20,
+                    overflow: "hidden",
+                    cursor: "pointer",
+                    transform: isActive ? "scale(1.1)" : "scale(0.93)",
+                    opacity: isActive ? 1 : 0.6,
+                    zIndex: isActive ? 4 : 1,
+                    // Blur radius kept small enough that the active card's shadow doesn't spread
+                    // across the row gap and wash over the (lower z-index) neighboring card.
+                    boxShadow: isActive ? "0 12px 22px rgba(22,50,92,0.28)" : "0 8px 18px rgba(22,50,92,0.16)",
+                    transition: "transform .24s cubic-bezier(.22,.9,.34,1), opacity .24s ease, box-shadow .24s ease",
+                  }}
+                >
+                  <img
+                    src={fr.photoSrc}
+                    alt="Fridge preview"
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%" }}
+                  />
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(22,50,92,0.1) 0%, rgba(22,50,92,0.5) 100%)" }} />
+                  <div style={{ position: "absolute", top: 12, left: 12, background: "rgba(255,255,255,0.9)", color: "#16325c", fontSize: 12.5, fontWeight: 800, padding: "6px 11px", borderRadius: 14, whiteSpace: "nowrap" }}>
+                    {fr.name}
+                  </div>
+                  <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.9)", color: fr.color, fontSize: 12.5, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
+                    {fr.freshness}%
+                  </div>
+                  <div style={{ position: "absolute", bottom: 12, left: 12, background: "rgba(22,50,92,0.5)", backdropFilter: "blur(6px)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 20 }}>
+                    {fr.itemCount} items
+                  </div>
+                  {isActive && (
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        actions.openStylePicker(i);
+                      }}
+                      style={{
+                        position: "absolute",
+                        right: 10,
+                        bottom: 10,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "7px 10px",
+                        borderRadius: 999,
+                        background: "rgba(255,255,255,0.15)",
+                        backdropFilter: "blur(6px)",
+                        border: "1px solid rgba(255,255,255,0.14)",
+                        cursor: "pointer",
+                        boxShadow: "0 8px 16px rgba(10, 30, 60, 0.16)",
+                      }}
+                    >
+                      <Palette size={13} color="#fff" strokeWidth={2.2} />
+                      <div style={{ fontSize: 10.5, fontWeight: 800, color: "#fff" }}>Customize</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div
+              style={{
+                scrollSnapAlign: "start",
+                flex: "none",
+                width: 300,
+                height: 190,
+                borderRadius: 20,
+                background: "rgba(255,255,255,0.5)",
+                border: "2px dashed rgba(22,50,92,0.22)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                padding: "0 26px",
+                boxSizing: "border-box",
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#16325c" }}>Add another fridge</div>
+              <input
+                value={state.newFridgeName}
+                onChange={(e) => actions.onNewFridgeNameChange(e.target.value)}
+                onKeyDown={(e) => actions.onNewFridgeNameKeyDown(e.key)}
+                placeholder="e.g. Garage, Office…"
+                style={{ width: "100%", border: "none", outline: "none", background: "#fff", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#16325c", boxSizing: "border-box" }}
+              />
+              <div onClick={actions.addFridge} style={{ background: "#16325c", color: "#fff", fontSize: 13, fontWeight: 700, padding: "9px 18px", borderRadius: 12, cursor: "pointer" }}>
+                Add fridge
+              </div>
+            </div>
+          </div>
+          {fridgesCanScrollRight && (
+            <div style={{ position: "absolute", top: -18, right: 0, bottom: -22, width: 44, background: "linear-gradient(90deg, transparent, #eaf6ff)", pointerEvents: "none" }} />
           )}
         </div>
       </div>
 
-      <div style={{ background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 22, padding: 20 }}>
-        <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 14 }}>Your crew</div>
-        <CrewScene scale={1.12} mapScale={0.9} mapOffsetY={-22} />
-      </div>
+      {/* Your crew: scene on the left, tips + recipe ideas on the right */}
+      <div style={{ background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 22, padding: 20, display: "grid", gridTemplateColumns: "minmax(0, 0.82fr) minmax(0, 1fr)", gap: 22 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <div style={{ fontSize: 14.5, fontWeight: 800 }}>Your crew</div>
+            <div onClick={actions.openRecipesHub} style={{ fontSize: 11.5, fontWeight: 700, color: "#2f6fb0", cursor: "pointer" }}>
+              Open →
+            </div>
+          </div>
+          <CrewScene />
+        </div>
 
-      <div style={{ height: 20 }} />
-
-      <div style={{ background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 22, padding: 20 }}>
-        <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 14 }}>Your crew</div>
-        {!guardianVisible && !lowStockVisible && !chefVisible ? (
-          <div style={{ fontSize: 12.5, color: "rgba(22,50,92,0.5)" }}>No tips right now — check back after your next shop.</div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
-            {chefVisible && (
-              <div onClick={actions.openRecipesHub} style={{ background: "#f9fbfd", borderRadius: 16, padding: 16, cursor: "pointer", display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 800 }}>Chef</div>
-                  <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#d99a2b", background: "#d99a2b1a", padding: "2px 7px", borderRadius: 6 }}>PICK</div>
-                </div>
-                <MarkdownText text={chefMessage} style={{ fontSize: 12, lineHeight: 1.5, color: "rgba(22,50,92,0.75)" }} />
-              </div>
-            )}
-            {guardianVisible && guardianItem && (
-              <div onClick={() => actions.selectItem(guardianItem.id)} style={{ background: "#f9fbfd", borderRadius: 16, padding: 16, cursor: "pointer", display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 800 }}>Guardian</div>
-                  <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#c1452e", background: "#c1452e1a", padding: "2px 7px", borderRadius: 6 }}>ALERT</div>
-                </div>
-                <MarkdownText text={guardianMessage} style={{ fontSize: 12, lineHeight: 1.5, color: "rgba(22,50,92,0.75)" }} />
-              </div>
-            )}
-            {lowStockVisible && lowStockItem && (
-              <div onClick={actions.openShoppingHub} style={{ background: "#f9fbfd", borderRadius: 16, padding: 16, cursor: "pointer", display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 800 }}>Shopkeeper</div>
-                  <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#3f8f5c", background: "#3f8f5c1a", padding: "2px 7px", borderRadius: 6 }}>LOW STOCK</div>
-                </div>
-                <MarkdownText text={shopkeeperMessage} style={{ fontSize: 12, lineHeight: 1.5, color: "rgba(22,50,92,0.75)" }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 18, minWidth: 0 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, color: "rgba(22,50,92,0.55)", marginBottom: 10 }}>Crew tips</div>
+            {!guardianVisible && !lowStockVisible && !chefVisible ? (
+              <div style={{ fontSize: 12, color: "rgba(22,50,92,0.5)" }}>No tips right now — check back after your next shop.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {guardianVisible && guardianItem && (
+                  <div
+                    onClick={() => actions.selectItem(guardianItem.id)}
+                    style={{ padding: "10px 12px", borderRadius: 12, background: "#f9fbfd", borderLeft: "3px solid #c1452e", cursor: "pointer" }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800 }}>Guardian</div>
+                      <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.3, color: "#c1452e", background: "#c1452e1a", padding: "2px 6px", borderRadius: 5 }}>ALERT</div>
+                    </div>
+                    <MarkdownText text={guardianMessage} style={{ fontSize: 11, lineHeight: 1.45, color: "rgba(22,50,92,0.75)" }} />
+                  </div>
+                )}
+                {chefVisible && (
+                  <div
+                    onClick={actions.openRecipesHub}
+                    style={{ padding: "10px 12px", borderRadius: 12, background: "#f9fbfd", borderLeft: "3px solid #d99a2b", cursor: "pointer" }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800 }}>Chef</div>
+                      <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.3, color: "#d99a2b", background: "#d99a2b1a", padding: "2px 6px", borderRadius: 5 }}>PICK</div>
+                    </div>
+                    <MarkdownText text={chefMessage} style={{ fontSize: 11, lineHeight: 1.45, color: "rgba(22,50,92,0.75)" }} />
+                  </div>
+                )}
+                {lowStockVisible && lowStockItem && (
+                  <div
+                    onClick={actions.openShoppingHub}
+                    style={{ padding: "10px 12px", borderRadius: 12, background: "#f9fbfd", borderLeft: "3px solid #3f8f5c", cursor: "pointer" }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800 }}>Shopkeeper</div>
+                      <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.3, color: "#3f8f5c", background: "#3f8f5c1a", padding: "2px 6px", borderRadius: 5 }}>LOW STOCK</div>
+                    </div>
+                    <MarkdownText text={shopkeeperMessage} style={{ fontSize: 11, lineHeight: 1.45, color: "rgba(22,50,92,0.75)" }} />
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
+
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, color: "rgba(22,50,92,0.55)", marginBottom: 10 }}>Recipe ideas</div>
+            {recipeIdeas.length === 0 ? (
+              <div style={{ fontSize: 12, color: "rgba(22,50,92,0.5)" }}>Add a few more items and recipe ideas will show up here.</div>
+            ) : (
+              <div ref={recipesRowRef} className="thatfridge-scroll-row" style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 2 }}>
+                {recipeIdeas.slice(0, 8).map((r) => (
+                  <div
+                    key={r.id}
+                    onClick={() => actions.openRecipeDetail(r.id)}
+                    style={{ flex: "none", width: 112, borderRadius: 12, overflow: "hidden", background: "#f9fbfd", cursor: "pointer" }}
+                  >
+                    <div style={{ position: "relative", width: "100%", height: 54, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <FoodIcon icon={r.icon} />
+                    </div>
+                    <div style={{ padding: "8px 9px 9px" }}>
+                      <div style={{ fontSize: 10.5, fontWeight: 800, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</div>
+                      <div style={{ fontSize: 9, color: r.ratioColor }}>{r.ratioLabel}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
     </>

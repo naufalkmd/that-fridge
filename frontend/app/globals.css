@@ -38,6 +38,16 @@ body {
   transform: translateX(-50%) scale(0.9);
 }
 
+/* Horizontally-scrolling card rows (desktop Home) - native scroll/swipe, just without
+   a visible scrollbar cluttering the row. */
+.thatfridge-scroll-row {
+  scrollbar-width: none;
+}
+
+.thatfridge-scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
 /* Auth screen: mobile is untouched full-bleed; >=640px swaps to a real split-screen
    (brand panel + form panel) rendered by AuthScreen itself — no more phone-card-on-dark-
    backdrop frame. Same "two clean states, one clean jump" approach as the signed-in app. */
