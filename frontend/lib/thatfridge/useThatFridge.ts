@@ -280,7 +280,7 @@ const UNDO_WINDOW_MS = 5000;
 // regardless of what's being asked. Falls back to Chef for general chit-chat,
 // since that was the original default and works fine for anything ambiguous.
 const AGENT_KEYWORDS: { agent: ChatAgentName; pattern: RegExp }[] = [
-  { agent: "Guardian", pattern: /\b(expir(e|es|ing|ed|y)|spoil(ed|ing)?|go(es|ing)? bad|moldy|mold|smell(s|y)?|safe to eat|food safety|throw (it|them) out)\b/i },
+  { agent: "Guardian", pattern: /\b(expir(e|es|ing|ed|y)|spoil(ed|ing)?|go(es|ing)? bad|moldy|mold|smell(s|y)?|safe to eat|food safety|throw (it|them) out|how('?s| is)( my| the)? fridge( doing)?)\b/i },
   { agent: "Shopkeeper", pattern: /\b(buy|shopping|shopping list|restock|grocery|groceries|running low|need to (get|buy)|out of|purchase)\b/i },
   { agent: "Organizer", pattern: /\b(organi[sz]e|storage|store (it|them)|arrange|where should|which shelf|fridge vs freezer|freezer or fridge)\b/i },
   { agent: "Chef", pattern: /\b(cook|recipe|meal|make (for|tonight)|dinner|lunch|breakfast|dish|ingredients)\b/i },

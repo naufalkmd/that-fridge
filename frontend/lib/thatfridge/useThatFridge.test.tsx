@@ -16,6 +16,14 @@ describe("routeChatAgent", () => {
     expect(routeChatAgent("my spinach is moldy")).toBe("Guardian");
   });
 
+  // Regression coverage: this exact string is one of the Chat screen's 4 built-in "Quick
+  // Chat" suggestions (ChatScreen.tsx's QUICK_ASKS). It matched none of the agent keyword
+  // patterns and fell through to the Chef default, so tapping it always got an off-topic
+  // recipe pitch instead of an actual answer about the fridge's status.
+  it("routes the 'How's my fridge doing?' quick-ask to Guardian, not the Chef default", () => {
+    expect(routeChatAgent("How's my fridge doing?")).toBe("Guardian");
+  });
+
   it("routes shopping language to Shopkeeper", () => {
     expect(routeChatAgent("what should I buy this week?")).toBe("Shopkeeper");
     expect(routeChatAgent("I'm running low on eggs")).toBe("Shopkeeper");
