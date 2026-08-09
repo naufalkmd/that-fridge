@@ -7,6 +7,7 @@ vi.mock("./api");
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.clearAllMocks();
   window.localStorage.clear();
 });
 
@@ -144,5 +145,107 @@ describe("useThatFridge shopping list seeding", () => {
     const names = result.current.state.shoppingList.map((i) => i.name);
     expect(names).toContain("Milk");
     expect(names).not.toContain("Rice");
+  });
+});
+
+describe("useThatFridge Organizer suggested moves", () => {
+  const setUpTwoItems = () => {
+    vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "My Fridge", sections: [] });
+    vi.mocked(api.createSection).mockResolvedValue({ id: "s1", name: "General", items: [] });
+    vi.mocked(api.createItem)
+      .mockResolvedValueOnce({ id: "i1", name: "Frozen Peas", icon: "leftovers", freshness: 90, days: 90, note: "", qty: 1, location: "fridge" })
+      .mockResolvedValueOnce({ id: "i2", name: "Milk", icon: "milk", freshness: 90, days: 7, note: "", qty: 1, location: "fridge" });
+    vi.mocked(api.sendChatMessage).mockResolvedValue({
+      agent: "Organizer",
+      user_message: "How should I organize my fridge right now?",
+      agent_response: "Looks fine.",
+      session_id: "session-1",
+      mocked: false,
+    });
+    vi.mocked(api.updateNotificationPrefs).mockResolvedValue({
+      expiryAlerts: true,
+      lowStock: true,
+      recipeTips: true,
+      weeklyDigest: false,
+      crewActionsEnabled: true,
+    });
+  };
+
+  const addTwoItems = async (result: { current: ReturnType<typeof useThatFridge> }) => {
+    act(() => result.current.actions.onManualNameChange("Frozen Peas"));
+    await act(async () => {
+      await result.current.actions.confirmManualAdd();
+    });
+    act(() => result.current.actions.onManualNameChange("Milk"));
+    await act(async () => {
+      await result.current.actions.confirmManualAdd();
+    });
+  };
+
+  it("only suggests moving the item whose AI-suggested location differs from its current one", async () => {
+    setUpTwoItems();
+    vi.mocked(api.suggestItemDetails).mockImplementation(async (name) =>
+      name === "Frozen Peas" ? { shelf_life_days: 180, location: "freezer" } : { shelf_life_days: 7, location: "fridge" }
+    );
+
+    const { result } = renderHook(() => useThatFridge());
+    await addTwoItems(result);
+
+    act(() => result.current.actions.toggleNotificationPref("crewActionsEnabled"));
+    expect(result.current.state.notificationPrefs.crewActionsEnabled).toBe(true);
+
+    act(() => result.current.actions.activateAgent("Organizer"));
+    await waitFor(() => expect(result.current.state.organizerMovesLoading).toBe(false));
+
+    expect(result.current.state.organizerSuggestedMoves).toEqual([{ itemId: "i1", itemName: "Frozen Peas", location: "freezer" }]);
+  });
+
+  it("does not check for moves when the user hasn't allowed the crew to take actions", async () => {
+    setUpTwoItems();
+    const suggestMock = vi.mocked(api.suggestItemDetails);
+
+    const { result } = renderHook(() => useThatFridge());
+    await addTwoItems(result);
+
+    // crewActionsEnabled defaults to false - never toggled on here.
+    expect(result.current.state.notificationPrefs.crewActionsEnabled).toBe(false);
+    act(() => result.current.actions.activateAgent("Organizer"));
+    await waitFor(() => expect(result.current.state.agentInsightLoading.Organizer).toBe(false));
+
+    expect(suggestMock).not.toHaveBeenCalled();
+    expect(result.current.state.organizerSuggestedMoves).toEqual([]);
+  });
+
+  it("applying a suggested move updates the item's location and clears just that suggestion", async () => {
+    setUpTwoItems();
+    // Both items come back mismatched here (everything "should" be in the freezer) - the
+    // point of this test is that applying one only clears and moves that one, not the other.
+    vi.mocked(api.suggestItemDetails).mockResolvedValue({ shelf_life_days: 180, location: "freezer" });
+    vi.mocked(api.updateItem).mockResolvedValue({
+      id: "i1",
+      name: "Frozen Peas",
+      icon: "leftovers",
+      freshness: 90,
+      days: 90,
+      note: "",
+      qty: 1,
+      location: "freezer",
+    });
+
+    const { result } = renderHook(() => useThatFridge());
+    await addTwoItems(result);
+    act(() => result.current.actions.toggleNotificationPref("crewActionsEnabled"));
+    act(() => result.current.actions.activateAgent("Organizer"));
+    await waitFor(() => expect(result.current.state.organizerSuggestedMoves).toHaveLength(2));
+
+    act(() => result.current.actions.applyOrganizerMove("i1", "freezer"));
+
+    const remaining = result.current.state.organizerSuggestedMoves;
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].itemId).toBe("i2"); // Milk's suggestion is untouched
+
+    const moved = result.current.state.fridges[0].sections[0].items.find((i) => i.id === "i1");
+    expect(moved?.location).toBe("freezer");
+    expect(result.current.state.undoMessage).toContain("Frozen Peas");
   });
 });

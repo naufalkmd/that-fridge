@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FOOD_ICON_KEYS, FOOD_TAB_ORDER, ICON_SECTION, guessIcon, guessLocation, suggestShelfLifeDays } from "./data";
+import { FOOD_ICON_KEYS, FOOD_TAB_ORDER, ICON_SECTION, STORAGE_LOCATIONS, guessIcon, guessLocation, suggestShelfLifeDays } from "./data";
 import {
   clearUsageHistoryApi,
   createFridge,
@@ -41,7 +41,7 @@ import {
   updateShoppingItem,
 } from "./api";
 import { ApiError, clearToken, getToken } from "./apiClient";
-import { findItem, findSectionIdForGroup } from "./selectors";
+import { findItem, findSectionIdForGroup, getActiveFridgeItems } from "./selectors";
 import type {
   AuthMode,
   ChatMessage,
@@ -197,6 +197,11 @@ export interface ThatFridgeState {
   // Guards the *auto* activation only (Home's tip cards) so a failed fetch doesn't retry on
   // every re-render; the manual "Activate"/"Refresh insight" button in FoodHub bypasses this.
   agentAutoFetched: Partial<Record<ChatAgentName, boolean>>;
+  // Items Organizer thinks are in the wrong spot, computed when "Activate Organizer" runs
+  // with notificationPrefs.crewActionsEnabled on - see checkOrganizerMoves(). Cleared on
+  // apply/dismiss and whenever a fresh Activate runs.
+  organizerSuggestedMoves: { itemId: string; itemName: string; location: StorageLocation }[];
+  organizerMovesLoading: boolean;
 }
 
 export function initialState(): ThatFridgeState {
@@ -263,13 +268,15 @@ export function initialState(): ThatFridgeState {
     stylingFridgeIndex: 0,
     undoMessage: null,
     syncError: null,
-    notificationPrefs: { expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false },
+    notificationPrefs: { expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false, crewActionsEnabled: false },
     notificationEvents: [],
     kitchenScope: "all",
     inventorySortMode: "category",
     agentInsights: {},
     agentInsightLoading: {},
     agentAutoFetched: {},
+    organizerSuggestedMoves: [],
+    organizerMovesLoading: false,
   };
 }
 
@@ -828,7 +835,54 @@ export function useThatFridge() {
         patch((s) => ({ agentInsightLoading: { ...s.agentInsightLoading, [agent]: false } }));
         patch({ syncError: describeError(err, "Couldn't reach the agent right now.") });
       });
+    // Organizer's insight text is just prose - it can't drive a real move (the model never
+    // sees item ids). So alongside it, when the user has allowed the crew to take actions,
+    // ask the same structured per-item endpoint the Add-item "Auto-fill" button already uses
+    // for every item in the active fridge, and surface the ones that don't match today.
+    if (agent === "Organizer" && state.notificationPrefs.crewActionsEnabled) {
+      checkOrganizerMoves();
+    }
   };
+
+  const checkOrganizerMoves = () => {
+    if (state.organizerMovesLoading) return;
+    const items = getActiveFridgeItems(state);
+    if (!items.length) return;
+    patch({ organizerMovesLoading: true, organizerSuggestedMoves: [] });
+    Promise.all(
+      items.map(async (item) => {
+        try {
+          const suggestion = await suggestItemDetails(item.name, item.icon);
+          const current = item.location || "fridge";
+          if (current !== suggestion.location) {
+            return { itemId: item.id, itemName: item.name, location: suggestion.location };
+          }
+        } catch {
+          // A single item's suggestion failing shouldn't block the rest - just skip it.
+        }
+        return null;
+      })
+    ).then((results) => {
+      patch({
+        organizerSuggestedMoves: results.filter((m) => m !== null),
+        organizerMovesLoading: false,
+      });
+    });
+  };
+
+  const applyOrganizerMove = (itemId: string, location: StorageLocation) => {
+    const move = state.organizerSuggestedMoves.find((m) => m.itemId === itemId);
+    const prevLocation = findItem(state, itemId)?.item.location || "fridge";
+    patch((s) => ({ organizerSuggestedMoves: s.organizerSuggestedMoves.filter((m) => m.itemId !== itemId) }));
+    setItemLocation(itemId, location);
+    const locationLabel = STORAGE_LOCATIONS.find((l) => l.key === location)?.label || location;
+    scheduleUndo(`Moved ${move?.itemName ?? "item"} to ${locationLabel}`, () => {
+      setItemLocation(itemId, prevLocation);
+    });
+  };
+
+  const dismissOrganizerMove = (itemId: string) =>
+    patch((s) => ({ organizerSuggestedMoves: s.organizerSuggestedMoves.filter((m) => m.itemId !== itemId) }));
   // Home's tip cards call this instead of activateAgent directly: fires the real agent call
   // at most once per session per agent (agentAutoFetched), so a slow network or a failed
   // request can't retry on every re-render the way an unguarded effect would.
@@ -1547,6 +1601,8 @@ export function useThatFridge() {
     setItemLocation,
     selectFridgeScope,
     setInventorySortMode,
+    applyOrganizerMove,
+    dismissOrganizerMove,
   };
 
   return { state, actions, chatScrollRef };

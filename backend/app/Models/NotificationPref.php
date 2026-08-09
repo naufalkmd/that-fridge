@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'expiry_alerts', 'low_stock', 'recipe_tips', 'weekly_digest'])]
+#[Fillable(['user_id', 'expiry_alerts', 'low_stock', 'recipe_tips', 'weekly_digest', 'crew_actions_enabled'])]
 class NotificationPref extends Model
 {
     protected function casts(): array
@@ -16,6 +16,7 @@ class NotificationPref extends Model
             'low_stock' => 'boolean',
             'recipe_tips' => 'boolean',
             'weekly_digest' => 'boolean',
+            'crew_actions_enabled' => 'boolean',
         ];
     }
 

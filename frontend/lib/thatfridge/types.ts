@@ -120,6 +120,7 @@ export interface NotificationPrefs {
   lowStock: boolean;
   recipeTips: boolean;
   weeklyDigest: boolean;
+  crewActionsEnabled: boolean;
 }
 
 export interface UsageHistoryEntry {

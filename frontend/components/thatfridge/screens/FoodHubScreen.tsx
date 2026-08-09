@@ -21,6 +21,7 @@ import FoodIcon from "../FoodIcon";
 import LocationIcon from "../LocationIcon";
 import MarkdownText from "../MarkdownText";
 import ShoppingListPanel from "../ShoppingListPanel";
+import Switch from "../Switch";
 
 const REC_SOURCE_META: Record<ShoppingRecommendation["source"], { label: string; color: string }> = {
   recipe: { label: "Recipe", color: "#b5702f" },
@@ -211,6 +212,41 @@ export default function FoodHubScreen() {
               {insightText ? <RefreshCw size={13} strokeWidth={2.4} /> : <Sparkles size={13} strokeWidth={2.4} />}
               {isActivating ? "Thinking…" : insightText ? "Refresh insight" : `Activate ${agentName}`}
             </div>
+
+            {activeTab === "organizer" && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 2, paddingTop: 8, borderTop: "1px solid rgba(22,50,92,0.08)" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(22,50,92,0.6)", lineHeight: 1.3 }}>Let Organizer move items for you</div>
+                <Switch on={!!state.notificationPrefs.crewActionsEnabled} onClick={() => actions.toggleNotificationPref("crewActionsEnabled")} />
+              </div>
+            )}
+
+            {activeTab === "organizer" && state.organizerMovesLoading && (
+              <div style={{ fontSize: 11, color: "rgba(22,50,92,0.45)", textAlign: "center" }}>Checking for misplaced items…</div>
+            )}
+
+            {activeTab === "organizer" &&
+              state.organizerSuggestedMoves.map((move) => {
+                const locationLabel = STORAGE_LOCATIONS.find((l) => l.key === move.location)?.label || move.location;
+                return (
+                  <div key={move.itemId} style={{ display: "flex", alignItems: "center", gap: 8, background: `${activeMeta.color}0f`, borderRadius: 10, padding: "7px 6px 7px 10px" }}>
+                    <div style={{ flex: 1, fontSize: 11.5, color: "#16325c", lineHeight: 1.3 }}>
+                      Move <strong>{move.itemName}</strong> to {locationLabel}
+                    </div>
+                    <div
+                      onClick={() => actions.applyOrganizerMove(move.itemId, move.location)}
+                      style={{ fontSize: 11, fontWeight: 700, color: activeMeta.color, cursor: "pointer", padding: "5px 9px", borderRadius: 8, background: "#fff", flex: "none" }}
+                    >
+                      Apply
+                    </div>
+                    <div
+                      onClick={() => actions.dismissOrganizerMove(move.itemId)}
+                      style={{ cursor: "pointer", color: "rgba(22,50,92,0.3)", flex: "none", display: "flex" }}
+                    >
+                      <X size={13} strokeWidth={2.4} />
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </div>
 
