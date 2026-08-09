@@ -45,6 +45,7 @@ class BarcodeController extends Controller
                 'icon' => $product['icon'],
                 'category' => $product['category'],
                 'default_shelf_life_days' => $product['default_shelf_life_days'],
+                'location' => $product['location'] ?? null,
                 'barcode' => $product['barcode'],
                 'image_url' => $product['image_url'],
             ],

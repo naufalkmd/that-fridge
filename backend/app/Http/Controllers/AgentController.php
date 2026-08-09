@@ -145,6 +145,7 @@ class AgentController extends Controller
             'agent' => $record->agent,
             'agent_response' => $record->agent_response,
             'created_at' => $record->created_at->toIso8601String(),
+            'mocked' => $result['mocked'] ?? false,
         ], 200);
     }
 

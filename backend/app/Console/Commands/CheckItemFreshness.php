@@ -30,6 +30,7 @@ class CheckItemFreshness extends Command
 
         $alreadyNotifiedItemIds = NotificationEvent::query()
             ->where('kind', 'expiring')
+            ->whereIn('item_id', $items->pluck('id'))
             ->pluck('item_id')
             ->flip();
 

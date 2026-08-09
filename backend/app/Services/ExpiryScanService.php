@@ -2,25 +2,18 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ExpiryScanService
 {
-    protected $apiKey;
-    protected $baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
-
-    public function __construct()
-    {
-        $this->apiKey = env('OPENROUTER_API_KEY');
-    }
+    public function __construct(protected OpenRouterClient $client) {}
 
     /**
      * Read a printed expiry/best-before date out of a package photo via a vision model.
      */
     public function extractDate($file)
     {
-        if (!$this->apiKey) {
+        if (! $this->client->available()) {
             return ['found' => false, 'reason' => 'no_api_key'];
         }
 
@@ -39,31 +32,21 @@ If the date format is ambiguous (e.g. DD/MM vs MM/DD), use nearby words like "EX
 If no date is visible or legible, set found to false and date to null.
 PROMPT;
 
-            $response = Http::withHeaders([
-                'Authorization' => "Bearer {$this->apiKey}",
-                'HTTP-Referer' => env('APP_URL'),
-                'X-Title' => 'ThatFridge',
-            ])->post($this->baseUrl, [
-                'model' => 'anthropic/claude-haiku-4.5',
-                'max_tokens' => 300,
-                'messages' => [
-                    [
-                        'role' => 'user',
-                        'content' => [
-                            ['type' => 'text', 'text' => $prompt],
-                            ['type' => 'image_url', 'image_url' => ['url' => $dataUrl]],
-                        ],
+            $result = $this->client->complete([
+                [
+                    'role' => 'user',
+                    'content' => [
+                        ['type' => 'text', 'text' => $prompt],
+                        ['type' => 'image_url', 'image_url' => ['url' => $dataUrl]],
                     ],
                 ],
-            ]);
+            ], 300);
 
-            if (!$response->successful()) {
-                Log::error('Expiry scan API error', ['status' => $response->status(), 'body' => $response->body()]);
-                return ['found' => false, 'reason' => 'api_error'];
+            if (! $result['ok']) {
+                return ['found' => false, 'reason' => $result['reason']];
             }
 
-            $text = $response->json('choices.0.message.content', '');
-            return $this->parseModelResponse($text);
+            return $this->parseModelResponse($result['content']);
         } catch (\Exception $e) {
             Log::error('Expiry scan failed', ['error' => $e->getMessage()]);
             return ['found' => false, 'reason' => 'exception'];

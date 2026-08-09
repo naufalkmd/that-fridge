@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Log;
 
 class BarcodeService
 {
+    public function __construct(protected AgentService $agentService) {}
+
     /**
      * Lookup product info by barcode, preferring our local cache over
      * Open Food Facts (product data barely changes once scanned).
@@ -23,6 +25,7 @@ class BarcodeService
                 'barcode' => $cached->barcode,
                 'icon' => $cached->icon,
                 'default_shelf_life_days' => $cached->default_shelf_life_days,
+                'location' => $cached->location,
                 'image_url' => $cached->image_url,
             ];
         }
@@ -49,40 +52,33 @@ class BarcodeService
     }
 
     /**
-     * Parse Open Food Facts response into our format
+     * Parse Open Food Facts response into our format. Open Food Facts' own "categories"
+     * field is unreliable (missing, in the wrong language, or overly granular), so instead
+     * of only matching it against a static keyword table, ask the model to estimate shelf
+     * life and storage location from the product name - same call AgentService::suggestItemDetails
+     * already makes for the manual "Auto-fill" button, with the same offline/no-key fallback.
      */
     private function parseResponse($data)
     {
         $product = $data['product'] ?? null;
-        
+
         if (!$product) {
             return null;
         }
 
+        $name = $product['product_name'] ?? 'Unknown Product';
+        $icon = $this->getIconFromCategory($product['categories'] ?? null);
+        $suggestion = $this->agentService->suggestItemDetails($name, $icon);
+
         return [
-            'name' => $product['product_name'] ?? 'Unknown Product',
+            'name' => $name,
             'category' => $product['categories'] ?? null,
             'barcode' => $product['code'] ?? null,
-            'icon' => $this->getIconFromCategory($product['categories'] ?? null),
-            'default_shelf_life_days' => $this->estimateShelfLife($product),
+            'icon' => $icon,
+            'default_shelf_life_days' => $suggestion['shelf_life_days'],
+            'location' => $suggestion['location'],
             'image_url' => $product['image_url'] ?? null,
         ];
-    }
-
-    /**
-     * Estimate shelf life based on product type
-     */
-    private function estimateShelfLife($product)
-    {
-        $categories = strtolower($product['categories'] ?? '');
-        
-        if (strpos($categories, 'dairy') !== false) return 14;
-        if (strpos($categories, 'meat') !== false) return 7;
-        if (strpos($categories, 'beverage') !== false) return 365;
-        if (strpos($categories, 'vegetable') !== false) return 14;
-        if (strpos($categories, 'fruit') !== false) return 10;
-        
-        return 30;
     }
 
     /**
