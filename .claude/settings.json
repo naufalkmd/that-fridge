@@ -37,7 +37,9 @@
       "Bash(node drive_wide_layout.mjs)",
       "Bash(node debug_wide_css.mjs)",
       "Bash(curl -s -o /dev/null -w \"http_code: %{http_code}\\\\n\" http://localhost:3001)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(echo \"---exit: $?---\")",
+      "Bash(grep -rn *)"
     ],
     "additionalDirectories": [
       "/private/tmp",
