@@ -49,6 +49,7 @@ PROMPT;
             return $this->parseModelResponse($result['content']);
         } catch (\Exception $e) {
             Log::error('Expiry scan failed', ['error' => $e->getMessage()]);
+
             return ['found' => false, 'reason' => 'exception'];
         }
     }
@@ -65,12 +66,12 @@ PROMPT;
 
         $data = json_decode($cleaned, true);
 
-        if (!is_array($data) || !($data['found'] ?? false)) {
+        if (! is_array($data) || ! ($data['found'] ?? false)) {
             return ['found' => false];
         }
 
         $date = $data['date'] ?? null;
-        if (!$date || !\DateTime::createFromFormat('Y-m-d', $date)) {
+        if (! $date || ! \DateTime::createFromFormat('Y-m-d', $date)) {
             return ['found' => false];
         }
 

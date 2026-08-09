@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 class OpenRouterClient
 {
     protected ?string $apiKey;
+
     protected string $baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
 
     public function __construct()
@@ -70,6 +71,7 @@ class OpenRouterClient
             return ['ok' => false, 'reason' => $reason, 'status' => $response->status()];
         } catch (\Exception $e) {
             Log::error('OpenRouter request failed', ['error' => $e->getMessage()]);
+
             return ['ok' => false, 'reason' => 'exception'];
         }
     }

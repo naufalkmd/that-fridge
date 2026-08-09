@@ -47,6 +47,7 @@ class BarcodeService
             return null; // Barcode not found
         } catch (\Exception $e) {
             Log::error('Barcode lookup failed', ['barcode' => $barcode, 'error' => $e->getMessage()]);
+
             return null;
         }
     }
@@ -62,7 +63,7 @@ class BarcodeService
     {
         $product = $data['product'] ?? null;
 
-        if (!$product) {
+        if (! $product) {
             return null;
         }
 
@@ -86,10 +87,12 @@ class BarcodeService
      */
     private function getIconFromCategory($category)
     {
-        if (!$category) return 'item';
-        
+        if (! $category) {
+            return 'item';
+        }
+
         $category = strtolower($category);
-        
+
         $icons = [
             'dairy' => 'milk',
             'milk' => 'milk',

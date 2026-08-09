@@ -55,7 +55,7 @@ class CheckItemFreshness extends Command
             }
 
             $message = $daysLeft < 0
-                ? "\"{$item->name}\" expired ".abs($daysLeft)." day(s) ago"
+                ? "\"{$item->name}\" expired ".abs($daysLeft).' day(s) ago'
                 : ($daysLeft === 0
                     ? "\"{$item->name}\" expires today"
                     : "\"{$item->name}\" expires in {$daysLeft} day(s)");

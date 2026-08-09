@@ -27,11 +27,11 @@ class BarcodeController extends Controller
         ]);
 
         $barcode = $request->input('barcode');
-        
+
         // Look up product from Open Food Facts
         $product = $this->barcodeService->lookup($barcode);
 
-        if (!$product) {
+        if (! $product) {
             return response()->json([
                 'error' => 'Barcode not found in database',
                 'barcode' => $barcode,

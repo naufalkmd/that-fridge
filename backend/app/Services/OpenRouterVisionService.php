@@ -28,6 +28,7 @@ class OpenRouterVisionService
             $contents = file_get_contents($imagePath);
             if ($contents === false) {
                 Log::error('OpenRouter vision call failed', ['error' => "Could not read image at {$imagePath}"]);
+
                 return null;
             }
 
@@ -50,6 +51,7 @@ class OpenRouterVisionService
             return $this->parseModelResponse($result['content']);
         } catch (\Exception $e) {
             Log::error('OpenRouter vision call failed', ['error' => $e->getMessage()]);
+
             return null;
         }
     }

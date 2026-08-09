@@ -1,0 +1,136 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\ChatHistory;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+
+class AgentControllerTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_chat_requires_authentication(): void
+    {
+        $response = $this->postJson('/api/chat', ['message' => 'hi', 'agent' => 'Chef']);
+
+        $response->assertStatus(401);
+    }
+
+    public function test_chat_rejects_an_unknown_agent(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'hi',
+            'agent' => 'NotARealAgent',
+        ]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_chat_persists_the_exchange_and_surfaces_the_mocked_flag(): void
+    {
+        $user = User::factory()->create();
+        config(['services.openrouter.key' => null]); // forces the mock path
+
+        $response = $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'What should I cook?',
+            'agent' => 'Chef',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['agent' => 'Chef', 'mocked' => true]);
+        $response->assertJsonStructure(['id', 'session_id', 'user_message', 'agent_response', 'created_at', 'mocked']);
+
+        $this->assertDatabaseHas('chat_history', [
+            'user_id' => $user->id,
+            'agent' => 'Chef',
+            'user_message' => 'What should I cook?',
+        ]);
+    }
+
+    public function test_chat_reuses_the_given_session_id(): void
+    {
+        $user = User::factory()->create();
+        config(['services.openrouter.key' => null]);
+        $sessionId = (string) Str::uuid();
+
+        $response = $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'hi',
+            'agent' => 'Chef',
+            'session_id' => $sessionId,
+        ]);
+
+        $response->assertJson(['session_id' => $sessionId]);
+    }
+
+    public function test_chat_returns_a_server_error_when_the_agent_service_fails(): void
+    {
+        $user = User::factory()->create();
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response(['error' => 'boom'], 500)]);
+
+        $response = $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'hi',
+            'agent' => 'Chef',
+        ]);
+
+        $response->assertStatus(500);
+        $this->assertDatabaseCount('chat_history', 0);
+    }
+
+    public function test_history_only_returns_the_authenticated_users_latest_session(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        ChatHistory::create([
+            'user_id' => $otherUser->id,
+            'session_id' => (string) Str::uuid(),
+            'agent' => 'Chef',
+            'user_message' => 'not mine',
+            'agent_response' => 'nope',
+        ]);
+
+        $sessionId = (string) Str::uuid();
+        ChatHistory::create([
+            'user_id' => $user->id,
+            'session_id' => $sessionId,
+            'agent' => 'Chef',
+            'user_message' => 'mine',
+            'agent_response' => 'yep',
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/chat');
+
+        $response->assertStatus(200);
+        $response->assertJson(['session_id' => $sessionId]);
+        $response->assertJsonCount(1, 'messages');
+    }
+
+    public function test_suggest_item_details_requires_a_name(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->postJson('/api/items/suggest-details', []);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_suggest_item_details_returns_shelf_life_and_location(): void
+    {
+        $user = User::factory()->create();
+        config(['services.openrouter.key' => null]);
+
+        $response = $this->actingAs($user)->postJson('/api/items/suggest-details', [
+            'name' => 'Frozen Peas',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['location' => 'freezer']);
+    }
+}

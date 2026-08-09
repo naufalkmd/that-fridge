@@ -16,6 +16,7 @@ class AgentController extends Controller
     }
 
     private const HISTORY_LIMIT = 200;
+
     private const SESSION_LIST_LIMIT = 50;
 
     /**
@@ -125,7 +126,7 @@ class AgentController extends Controller
             $request->input('usage_history')
         );
 
-        if (!$result) {
+        if (! $result) {
             return response()->json(['error' => 'Failed to get agent response'], 500);
         }
 
