@@ -817,7 +817,7 @@ export function useThatFridge() {
     patch((s) => ({ agentInsightLoading: { ...s.agentInsightLoading, [agent]: true } }));
     const inventory = buildInventorySummary(state.fridges[state.activeFridge]);
     const usageSummary = buildUsageSummary(state.usageHistory);
-    sendChatMessage(AGENT_ACTIVATE_PROMPT[agent], agent, inventory, undefined, usageSummary)
+    sendChatMessage(AGENT_ACTIVATE_PROMPT[agent], agent, inventory, undefined, usageSummary, true)
       .then((res) => {
         patch((s) => ({
           agentInsights: { ...s.agentInsights, [agent]: res.agent_response },

@@ -268,11 +268,12 @@ export function sendChatMessage(
   agent: ChatAgentName,
   inventory?: string,
   sessionId?: string | null,
-  usageHistory?: string
+  usageHistory?: string,
+  compact?: boolean
 ): Promise<SendChatMessageResult> {
   return apiFetch<SendChatMessageResult>("/chat", {
     method: "POST",
-    body: JSON.stringify({ message, agent, inventory, session_id: sessionId || undefined, usage_history: usageHistory }),
+    body: JSON.stringify({ message, agent, inventory, session_id: sessionId || undefined, usage_history: usageHistory, compact }),
   });
 }
 

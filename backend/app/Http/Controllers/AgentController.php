@@ -117,13 +117,19 @@ class AgentController extends Controller
             'inventory' => 'nullable|string', // JSON string of inventory for context
             'usage_history' => 'nullable|string', // frequently-used-items summary for context
             'session_id' => 'nullable|uuid',
+            // Set by the Home tip cards / "Activate" button, not real user chat messages -
+            // asks for one short plain-text sentence instead of a looser 2-3 sentence reply,
+            // so those small fixed-size cards read consistently instead of one being a plain
+            // sentence and another a bolded, bulleted mini-essay.
+            'compact' => 'nullable|boolean',
         ]);
 
         $result = $this->agentService->chat(
             $request->input('message'),
             $request->input('agent'),
             $request->input('inventory'),
-            $request->input('usage_history')
+            $request->input('usage_history'),
+            $request->boolean('compact')
         );
 
         if (! $result) {

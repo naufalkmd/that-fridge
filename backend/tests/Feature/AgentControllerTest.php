@@ -53,6 +53,27 @@ class AgentControllerTest extends TestCase
         ]);
     }
 
+    public function test_chat_passes_the_compact_flag_through_to_the_agent_service(): void
+    {
+        $user = User::factory()->create();
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'ok']]],
+        ], 200)]);
+
+        $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'hi',
+            'agent' => 'Chef',
+            'compact' => true,
+        ])->assertStatus(200);
+
+        Http::assertSent(function ($request) {
+            $systemPrompt = collect($request->data()['messages'])->firstWhere('role', 'system')['content'];
+
+            return str_contains($systemPrompt, 'ONE short, plain sentence');
+        });
+    }
+
     public function test_chat_reuses_the_given_session_id(): void
     {
         $user = User::factory()->create();

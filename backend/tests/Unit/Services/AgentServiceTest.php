@@ -46,6 +46,68 @@ class AgentServiceTest extends TestCase
         $this->assertSame('Try a spinach omelette!', $result['agent_response']);
     }
 
+    public function test_chat_strips_markdown_and_trims_to_one_sentence_when_compact_is_true(): void
+    {
+        // The compact-mode prompt instruction alone isn't reliably followed by the model (it
+        // still sometimes returns a **bold** label and multiple sentences), so this asserts
+        // the deterministic cleanup actually runs regardless of what the model returns.
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => '**ALERT:** Your milk expires today. Your eggs are fine.']]],
+        ], 200)]);
+
+        $result = app(AgentService::class)->chat('hi', 'Guardian', null, null, true);
+
+        $this->assertSame('ALERT: Your milk expires today.', $result['agent_response']);
+    }
+
+    public function test_chat_leaves_the_response_untouched_when_compact_is_false(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => '**ALERT:** Your milk expires today. Your eggs are fine.']]],
+        ], 200)]);
+
+        $result = app(AgentService::class)->chat('hi', 'Guardian');
+
+        $this->assertSame('**ALERT:** Your milk expires today. Your eggs are fine.', $result['agent_response']);
+    }
+
+    public function test_chat_asks_for_a_single_plain_sentence_when_compact_is_true(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'ok']]],
+        ], 200)]);
+
+        app(AgentService::class)->chat('hi', 'Chef', null, null, true);
+
+        Http::assertSent(function ($request) {
+            $systemPrompt = collect($request->data()['messages'])->firstWhere('role', 'system')['content'];
+
+            return str_contains($systemPrompt, 'ONE short, plain sentence')
+                && str_contains($systemPrompt, 'no markdown')
+                && ! str_contains($systemPrompt, '2-3 sentences');
+        });
+    }
+
+    public function test_chat_uses_the_looser_multi_sentence_instruction_by_default(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'ok']]],
+        ], 200)]);
+
+        app(AgentService::class)->chat('hi', 'Chef');
+
+        Http::assertSent(function ($request) {
+            $systemPrompt = collect($request->data()['messages'])->firstWhere('role', 'system')['content'];
+
+            return str_contains($systemPrompt, '2-3 sentences')
+                && ! str_contains($systemPrompt, 'ONE short, plain sentence');
+        });
+    }
+
     public function test_chat_returns_null_when_the_api_call_fails(): void
     {
         config(['services.openrouter.key' => 'test-key']);
