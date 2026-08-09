@@ -118,6 +118,43 @@ class AgentServiceTest extends TestCase
         $this->assertNull($result);
     }
 
+    public function test_chat_tells_the_model_not_to_invent_specifics_when_no_inventory_is_shared(): void
+    {
+        // Caught live: with no inventory, Shopkeeper confidently invented specific items,
+        // quantities, and "your shopping patterns" claims out of nothing, every time -
+        // Chef and Guardian happened to already handle this honestly on their own, but
+        // nothing enforced it, so it wasn't safe to assume every agent would.
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'ok']]],
+        ], 200)]);
+
+        app(AgentService::class)->chat('What should I restock?', 'Shopkeeper', null, null);
+
+        Http::assertSent(function ($request) {
+            $systemPrompt = collect($request->data()['messages'])->firstWhere('role', 'system')['content'];
+
+            return str_contains($systemPrompt, "Don't invent specific items")
+                && str_contains($systemPrompt, 'No inventory has been shared yet');
+        });
+    }
+
+    public function test_chat_omits_the_anti_hallucination_instruction_when_inventory_is_provided(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'ok']]],
+        ], 200)]);
+
+        app(AgentService::class)->chat('What should I restock?', 'Shopkeeper', 'Milk (1 left)', null);
+
+        Http::assertSent(function ($request) {
+            $systemPrompt = collect($request->data()['messages'])->firstWhere('role', 'system')['content'];
+
+            return ! str_contains($systemPrompt, 'No inventory has been shared yet');
+        });
+    }
+
     public function test_chat_fences_inventory_and_strips_forged_closing_delimiters(): void
     {
         config(['services.openrouter.key' => 'test-key']);

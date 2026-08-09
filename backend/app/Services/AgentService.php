@@ -133,14 +133,24 @@ class AgentService
             ? ' Respond in exactly ONE short, plain sentence (max 18 words) - no markdown, no bold, no bullet points, no headers, just plain text.'
             : ' Keep responses concise (2-3 sentences).';
 
+        // Caught live: with no inventory shared (a fresh account, or scoped to an empty
+        // fridge), Shopkeeper confidently invented specific items, quantities, and "your
+        // shopping patterns" / "since you use them regularly" claims out of nothing, every
+        // single time. Chef and Guardian already handled this honestly on their own ("what's
+        // in your fridge?"), but nothing enforced it, so it isn't safe to assume every agent
+        // (or every future prompt edit) will keep doing that by default - make it explicit.
+        $groundingInstruction = $inventory
+            ? ''
+            : " No inventory has been shared yet. Don't invent specific items, quantities, or claims about the user's habits or \"typical patterns\" - be upfront that you don't have their fridge contents yet, and either ask them to add items or give only general, non-item-specific advice.";
+
         $prompts = [
-            'Chef' => 'You are Chef. Your role is to suggest recipes and meals based on available ingredients. Prioritize items that are expiring soon. Be enthusiastic about cooking!'.$styleInstruction.$inventoryContext.$usageContext.$memoryContext,
+            'Chef' => 'You are Chef. Your role is to suggest recipes and meals based on available ingredients. Prioritize items that are expiring soon. Be enthusiastic about cooking!'.$styleInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext,
 
-            'Guardian' => 'You are Guardian. Your role is to alert about food safety issues and spoilage. Flag items that are expired or close to expiring. Warn about risky storage. Be direct and clear about safety concerns.'.$styleInstruction.$inventoryContext.$usageContext.$memoryContext,
+            'Guardian' => 'You are Guardian. Your role is to alert about food safety issues and spoilage. Flag items that are expired or close to expiring. Warn about risky storage. Be direct and clear about safety concerns.'.$styleInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext,
 
-            'Organizer' => 'You are Organizer. Your role is to suggest optimal storage locations for items (fridge, freezer, pantry). Explain why each storage location is best for that food. Help maintain an organized fridge.'.$styleInstruction.$inventoryContext.$usageContext.$memoryContext,
+            'Organizer' => 'You are Organizer. Your role is to suggest optimal storage locations for items (fridge, freezer, pantry). Explain why each storage location is best for that food. Help maintain an organized fridge.'.$styleInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext,
 
-            'Shopkeeper' => "You are Shopkeeper. Your role is to recommend items to buy based on what's running low in inventory and what the user tends to buy again. Suggest quantities. Consider meal planning needs.".$styleInstruction.$inventoryContext.$usageContext.$memoryContext,
+            'Shopkeeper' => "You are Shopkeeper. Your role is to recommend items to buy based on what's running low in inventory and what the user tends to buy again. Suggest quantities. Consider meal planning needs.".$styleInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext,
         ];
 
         return $prompts[$agent] ?? $prompts['Chef'];
