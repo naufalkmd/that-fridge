@@ -199,7 +199,7 @@ export interface ThatFridgeState {
   agentAutoFetched: Partial<Record<ChatAgentName, boolean>>;
 }
 
-function initialState(): ThatFridgeState {
+export function initialState(): ThatFridgeState {
   return {
     screen: "home",
     lastMainScreen: "home",
@@ -286,7 +286,7 @@ const AGENT_KEYWORDS: { agent: ChatAgentName; pattern: RegExp }[] = [
   { agent: "Chef", pattern: /\b(cook|recipe|meal|make (for|tonight)|dinner|lunch|breakfast|dish|ingredients)\b/i },
 ];
 
-function routeChatAgent(message: string): ChatAgentName {
+export function routeChatAgent(message: string): ChatAgentName {
   for (const { agent, pattern } of AGENT_KEYWORDS) {
     if (pattern.test(message)) return agent;
   }
