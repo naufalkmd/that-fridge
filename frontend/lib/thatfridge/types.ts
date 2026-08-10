@@ -74,12 +74,22 @@ export interface ShoppingItem {
   checked: boolean;
 }
 
+export interface RecipeSuggestion {
+  name: string;
+  description: string;
+  minutes: number;
+  category: RecipeCategory | null;
+  ingredients: { name: string }[];
+  steps: string[];
+}
+
 export interface ChatMessage {
   id: string;
   from: "bot" | "user";
   text: string;
   attachmentName?: string;
   mocked?: boolean;
+  suggestedRecipe?: RecipeSuggestion | null;
 }
 
 export interface ChatThread {

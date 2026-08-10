@@ -9,9 +9,14 @@ class AgentService
     public function __construct(protected OpenRouterClient $client) {}
 
     /**
-     * Send message to agent and get response
+     * Send message to agent and get response. $history is the prior turns of this same
+     * session (oldest first, alternating user/assistant) - without it, every follow-up
+     * message is answered in total isolation, with no idea what the model itself just said
+     * (see AgentController::send, which assembles this from chat_history). That was making
+     * "show me the recipe" right after Chef proposed one read as a context-free, ambiguous
+     * request every time, so it kept re-asking instead of ever committing to a recipe.
      */
-    public function chat($message, $agent = 'Chef', $inventory = null, $usageHistory = null, $compact = false, $memory = null)
+    public function chat($message, $agent = 'Chef', $inventory = null, $usageHistory = null, $compact = false, $memory = null, $history = [])
     {
         // Mock response if no API key (for testing)
         if (! $this->client->available()) {
@@ -21,22 +26,32 @@ class AgentService
         try {
             $systemPrompt = $this->getSystemPrompt($agent, $inventory, $usageHistory, $compact, $memory);
 
+            // Non-compact Chef replies can carry a trailing <<<RECIPE_SUGGESTION>>> JSON block
+            // on top of the normal prose - give those a bit more room than the 1000-token
+            // default so a real recipe suggestion doesn't get truncated mid-JSON.
+            $maxTokens = (! $compact && $agent === 'Chef') ? 1300 : 1000;
+
             $result = $this->client->complete([
                 ['role' => 'system', 'content' => $systemPrompt],
+                ...$history,
                 ['role' => 'user', 'content' => $message],
-            ], 1000);
+            ], $maxTokens);
 
             if ($result['ok']) {
                 $response = $result['content'] ?: 'No response';
+                $recipeSuggestion = null;
 
                 if ($compact) {
                     $response = $this->enforceCompactStyle($response);
+                } else {
+                    ['text' => $response, 'recipe' => $recipeSuggestion] = $this->extractRecipeSuggestion($response);
                 }
 
                 return [
                     'agent' => $agent,
                     'user_message' => $message,
                     'agent_response' => $response,
+                    'recipe_suggestion' => $recipeSuggestion,
                     'status' => 'success',
                     'mocked' => false,
                 ];
@@ -91,6 +106,7 @@ class AgentService
             'agent' => $agent,
             'user_message' => $message,
             'agent_response' => $mockResponses[$agent] ?? $mockResponses['Chef'],
+            'recipe_suggestion' => null,
             'status' => 'success',
             'mocked' => true,
         ];
@@ -143,8 +159,17 @@ class AgentService
             ? ''
             : " No inventory has been shared yet. Don't invent specific items, quantities, or claims about the user's habits or \"typical patterns\" - be upfront that you don't have their fridge contents yet, and either ask them to add items or give only general, non-item-specific advice.";
 
+        // Lets the frontend turn a chat reply into an actual "Add to recipes" card instead of
+        // being stuck as prose the user has to retype by hand. Chef-only and skipped in
+        // compact mode (the Home tip card is a single sentence with nowhere to put a card).
+        // The block is appended, not the whole reply, so the normal conversational text still
+        // renders unchanged for every message that isn't a concrete recipe recommendation.
+        $recipeBlockInstruction = ($agent === 'Chef' && ! $compact)
+            ? ' Whenever your reply gives the user a complete, ready-to-cook recipe for one specific dish - whether you\'re the one suggesting it, or they asked for it by name, or they\'re confirming/accepting a dish you proposed earlier in this conversation ("yes", "make it", "show me the recipe", etc.) - end your reply with this block on its own lines, with nothing after it: <<<RECIPE_SUGGESTION>>> then one line of valid JSON with keys "name" (string), "description" (a punchy one-sentence flavor description, max 90 characters), "minutes" (integer), "category" (one of breakfast, lunch, dinner, dessert, snack, quick, or null), "ingredients" (array of {"name": string}), "steps" (array of strings) - then <<<END_RECIPE_SUGGESTION>>>. Do not ask a follow-up question in the same reply as this block - if you\'re including it, commit to the recipe. Only skip the block when you genuinely don\'t have enough information yet to name one specific dish.'
+            : '';
+
         $prompts = [
-            'Chef' => 'You are Chef. Your role is to suggest recipes and meals based on available ingredients. Prioritize items that are expiring soon. Be enthusiastic about cooking!'.$styleInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext,
+            'Chef' => 'You are Chef. Your role is to suggest recipes and meals based on available ingredients. Prioritize items that are expiring soon. Be enthusiastic about cooking!'.$styleInstruction.$groundingInstruction.$recipeBlockInstruction.$inventoryContext.$usageContext.$memoryContext,
 
             'Guardian' => 'You are Guardian. Your role is to alert about food safety issues and spoilage. Flag items that are expired or close to expiring. Warn about risky storage. Be direct and clear about safety concerns.'.$styleInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext,
 
@@ -164,10 +189,84 @@ class AgentService
     private function sanitizeUntrustedBlock(string $text): string
     {
         return str_ireplace(
-            ['<<<INVENTORY>>>', '<<<END_INVENTORY>>>', '<<<USAGE_HISTORY>>>', '<<<END_USAGE_HISTORY>>>', '<<<MEMORY>>>', '<<<END_MEMORY>>>'],
+            [
+                '<<<INVENTORY>>>', '<<<END_INVENTORY>>>', '<<<USAGE_HISTORY>>>', '<<<END_USAGE_HISTORY>>>', '<<<MEMORY>>>', '<<<END_MEMORY>>>',
+                '<<<RECIPE_SUGGESTION>>>', '<<<END_RECIPE_SUGGESTION>>>',
+            ],
             '',
             $text
         );
+    }
+
+    private const RECIPE_SUGGESTION_START = '<<<RECIPE_SUGGESTION>>>';
+
+    private const RECIPE_SUGGESTION_END = '<<<END_RECIPE_SUGGESTION>>>';
+
+    private const RECIPE_CATEGORIES = ['breakfast', 'lunch', 'dinner', 'dessert', 'snack', 'quick'];
+
+    /**
+     * Pulls Chef's trailing <<<RECIPE_SUGGESTION>>>{json}<<<END_RECIPE_SUGGESTION>>> block (see
+     * the recipeBlockInstruction in getSystemPrompt) out of the reply and returns it as a
+     * separate, validated structure - so the frontend gets plain conversational text plus a
+     * clean recipe object, instead of having to parse the model's raw output itself. The block
+     * is always stripped from the returned text even if the JSON turns out malformed, so a
+     * broken block never leaks into the chat bubble.
+     */
+    private function extractRecipeSuggestion(string $text): array
+    {
+        $start = strpos($text, self::RECIPE_SUGGESTION_START);
+        $end = strpos($text, self::RECIPE_SUGGESTION_END);
+
+        if ($start === false || $end === false || $end < $start) {
+            return ['text' => $text, 'recipe' => null];
+        }
+
+        $before = substr($text, 0, $start);
+        $after = substr($text, $end + strlen(self::RECIPE_SUGGESTION_END));
+        $cleanedText = trim($before.$after);
+
+        $jsonRaw = trim(substr($text, $start + strlen(self::RECIPE_SUGGESTION_START), $end - ($start + strlen(self::RECIPE_SUGGESTION_START))));
+        $parsed = json_decode($jsonRaw, true);
+
+        if (! is_array($parsed)) {
+            return ['text' => $cleanedText, 'recipe' => null];
+        }
+
+        $name = is_string($parsed['name'] ?? null) ? trim($parsed['name']) : '';
+        $description = is_string($parsed['description'] ?? null) ? mb_substr(trim($parsed['description']), 0, 120) : '';
+        $ingredients = is_array($parsed['ingredients'] ?? null)
+            ? array_values(array_filter(array_map(
+                fn ($ing) => is_array($ing) && is_string($ing['name'] ?? null) ? ['name' => trim($ing['name'])] : null,
+                $parsed['ingredients']
+            )))
+            : [];
+        $ingredients = array_values(array_filter($ingredients, fn ($ing) => $ing['name'] !== ''));
+        $steps = is_array($parsed['steps'] ?? null)
+            ? array_values(array_filter(array_map(
+                fn ($s) => is_string($s) ? trim($s) : '',
+                $parsed['steps']
+            )))
+            : [];
+        $minutes = is_numeric($parsed['minutes'] ?? null) ? max(1, min(1440, (int) $parsed['minutes'])) : 20;
+        $category = is_string($parsed['category'] ?? null) && in_array($parsed['category'], self::RECIPE_CATEGORIES, true)
+            ? $parsed['category']
+            : null;
+
+        if ($name === '' || ! $ingredients || ! $steps) {
+            return ['text' => $cleanedText, 'recipe' => null];
+        }
+
+        return [
+            'text' => $cleanedText,
+            'recipe' => [
+                'name' => $name,
+                'description' => $description,
+                'minutes' => $minutes,
+                'category' => $category,
+                'ingredients' => $ingredients,
+                'steps' => $steps,
+            ],
+        ];
     }
 
     /**

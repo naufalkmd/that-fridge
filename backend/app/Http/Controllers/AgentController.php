@@ -19,6 +19,8 @@ class AgentController extends Controller
 
     private const SESSION_LIST_LIMIT = 50;
 
+    private const CHAT_CONTEXT_TURNS = 8;
+
     /**
      * Get the authenticated user's most recent chat session, oldest message first.
      * Used to restore "where you left off" on login/refresh - not the entire
@@ -38,7 +40,7 @@ class AgentController extends Controller
             ->where('session_id', $latestSessionId)
             ->orderBy('created_at')
             ->limit(self::HISTORY_LIMIT)
-            ->get(['id', 'agent', 'user_message', 'agent_response', 'created_at']);
+            ->get(['id', 'agent', 'user_message', 'agent_response', 'recipe_suggestion', 'created_at']);
 
         return response()->json([
             'messages' => $messages,
@@ -74,7 +76,7 @@ class AgentController extends Controller
             ->where('session_id', $sessionId)
             ->orderBy('created_at')
             ->limit(self::HISTORY_LIMIT)
-            ->get(['id', 'agent', 'user_message', 'agent_response', 'created_at']);
+            ->get(['id', 'agent', 'user_message', 'agent_response', 'recipe_suggestion', 'created_at']);
 
         if ($messages->isEmpty()) {
             return response()->json(['error' => 'Session not found'], 404);
@@ -100,6 +102,39 @@ class AgentController extends Controller
         }
 
         return response()->json(['session_id' => $sessionId, 'deleted' => true], 200);
+    }
+
+    /**
+     * The prior turns of the session this message belongs to, oldest first, as alternating
+     * user/assistant messages ready to hand to the model - without this, AgentService::chat
+     * only ever sees the single latest message, so every follow-up ("show me the recipe",
+     * "yes", "make it spicier") reads as a context-free, ambiguous request with no memory of
+     * what the assistant itself just said. A compact call or a brand-new conversation (no
+     * session_id yet) has nothing to fetch.
+     */
+    private function recentSessionHistory(Request $request): array
+    {
+        $sessionId = $request->input('session_id');
+        if (! $sessionId || $request->boolean('compact')) {
+            return [];
+        }
+
+        $rows = $request->user()->chatHistory()
+            ->where('session_id', $sessionId)
+            ->orderByDesc('created_at')
+            ->limit(self::CHAT_CONTEXT_TURNS)
+            ->get(['user_message', 'agent_response'])
+            ->reverse();
+
+        $messages = [];
+        foreach ($rows as $row) {
+            $messages[] = ['role' => 'user', 'content' => $row->user_message];
+            if ($row->agent_response) {
+                $messages[] = ['role' => 'assistant', 'content' => $row->agent_response];
+            }
+        }
+
+        return $messages;
     }
 
     /**
@@ -136,7 +171,8 @@ class AgentController extends Controller
             $request->input('inventory'),
             $request->input('usage_history'),
             $request->boolean('compact'),
-            $memory
+            $memory,
+            $this->recentSessionHistory($request)
         );
 
         if (! $result) {
@@ -154,6 +190,7 @@ class AgentController extends Controller
                 'user_message' => $result['user_message'],
                 'agent' => $result['agent'],
                 'agent_response' => $result['agent_response'],
+                'recipe_suggestion' => $result['recipe_suggestion'] ?? null,
                 'created_at' => now()->toIso8601String(),
                 'mocked' => $result['mocked'] ?? false,
             ], 200);
@@ -166,6 +203,7 @@ class AgentController extends Controller
             'agent' => $result['agent'],
             'user_message' => $result['user_message'],
             'agent_response' => $result['agent_response'],
+            'recipe_suggestion' => $result['recipe_suggestion'] ?? null,
         ]);
 
         return response()->json([
@@ -174,6 +212,7 @@ class AgentController extends Controller
             'user_message' => $record->user_message,
             'agent' => $record->agent,
             'agent_response' => $record->agent_response,
+            'recipe_suggestion' => $record->recipe_suggestion,
             'created_at' => $record->created_at->toIso8601String(),
             'mocked' => $result['mocked'] ?? false,
         ], 200);

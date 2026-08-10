@@ -219,6 +219,13 @@ body {
     max-width: 820px;
   }
 
+  /* ChatScreen's input footer reserves 80px of bottom padding on mobile to clear the fixed
+     TabBar sitting on top of it - .thatfridge-tabbar is display:none here, so that space is
+     just dead gray padding with nothing to clear. !important overrides the inline style. */
+  .thatfridge-chat-footer {
+    padding-bottom: 8px !important;
+  }
+
   .thatfridge-profile-shell .thatfridge-profile-backdrop {
     display: none;
   }

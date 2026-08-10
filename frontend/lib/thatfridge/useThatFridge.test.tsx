@@ -79,6 +79,7 @@ describe("useThatFridge sendChat", () => {
         user_message: "What's expiring?",
         agent_response: "Try using it soon!",
         session_id: "session-1",
+        recipe_suggestion: null,
         mocked: false,
       });
       await firstReplyPromise;
@@ -92,6 +93,7 @@ describe("useThatFridge sendChat", () => {
       user_message: "What should I cook?",
       agent_response: "How about pasta?",
       session_id: "session-1",
+      recipe_suggestion: null,
       mocked: false,
     });
 
@@ -164,6 +166,7 @@ describe("useThatFridge Organizer suggested moves", () => {
       user_message: "How should I organize my fridge right now?",
       agent_response: "Looks fine.",
       session_id: "session-1",
+      recipe_suggestion: null,
       mocked: false,
     });
     vi.mocked(api.updateNotificationPrefs).mockResolvedValue({
@@ -261,6 +264,7 @@ describe("useThatFridge memory", () => {
       user_message: "What can I cook?",
       agent_response: "Try pasta!",
       session_id: "session-1",
+      recipe_suggestion: null,
       mocked: false,
     });
 
@@ -294,6 +298,7 @@ describe("useThatFridge memory", () => {
       user_message: "hi",
       agent_response: "hello!",
       session_id: "session-1",
+      recipe_suggestion: null,
       mocked: false,
     });
     vi.mocked(api.extractMemory).mockRejectedValueOnce(new Error("network error"));
@@ -317,6 +322,7 @@ describe("useThatFridge memory", () => {
       user_message: "hi",
       agent_response: "hello!",
       session_id: "session-1",
+      recipe_suggestion: null,
       mocked: false,
     });
     vi.mocked(api.extractMemory).mockResolvedValueOnce(["Vegetarian", "Dislikes cilantro"]);
@@ -434,6 +440,7 @@ describe("useThatFridge memory undo", () => {
       user_message: "hi",
       agent_response: "hello!",
       session_id: "session-1",
+      recipe_suggestion: null,
       mocked: false,
     });
   };

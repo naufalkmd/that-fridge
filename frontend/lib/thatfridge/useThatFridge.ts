@@ -66,6 +66,7 @@ import type {
   Recipe,
   RecipeCategory,
   RecipeIngredient,
+  RecipeSuggestion,
   Screen,
   ScanMethod,
   ShoppingItem,
@@ -447,7 +448,12 @@ export function useThatFridge() {
         if (cancelled) return;
         const restoredChatMessages: ChatMessage[] = chatHistory.messages.flatMap((row) => [
           { id: `u${row.id}`, from: "user" as const, text: row.user_message },
-          ...(row.agent_response ? [{ id: `b${row.id}`, from: "bot" as const, text: row.agent_response }] : []),
+          // A reply can be just the recipe card with no surrounding prose (agent_response ""),
+          // so this can't gate on agent_response alone - that would silently drop the whole
+          // bot message, card included, on restore.
+          ...(row.agent_response || row.recipe_suggestion
+            ? [{ id: `b${row.id}`, from: "bot" as const, text: row.agent_response ?? "", suggestedRecipe: row.recipe_suggestion }]
+            : []),
         ]);
         patch({
           fridges,
@@ -835,6 +841,30 @@ export function useThatFridge() {
     }
   };
 
+  // Chef's chat replies can carry a structured recipe_suggestion (see
+  // AgentService::extractRecipeSuggestion on the backend) that renders as a card with an "Add
+  // to recipes" action - this turns that into a real saved custom recipe, same endpoint
+  // RecipeFormSheet uses. Ingredient icons are guessed the same way manual entry does
+  // (guessIcon, "leftovers" fallback), since the model only knows plain ingredient names, not
+  // this app's icon key vocabulary.
+  const addSuggestedRecipeToLibrary = async (suggestion: RecipeSuggestion) => {
+    const payload = {
+      name: suggestion.name,
+      minutes: suggestion.minutes,
+      category: suggestion.category,
+      ingredients: suggestion.ingredients.map((ing) => ({ icon: guessIcon(ing.name) || "leftovers", name: ing.name })),
+      steps: suggestion.steps,
+    };
+    try {
+      const created = await createRecipe(payload);
+      patch((s) => ({ recipes: [...s.recipes, created] }));
+      return created;
+    } catch (err) {
+      patch({ syncError: describeError(err, "Couldn't save that recipe.") });
+      return null;
+    }
+  };
+
   const deleteCustomRecipe = (id: string) => {
     const recipe = state.recipes.find((r) => r.id === id);
     if (!recipe || !recipe.isCustom) return;
@@ -923,7 +953,9 @@ export function useThatFridge() {
       .then((result) => {
         const restored: ChatMessage[] = result.messages.flatMap((row) => [
           { id: `u${row.id}`, from: "user" as const, text: row.user_message },
-          ...(row.agent_response ? [{ id: `b${row.id}`, from: "bot" as const, text: row.agent_response }] : []),
+          ...(row.agent_response || row.recipe_suggestion
+            ? [{ id: `b${row.id}`, from: "bot" as const, text: row.agent_response ?? "", suggestedRecipe: row.recipe_suggestion }]
+            : []),
         ]);
         patch({ chatMessages: restored.length ? restored : DEFAULT_CHAT_MESSAGES, currentSessionId: result.session_id });
       })
@@ -946,7 +978,13 @@ export function useThatFridge() {
     const usageSummary = buildUsageSummary(state.usageHistory);
     sendChatMessage(trimmed, routeChatAgent(trimmed), inventory, state.currentSessionId, usageSummary)
       .then((res) => {
-        const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: res.agent_response, mocked: res.mocked };
+        const reply: ChatMessage = {
+          id: "b" + Date.now(),
+          from: "bot",
+          text: res.agent_response,
+          mocked: res.mocked,
+          suggestedRecipe: res.recipe_suggestion,
+        };
         patch((s) => ({ chatMessages: [...s.chatMessages, reply], isTyping: false, currentSessionId: res.session_id }));
 
         // Fire-and-forget: extracts/updates remembered facts from this exchange. Never
@@ -1773,6 +1811,7 @@ export function useThatFridge() {
     isRecipeFormValid,
     saveRecipeForm,
     deleteCustomRecipe,
+    addSuggestedRecipeToLibrary,
     onNewShoppingChange,
     onNewShoppingKeyDown,
     addShoppingItem,

@@ -6,6 +6,7 @@ import type {
   Recipe,
   RecipeCategory,
   RecipeIngredient,
+  RecipeSuggestion,
   Section,
   ShoppingItem,
   StorageLocation,
@@ -293,6 +294,11 @@ export interface SendChatMessageResult {
   agent: ChatAgentName;
   user_message: string;
   agent_response: string;
+  // Present when Chef's reply recommends one specific recipe - see the
+  // <<<RECIPE_SUGGESTION>>> block AgentService::extractRecipeSuggestion parses out of the raw
+  // model output server-side, so this is already clean structured data by the time it reaches
+  // the client.
+  recipe_suggestion: RecipeSuggestion | null;
   // Compact (Home tip-card) calls aren't persisted as a session server-side, so
   // there's no session_id to hand back - see AgentController::send.
   session_id: string | null;
@@ -318,6 +324,7 @@ export interface ChatHistoryRow {
   agent: ChatAgentName;
   user_message: string;
   agent_response: string | null;
+  recipe_suggestion: RecipeSuggestion | null;
   created_at: string;
 }
 

@@ -1,9 +1,80 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ArrowUp, ChevronLeft, History, Mic, Paperclip, Square, SquarePen, X } from "lucide-react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { ArrowUp, Check, ChevronLeft, History, Mic, Paperclip, Square, SquarePen, X } from "lucide-react";
+import type { RecipeSuggestion } from "@/lib/thatfridge/types";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import MarkdownText from "../MarkdownText";
+import RecipePixelCard from "../RecipePixelCard";
+
+function RecipeSuggestionCard({ suggestion }: { suggestion: RecipeSuggestion }) {
+  const { state, actions } = useThatFridgeCtx();
+  const [dismissed, setDismissed] = useState(false);
+  // Chat history (and its recipe cards) is restored fresh on every reload, so "already added"
+  // can't live in this component's local state alone - it'd forget and let the same card
+  // create a duplicate recipe on a second click after a refresh. Deriving it from whether a
+  // matching recipe already exists (same pattern RecipeDetailSheet uses for "on shopping
+  // list") makes it survive reloads for free.
+  const alreadyAdded = state.recipes.some((r) => r.name.trim().toLowerCase() === suggestion.name.trim().toLowerCase());
+  const [adding, setAdding] = useState(false);
+  const status = dismissed ? "dismissed" : adding ? "adding" : alreadyAdded ? "added" : "idle";
+
+  if (status === "dismissed") return null;
+
+  const handleAdd = async () => {
+    setAdding(true);
+    await actions.addSuggestedRecipeToLibrary(suggestion);
+    setAdding(false);
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+      <RecipePixelCard suggestion={suggestion} />
+      {status === "added" ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: "#3f8f5c" }}>
+          <Check size={14} strokeWidth={2.4} />
+          Added to your recipe book
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 8, width: "100%", maxWidth: 220 }}>
+          <div
+            onClick={handleAdd}
+            style={{
+              flex: 1,
+              textAlign: "center",
+              padding: "9px 10px",
+              borderRadius: 12,
+              background: status === "adding" ? "rgba(22,50,92,0.35)" : "#16325c",
+              color: "#fff",
+              fontSize: 12.5,
+              fontWeight: 700,
+              cursor: status === "adding" ? "default" : "pointer",
+            }}
+          >
+            {status === "adding" ? "Adding…" : "Add to recipe book"}
+          </div>
+          <div
+            onClick={() => status !== "adding" && setDismissed(true)}
+            style={{
+              flex: "none",
+              textAlign: "center",
+              padding: "9px 14px",
+              borderRadius: 12,
+              background: "#fff",
+              border: "1px solid rgba(22,50,92,0.14)",
+              color: "#16325c",
+              fontSize: 12.5,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            No thanks
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const QUICK_ASKS = ["What's expiring soon?", "What can I cook tonight?", "What do I need to buy?", "How's my fridge doing?"];
 
@@ -163,28 +234,37 @@ export default function ChatScreen() {
 
       <div ref={chatScrollRef} className="thatfridge-wide-content thatfridge-wide-content--chat" style={{ flex: 1, overflowY: "auto", padding: "16px 16px 8px", display: "flex", flexDirection: "column", gap: 12, boxSizing: "border-box" }}>
         {state.chatMessages.map((m) => (
-          <div key={m.id} style={{ display: "flex", justifyContent: m.from === "user" ? "flex-end" : "flex-start", animation: "pop .18s ease-out" }}>
-            {m.from === "bot" ? (
-              <div style={{ maxWidth: "82%", background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.08)", borderRadius: "4px 16px 16px 16px", padding: "11px 14px" }}>
-                {m.mocked && (
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(22,50,92,0.45)", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.4 }}>
-                    Demo reply — no AI key configured
+          <Fragment key={m.id}>
+            {(m.from === "user" || m.text) && (
+              <div style={{ display: "flex", justifyContent: m.from === "user" ? "flex-end" : "flex-start", animation: "pop .18s ease-out" }}>
+                {m.from === "bot" ? (
+                  <div style={{ maxWidth: "82%", background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.08)", borderRadius: "4px 16px 16px 16px", padding: "11px 14px" }}>
+                    {m.mocked && (
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(22,50,92,0.45)", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.4 }}>
+                        Demo reply — no AI key configured
+                      </div>
+                    )}
+                    {m.text && <MarkdownText text={m.text} />}
+                  </div>
+                ) : (
+                  <div style={{ maxWidth: "78%", background: "#16325c", color: "#fff", borderRadius: "16px 4px 16px 16px", padding: "11px 14px", fontSize: 13.5, lineHeight: 1.5 }}>
+                    {m.attachmentName && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: m.text ? 6 : 0, fontSize: 12, fontWeight: 700, opacity: 0.85 }}>
+                        <Paperclip size={13} />
+                        {m.attachmentName}
+                      </div>
+                    )}
+                    {m.text}
                   </div>
                 )}
-                <MarkdownText text={m.text} />
-              </div>
-            ) : (
-              <div style={{ maxWidth: "78%", background: "#16325c", color: "#fff", borderRadius: "16px 4px 16px 16px", padding: "11px 14px", fontSize: 13.5, lineHeight: 1.5 }}>
-                {m.attachmentName && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: m.text ? 6 : 0, fontSize: 12, fontWeight: 700, opacity: 0.85 }}>
-                    <Paperclip size={13} />
-                    {m.attachmentName}
-                  </div>
-                )}
-                {m.text}
               </div>
             )}
-          </div>
+            {m.suggestedRecipe && (
+              <div style={{ display: "flex", justifyContent: "flex-start", animation: "pop .18s ease-out" }}>
+                <RecipeSuggestionCard suggestion={m.suggestedRecipe} />
+              </div>
+            )}
+          </Fragment>
         ))}
 
         {state.isTyping && (
@@ -210,7 +290,7 @@ export default function ChatScreen() {
         </div>
       )}
 
-      <div style={{ flex: "none", padding: "8px 0 80px", background: "rgba(255,255,255,0.7)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(22,50,92,0.08)" }}>
+      <div className="thatfridge-chat-footer" style={{ flex: "none", padding: "8px 0 80px", background: "rgba(255,255,255,0.7)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(22,50,92,0.08)" }}>
         <div className="thatfridge-wide-content thatfridge-wide-content--chat" style={{ padding: "0 14px", boxSizing: "border-box" }}>
           {attachmentName && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#eef4fa", borderRadius: 14, padding: "6px 10px", marginBottom: 8, fontSize: 12, fontWeight: 600, color: "#16325c", width: "fit-content" }}>
