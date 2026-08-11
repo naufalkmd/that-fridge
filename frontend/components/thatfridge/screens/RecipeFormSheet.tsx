@@ -32,7 +32,7 @@ export default function RecipeFormSheet() {
   const isEditing = !!state.recipeFormId;
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)" }}>
+    <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)", zIndex: 10 }}>
       <div
         style={{
           position: "absolute",

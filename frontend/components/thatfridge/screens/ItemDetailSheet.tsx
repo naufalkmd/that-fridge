@@ -38,14 +38,32 @@ export default function ItemDetailSheet() {
 
   if (state.isEditingItem) {
     return (
-      <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)", overflowY: "auto" }}>
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, background: "#fff", borderRadius: "28px 28px 0 0", padding: "14px 22px 30px", animation: "pop .22s ease-out" }}>
-          <div onClick={() => {
-            setShowIconPicker(false);
-            actions.cancelEditItem();
-          }} style={{ width: 36, height: 5, borderRadius: 3, background: "rgba(22,50,92,0.18)", margin: "0 auto 20px", cursor: "pointer" }} />
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Edit item</div>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)", zIndex: 10 }}>
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            top: 60,
+            background: "#fff",
+            borderRadius: "28px 28px 0 0",
+            padding: "14px 22px 30px",
+            animation: "pop .22s ease-out",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div
+            onClick={() => {
+              setShowIconPicker(false);
+              actions.cancelEditItem();
+            }}
+            style={{ width: 36, height: 5, borderRadius: 3, background: "rgba(22,50,92,0.18)", margin: "0 auto 20px", cursor: "pointer", flex: "none" }}
+          />
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, flex: "none" }}>Edit item</div>
 
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           <div style={{ marginBottom: 14 }}>
             <div style={labelStyle}>NAME</div>
             <input
@@ -145,8 +163,9 @@ export default function ItemDetailSheet() {
               style={fieldStyle}
             />
           </div>
+          </div>
 
-          <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 10, flex: "none" }}>
             <div onClick={() => {
             setShowIconPicker(false);
             actions.cancelEditItem();
@@ -173,7 +192,7 @@ export default function ItemDetailSheet() {
               Save
             </div>
           </div>
-          <div onClick={actions.discardItem} style={{ textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#c1452e", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
+          <div onClick={actions.discardItem} style={{ textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#c1452e", fontSize: 13.5, fontWeight: 700, cursor: "pointer", flex: "none" }}>
             Delete item
           </div>
         </div>
@@ -192,9 +211,24 @@ export default function ItemDetailSheet() {
         : `${item.name} is holding up well — no action needed.`;
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)" }}>
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, background: "#fff", borderRadius: "28px 28px 0 0", padding: "14px 22px 34px", animation: "pop .22s ease-out" }}>
-        <div onClick={actions.goHome} style={{ width: 36, height: 5, borderRadius: 3, background: "rgba(22,50,92,0.18)", margin: "0 auto 20px", cursor: "pointer" }} />
+    <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)", zIndex: 10 }}>
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          top: 60,
+          background: "#fff",
+          borderRadius: "28px 28px 0 0",
+          padding: "14px 22px 34px",
+          animation: "pop .22s ease-out",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div onClick={actions.goHome} style={{ width: 36, height: 5, borderRadius: 3, background: "rgba(22,50,92,0.18)", margin: "0 auto 20px", cursor: "pointer", flex: "none" }} />
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, position: "relative" }}>
           <div style={{ width: 88, height: 88, background: "#eaf6ff", borderRadius: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div style={{ position: "relative", width: 52, height: 52 }}>
@@ -253,7 +287,9 @@ export default function ItemDetailSheet() {
           <div style={{ fontSize: 12.5, lineHeight: 1.45, color: "#16325c" }}>{tip}</div>
         </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, flex: "none" }}>
           {item.opened ? (
             <div style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "rgba(22,50,92,0.06)", color: "rgba(22,50,92,0.4)", fontSize: 13.5, fontWeight: 700 }}>
               Opened

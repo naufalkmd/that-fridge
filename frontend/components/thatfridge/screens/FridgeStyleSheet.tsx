@@ -35,7 +35,7 @@ export default function FridgeStyleSheet() {
   };
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)" }}>
+    <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)", zIndex: 10 }}>
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, top: 120, background: "#fff", borderRadius: "28px 28px 0 0", padding: "14px 22px 26px", animation: "pop .22s ease-out", display: "flex", flexDirection: "column" }}>
         <div onClick={actions.closeStylePicker} style={{ width: 36, height: 5, borderRadius: 3, background: "rgba(22,50,92,0.18)", margin: "0 auto 16px", cursor: "pointer", flex: "none" }} />
         <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>Manage fridge</div>

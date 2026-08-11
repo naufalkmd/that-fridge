@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Refrigerator } from "lucide-react";
+import type { Screen } from "@/lib/thatfridge/types";
 import { ThatFridgeProvider, useThatFridgeCtx } from "./ThatFridgeContext";
 import TabBar from "./TabBar";
 import Sidebar from "./Sidebar";
@@ -24,23 +26,18 @@ import AIDataScreen from "./screens/AIDataScreen";
 import AboutScreen from "./screens/AboutScreen";
 import AuthScreen from "./screens/AuthScreen";
 
-function Screens() {
-  const { state } = useThatFridgeCtx();
-  switch (state.screen) {
+// These four render as a dimmed backdrop + slide-up sheet on top of whatever was already on
+// screen (see each file's `rgba(22,50,92,0.32)` backdrop), not as a full replacement screen.
+const SHEET_SCREENS = new Set<Screen>(["itemDetail", "fridgeStyle", "recipeDetail", "recipeForm"]);
+
+function BaseScreen({ screen }: { screen: Screen }) {
+  switch (screen) {
     case "home":
       return <HomeScreen />;
     case "inventory":
       return <InventoryScreen />;
     case "foodHub":
       return <FoodHubScreen />;
-    case "recipeDetail":
-      return <RecipeDetailSheet />;
-    case "recipeForm":
-      return <RecipeFormSheet />;
-    case "fridgeStyle":
-      return <FridgeStyleSheet />;
-    case "itemDetail":
-      return <ItemDetailSheet />;
     case "add":
       return <AddScreen />;
     case "search":
@@ -60,6 +57,36 @@ function Screens() {
     default:
       return null;
   }
+}
+
+function Screens() {
+  const { state } = useThatFridgeCtx();
+  // A sheet (edit item / edit fridge / recipe detail / recipe form) has no full screen of its
+  // own - it opens over whatever screen was already showing, dimmed behind it. state.screen
+  // switches exclusively to the sheet's own value while it's open, so the base screen has to
+  // be remembered separately rather than read straight off state.screen, or it would unmount
+  // and leave the backdrop over blank space instead of the real screen underneath. This is
+  // React's documented "adjusting state during render" pattern (comparing against the last-seen
+  // prop and calling setState directly in the render body) rather than a ref, since refs can't
+  // be read or written during render.
+  const [prevScreen, setPrevScreen] = useState(state.screen);
+  const [baseScreen, setBaseScreen] = useState<Screen>(SHEET_SCREENS.has(state.screen) ? "home" : state.screen);
+  if (state.screen !== prevScreen) {
+    setPrevScreen(state.screen);
+    if (!SHEET_SCREENS.has(state.screen)) {
+      setBaseScreen(state.screen);
+    }
+  }
+
+  return (
+    <>
+      <BaseScreen screen={baseScreen} />
+      {state.screen === "itemDetail" && <ItemDetailSheet />}
+      {state.screen === "fridgeStyle" && <FridgeStyleSheet />}
+      {state.screen === "recipeDetail" && <RecipeDetailSheet />}
+      {state.screen === "recipeForm" && <RecipeFormSheet />}
+    </>
+  );
 }
 
 const shellStyle: React.CSSProperties = {
