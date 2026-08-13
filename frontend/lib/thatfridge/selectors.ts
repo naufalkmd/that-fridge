@@ -1,6 +1,6 @@
 import { EMPTY_ICON, FOOD_GROUP_LABELS, FRIDGE_STYLES, ICON_LABELS, ICON_SECTION, ICONS } from "./data";
 import { freshColor } from "./utils";
-import type { Item, RecipeCategory, Section } from "./types";
+import type { Item, RecipeAttachment, RecipeCategory, Section } from "./types";
 import type { ThatFridgeState } from "./useThatFridge";
 
 export function findSectionIdForGroup(sections: Section[], group: string): string | null {
@@ -114,6 +114,7 @@ export interface RecipeView {
   category: RecipeCategory | null;
   isFavorite: boolean;
   isCustom: boolean;
+  attachments: RecipeAttachment[];
   haveCount: number;
   total: number;
   ratioLabel: string;
@@ -145,6 +146,7 @@ export function getRecipesView(state: ThatFridgeState): RecipeView[] {
       category: r.category,
       isFavorite: r.isFavorite,
       isCustom: r.isCustom,
+      attachments: r.attachments,
       ingredientsView,
       stepsView: r.steps.map((text, i) => ({ text, n: i + 1 })),
       haveCount,

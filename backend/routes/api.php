@@ -86,6 +86,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/recipes', [RecipeController::class, 'index']);
     Route::post('/recipes', [RecipeController::class, 'store']);
+    Route::post('/recipes/attachments', [RecipeController::class, 'uploadAttachment']);
+    Route::post('/recipes/import-link', [RecipeController::class, 'importFromLink']);
     Route::patch('/recipes/{recipe}', [RecipeController::class, 'update']);
     Route::delete('/recipes/{recipe}', [RecipeController::class, 'destroy']);
     Route::post('/recipes/{recipe}/favorite', [RecipeController::class, 'favorite']);

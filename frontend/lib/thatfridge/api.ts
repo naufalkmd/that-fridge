@@ -4,6 +4,7 @@ import type {
   NotificationEvent,
   NotificationPrefs,
   Recipe,
+  RecipeAttachment,
   RecipeCategory,
   RecipeIngredient,
   RecipeSuggestion,
@@ -24,6 +25,7 @@ export interface RecipeInput {
   category?: RecipeCategory | null;
   ingredients: RecipeIngredient[];
   steps: string[];
+  attachments?: RecipeAttachment[];
 }
 
 export function createRecipe(data: RecipeInput): Promise<Recipe> {
@@ -44,6 +46,22 @@ export function favoriteRecipe(id: string): Promise<Recipe> {
 
 export function unfavoriteRecipe(id: string): Promise<Recipe> {
   return apiFetch<Recipe>(`/recipes/${id}/favorite`, { method: "DELETE" });
+}
+
+export function uploadRecipeAttachment(file: File): Promise<RecipeAttachment> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiFetch<RecipeAttachment>("/recipes/attachments", { method: "POST", body: formData });
+}
+
+export interface RecipeLinkImportResult {
+  found: boolean;
+  recipe?: RecipeSuggestion;
+  reason?: string;
+}
+
+export function importRecipeFromLink(url: string): Promise<RecipeLinkImportResult> {
+  return apiFetch<RecipeLinkImportResult>("/recipes/import-link", { method: "POST", body: JSON.stringify({ url }) });
 }
 
 interface RawSection {

@@ -41,6 +41,11 @@ export interface RecipeIngredient {
 
 export type RecipeCategory = "breakfast" | "lunch" | "dinner" | "dessert" | "snack" | "quick";
 
+export interface RecipeAttachment {
+  type: "image" | "video";
+  url: string;
+}
+
 export interface Recipe {
   id: string;
   name: string;
@@ -48,6 +53,7 @@ export interface Recipe {
   category: RecipeCategory | null;
   ingredients: RecipeIngredient[];
   steps: string[];
+  attachments: RecipeAttachment[];
   isFavorite: boolean;
   isCustom: boolean;
 }

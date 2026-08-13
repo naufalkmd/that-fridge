@@ -30,6 +30,7 @@ import {
   fetchRecipes,
   fetchShoppingItems,
   fetchUsageHistory,
+  importRecipeFromLink,
   login,
   logout,
   recordItemUsage,
@@ -48,6 +49,7 @@ import {
   updateNotificationPrefs,
   updateRecipe,
   updateShoppingItem,
+  uploadRecipeAttachment,
 } from "./api";
 import { ApiError, clearToken, getToken } from "./apiClient";
 import { findItem, findSectionIdForGroup, getActiveFridgeItems } from "./selectors";
@@ -64,6 +66,7 @@ import type {
   NotificationEvent,
   NotificationPrefs,
   Recipe,
+  RecipeAttachment,
   RecipeCategory,
   RecipeIngredient,
   RecipeSuggestion,
@@ -202,6 +205,11 @@ export interface ThatFridgeState {
   recipeFormCategory: RecipeCategory | null;
   recipeFormIngredients: RecipeIngredient[];
   recipeFormSteps: string[];
+  recipeFormAttachments: RecipeAttachment[];
+  recipeFormAttachmentUploading: boolean;
+  recipeFormLinkUrl: string;
+  recipeFormLinkImporting: boolean;
+  recipeFormLinkError: string | null;
   newShoppingText: string;
   shoppingList: ShoppingItem[];
   shoppingSeeded: boolean;
@@ -292,6 +300,11 @@ export function initialState(): ThatFridgeState {
     recipeFormCategory: null,
     recipeFormIngredients: [],
     recipeFormSteps: [],
+    recipeFormAttachments: [],
+    recipeFormAttachmentUploading: false,
+    recipeFormLinkUrl: "",
+    recipeFormLinkImporting: false,
+    recipeFormLinkError: null,
     newShoppingText: "",
     shoppingList: [],
     shoppingSeeded: false,
@@ -768,6 +781,11 @@ export function useThatFridge() {
       recipeFormCategory: null,
       recipeFormIngredients: [{ icon: "leftovers", name: "" }],
       recipeFormSteps: [""],
+      recipeFormAttachments: [],
+      recipeFormAttachmentUploading: false,
+      recipeFormLinkUrl: "",
+      recipeFormLinkImporting: false,
+      recipeFormLinkError: null,
     });
 
   const openEditRecipeForm = (id: string) => {
@@ -781,6 +799,11 @@ export function useThatFridge() {
       recipeFormCategory: recipe.category,
       recipeFormIngredients: recipe.ingredients.map((ing) => ({ ...ing })),
       recipeFormSteps: [...recipe.steps],
+      recipeFormAttachments: recipe.attachments.map((a) => ({ ...a })),
+      recipeFormAttachmentUploading: false,
+      recipeFormLinkUrl: "",
+      recipeFormLinkImporting: false,
+      recipeFormLinkError: null,
     });
   };
 
@@ -812,6 +835,60 @@ export function useThatFridge() {
     state.recipeFormIngredients.some((ing) => ing.name.trim()) &&
     state.recipeFormSteps.some((s) => s.trim());
 
+  const onRecipeFormLinkUrlChange = (value: string) => patch({ recipeFormLinkUrl: value, recipeFormLinkError: null });
+
+  const LINK_IMPORT_ERROR_MESSAGES: Record<string, string> = {
+    no_api_key: "Link import isn't set up on this server yet.",
+    unsafe_url: "That link can't be used.",
+    fetch_failed: "Couldn't open that link.",
+    not_recognized: "Couldn't find a recipe on that page.",
+  };
+
+  // Prefills the open form for review rather than saving straight away, so an import that
+  // gets something wrong (or picks the wrong recipe off a page with several) is a quick edit
+  // instead of a silent bad save - the user still has to hit the existing Save button.
+  const importRecipeFormLink = async () => {
+    const url = state.recipeFormLinkUrl.trim();
+    if (!url || state.recipeFormLinkImporting) return;
+    patch({ recipeFormLinkImporting: true, recipeFormLinkError: null });
+    try {
+      const result = await importRecipeFromLink(url);
+      if (result.found && result.recipe) {
+        const suggestion = result.recipe;
+        patch({
+          recipeFormName: suggestion.name,
+          recipeFormMinutes: String(suggestion.minutes),
+          recipeFormCategory: suggestion.category,
+          recipeFormIngredients: suggestion.ingredients.map((ing) => ({ icon: guessIcon(ing.name) || "leftovers", name: ing.name })),
+          recipeFormSteps: [...suggestion.steps],
+          recipeFormLinkUrl: "",
+          recipeFormLinkImporting: false,
+          recipeFormLinkError: null,
+        });
+      } else {
+        patch({
+          recipeFormLinkImporting: false,
+          recipeFormLinkError: LINK_IMPORT_ERROR_MESSAGES[result.reason ?? ""] ?? "Couldn't find a recipe on that page.",
+        });
+      }
+    } catch (err) {
+      patch({ recipeFormLinkImporting: false, recipeFormLinkError: describeError(err, "Couldn't import that link.") });
+    }
+  };
+
+  const addRecipeFormAttachment = async (file: File) => {
+    patch({ recipeFormAttachmentUploading: true });
+    try {
+      const attachment = await uploadRecipeAttachment(file);
+      patch((s) => ({ recipeFormAttachments: [...s.recipeFormAttachments, attachment], recipeFormAttachmentUploading: false }));
+    } catch (err) {
+      patch({ recipeFormAttachmentUploading: false, syncError: describeError(err, "Couldn't upload that file.") });
+    }
+  };
+
+  const removeRecipeFormAttachment = (index: number) =>
+    patch((s) => ({ recipeFormAttachments: s.recipeFormAttachments.filter((_, i) => i !== index) }));
+
   const saveRecipeForm = async () => {
     const name = state.recipeFormName.trim();
     if (!name) return;
@@ -822,7 +899,7 @@ export function useThatFridge() {
     const steps = state.recipeFormSteps.map((s) => s.trim()).filter(Boolean);
     if (!ingredients.length || !steps.length) return;
 
-    const payload = { name, minutes, category: state.recipeFormCategory, ingredients, steps };
+    const payload = { name, minutes, category: state.recipeFormCategory, ingredients, steps, attachments: state.recipeFormAttachments };
 
     try {
       if (state.recipeFormId) {
@@ -1808,6 +1885,10 @@ export function useThatFridge() {
     addRecipeFormStep,
     removeRecipeFormStep,
     onRecipeFormStepChange,
+    onRecipeFormLinkUrlChange,
+    importRecipeFormLink,
+    addRecipeFormAttachment,
+    removeRecipeFormAttachment,
     isRecipeFormValid,
     saveRecipeForm,
     deleteCustomRecipe,

@@ -1,13 +1,17 @@
 "use client";
 
-import { Check, Heart, Pencil, Plus } from "lucide-react";
+import { useState } from "react";
+import { Check, Heart, Pencil, Play, Plus } from "lucide-react";
 import { RECIPE_CATEGORIES } from "@/lib/thatfridge/data";
 import { getRecipesView } from "@/lib/thatfridge/selectors";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
+import AttachmentLightbox from "../AttachmentLightbox";
 import FoodIcon from "../FoodIcon";
+import type { RecipeAttachment } from "@/lib/thatfridge/types";
 
 export default function RecipeDetailSheet() {
   const { state, actions } = useThatFridgeCtx();
+  const [viewingAttachment, setViewingAttachment] = useState<RecipeAttachment | null>(null);
   const recipesView = getRecipesView(state);
   const selectedRecipe = recipesView.find((r) => r.id === state.selectedRecipeId) || {
     id: "",
@@ -16,6 +20,7 @@ export default function RecipeDetailSheet() {
     category: null,
     isFavorite: false,
     isCustom: false,
+    attachments: [],
     ratioLabel: "",
     icon: "",
     ingredientsView: [],
@@ -107,8 +112,35 @@ export default function RecipeDetailSheet() {
               </div>
             ))}
           </div>
+
+          {selectedRecipe.attachments.length > 0 && (
+            <div style={{ marginTop: 6 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>REFERENCE</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {selectedRecipe.attachments.map((att, i) => (
+                  <div
+                    key={i}
+                    onClick={() => setViewingAttachment(att)}
+                    style={{ position: "relative", width: 64, height: 64, borderRadius: 12, overflow: "hidden", background: "#000", cursor: "pointer" }}
+                  >
+                    {att.type === "video" ? (
+                      <>
+                        <video src={att.url} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.25)" }}>
+                          <Play size={18} color="#fff" fill="#fff" strokeWidth={0} />
+                        </div>
+                      </>
+                    ) : (
+                      <img src={att.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+      <AttachmentLightbox attachment={viewingAttachment} onClose={() => setViewingAttachment(null)} />
     </div>
   );
 }
