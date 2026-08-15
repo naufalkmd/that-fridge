@@ -225,11 +225,13 @@ export interface ThatFridgeState {
   recipeFormLinkError: string | null;
   // "Mark as made" - null recipeId means the sheet is closed. Candidates are inventory items
   // matched to the recipe's ingredients by icon (soonest-expiring one wins on duplicates,
-  // unmatched ingredients don't produce a candidate), pre-checked; confirming runs the same
-  // "consumed" logic as markItemConsumed for every checked candidate.
+  // unmatched ingredients don't produce a candidate) - removing one from the list entirely
+  // means "not actually used". Everything still in the list is either "finished" (consumed -
+  // same logic as markItemConsumed) or "remaining" (used from, not up - same as markUsed/
+  // "Opened it"), defaulting to finished since that's the common case.
   markMadeRecipeId: string | null;
-  markMadeCandidates: { ingredientName: string; itemId: string; itemName: string; icon: string }[];
-  markMadeChecked: Record<string, boolean>;
+  markMadeCandidates: { id: string; ingredientName: string; itemId: string; itemName: string; icon: string }[];
+  markMadeStatus: Record<string, "finished" | "remaining">;
   newShoppingText: string;
   shoppingList: ShoppingItem[];
   shoppingSeeded: boolean;
@@ -333,7 +335,7 @@ export function initialState(): ThatFridgeState {
     recipeFormLinkError: null,
     markMadeRecipeId: null,
     markMadeCandidates: [],
-    markMadeChecked: {},
+    markMadeStatus: {},
     newShoppingText: "",
     shoppingList: [],
     shoppingSeeded: false,
@@ -999,33 +1001,52 @@ export function useThatFridge() {
   // else in the app (the existing "have" check on a recipe's ingredientsView is icon-only, a
   // boolean, not a specific item) - built here by icon match, picking the soonest-expiring
   // item when more than one shares an icon (the one most worth using), skipping ingredients
-  // with no match at all. Shown as a pre-checked confirm list the user can adjust; only
-  // confirming actually commits anything.
+  // with no match at all. Each ingredient gets its own row (even if two ingredients share an
+  // icon and resolve to the same fridge item), keyed by a per-row `id` rather than the item id
+  // so rows can be toggled/removed independently of each other. If two rows for the same
+  // physical item end up with different statuses, "finished" wins on confirm - the item can't
+  // actually be both used up and left in the fridge. Shown as a pre-checked confirm list the
+  // user can adjust; only confirming actually commits anything.
   const openMarkRecipeMade = (recipeId: string) => {
     const recipe = state.recipes.find((r) => r.id === recipeId);
     if (!recipe) return;
     const items = getScopedItems(state);
-    const candidates: { ingredientName: string; itemId: string; itemName: string; icon: string }[] = [];
+    const candidates: { id: string; ingredientName: string; itemId: string; itemName: string; icon: string }[] = [];
+    let rowCount = 0;
     for (const ing of recipe.ingredients) {
       const matches = items.filter((i) => i.icon === ing.icon);
       if (!matches.length) continue;
       const soonestExpiring = matches.reduce((a, b) => (b.days < a.days ? b : a));
-      candidates.push({ ingredientName: ing.name, itemId: soonestExpiring.id, itemName: soonestExpiring.name, icon: soonestExpiring.icon });
+      candidates.push({ id: `row-${rowCount++}`, ingredientName: ing.name, itemId: soonestExpiring.id, itemName: soonestExpiring.name, icon: soonestExpiring.icon });
     }
     patch({
       markMadeRecipeId: recipeId,
       markMadeCandidates: candidates,
-      markMadeChecked: Object.fromEntries(candidates.map((c) => [c.itemId, true])),
+      markMadeStatus: Object.fromEntries(candidates.map((c) => [c.id, "finished" as const])),
     });
   };
-  const toggleMarkMadeCandidate = (itemId: string) =>
-    patch((s) => ({ markMadeChecked: { ...s.markMadeChecked, [itemId]: !s.markMadeChecked[itemId] } }));
-  const closeMarkRecipeMade = () => patch({ markMadeRecipeId: null, markMadeCandidates: [], markMadeChecked: {} });
+  const setMarkMadeStatus = (rowId: string, status: "finished" | "remaining") =>
+    patch((s) => ({ markMadeStatus: { ...s.markMadeStatus, [rowId]: status } }));
+  const removeMarkMadeCandidate = (rowId: string) =>
+    patch((s) => {
+      const rest = { ...s.markMadeStatus };
+      delete rest[rowId];
+      return { markMadeCandidates: s.markMadeCandidates.filter((c) => c.id !== rowId), markMadeStatus: rest };
+    });
+  const closeMarkRecipeMade = () => patch({ markMadeRecipeId: null, markMadeCandidates: [], markMadeStatus: {} });
   const confirmMarkMade = () => {
-    const checkedIds = state.markMadeCandidates.filter((c) => state.markMadeChecked[c.itemId]).map((c) => c.itemId);
-    patch({ markMadeRecipeId: null, markMadeCandidates: [], markMadeChecked: {} });
+    const candidates = state.markMadeCandidates;
+    const statusById = state.markMadeStatus;
+    patch({ markMadeRecipeId: null, markMadeCandidates: [], markMadeStatus: {} });
 
-    for (const itemId of checkedIds) {
+    const itemIds = Array.from(new Set(candidates.map((c) => c.itemId)));
+    for (const itemId of itemIds) {
+      const rowStatuses = candidates.filter((c) => c.itemId === itemId).map((c) => statusById[c.id]);
+      const finalStatus = rowStatuses.includes("finished") ? "finished" : "remaining";
+      if (finalStatus === "remaining") {
+        markItemOpenedById(itemId);
+        continue;
+      }
       const found = findItem(state, itemId);
       if (!found) continue;
       const { item, section, fridgeIndex } = found;
@@ -1516,9 +1537,9 @@ export function useThatFridge() {
       }
     );
   };
-  const markUsed = () => {
-    const id = state.selectedItemId;
-    if (!id) return;
+  // Shared by the item-detail "Opened it" toggle and Mark as made's "Still have some" choice -
+  // both mean the same thing (used from, not finished), just reached from different screens.
+  const markItemOpenedById = (id: string) => {
     patch((s) => {
       const found = findItem(s, id);
       if (!found || found.item.opened) return {};
@@ -1534,6 +1555,10 @@ export function useThatFridge() {
         ),
       };
     });
+  };
+  const markUsed = () => {
+    if (!state.selectedItemId) return;
+    markItemOpenedById(state.selectedItemId);
   };
   // Consumed vs wasted: only markItemConsumed ever calls recordUsage, so usage_history (and
   // everything it feeds - Shopkeeper's memory, the goal metrics, the Food Balance score) stays
@@ -2023,7 +2048,8 @@ export function useThatFridge() {
     deleteCustomRecipe,
     addSuggestedRecipeToLibrary,
     openMarkRecipeMade,
-    toggleMarkMadeCandidate,
+    setMarkMadeStatus,
+    removeMarkMadeCandidate,
     closeMarkRecipeMade,
     confirmMarkMade,
     onNewShoppingChange,

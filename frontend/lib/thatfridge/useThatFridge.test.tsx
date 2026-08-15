@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { routeChatAgent, useThatFridge } from "./useThatFridge";
+import { getRecipesView } from "./selectors";
 import * as api from "./api";
 
 vi.mock("./api");
@@ -512,5 +513,79 @@ describe("useThatFridge memory undo", () => {
     expect(result.current.state.memoryFacts).toEqual([]);
     expect(api.deleteMemoryFactApi).toHaveBeenCalledWith(0);
     expect(api.deleteMemoryFactApi).toHaveBeenCalledWith(1);
+  });
+});
+
+describe("useThatFridge Mark as made", () => {
+  it("marking an ingredient 'remaining' keeps the item in the fridge, opened, and still countable for other recipes", async () => {
+    vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "My Fridge", sections: [] });
+    vi.mocked(api.createSection).mockImplementation((fridgeId, name) => Promise.resolve({ id: `sec-${name}`, name, items: [] }));
+    vi.mocked(api.createItem).mockResolvedValue({ id: "i1", name: "Milk", icon: "milk", freshness: 90, days: 7, note: "", qty: 1 });
+    vi.mocked(api.createRecipe)
+      .mockResolvedValueOnce({
+        id: "r1",
+        name: "Pancakes",
+        minutes: 20,
+        category: "breakfast",
+        ingredients: [{ icon: "milk", name: "Milk" }],
+        steps: [],
+        attachments: [],
+        isFavorite: false,
+        isCustom: true,
+      })
+      .mockResolvedValueOnce({
+        id: "r2",
+        name: "Milkshake",
+        minutes: 5,
+        category: "snack",
+        ingredients: [{ icon: "milk", name: "Milk" }],
+        steps: [],
+        attachments: [],
+        isFavorite: false,
+        isCustom: true,
+      });
+
+    const { result } = renderHook(() => useThatFridge());
+
+    act(() => result.current.actions.onManualNameChange("Milk"));
+    await act(async () => {
+      await result.current.actions.confirmManualAdd();
+    });
+
+    await act(async () => {
+      await result.current.actions.addSuggestedRecipeToLibrary({
+        name: "Pancakes",
+        description: "",
+        minutes: 20,
+        category: "breakfast",
+        ingredients: [{ name: "Milk" }],
+        steps: [],
+      });
+      await result.current.actions.addSuggestedRecipeToLibrary({
+        name: "Milkshake",
+        description: "",
+        minutes: 5,
+        category: "snack",
+        ingredients: [{ name: "Milk" }],
+        steps: [],
+      });
+    });
+
+    act(() => result.current.actions.openMarkRecipeMade("r1"));
+    const candidate = result.current.state.markMadeCandidates[0];
+    expect(candidate.ingredientName).toBe("Milk");
+
+    act(() => result.current.actions.setMarkMadeStatus(candidate.id, "remaining"));
+    act(() => result.current.actions.confirmMarkMade());
+
+    // Still in the fridge, marked opened - not consumed or removed.
+    const item = result.current.state.fridges[0].sections.flatMap((sec) => sec.items).find((i) => i.id === "i1");
+    expect(item?.opened).toBe(true);
+    expect(api.recordItemUsage).not.toHaveBeenCalled();
+    expect(api.deleteItem).not.toHaveBeenCalled();
+
+    // Still counts as "have it" for the other recipe that also needs milk.
+    const milkshakeView = getRecipesView(result.current.state).find((r) => r.id === "r2");
+    expect(milkshakeView?.ingredientsView[0].have).toBe(true);
   });
 });
