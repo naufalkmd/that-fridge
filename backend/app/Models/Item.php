@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'product_id',
     'name',
     'icon',
+    'nutrition_category',
     'location',
     'quantity',
     'expiry_date',

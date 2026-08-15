@@ -1,8 +1,11 @@
 import type {
   CurrentUser,
   Fridge,
+  GoalMetricType,
+  GoalPeriod,
   NotificationEvent,
   NotificationPrefs,
+  NutritionCategory,
   Recipe,
   RecipeAttachment,
   RecipeCategory,
@@ -12,6 +15,7 @@ import type {
   ShoppingItem,
   StorageLocation,
   UsageHistoryEntry,
+  UserGoal,
 } from "./types";
 import { apiFetch, setToken, type RawItem, toClientItem } from "./apiClient";
 
@@ -146,6 +150,7 @@ export async function createSection(fridgeId: string, name: string): Promise<Sec
 export interface CreateItemInput {
   name: string;
   icon: string;
+  nutrition_category?: NutritionCategory | null;
   location?: StorageLocation;
   quantity?: number;
   expiry_date?: string;
@@ -161,6 +166,7 @@ export async function createItem(sectionId: string, data: CreateItemInput) {
 export interface UpdateItemInput {
   name?: string;
   icon?: string;
+  nutrition_category?: NutritionCategory | null;
   section_id?: string;
   location?: StorageLocation;
   quantity?: number;
@@ -298,6 +304,21 @@ export function updateNotificationPrefs(data: Partial<NotificationPrefs>): Promi
   return apiFetch<NotificationPrefs>("/notification-prefs", { method: "PATCH", body: JSON.stringify(data) });
 }
 
+export function fetchUserGoal(): Promise<UserGoal> {
+  return apiFetch<UserGoal>("/user-goal");
+}
+
+export interface UserGoalInput {
+  metricType?: GoalMetricType;
+  targetValue?: number;
+  period?: GoalPeriod;
+  isActive?: boolean;
+}
+
+export function updateUserGoal(data: UserGoalInput): Promise<UserGoal> {
+  return apiFetch<UserGoal>("/user-goal", { method: "PATCH", body: JSON.stringify(data) });
+}
+
 export function fetchNotificationEvents(): Promise<NotificationEvent[]> {
   return apiFetch<NotificationEvent[]>("/notification-events");
 }
@@ -400,10 +421,28 @@ export function fetchUsageHistory(): Promise<UsageHistoryEntry[]> {
 // this item name or creates one — this record is what the Shopkeeper agent's prompt actually
 // reads (see AgentService::getSystemPrompt), making the "AI Data & Memory" screen's claim
 // that "Shopkeeper remembers items you use often" true instead of a local-only display.
-export function recordItemUsage(name: string, icon: string): Promise<UsageHistoryEntry> {
+//
+// category/daysRemaining/freshness are optional and come from the item's own
+// Item.nutritionCategory/Item.days/Item.freshness at the moment it's removed - real values
+// already computed client-side, not invented. They back the items_rescued/freshness_at_use
+// goal metrics and the Food Balance score's variety calculation (see lib/thatfridge/goals.ts
+// and scoring.ts).
+export function recordItemUsage(
+  name: string,
+  icon: string,
+  daysRemaining?: number,
+  freshness?: number,
+  category?: NutritionCategory | null
+): Promise<UsageHistoryEntry> {
   return apiFetch<UsageHistoryEntry>("/usage-history", {
     method: "POST",
-    body: JSON.stringify({ name, icon }),
+    body: JSON.stringify({
+      name,
+      icon,
+      ...(daysRemaining !== undefined ? { daysRemaining } : {}),
+      ...(freshness !== undefined ? { freshness } : {}),
+      ...(category ? { category } : {}),
+    }),
   });
 }
 

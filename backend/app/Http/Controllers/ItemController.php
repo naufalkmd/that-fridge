@@ -10,6 +10,10 @@ use Illuminate\Validation\Rule;
 
 class ItemController extends Controller
 {
+    // Kept as plain constants (not a DB enum) so the allowed set can change without a
+    // migration - same treatment as the icon/location/source fields below.
+    public const NUTRITION_CATEGORIES = ['protein', 'vegetables', 'fruit', 'grains', 'dairy', 'other_extras'];
+
     public function store(Request $request, Section $section)
     {
         $this->authorize('update', $section);
@@ -18,6 +22,7 @@ class ItemController extends Controller
             'product_id' => ['nullable', 'exists:products,id'],
             'name' => ['required', 'string', 'max:255'],
             'icon' => ['required', 'string', 'max:255'],
+            'nutrition_category' => ['nullable', 'string', Rule::in(self::NUTRITION_CATEGORIES)],
             'location' => ['nullable', 'string', 'in:fridge,freezer,pantry'],
             'quantity' => ['sometimes', 'integer', 'min:1'],
             'expiry_date' => ['nullable', 'date'],
@@ -42,6 +47,7 @@ class ItemController extends Controller
             )],
             'name' => ['sometimes', 'string', 'max:255'],
             'icon' => ['sometimes', 'string', 'max:255'],
+            'nutrition_category' => ['sometimes', 'nullable', 'string', Rule::in(self::NUTRITION_CATEGORIES)],
             'location' => ['sometimes', 'nullable', 'string', 'in:fridge,freezer,pantry'],
             'quantity' => ['sometimes', 'integer', 'min:1'],
             'expiry_date' => ['sometimes', 'nullable', 'date'],

@@ -1,7 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FOOD_ICON_KEYS, FOOD_TAB_ORDER, ICON_SECTION, STORAGE_LOCATIONS, guessIcon, guessLocation, suggestShelfLifeDays } from "./data";
+import {
+  FOOD_ICON_KEYS,
+  FOOD_TAB_ORDER,
+  ICON_SECTION,
+  NUTRITION_CATEGORIES,
+  STORAGE_LOCATIONS,
+  guessIcon,
+  guessLocation,
+  guessNutritionCategory,
+  guessNutritionCategoryLabel,
+  suggestShelfLifeDays,
+} from "./data";
 import {
   clearMemoryFactsApi,
   clearUsageHistoryApi,
@@ -30,6 +41,7 @@ import {
   fetchRecipes,
   fetchShoppingItems,
   fetchUsageHistory,
+  fetchUserGoal,
   importRecipeFromLink,
   login,
   logout,
@@ -42,6 +54,7 @@ import {
   sendChatMessage,
   suggestItemDetails,
   type ChatAgentName,
+  type UserGoalInput,
   unfavoriteRecipe,
   updateFridge,
   updateItem,
@@ -49,10 +62,11 @@ import {
   updateNotificationPrefs,
   updateRecipe,
   updateShoppingItem,
+  updateUserGoal,
   uploadRecipeAttachment,
 } from "./api";
 import { ApiError, clearToken, getToken } from "./apiClient";
-import { findItem, findSectionIdForGroup, getActiveFridgeItems } from "./selectors";
+import { findItem, findSectionIdForGroup, getActiveFridgeItems, getScopedItems } from "./selectors";
 import type {
   AuthMode,
   ChatMessage,
@@ -65,6 +79,7 @@ import type {
   Item,
   NotificationEvent,
   NotificationPrefs,
+  NutritionCategory,
   Recipe,
   RecipeAttachment,
   RecipeCategory,
@@ -72,9 +87,11 @@ import type {
   RecipeSuggestion,
   Screen,
   ScanMethod,
+  Section,
   ShoppingItem,
   StorageLocation,
   UsageHistoryEntry,
+  UserGoal,
 } from "./types";
 const DEFAULT_CHAT_MESSAGES: ChatMessage[] = [{ id: "m0", from: "bot", text: "Hi! Ask me anything about what's in your fridge." }];
 
@@ -131,13 +148,6 @@ function describeError(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.message : fallback;
 }
 
-const DEFAULT_ICON_BY_SECTION: Record<string, string> = {
-  dairy: "milk",
-  produce: "carrot",
-  protein: "meat",
-  leftovers: "leftovers",
-};
-
 export interface ThatFridgeState {
   screen: Screen;
   lastMainScreen: "home" | "inventory";
@@ -161,6 +171,7 @@ export interface ThatFridgeState {
   editName: string;
   editSectionId: string;
   editIcon: string;
+  editCategory: string;
   editFridgeIndex: number;
   editExpiryDate: string;
   editNote: string;
@@ -187,6 +198,8 @@ export interface ThatFridgeState {
   manualSectionAuto: boolean;
   manualIcon: string;
   manualIconAuto: boolean;
+  manualCategory: string;
+  manualCategoryAuto: boolean;
   manualLocation: StorageLocation;
   manualExpiryDate: string;
   manualNote: string;
@@ -210,6 +223,13 @@ export interface ThatFridgeState {
   recipeFormLinkUrl: string;
   recipeFormLinkImporting: boolean;
   recipeFormLinkError: string | null;
+  // "Mark as made" - null recipeId means the sheet is closed. Candidates are inventory items
+  // matched to the recipe's ingredients by icon (soonest-expiring one wins on duplicates,
+  // unmatched ingredients don't produce a candidate), pre-checked; confirming runs the same
+  // "consumed" logic as markItemConsumed for every checked candidate.
+  markMadeRecipeId: string | null;
+  markMadeCandidates: { ingredientName: string; itemId: string; itemName: string; icon: string }[];
+  markMadeChecked: Record<string, boolean>;
   newShoppingText: string;
   shoppingList: ShoppingItem[];
   shoppingSeeded: boolean;
@@ -223,6 +243,9 @@ export interface ThatFridgeState {
   syncError: string | null;
   notificationPrefs: NotificationPrefs;
   notificationEvents: NotificationEvent[];
+  // null until the initial fetch resolves - GET /user-goal always firstOrCreate()s a default
+  // server-side, so this only stays null very briefly (or if the fetch itself fails).
+  userGoal: UserGoal | null;
   kitchenScope: "active" | "all";
   inventorySortMode: "category" | "expiry" | "name";
   agentInsights: Partial<Record<ChatAgentName, string>>;
@@ -263,6 +286,7 @@ export function initialState(): ThatFridgeState {
     editName: "",
     editSectionId: "",
     editIcon: "",
+    editCategory: "",
     editFridgeIndex: 0,
     editExpiryDate: "",
     editNote: "",
@@ -286,6 +310,8 @@ export function initialState(): ThatFridgeState {
     manualSectionAuto: true,
     manualIcon: "leftovers",
     manualIconAuto: true,
+    manualCategory: "other_extras",
+    manualCategoryAuto: true,
     manualLocation: "fridge",
     manualExpiryDate: defaultExpiryDate(),
     manualNote: "",
@@ -305,6 +331,9 @@ export function initialState(): ThatFridgeState {
     recipeFormLinkUrl: "",
     recipeFormLinkImporting: false,
     recipeFormLinkError: null,
+    markMadeRecipeId: null,
+    markMadeCandidates: [],
+    markMadeChecked: {},
     newShoppingText: "",
     shoppingList: [],
     shoppingSeeded: false,
@@ -318,6 +347,7 @@ export function initialState(): ThatFridgeState {
     syncError: null,
     notificationPrefs: { expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false, crewActionsEnabled: false },
     notificationEvents: [],
+    userGoal: null,
     kitchenScope: "all",
     inventorySortMode: "category",
     agentInsights: {},
@@ -456,8 +486,9 @@ export function useThatFridge() {
       fetchChatHistory(),
       fetchUsageHistory(),
       fetchMemoryFacts(),
+      fetchUserGoal(),
     ]).then(
-      ([fridges, recipes, shoppingList, notificationPrefs, notificationEvents, chatHistory, usageHistory, memoryFacts]) => {
+      ([fridges, recipes, shoppingList, notificationPrefs, notificationEvents, chatHistory, usageHistory, memoryFacts, userGoal]) => {
         if (cancelled) return;
         const restoredChatMessages: ChatMessage[] = chatHistory.messages.flatMap((row) => [
           { id: `u${row.id}`, from: "user" as const, text: row.user_message },
@@ -479,6 +510,7 @@ export function useThatFridge() {
           notificationEvents: notificationEvents.slice().sort((a, b) => b.createdAt - a.createdAt),
           usageHistory,
           memoryFacts,
+          userGoal,
           ...(restoredChatMessages.length ? { chatMessages: restoredChatMessages } : {}),
         });
       }
@@ -618,6 +650,17 @@ export function useThatFridge() {
       patch((s) => ({ notificationPrefs: { ...s.notificationPrefs, [key]: prevValue } }));
       patch({ syncError: describeError(err, "Couldn't save your notification settings.") });
     });
+  };
+
+  const openGoals = () => patch({ screen: "goals", showProfilePanel: false });
+  const updateUserGoalSettings = (input: UserGoalInput) => {
+    const prevGoal = state.userGoal;
+    patch((s) => ({ userGoal: s.userGoal ? { ...s.userGoal, ...input } : s.userGoal }));
+    updateUserGoal(input)
+      .then((goal) => patch({ userGoal: goal }))
+      .catch((err) => {
+        patch({ userGoal: prevGoal, syncError: describeError(err, "Couldn't update your goal.") });
+      });
   };
 
   const openAIDataSettings = () => patch({ screen: "aiData", showProfilePanel: false });
@@ -952,6 +995,52 @@ export function useThatFridge() {
     });
   };
 
+  // "Mark as made": ingredient -> specific-inventory-item matching doesn't exist anywhere
+  // else in the app (the existing "have" check on a recipe's ingredientsView is icon-only, a
+  // boolean, not a specific item) - built here by icon match, picking the soonest-expiring
+  // item when more than one shares an icon (the one most worth using), skipping ingredients
+  // with no match at all. Shown as a pre-checked confirm list the user can adjust; only
+  // confirming actually commits anything.
+  const openMarkRecipeMade = (recipeId: string) => {
+    const recipe = state.recipes.find((r) => r.id === recipeId);
+    if (!recipe) return;
+    const items = getScopedItems(state);
+    const candidates: { ingredientName: string; itemId: string; itemName: string; icon: string }[] = [];
+    for (const ing of recipe.ingredients) {
+      const matches = items.filter((i) => i.icon === ing.icon);
+      if (!matches.length) continue;
+      const soonestExpiring = matches.reduce((a, b) => (b.days < a.days ? b : a));
+      candidates.push({ ingredientName: ing.name, itemId: soonestExpiring.id, itemName: soonestExpiring.name, icon: soonestExpiring.icon });
+    }
+    patch({
+      markMadeRecipeId: recipeId,
+      markMadeCandidates: candidates,
+      markMadeChecked: Object.fromEntries(candidates.map((c) => [c.itemId, true])),
+    });
+  };
+  const toggleMarkMadeCandidate = (itemId: string) =>
+    patch((s) => ({ markMadeChecked: { ...s.markMadeChecked, [itemId]: !s.markMadeChecked[itemId] } }));
+  const closeMarkRecipeMade = () => patch({ markMadeRecipeId: null, markMadeCandidates: [], markMadeChecked: {} });
+  const confirmMarkMade = () => {
+    const checkedIds = state.markMadeCandidates.filter((c) => state.markMadeChecked[c.itemId]).map((c) => c.itemId);
+    patch({ markMadeRecipeId: null, markMadeCandidates: [], markMadeChecked: {} });
+
+    for (const itemId of checkedIds) {
+      const found = findItem(state, itemId);
+      if (!found) continue;
+      const { item, section, fridgeIndex } = found;
+      patch((s) => ({
+        fridges: s.fridges.map((f, i) =>
+          i === fridgeIndex
+            ? { ...f, sections: f.sections.map((sec) => (sec.id === section.id ? { ...sec, items: sec.items.filter((it) => it.id !== itemId) } : sec)) }
+            : f
+        ),
+      }));
+      recordUsage(item.name, item.icon, item.days, item.freshness, item.nutritionCategory);
+      deleteItem(itemId).catch((err) => patch({ syncError: describeError(err, "Couldn't update the fridge for one of the items.") }));
+    }
+  };
+
   const onNewShoppingChange = (value: string) => patch({ newShoppingText: value });
   const addShoppingItem = async () => {
     const name = state.newShoppingText.trim();
@@ -1219,6 +1308,8 @@ export function useThatFridge() {
       manualSectionAuto: true,
       manualIcon: "leftovers",
       manualIconAuto: true,
+      manualCategory: "other_extras",
+      manualCategoryAuto: true,
       manualLocation: "fridge",
       manualExpiryDate: defaultExpiryDate(),
       manualNote: "",
@@ -1245,6 +1336,7 @@ export function useThatFridge() {
       editName: found.item.name,
       editSectionId: found.section.id,
       editIcon: found.item.icon,
+      editCategory: found.item.nutritionCategory || "",
       editFridgeIndex: found.fridgeIndex,
       editExpiryDate: toISODate(target),
       editNote: found.item.note,
@@ -1254,6 +1346,7 @@ export function useThatFridge() {
   const onEditNameChange = (value: string) => patch({ editName: value });
   const onEditSectionChange = (value: string) => patch({ editSectionId: value });
   const onEditIconChange = (value: string) => patch({ editIcon: value });
+  const onEditCategoryChange = (value: string) => patch({ editCategory: value });
   const onEditExpiryDateChange = (value: string) => patch({ editExpiryDate: value });
   const onEditNoteChange = (value: string) => patch({ editNote: value });
   const confirmEditItem = () => {
@@ -1266,6 +1359,7 @@ export function useThatFridge() {
     const { item: prevItem, section: fromSection } = found;
     const toSectionId = state.editSectionId || fromSection.id;
     const icon = state.editIcon || prevItem.icon;
+    const category = (state.editCategory || prevItem.nutritionCategory || null) as NutritionCategory | null;
     const note = state.editNote.trim();
     const moved = toSectionId !== fromSection.id;
 
@@ -1279,7 +1373,7 @@ export function useThatFridge() {
       if (!found2) return {};
       const { item, section: fromSec, fridgeIndex } = found2;
       const fridge = s.fridges[fridgeIndex];
-      const updatedItem = { ...item, name, icon, note, days: newDays, freshness: newFreshness };
+      const updatedItem = { ...item, name, icon, nutritionCategory: category, note, days: newDays, freshness: newFreshness };
 
       const sections =
         toSectionId === fromSec.id
@@ -1301,6 +1395,7 @@ export function useThatFridge() {
     updateItem(id, {
       name,
       icon,
+      nutrition_category: category,
       note,
       expiry_date: expiryDate,
       shelf_life_days: shelfLifeDays,
@@ -1367,10 +1462,10 @@ export function useThatFridge() {
     }, 450);
   };
 
-  const recordUsage = (name: string, icon: string) => {
+  const recordUsage = (name: string, icon: string, daysRemaining?: number, freshness?: number, category?: NutritionCategory | null) => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    recordItemUsage(trimmed, icon)
+    recordItemUsage(trimmed, icon, daysRemaining, freshness, category)
       .then((entry) => {
         patch((s) => {
           const existingIndex = s.usageHistory.findIndex((h) => h.key === entry.key);
@@ -1440,14 +1535,24 @@ export function useThatFridge() {
       };
     });
   };
-  const discardItem = () => {
+  // Consumed vs wasted: only markItemConsumed ever calls recordUsage, so usage_history (and
+  // everything it feeds - Shopkeeper's memory, the goal metrics, the Food Balance score) stays
+  // an honest signal of what was actually eaten rather than "removed for any reason."
+  const markItemConsumed = () => {
     if (!state.selectedItemId) return;
     const found = findItem(state, state.selectedItemId);
     if (!found) return;
     const { item } = found;
-    removeItemWithUndo(state.selectedItemId, `Removed "${item.name}"`, () => {
-      recordUsage(item.name, item.icon);
+    removeItemWithUndo(state.selectedItemId, `Used up "${item.name}"`, () => {
+      recordUsage(item.name, item.icon, item.days, item.freshness, item.nutritionCategory);
     });
+  };
+  const discardItemWasted = () => {
+    if (!state.selectedItemId) return;
+    const found = findItem(state, state.selectedItemId);
+    if (!found) return;
+    const { item } = found;
+    removeItemWithUndo(state.selectedItemId, `Threw away "${item.name}"`);
   };
 
   const chooseMethod = (method: ScanMethod) => {
@@ -1460,6 +1565,8 @@ export function useThatFridge() {
         manualSectionAuto: true,
         manualIcon: "leftovers",
         manualIconAuto: true,
+        manualCategory: "other_extras",
+        manualCategoryAuto: true,
         manualLocation: "fridge",
         manualExpiryDate: defaultExpiryDate(),
         manualNote: "",
@@ -1475,6 +1582,24 @@ export function useThatFridge() {
     patch({ scanMethod: method, addStep: 1, scanImageError: null });
   };
 
+  // Brand-new fridges used to get a single generic "General" section created on the fly the
+  // first time an item needed one. Default sections are now the 6 nutrition categories instead,
+  // created together (only the ones missing) so STORE IN always has somewhere meaningful to
+  // route an item to, matching FOOD GROUP one-for-one.
+  const ensureCategorySections = async (fridgeIndex: number, fridge: Fridge): Promise<Section[]> => {
+    const existingNames = new Set(fridge.sections.map((sec) => sec.name));
+    const missing = NUTRITION_CATEGORIES.filter((c) => !existingNames.has(c.label));
+    if (!missing.length) return fridge.sections;
+    const created = await Promise.all(missing.map((c) => createSection(fridge.id, c.label)));
+    const sections = [...fridge.sections, ...created];
+    patch((s) => ({ fridges: s.fridges.map((f, i) => (i === fridgeIndex ? { ...f, sections } : f)) }));
+    return sections;
+  };
+  // "Other/Extras" is the closest thing to a generic catch-all in the new taxonomy, so it's
+  // what receipt/barcode scanning bootstraps with before any items are known to classify -
+  // once detected, each item still routes to its own matched category section below.
+  const catchAllSectionId = (sections: Section[]) => sections.find((sec) => sec.name === "Other/Extras")?.id ?? sections[0]?.id;
+
   const captureReceiptOrPhoto = async (file: File) => {
     patch({ scanImageLoading: true, scanImageError: null });
     try {
@@ -1486,16 +1611,10 @@ export function useThatFridge() {
         fridgeIndex = state.fridges.length;
         patch((s) => ({ fridges: [...s.fridges, fridge], activeFridge: fridgeIndex, addFridgeIndex: fridgeIndex }));
       }
-      let sectionId = fridge.sections[0]?.id;
-      if (!sectionId) {
-        // Brand-new fridges start with zero sections — create one on the fly, same as barcode/manual.
-        const section = await createSection(fridge.id, "General");
-        sectionId = section.id;
-        fridge = { ...fridge, sections: [...fridge.sections, section] };
-        patch((s) => ({
-          fridges: s.fridges.map((f, i) => (i === fridgeIndex ? { ...f, sections: [...f.sections, section] } : f)),
-        }));
+      if (fridge.sections.length === 0) {
+        fridge = { ...fridge, sections: await ensureCategorySections(fridgeIndex, fridge) };
       }
+      const sectionId = catchAllSectionId(fridge.sections);
 
       let detected: DetectedItem[] = [];
 
@@ -1503,12 +1622,12 @@ export function useThatFridge() {
         const result = await scanReceipt(sectionId, file);
         detected = result.detected_items.map((d, i) => {
           const icon = FOOD_ICON_KEYS.includes(d.icon) ? d.icon : guessIcon(d.parsed_name) || "leftovers";
-          const group = ICON_SECTION[icon];
+          const group = guessNutritionCategoryLabel(icon);
           return {
             id: "rc" + Date.now() + i,
             name: d.parsed_name,
             icon,
-            section: (group && findSectionIdForGroup(fridge.sections, group)) || sectionId,
+            section: (group && findSectionIdForGroup(fridge.sections, group.toLowerCase())) || sectionId,
             checked: true,
             qty: Math.max(1, d.parsed_quantity || 1),
             expiryDate: "",
@@ -1519,12 +1638,12 @@ export function useThatFridge() {
         const result = await scanFridgePhoto(sectionId, file);
         detected = result.detected_items.map((d, i) => {
           const icon = FOOD_ICON_KEYS.includes(d.icon) ? d.icon : guessIcon(d.parsed_name) || "leftovers";
-          const group = ICON_SECTION[icon];
+          const group = guessNutritionCategoryLabel(icon);
           return {
             id: "ph" + Date.now() + i,
             name: d.parsed_name,
             icon,
-            section: (group && findSectionIdForGroup(fridge.sections, group)) || sectionId,
+            section: (group && findSectionIdForGroup(fridge.sections, group.toLowerCase())) || sectionId,
             checked: true,
             qty: 1,
             expiryDate: "",
@@ -1563,26 +1682,20 @@ export function useThatFridge() {
         fridgeIndex = state.fridges.length;
         patch((s) => ({ fridges: [...s.fridges, fridge], activeFridge: fridgeIndex, addFridgeIndex: fridgeIndex }));
       }
-      let sectionId = fridge.sections[0]?.id;
-      if (!sectionId) {
-        // Brand-new fridges start with zero sections — create one on the fly, same as manual add.
-        const section = await createSection(fridge.id, "General");
-        sectionId = section.id;
-        fridge = { ...fridge, sections: [...fridge.sections, section] };
-        patch((s) => ({
-          fridges: s.fridges.map((f, i) => (i === fridgeIndex ? { ...f, sections: [...f.sections, section] } : f)),
-        }));
+      if (fridge.sections.length === 0) {
+        fridge = { ...fridge, sections: await ensureCategorySections(fridgeIndex, fridge) };
       }
+      const sectionId = catchAllSectionId(fridge.sections);
       const product = await scanBarcode(sectionId, barcode);
       const icon = FOOD_ICON_KEYS.includes(product.icon) ? product.icon : guessIcon(product.name) || "leftovers";
-      const group = ICON_SECTION[icon];
+      const group = guessNutritionCategoryLabel(icon);
       const target = new Date();
       target.setDate(target.getDate() + (product.default_shelf_life_days || suggestShelfLifeDays(icon)));
       const detected: DetectedItem = {
         id: "bc" + Date.now(),
         name: product.name,
         icon,
-        section: (group && findSectionIdForGroup(fridge.sections, group)) || sectionId,
+        section: (group && findSectionIdForGroup(fridge.sections, group.toLowerCase())) || sectionId,
         checked: true,
         qty: 1,
         expiryDate: toISODate(target),
@@ -1609,15 +1722,12 @@ export function useThatFridge() {
         fridgeIndex = state.fridges.length;
         patch((s) => ({ fridges: [...s.fridges, fridge], activeFridge: fridgeIndex, addFridgeIndex: fridgeIndex }));
       }
-      let sectionId = state.manualSectionId || fridge.sections[0]?.id;
-      if (!sectionId) {
-        // Brand-new fridges start with zero sections — create one on the fly, same as manual add.
-        const section = await createSection(fridge.id, "General");
-        sectionId = section.id;
-        patch((s) => ({
-          fridges: s.fridges.map((f, i) => (i === fridgeIndex ? { ...f, sections: [...f.sections, section] } : f)),
-        }));
+      if (fridge.sections.length === 0) {
+        fridge = { ...fridge, sections: await ensureCategorySections(fridgeIndex, fridge) };
       }
+      const group = guessNutritionCategoryLabel(state.manualIcon);
+      const sectionId =
+        state.manualSectionId || (group && findSectionIdForGroup(fridge.sections, group.toLowerCase())) || catchAllSectionId(fridge.sections);
       patch({ expiryPhotoTargetId: "manual", manualSectionId: sectionId, addStep: 6, expiryPhotoError: null });
     } catch (err) {
       patch({ syncError: describeError(err, "Couldn't start the expiry scan.") });
@@ -1696,16 +1806,31 @@ export function useThatFridge() {
     patch((s) => {
       const icon = guessIcon(value);
       const fridge = s.fridges[s.addFridgeIndex];
-      const group = icon ? ICON_SECTION[icon] : null;
-      const guessedSectionId = group && fridge ? findSectionIdForGroup(fridge.sections, group) : null;
+      const group = icon ? guessNutritionCategoryLabel(icon) : null;
+      const guessedSectionId = group && fridge ? findSectionIdForGroup(fridge.sections, group.toLowerCase()) : null;
+      const category = icon ? guessNutritionCategory(icon) : null;
       return {
         manualName: value,
         ...(s.manualIconAuto && icon ? { manualIcon: icon } : {}),
         ...(s.manualSectionAuto && guessedSectionId ? { manualSectionId: guessedSectionId } : {}),
+        ...(s.manualCategoryAuto && category ? { manualCategory: category } : {}),
       };
     });
   const onManualSectionChange = (value: string) => patch({ manualSectionId: value, manualSectionAuto: false });
-  const onManualIconChange = (value: string) => patch({ manualIcon: value, manualIconAuto: false });
+  const onManualIconChange = (value: string) =>
+    patch((s) => {
+      const category = guessNutritionCategory(value);
+      const groupLabel = guessNutritionCategoryLabel(value);
+      const fridge = s.fridges[s.addFridgeIndex];
+      const guessedSectionId = groupLabel && fridge ? findSectionIdForGroup(fridge.sections, groupLabel.toLowerCase()) : null;
+      return {
+        manualIcon: value,
+        manualIconAuto: false,
+        ...(s.manualCategoryAuto && category ? { manualCategory: category } : {}),
+        ...(s.manualSectionAuto && guessedSectionId ? { manualSectionId: guessedSectionId } : {}),
+      };
+    });
+  const onManualCategoryChange = (value: string) => patch({ manualCategory: value, manualCategoryAuto: false });
   const onManualExpiryDateChange = (value: string) => patch({ manualExpiryDate: value });
   const onManualLocationChange = (location: StorageLocation) => patch({ manualLocation: location });
   const suggestManualDetails = () => {
@@ -1742,18 +1867,20 @@ export function useThatFridge() {
         fridgeIndex = state.fridges.length;
         patch((s) => ({ fridges: [...s.fridges, fridge], activeFridge: fridgeIndex, addFridgeIndex: fridgeIndex }));
       }
-      let sectionId = state.manualSectionId || fridge.sections[0]?.id;
-      if (!fridge.sections.some((sec) => sec.id === sectionId)) {
-        const section = await createSection(fridge.id, "General");
-        sectionId = section.id;
-        patch((s) => ({
-          fridges: s.fridges.map((f, i) => (i === fridgeIndex ? { ...f, sections: [...f.sections, section] } : f)),
-        }));
+      if (fridge.sections.length === 0) {
+        fridge = { ...fridge, sections: await ensureCategorySections(fridgeIndex, fridge) };
       }
-      const icon = state.manualIcon || (sectionId && DEFAULT_ICON_BY_SECTION[sectionId]) || "leftovers";
+      const icon = state.manualIcon || "leftovers";
+      const category = state.manualCategory || guessNutritionCategory(icon);
+      let sectionId = state.manualSectionId;
+      if (!sectionId || !fridge.sections.some((sec) => sec.id === sectionId)) {
+        const group = guessNutritionCategoryLabel(icon);
+        sectionId = (group && findSectionIdForGroup(fridge.sections, group.toLowerCase())) || catchAllSectionId(fridge.sections);
+      }
       const item = await createItem(sectionId!, {
         name,
         icon,
+        nutrition_category: category as NutritionCategory | null,
         location,
         quantity: 1,
         expiry_date: expiryDate,
@@ -1848,6 +1975,8 @@ export function useThatFridge() {
     dismissNotificationWithUndo,
     openAbout,
     toggleNotificationPref,
+    openGoals,
+    updateUserGoalSettings,
     openAIDataSettings,
     deleteChatThread,
     clearAllChatData,
@@ -1893,6 +2022,10 @@ export function useThatFridge() {
     saveRecipeForm,
     deleteCustomRecipe,
     addSuggestedRecipeToLibrary,
+    openMarkRecipeMade,
+    toggleMarkMadeCandidate,
+    closeMarkRecipeMade,
+    confirmMarkMade,
     onNewShoppingChange,
     onNewShoppingKeyDown,
     addShoppingItem,
@@ -1926,12 +2059,14 @@ export function useThatFridge() {
     selectItem,
     adjustItemQty,
     markUsed,
-    discardItem,
+    markItemConsumed,
+    discardItemWasted,
     startEditItem,
     cancelEditItem,
     onEditNameChange,
     onEditSectionChange,
     onEditIconChange,
+    onEditCategoryChange,
     onEditExpiryDateChange,
     onEditNoteChange,
     confirmEditItem,
@@ -1949,6 +2084,7 @@ export function useThatFridge() {
     onManualNameChange,
     onManualSectionChange,
     onManualIconChange,
+    onManualCategoryChange,
     onManualExpiryDateChange,
     onManualLocationChange,
     suggestManualDetails,

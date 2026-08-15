@@ -14,6 +14,7 @@ import InventoryScreen from "./screens/InventoryScreen";
 import FoodHubScreen from "./screens/FoodHubScreen";
 import RecipeDetailSheet from "./screens/RecipeDetailSheet";
 import RecipeFormSheet from "./screens/RecipeFormSheet";
+import MarkRecipeMadeSheet from "./screens/MarkRecipeMadeSheet";
 import FridgeStyleSheet from "./screens/FridgeStyleSheet";
 import ItemDetailSheet from "./screens/ItemDetailSheet";
 import AddScreen from "./screens/AddScreen";
@@ -23,6 +24,7 @@ import ChatHistoryScreen from "./screens/ChatHistoryScreen";
 import NotificationsScreen from "./screens/NotificationsScreen";
 import NotificationHistoryScreen from "./screens/NotificationHistoryScreen";
 import AIDataScreen from "./screens/AIDataScreen";
+import GoalsScreen from "./screens/GoalsScreen";
 import AboutScreen from "./screens/AboutScreen";
 import AuthScreen from "./screens/AuthScreen";
 
@@ -52,6 +54,8 @@ function BaseScreen({ screen }: { screen: Screen }) {
       return <NotificationHistoryScreen />;
     case "aiData":
       return <AIDataScreen />;
+    case "goals":
+      return <GoalsScreen />;
     case "about":
       return <AboutScreen />;
     default:
@@ -85,6 +89,10 @@ function Screens() {
       {state.screen === "fridgeStyle" && <FridgeStyleSheet />}
       {state.screen === "recipeDetail" && <RecipeDetailSheet />}
       {state.screen === "recipeForm" && <RecipeFormSheet />}
+      {/* Not screen-driven like the sheets above - overlays on top of whichever screen opened
+          it (always recipeDetail today) via its own markMadeRecipeId state, so it needs to be
+          unconditionally mounted here rather than added to SHEET_SCREENS. */}
+      <MarkRecipeMadeSheet />
     </>
   );
 }

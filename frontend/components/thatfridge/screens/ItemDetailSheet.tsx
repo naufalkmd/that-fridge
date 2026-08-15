@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { ChevronDown, PackageOpen, Pencil } from "lucide-react";
-import { FOOD_ICON_KEYS, ICON_LABELS } from "@/lib/thatfridge/data";
+import { FOOD_ICON_KEYS, ICON_LABELS, NUTRITION_CATEGORIES } from "@/lib/thatfridge/data";
 import { findItem } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
+import CategoryTag from "../CategoryTag";
 import FoodIcon from "../FoodIcon";
 
 const labelStyle: React.CSSProperties = {
@@ -145,6 +146,32 @@ export default function ItemDetailSheet() {
           </div>
 
           <div style={{ marginBottom: 14 }}>
+            <div style={labelStyle}>FOOD GROUP</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {NUTRITION_CATEGORIES.map((c) => {
+                const active = state.editCategory === c.key;
+                return (
+                  <div
+                    key={c.key}
+                    onClick={() => actions.onEditCategoryChange(c.key)}
+                    style={{
+                      padding: "7px 12px",
+                      borderRadius: 12,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      background: active ? "#16325c" : "#eaf6ff",
+                      color: active ? "#fff" : "#16325c",
+                    }}
+                  >
+                    {c.label}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
             <div style={labelStyle}>BEST BEFORE</div>
             <input
               type="date"
@@ -192,8 +219,8 @@ export default function ItemDetailSheet() {
               Save
             </div>
           </div>
-          <div onClick={actions.discardItem} style={{ textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#c1452e", fontSize: 13.5, fontWeight: 700, cursor: "pointer", flex: "none" }}>
-            Delete item
+          <div onClick={actions.discardItemWasted} style={{ textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#c1452e", fontSize: 13.5, fontWeight: 700, cursor: "pointer", flex: "none" }}>
+            Throw away
           </div>
         </div>
       </div>
@@ -257,7 +284,7 @@ export default function ItemDetailSheet() {
             <Pencil size={14} color="#fff" strokeWidth={2.2} />
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 2 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 2, flexWrap: "wrap" }}>
           <div style={{ textAlign: "center", fontSize: 20, fontWeight: 700 }}>{item.name}</div>
           {item.opened && (
             <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#2f6fb0", background: "#2f6fb01a", padding: "2px 7px", borderRadius: 6 }}>
@@ -265,6 +292,7 @@ export default function ItemDetailSheet() {
               OPENED
             </div>
           )}
+          <CategoryTag category={item.nutritionCategory} />
         </div>
         <div style={{ textAlign: "center", fontSize: 12.5, color: "rgba(22,50,92,0.45)", marginBottom: 18 }}>
           {itemFridge?.name} · {section.name}
@@ -289,18 +317,35 @@ export default function ItemDetailSheet() {
 
         </div>
 
-        <div style={{ display: "flex", gap: 10, flex: "none" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: "none" }}>
           {item.opened ? (
-            <div style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "rgba(22,50,92,0.06)", color: "rgba(22,50,92,0.4)", fontSize: 13.5, fontWeight: 700 }}>
+            <div style={{ textAlign: "center", padding: 11, borderRadius: 14, background: "rgba(22,50,92,0.06)", color: "rgba(22,50,92,0.4)", fontSize: 13, fontWeight: 700 }}>
               Opened
             </div>
           ) : (
-            <div onClick={actions.markUsed} style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#16325c", color: "#fff", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
-              Mark as used
+            <div
+              onClick={actions.markUsed}
+              title="Opened but not finished - stays in your fridge, just tracked as opened"
+              style={{ textAlign: "center", padding: 11, borderRadius: 14, background: "#eaf6ff", color: "#2f6fb0", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+            >
+              Opened it
             </div>
           )}
-          <div onClick={actions.discardItem} style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#c1452e", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
-            Delete item
+          <div style={{ display: "flex", gap: 10 }}>
+            <div
+              onClick={actions.markItemConsumed}
+              title="Finished it - counts toward your Food Balance score"
+              style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#16325c", color: "#fff", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+            >
+              Used it up
+            </div>
+            <div
+              onClick={actions.discardItemWasted}
+              title="Threw it out - doesn't count toward your Food Balance score"
+              style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#c1452e", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+            >
+              Throw away
+            </div>
           </div>
         </div>
       </div>

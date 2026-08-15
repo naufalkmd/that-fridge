@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { ListFilter, Minus, PackageOpen, Plus, Refrigerator, Search } from "lucide-react";
-import { STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
-import { getScopeLabel, getScopedItems } from "@/lib/thatfridge/selectors";
+import { NUTRITION_CATEGORIES, STORAGE_LOCATIONS, guessNutritionCategory } from "@/lib/thatfridge/data";
+import { getScopeLabel, getScopedItems, type ItemWithSection } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
-import type { StorageLocation } from "@/lib/thatfridge/types";
+import type { NutritionCategory, StorageLocation } from "@/lib/thatfridge/types";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
+import CategoryTag from "../CategoryTag";
 import FoodIcon from "../FoodIcon";
 import LocationIcon from "../LocationIcon";
 
@@ -70,20 +71,21 @@ export default function InventoryScreen() {
 
   const allItems = getScopedItems(state);
 
-  const categories = [{ id: "all", name: "All" }];
-  const seenCategoryIds = new Set<string>();
-  for (const item of allItems) {
-    if (!seenCategoryIds.has(item.sectionId)) {
-      seenCategoryIds.add(item.sectionId);
-      categories.push({ id: item.sectionId, name: item.sectionName });
-    }
-  }
+  // Falls back to guessing from the icon for items added before nutrition categories existed
+  // (or anything the picker couldn't place), so grouping/filtering never has to show a
+  // meaningless "General"/uncategorized bucket - everything lands in a real food group.
+  const resolveCategory = (item: ItemWithSection): NutritionCategory => item.nutritionCategory ?? guessNutritionCategory(item.icon) ?? "other_extras";
 
-  const filteredItems = categoryFilter === "all" ? allItems : allItems.filter((i) => i.sectionId === categoryFilter);
-  const groupedByCategory = categories
-    .filter((c) => c.id !== "all")
-    .map((cat) => ({ ...cat, items: filteredItems.filter((i) => i.sectionId === cat.id) }))
-    .filter((g) => g.items.length > 0);
+  const presentCategoryKeys = new Set(allItems.map(resolveCategory));
+  const categories = [
+    { id: "all", name: "All" },
+    ...NUTRITION_CATEGORIES.filter((c) => presentCategoryKeys.has(c.key)).map((c) => ({ id: c.key, name: c.label })),
+  ];
+
+  const filteredItems = categoryFilter === "all" ? allItems : allItems.filter((i) => resolveCategory(i) === categoryFilter);
+  const groupedByCategory = NUTRITION_CATEGORIES.map((c) => ({ id: c.key, name: c.label, items: filteredItems.filter((i) => resolveCategory(i) === c.key) })).filter(
+    (g) => g.items.length > 0
+  );
 
   const sortedItems =
     state.inventorySortMode === "expiry"
@@ -225,6 +227,7 @@ export default function InventoryScreen() {
                       {showFridgeTags && <span style={{ fontWeight: 500, color: "rgba(22,50,92,0.4)" }}> · {item.fridgeName}</span>}
                       {item.opened && <PackageOpen size={12} color="#2f6fb0" strokeWidth={2.4} />}
                       <LocationTag location={item.location || "fridge"} />
+                      <CategoryTag category={item.nutritionCategory} />
                     </div>
                     <div style={{ height: 4, borderRadius: 2, background: "rgba(22,50,92,0.08)", overflow: "hidden" }}>
                       <div style={{ height: "100%", borderRadius: 2, width: `${item.freshness}%`, background: freshColor(item.freshness) }} />
@@ -256,6 +259,7 @@ export default function InventoryScreen() {
                   {item.name}
                   {item.opened && <PackageOpen size={12} color="#2f6fb0" strokeWidth={2.4} />}
                   <LocationTag location={item.location || "fridge"} />
+                  <CategoryTag category={item.nutritionCategory} />
                 </div>
                 <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", marginBottom: 4 }}>
                   {item.sectionName}
@@ -380,9 +384,10 @@ export default function InventoryScreen() {
                   <LocationTag location={item.location || "fridge"} />
                 </div>
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13.5, fontWeight: 700 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13.5, fontWeight: 700, flexWrap: "wrap" }}>
                     {item.name}
                     {item.opened && <PackageOpen size={12} color="#2f6fb0" strokeWidth={2.4} />}
+                    <CategoryTag category={item.nutritionCategory} />
                   </div>
                   <div style={{ fontSize: 11, color: "rgba(22,50,92,0.5)", marginTop: 2 }}>
                     {item.sectionName}

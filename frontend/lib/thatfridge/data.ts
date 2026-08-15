@@ -1,4 +1,4 @@
-import type { Agent, FoodSubtab, FridgeStyleDef, IconData, RecipeCategory, Section, StorageLocation } from "./types";
+import type { Agent, FoodSubtab, FridgeStyleDef, IconData, NutritionCategory, RecipeCategory, Section, StorageLocation } from "./types";
 import foodIconManifest from "@/public/images/thatfridge/food-icons/manifest.json";
 
 export const FOOD_TAB_ORDER: FoodSubtab[] = ["recipes", "shopping", "guardian", "organizer"];
@@ -162,6 +162,43 @@ function guessGroupForLabel(label: string): string {
   return "leftovers";
 }
 
+// A separate, newer taxonomy from the ICON_SECTION groups above - used for the per-item
+// "nutrition category" tag and the Food Balance score's variety calculation, not for the
+// shopping-balance suggestions ICON_SECTION backs. Deliberately its own keyword lists (not a
+// reuse/edit of DAIRY_GROUP_KEYWORDS etc. above) since the two taxonomies disagree in places -
+// eggs are dairy in the old grouping but protein here, matching a normal food-group breakdown.
+const NUTRITION_DAIRY_KEYWORDS = ["cheese", "cream", "milk", "yogurt", "yoghurt", "butter"];
+const NUTRITION_PROTEIN_KEYWORDS = [
+  "bacon", "ham", "beef", "chicken", "drumstick", "sausage", "steak", "shrimp", "meat", "mussel",
+  "oyster", "dumpling", "pork", "egg", "tofu", "bean", "legume", "lentil", "chickpea", "fish", "salmon", "tuna",
+];
+const NUTRITION_VEGETABLE_KEYWORDS = [
+  "onion", "mushroom", "tomato", "carrot", "corn", "pea", "pumpkin", "parsnip", "chili",
+  "cauliflower", "cucumber", "cabbage", "broccoli", "parsley", "beet", "garlic", "eggplant",
+  "asparagus", "herb", "lettuce", "kale", "spinach", "radish", "artichoke", "zucchini", "squash", "celery", "leek",
+];
+const NUTRITION_FRUIT_KEYWORDS = [
+  "apple", "cherry", "pear", "peach", "pineapple", "dragonfruit", "pomegranate", "berry", "berries",
+  "watermelon", "grape", "lime", "lemon", "orange", "mango", "banana", "melon", "kiwi", "plum", "fig",
+];
+const NUTRITION_GRAIN_KEYWORDS = [
+  "rice", "bread", "pasta", "potato", "cereal", "oat", "noodle", "wheat", "tortilla", "bagel",
+  "waffle", "pancake", "quinoa", "grain", "dough", "toast", "bun", "roll", "wrap",
+];
+
+// Falls through to "other_extras" (sauces, snacks, condiments, drinks, desserts, mixed/prepared
+// dishes) for anything that doesn't match one of the real food groups above - deliberately the
+// catch-all, since that's also the bucket excluded from the variety score (see scoring.ts).
+function guessNutritionCategoryForLabel(label: string): NutritionCategory {
+  const q = label.toLowerCase();
+  if (NUTRITION_DAIRY_KEYWORDS.some((k) => q.includes(k))) return "dairy";
+  if (NUTRITION_PROTEIN_KEYWORDS.some((k) => q.includes(k))) return "protein";
+  if (NUTRITION_VEGETABLE_KEYWORDS.some((k) => q.includes(k))) return "vegetables";
+  if (NUTRITION_FRUIT_KEYWORDS.some((k) => q.includes(k))) return "fruit";
+  if (NUTRITION_GRAIN_KEYWORDS.some((k) => q.includes(k))) return "grains";
+  return "other_extras";
+}
+
 // The asset pack's manifest.json labels were visually spot-checked against their actual
 // pixel art (see contact-sheet review of all 164 icons) and turned out to be scrambled
 // across a big chunk of the set. Corrections have since been folded directly into
@@ -195,6 +232,7 @@ const extraIconEntries = (foodIconManifest as FoodIconManifestEntry[])
       file: m.file,
       keywords: deriveKeywordsFromLabel(label),
       group: guessGroupForLabel(label),
+      nutritionCategory: guessNutritionCategoryForLabel(label),
     };
   });
 
@@ -239,6 +277,46 @@ export const ICON_SECTION: Record<string, string> = {
   leftovers: "leftovers",
   ...Object.fromEntries(extraIconEntries.map((e) => [e.key, e.group])),
 };
+
+// The nutrition-category taxonomy shown as a per-item tag and used by the Food Balance score
+// (see scoring.ts) - deliberately a different, smaller breakdown than ICON_SECTION above (no
+// "produce"/"leftovers" catch-all; dairy is its own group; eggs count as protein). Order here
+// is also display order for the category picker UI.
+export const NUTRITION_CATEGORIES: { key: NutritionCategory; label: string; countsTowardVariety: boolean }[] = [
+  { key: "protein", label: "Protein", countsTowardVariety: true },
+  { key: "vegetables", label: "Vegetables", countsTowardVariety: true },
+  { key: "fruit", label: "Fruit", countsTowardVariety: true },
+  { key: "grains", label: "Grains & Starches", countsTowardVariety: true },
+  { key: "dairy", label: "Dairy", countsTowardVariety: true },
+  { key: "other_extras", label: "Other/Extras", countsTowardVariety: false },
+];
+
+const ICON_NUTRITION_CATEGORY: Record<string, NutritionCategory> = {
+  milk: "dairy",
+  yogurt: "dairy",
+  cheese: "dairy",
+  eggs: "protein",
+  spinach: "vegetables",
+  carrot: "vegetables",
+  apple: "fruit",
+  berries: "fruit",
+  meat: "protein",
+  leftovers: "other_extras",
+  ...Object.fromEntries(extraIconEntries.map((e) => [e.key, e.nutritionCategory])),
+};
+
+export function guessNutritionCategory(icon: string): NutritionCategory | null {
+  return ICON_NUTRITION_CATEGORY[icon] ?? null;
+}
+
+// Default fridge sections are now named after the nutrition categories (Protein, Vegetables,
+// Fruit, Grains & Starches, Dairy, Other/Extras) instead of one generic "General" bucket - this
+// resolves an icon straight to the matching section's display name, e.g. for auto-selecting
+// "Dairy" as the STORE IN section while typing "Milk" (see useThatFridge.ts).
+export function guessNutritionCategoryLabel(icon: string): string | null {
+  const key = guessNutritionCategory(icon);
+  return key ? (NUTRITION_CATEGORIES.find((c) => c.key === key)?.label ?? null) : null;
+}
 
 const ICON_KEYWORDS: Record<string, string[]> = {
   milk: ["milk"],

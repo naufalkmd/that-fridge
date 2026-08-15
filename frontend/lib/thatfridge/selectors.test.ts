@@ -182,9 +182,9 @@ describe("getBuyAgainSuggestions", () => {
       fridges: [makeFridge({ sections: [makeSection({ items: [makeItem({ name: "Milk" })] })] })],
       shoppingList: [{ id: "s1", name: "Bread", icon: "bread", section: "other", checked: false }],
       usageHistory: [
-        { id: "u1", key: "milk", name: "Milk", icon: "milk", count: 5, lastAt: 3 },
-        { id: "u2", key: "bread", name: "Bread", icon: "bread", count: 4, lastAt: 2 },
-        { id: "u3", key: "cheese", name: "Cheese", icon: "cheese", count: 2, lastAt: 1 },
+        { id: "u1", key: "milk", name: "Milk", icon: "milk", category: null, count: 5, freshUseCount: 0, freshnessSum: 0, freshnessSampleCount: 0, lastAt: 3 },
+        { id: "u2", key: "bread", name: "Bread", icon: "bread", category: null, count: 4, freshUseCount: 0, freshnessSum: 0, freshnessSampleCount: 0, lastAt: 2 },
+        { id: "u3", key: "cheese", name: "Cheese", icon: "cheese", category: null, count: 2, freshUseCount: 0, freshnessSum: 0, freshnessSampleCount: 0, lastAt: 1 },
       ],
     });
 
@@ -195,8 +195,8 @@ describe("getBuyAgainSuggestions", () => {
   it("ranks by usage count first, then recency", () => {
     const state = makeState({
       usageHistory: [
-        { id: "u1", key: "a", name: "A", icon: "item", count: 1, lastAt: 100 },
-        { id: "u2", key: "b", name: "B", icon: "item", count: 3, lastAt: 1 },
+        { id: "u1", key: "a", name: "A", icon: "item", category: null, count: 1, freshUseCount: 0, freshnessSum: 0, freshnessSampleCount: 0, lastAt: 100 },
+        { id: "u2", key: "b", name: "B", icon: "item", category: null, count: 3, freshUseCount: 0, freshnessSum: 0, freshnessSampleCount: 0, lastAt: 1 },
       ],
     });
 

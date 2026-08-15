@@ -8,6 +8,7 @@ import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import CrewScene from "../CrewScene";
 import FoodIcon from "../FoodIcon";
+import KitchenScoreSection from "../KitchenScoreSection";
 import MarkdownText from "../MarkdownText";
 
 const CLEAR_THRESHOLD = -80;
@@ -329,6 +330,11 @@ export default function HomeScreen() {
         </div>
       </div>
 
+      {/* your kitchen this week */}
+      <div style={{ marginBottom: 20 }}>
+        <KitchenScoreSection />
+      </div>
+
       {/* fridge hero carousel */}
       <div style={{ position: "relative", overflow: "hidden", marginBottom: 10 }}>
         <div
@@ -591,6 +597,11 @@ export default function HomeScreen() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* your kitchen this week */}
+      <div style={{ marginBottom: 28 }}>
+        <KitchenScoreSection />
       </div>
 
       {/* Needs attention: horizontally-scrolling row */}

@@ -111,7 +111,11 @@ describe("useThatFridge shopping list seeding", () => {
   // "Leftovers from Tuesday" and excluded items whose note just didn't happen to say so.
   it("seeds the shopping list from real quantity, not from what an item's note happens to say", async () => {
     vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "My Fridge", sections: [] });
-    vi.mocked(api.createSection).mockResolvedValue({ id: "s1", name: "General", items: [] });
+    // A brand-new fridge now gets one section per nutrition category (not a single "General"
+    // section), created via several parallel createSection calls - each needs its own distinct
+    // id/name here, or every "created" section would collapse into duplicate copies of the
+    // same section id and the items below would appear to live in all of them at once.
+    vi.mocked(api.createSection).mockImplementation((fridgeId, name) => Promise.resolve({ id: `sec-${name}`, name, items: [] }));
     vi.mocked(api.createItem)
       .mockResolvedValueOnce({
         id: "i1",
@@ -157,7 +161,11 @@ describe("useThatFridge shopping list seeding", () => {
 describe("useThatFridge Organizer suggested moves", () => {
   const setUpTwoItems = () => {
     vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "My Fridge", sections: [] });
-    vi.mocked(api.createSection).mockResolvedValue({ id: "s1", name: "General", items: [] });
+    // A brand-new fridge now gets one section per nutrition category (not a single "General"
+    // section), created via several parallel createSection calls - each needs its own distinct
+    // id/name here, or every "created" section would collapse into duplicate copies of the
+    // same section id and the items below would appear to live in all of them at once.
+    vi.mocked(api.createSection).mockImplementation((fridgeId, name) => Promise.resolve({ id: `sec-${name}`, name, items: [] }));
     vi.mocked(api.createItem)
       .mockResolvedValueOnce({ id: "i1", name: "Frozen Peas", icon: "leftovers", freshness: 90, days: 90, note: "", qty: 1, location: "fridge" })
       .mockResolvedValueOnce({ id: "i2", name: "Milk", icon: "milk", freshness: 90, days: 7, note: "", qty: 1, location: "fridge" });
@@ -251,7 +259,9 @@ describe("useThatFridge Organizer suggested moves", () => {
     expect(remaining).toHaveLength(1);
     expect(remaining[0].itemId).toBe("i2"); // Milk's suggestion is untouched
 
-    const moved = result.current.state.fridges[0].sections[0].items.find((i) => i.id === "i1");
+    // Items are now routed to whichever of the several default category sections matches
+    // their icon, not necessarily sections[0] - search across all of them.
+    const moved = result.current.state.fridges[0].sections.flatMap((sec) => sec.items).find((i) => i.id === "i1");
     expect(moved?.location).toBe("freezer");
     expect(result.current.state.undoMessage).toContain("Frozen Peas");
   });
@@ -356,7 +366,11 @@ describe("useThatFridge memory", () => {
 describe("useThatFridge expiry scan routing", () => {
   it("startExpiryScanForManual creates a fridge/section on the fly and routes to the camera step", async () => {
     vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "My Fridge", sections: [] });
-    vi.mocked(api.createSection).mockResolvedValue({ id: "s1", name: "General", items: [] });
+    // A brand-new fridge now gets one section per nutrition category (not a single "General"
+    // section), created via several parallel createSection calls - each needs its own distinct
+    // id/name here, or every "created" section would collapse into duplicate copies of the
+    // same section id and the items below would appear to live in all of them at once.
+    vi.mocked(api.createSection).mockImplementation((fridgeId, name) => Promise.resolve({ id: `sec-${name}`, name, items: [] }));
 
     const { result } = renderHook(() => useThatFridge());
 
@@ -366,12 +380,18 @@ describe("useThatFridge expiry scan routing", () => {
 
     expect(result.current.state.addStep).toBe(6);
     expect(result.current.state.expiryPhotoTargetId).toBe("manual");
-    expect(result.current.state.manualSectionId).toBe("s1");
+    // No name/icon typed yet, so manualIcon is still its "leftovers" default, which maps to
+    // the "Other/Extras" catch-all category - it's the section that gets picked.
+    expect(result.current.state.manualSectionId).toBe("sec-Other/Extras");
   });
 
   it("captureExpiryPhoto for the manual target fills manualExpiryDate and returns to the manual form", async () => {
     vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "My Fridge", sections: [] });
-    vi.mocked(api.createSection).mockResolvedValue({ id: "s1", name: "General", items: [] });
+    // A brand-new fridge now gets one section per nutrition category (not a single "General"
+    // section), created via several parallel createSection calls - each needs its own distinct
+    // id/name here, or every "created" section would collapse into duplicate copies of the
+    // same section id and the items below would appear to live in all of them at once.
+    vi.mocked(api.createSection).mockImplementation((fridgeId, name) => Promise.resolve({ id: `sec-${name}`, name, items: [] }));
     vi.mocked(api.scanExpiryPhoto).mockResolvedValue({ found: true, date: "2026-09-01", confidence: "high" });
 
     const { result } = renderHook(() => useThatFridge());
@@ -420,7 +440,11 @@ describe("useThatFridge expiry scan routing", () => {
 
   it("skipExpiryPhoto returns to the manual form when the scan was started from there", async () => {
     vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "My Fridge", sections: [] });
-    vi.mocked(api.createSection).mockResolvedValue({ id: "s1", name: "General", items: [] });
+    // A brand-new fridge now gets one section per nutrition category (not a single "General"
+    // section), created via several parallel createSection calls - each needs its own distinct
+    // id/name here, or every "created" section would collapse into duplicate copies of the
+    // same section id and the items below would appear to live in all of them at once.
+    vi.mocked(api.createSection).mockImplementation((fridgeId, name) => Promise.resolve({ id: `sec-${name}`, name, items: [] }));
 
     const { result } = renderHook(() => useThatFridge());
     await act(async () => {

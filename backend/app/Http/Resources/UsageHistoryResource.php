@@ -19,7 +19,11 @@ class UsageHistoryResource extends JsonResource
             'key' => $this->key,
             'name' => $this->name,
             'icon' => $this->icon,
+            'category' => $this->category,
             'count' => $this->count,
+            'freshUseCount' => $this->fresh_use_count,
+            'freshnessSum' => $this->freshness_sum,
+            'freshnessSampleCount' => $this->freshness_sample_count,
             'lastAt' => $this->last_used_at->getTimestamp() * 1000,
         ];
     }

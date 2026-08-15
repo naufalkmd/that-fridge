@@ -16,6 +16,7 @@ use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\ShoppingItemController;
 use App\Http\Controllers\UsageHistoryController;
+use App\Http\Controllers\UserGoalController;
 use Illuminate\Support\Facades\Route;
 
 // Auth routes (public)
@@ -70,6 +71,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/notification-prefs', [NotificationPrefController::class, 'show']);
     Route::patch('/notification-prefs', [NotificationPrefController::class, 'update']);
+
+    Route::get('/user-goal', [UserGoalController::class, 'show']);
+    Route::patch('/user-goal', [UserGoalController::class, 'update']);
 
     Route::get('/notification-events', [NotificationEventController::class, 'index']);
     Route::patch('/notification-events/{notificationEvent}', [NotificationEventController::class, 'update']);

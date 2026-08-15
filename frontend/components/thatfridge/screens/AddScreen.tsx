@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import type { IScannerControls } from "@zxing/browser";
 import { Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Keyboard, Minus, Plus, Receipt, Refrigerator, ScanBarcode, Sparkles, X } from "lucide-react";
-import { FOOD_ICON_KEYS, ICON_LABELS, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
+import { FOOD_ICON_KEYS, ICON_LABELS, NUTRITION_CATEGORIES, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 import LocationIcon from "../LocationIcon";
@@ -807,6 +807,32 @@ export default function AddScreen() {
                   </div>
                 </div>
               )}
+            </div>
+            <div>
+              <div style={labelStyle}>FOOD GROUP</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {NUTRITION_CATEGORIES.map((c) => {
+                  const active = state.manualCategory === c.key;
+                  return (
+                    <div
+                      key={c.key}
+                      onClick={() => actions.onManualCategoryChange(c.key)}
+                      style={{
+                        padding: "7px 12px",
+                        borderRadius: 12,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        background: active ? "#16325c" : "#fff",
+                        color: active ? "#fff" : "#16325c",
+                        boxShadow: active ? "none" : "0 4px 10px rgba(22,50,92,0.06)",
+                      }}
+                    >
+                      {c.label}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             {/* Bare native <select> with no chevron/affordance reads as broken on desktop — the
                 section is already auto-picked from the item name (see onManualNameChange) and

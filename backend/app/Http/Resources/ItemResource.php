@@ -28,6 +28,7 @@ class ItemResource extends JsonResource
             'id' => (string) $this->id,
             'name' => $this->name,
             'icon' => $this->icon,
+            'nutrition_category' => $this->nutrition_category,
             'freshness' => $freshness,
             'days' => $days,
             'note' => $this->note,

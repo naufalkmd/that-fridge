@@ -1,4 +1,4 @@
-import type { Item, StorageLocation } from "./types";
+import type { Item, NutritionCategory, StorageLocation } from "./types";
 
 const TOKEN_KEY = "thatfridge_token";
 
@@ -59,6 +59,7 @@ export interface RawItem {
   id: string;
   name: string;
   icon: string;
+  nutrition_category: NutritionCategory | null;
   freshness: number | null;
   days: number | null;
   note: string | null;
@@ -71,6 +72,7 @@ export function toClientItem(raw: RawItem): Item {
     id: raw.id,
     name: raw.name,
     icon: raw.icon,
+    nutritionCategory: raw.nutrition_category ?? null,
     freshness: raw.freshness ?? 0,
     days: raw.days ?? 0,
     note: raw.note ?? "",

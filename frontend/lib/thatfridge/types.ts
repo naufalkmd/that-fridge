@@ -6,10 +6,16 @@ export interface IconData {
 
 export type StorageLocation = "fridge" | "freezer" | "pantry";
 
+// A lightweight food-group tag, not macro/nutrition tracking. other_extras (sauces, snacks,
+// condiments, drinks, desserts, mixed/prepared dishes) is deliberately excluded from the Food
+// Balance score's variety calculation - see NUTRITION_CATEGORIES in data.ts and scoring.ts.
+export type NutritionCategory = "protein" | "vegetables" | "fruit" | "grains" | "dairy" | "other_extras";
+
 export interface Item {
   id: string;
   name: string;
   icon: string;
+  nutritionCategory?: NutritionCategory | null;
   freshness: number;
   days: number;
   note: string;
@@ -133,6 +139,7 @@ export type Screen =
   | "notifications"
   | "notificationHistory"
   | "aiData"
+  | "goals"
   | "about";
 
 export type FoodSubtab = "recipes" | "shopping" | "guardian" | "organizer";
@@ -150,8 +157,26 @@ export interface UsageHistoryEntry {
   key: string;
   name: string;
   icon: string;
+  category: NutritionCategory | null;
   count: number;
+  freshUseCount: number;
+  freshnessSum: number;
+  freshnessSampleCount: number;
   lastAt: number;
+}
+
+// money_saved is deliberately not offered - there's no price data anywhere in the schema
+// (see backend/API.md's "User goal" section), so it can't be computed without inventing a
+// number.
+export type GoalMetricType = "waste_rate" | "items_rescued" | "freshness_at_use";
+export type GoalPeriod = "weekly" | "monthly";
+
+export interface UserGoal {
+  metricType: GoalMetricType;
+  targetValue: number;
+  period: GoalPeriod;
+  isActive: boolean;
+  updatedAt: number;
 }
 
 export type NotificationKind = "expiring" | "lowStock" | "recipe";

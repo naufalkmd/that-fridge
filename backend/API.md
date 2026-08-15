@@ -88,6 +88,7 @@ Returns all of the current user's fridges, fully nested (sections → items).
               "id": "1",
               "name": "Milk",
               "icon": "milk",
+              "nutrition_category": "dairy",
               "freshness": 50,
               "days": 4,
               "note": null,
@@ -162,6 +163,7 @@ Always created/modified under a parent section. **This is the contract Track B's
   "product_id": null,
   "name": "Milk",
   "icon": "milk",
+  "nutrition_category": "dairy",
   "location": "fridge",
   "quantity": 1,
   "expiry_date": "2026-08-01",
@@ -176,6 +178,7 @@ Always created/modified under a parent section. **This is the contract Track B's
 | `product_id` | no | must exist in `products` if given |
 | `name` | yes | |
 | `icon` | yes | free string, matches frontend icon key |
+| `nutrition_category` | no | one of `protein`, `vegetables`, `fruit`, `grains`, `dairy`, `other_extras` — a lightweight food-group tag (not macro/nutrient tracking), auto-guessed from `icon` client-side but user-editable. Feeds the Food Balance goal metric's variety calculation; `other_extras` (sauces/snacks/condiments/drinks/desserts) is deliberately excluded from that calculation so it can't inflate the score |
 | `location` | no | `fridge` \| `freezer` \| `pantry` |
 | `quantity` | no | default `1` |
 | `expiry_date` | no | `YYYY-MM-DD` |
@@ -314,18 +317,29 @@ Newest-used first.
 ```json
 {
   "data": [
-    { "id": "3", "key": "bananas", "name": "Bananas", "icon": "banana", "count": 1, "lastAt": 1786036186000 }
+    { "id": "3", "key": "bananas", "name": "Bananas", "icon": "banana", "category": "fruit", "count": 1, "freshUseCount": 1, "freshnessSum": 80, "freshnessSampleCount": 1, "lastAt": 1786036186000 }
   ]
 }
 ```
 
 ### `POST /usage-history` 🔒
 
-Records that an item was used up. Upserts by a normalized `key` (lowercased, trimmed `name`) scoped to the user — an existing entry gets `count` incremented and `last_used_at` bumped rather than a duplicate row being created.
+Records that an item was used up (consumed) — **not** called for items thrown away wasted; the frontend only calls this from its "Used it up" action (and "Mark as made" on a recipe, which is the same action run per matched ingredient), never from "Throw away". This is what keeps this table an honest consumption signal, used by both the `items_rescued`/`freshness_at_use` [user goal](#user-goal) metrics and the Food Balance score's variety calculation. Upserts by a normalized `key` (lowercased, trimmed `name`) scoped to the user — an existing entry gets `count` incremented and `last_used_at` bumped rather than a duplicate row being created.
 
-**Body** `{ "name": "Bananas", "icon": "banana" }`
+**Body**
+```json
+{ "name": "Bananas", "icon": "banana", "category": "fruit", "daysRemaining": 2, "freshness": 80 }
+```
+`category`, `daysRemaining`, and `freshness` are all optional — fed straight from the frontend's `Item.nutritionCategory`/`Item.days`/`Item.freshness` at the moment the item was removed, not invented. `category` is one of the [nutrition categories](#items) and is overwritten on every call (like `name`/`icon` — it reflects the item's category the most recent time it was used, not a history); it feeds the Food Balance score's variety grouping (`other_extras` is excluded from that calculation). `daysRemaining`/`freshness` back the goal metrics as described there: a non-negative `daysRemaining` increments `freshUseCount`, and `freshness` adds to a running `freshnessSum`/`freshnessSampleCount`. All three are all-time cumulative — there's no per-event history, just one row per distinct item name — so they answer "since you started tracking," not a specific week/month.
 
-**200** — the created/updated entry, same shape as above.
+**200** — the created/updated entry:
+```json
+{
+  "id": "3", "key": "bananas", "name": "Bananas", "icon": "banana", "category": "fruit",
+  "count": 1, "freshUseCount": 1, "freshnessSum": 80, "freshnessSampleCount": 1,
+  "lastAt": 1786036186000
+}
+```
 
 ### `DELETE /usage-history/{usageHistory}` 🔒
 
@@ -334,6 +348,43 @@ Removes one entry. **204**.
 ### `DELETE /usage-history` 🔒
 
 Clears every entry for the current user. **204**.
+
+---
+
+## User goal
+
+A single, editable goal per user (singleton — no id in the URL, same pattern as [Notification preferences](#notification-preferences)). First `GET`/`PATCH` auto-creates the row with a default goal if it doesn't exist yet, so every user always has one.
+
+### `GET /user-goal` 🔒
+
+**200** (or **201** the very first time, since `firstOrCreate()` creates the row)
+```json
+{ "metricType": "waste_rate", "targetValue": 20, "period": "weekly", "isActive": true, "updatedAt": 1786036186000 }
+```
+
+Default for new users: `metricType: "waste_rate"`, `targetValue: 20`, `period: "weekly"`, `isActive: true`.
+
+### `PATCH /user-goal` 🔒
+
+**Body** — any subset of `metricType`, `targetValue`, `period`, `isActive`.
+
+| field | notes |
+|---|---|
+| `metricType` | one of `waste_rate`, `items_rescued`, `freshness_at_use` (see below) |
+| `targetValue` | integer ≥ 1. Capped at 100 for `waste_rate`/`freshness_at_use` (both 0-100 scales) — no cap for `items_rescued` |
+| `period` | `weekly` \| `monthly` — descriptive intent; see the per-metric notes below for what's actually period-bound |
+| `isActive` | `false` = user has turned off/skipped goal tracking, without losing their chosen metric/target |
+
+**200** — updated goal, same shape as `GET`.
+
+**422** — an unsupported `metricType` (including `money_saved` — see below) or an out-of-range `targetValue`, in the standard [validation error shape](#error-shape).
+
+#### Supported metrics
+
+- **`waste_rate`** — % of currently-owned items past their `expiry_date` right now, out of all owned items (`Item.days < 0` — the one unambiguous "still here past its date" signal; see [Items](#items)). Computed live from current inventory on every read, so `period` doesn't change how it's measured — it's always "right now," not a weekly/monthly rate.
+- **`items_rescued`** — count of items removed via `POST /usage-history` while still within their date (`daysRemaining >= 0` at the time), summed across `freshUseCount`. **All-time since tracking began**, not strictly per-`period` — `usage_history` has no per-event timestamp log, only a cumulative count per item name, so a real "this week" figure isn't available yet.
+- **`freshness_at_use`** — weighted average of `freshness` values recorded via `POST /usage-history` at the moment items were used (`freshnessSum` / `freshnessSampleCount`). Same **all-time** caveat as `items_rescued`.
+- **`money_saved` is not supported.** There's no price data anywhere in the schema (no `price` column on `products`, `items`, or `receipt_line_items`, and receipt/photo scanning doesn't capture cost) — offering this metric would mean inventing a number, so it's intentionally left out until real price data exists.
 
 ---
 

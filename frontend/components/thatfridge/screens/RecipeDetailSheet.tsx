@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Heart, Pencil, Play, Plus } from "lucide-react";
+import { Check, ChefHat, Heart, Pencil, Play, Plus } from "lucide-react";
 import { RECIPE_CATEGORIES } from "@/lib/thatfridge/data";
 import { getRecipesView } from "@/lib/thatfridge/selectors";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
@@ -111,6 +111,27 @@ export default function RecipeDetailSheet() {
                 <div style={{ fontSize: 13.5, lineHeight: 1.5, color: "#16325c" }}>{step.text}</div>
               </div>
             ))}
+          </div>
+
+          <div
+            onClick={() => actions.openMarkRecipeMade(selectedRecipe.id)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              padding: 13,
+              borderRadius: 14,
+              background: "#16325c",
+              color: "#fff",
+              fontSize: 13.5,
+              fontWeight: 700,
+              cursor: "pointer",
+              marginBottom: selectedRecipe.attachments.length > 0 ? 20 : 6,
+            }}
+          >
+            <ChefHat size={15} strokeWidth={2.2} />
+            Mark as made
           </div>
 
           {selectedRecipe.attachments.length > 0 && (

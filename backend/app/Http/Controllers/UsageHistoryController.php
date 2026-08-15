@@ -6,9 +6,13 @@ use App\Http\Resources\UsageHistoryResource;
 use App\Models\UsageHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class UsageHistoryController extends Controller
 {
+    // Mirrors ItemController::NUTRITION_CATEGORIES - keep both in sync if the allowed set changes.
+    private const NUTRITION_CATEGORIES = ['protein', 'vegetables', 'fruit', 'grains', 'dairy', 'other_extras'];
+
     public function index(Request $request)
     {
         $entries = $request->user()->usageHistory()->orderByDesc('last_used_at')->get();
@@ -28,25 +32,46 @@ class UsageHistoryController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'icon' => ['required', 'string', 'max:255'],
+            // Both optional and both fed straight from data the frontend already has at the
+            // moment an item is removed (Item.days / Item.freshness) - not invented. They back
+            // the "items rescued" / "average freshness at use" goal metrics (see UserGoal).
+            'daysRemaining' => ['sometimes', 'nullable', 'integer'],
+            'freshness' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100'],
+            // The item's nutrition category at the moment it was used - feeds the Food
+            // Balance goal metric's variety calculation. Optional; older/uncategorized items
+            // just won't contribute a category for that use.
+            'category' => ['sometimes', 'nullable', 'string', Rule::in(self::NUTRITION_CATEGORIES)],
         ]);
 
         $key = Str::lower(trim($data['name']));
+
+        $freshUseIncrement = array_key_exists('daysRemaining', $data) && $data['daysRemaining'] !== null && $data['daysRemaining'] >= 0 ? 1 : 0;
+        $freshnessIncrement = array_key_exists('freshness', $data) && $data['freshness'] !== null ? $data['freshness'] : 0;
+        $freshnessSampleIncrement = array_key_exists('freshness', $data) && $data['freshness'] !== null ? 1 : 0;
 
         $entry = $request->user()->usageHistory()->where('key', $key)->first();
 
         if ($entry) {
             $entry->update([
                 'count' => $entry->count + 1,
+                'fresh_use_count' => $entry->fresh_use_count + $freshUseIncrement,
+                'freshness_sum' => $entry->freshness_sum + $freshnessIncrement,
+                'freshness_sample_count' => $entry->freshness_sample_count + $freshnessSampleIncrement,
                 'last_used_at' => now(),
                 'name' => $data['name'],
                 'icon' => $data['icon'],
+                'category' => $data['category'] ?? $entry->category,
             ]);
         } else {
             $entry = $request->user()->usageHistory()->create([
                 'key' => $key,
                 'name' => $data['name'],
                 'icon' => $data['icon'],
+                'category' => $data['category'] ?? null,
                 'count' => 1,
+                'fresh_use_count' => $freshUseIncrement,
+                'freshness_sum' => $freshnessIncrement,
+                'freshness_sample_count' => $freshnessSampleIncrement,
                 'last_used_at' => now(),
             ]);
         }
