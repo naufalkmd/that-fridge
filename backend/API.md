@@ -351,6 +351,71 @@ Clears every entry for the current user. **204**.
 
 ---
 
+## Recipes
+
+A recipe with `user_id: null` is curated (visible/read-only-ish to everyone); a set `user_id` is a custom recipe, visible and editable only by its owner. `ingredients` is an array of `{name, icon}`; `steps` is an array of strings; `attachments` is an array of `{type: "image"|"video", url}`.
+
+### `GET /recipes` 🔒
+
+Every curated recipe plus the current user's own. **200**, array of recipe objects (see shape below).
+
+### `POST /recipes` 🔒
+
+**Body**: `name` (string), `minutes` (integer 1-1440), `category` (nullable, one of `breakfast`\|`lunch`\|`dinner`\|`dessert`\|`snack`\|`quick` — the user's own organizational tag, shown in Food Hub's filter chips), `ingredients` (array, each `{name, icon}` required), `steps` (array of strings), `attachments` (optional array).
+
+Also runs the one-time "What Should I Eat?" tagging call (`AgentService::tagRecipe` — same OpenRouter-or-mock-fallback pattern as `POST /items/suggest-details`) and persists its result alongside creation. **Not** re-run on `PATCH` — tags are advisory, not correctness-critical.
+
+**201**:
+```json
+{ "data": {
+  "id": "1", "name": "Weeknight Pasta", "minutes": 20, "category": null,
+  "ingredients": [{ "name": "Pasta", "icon": "leftovers" }], "steps": ["Boil it", "Eat it"], "attachments": [],
+  "mealType": "dinner", "vibes": [], "foodFocus": ["balanced"], "madeCount": 0,
+  "isCustom": true, "isFavorite": false
+} }
+```
+
+### `PATCH /recipes/{recipe}` 🔒 · `DELETE /recipes/{recipe}` 🔒
+
+Owner only. Same body fields as `POST` (all optional on `PATCH`). Tags (`mealType`/`vibes`/`foodFocus`) are untouched by an update.
+
+### `POST /recipes/{recipe}/favorite` 🔒 · `DELETE /recipes/{recipe}/favorite` 🔒
+
+Any visible recipe (curated or own). Toggles the current user's favorite. **200**, updated recipe.
+
+### `POST /recipes/attachments` 🔒 · `POST /recipes/import-link` 🔒
+
+Reference-media upload and link-import parsing for the recipe form — unrelated to tagging/suggestions, documented here only for completeness of the Recipes surface.
+
+---
+
+## "What Should I Eat?"
+
+A floating-button feature on the Food Hub Recipes tab: pick a meal type + vibes + food focus, get up to 3 ranked recipes from the user's own visible collection. `meal_type`/`vibes`/`food_focus` are the recipe's stored tags (see above); `something_new` and `use_it_up` are **not** tags — they're computed live, per request, against `made_count` and the user's current inventory, so they can't go stale between tagging and query time.
+
+### `GET /recipes/suggest` 🔒
+
+**Query** (all optional):
+- `meal_type` — one of `breakfast`\|`lunch`\|`dinner`\|`snack`. Hard filter (exact match).
+- `vibes[]` — any of `comfort`\|`light_fresh`\|`quick_easy` (matched against the recipe's stored `vibes`) plus `something_new` (recipe's `madeCount === 0`) and `use_it_up` (ingredient icons overlap the user's own items that have an `expiry_date` set, weighted by urgency: 0 days left = weight 3, 3+ days left = weight 0). Scored, not filtered — every selected vibe adds to one combined score per recipe.
+- `food_focus[]` — any of `high_protein`\|`high_veg`\|`low_carb`\|`balanced`. Hard filter (at least one overlap with the recipe's stored `foodFocus`).
+
+Recipes scoring `0` are dropped; the rest are sorted by score descending, top 3 kept. If that's empty, filters relax progressively — `food_focus` is dropped and retried, then `meal_type` — before giving up.
+
+**200**:
+```json
+{ "suggestions": [ /* up to 3 recipe objects, same shape as GET /recipes */ ], "relaxed": false, "exhausted": false }
+```
+`relaxed: true` means a hard filter had to be dropped to find anything — show that honestly ("No exact match, but here's a dinner recipe close to what you picked") rather than pretending it was an exact hit. `exhausted: true` means even the fully-relaxed search came up empty (`suggestions` is `[]`); the frontend falls back to the existing Chef chat flow (`activateAgent("Chef")`) rather than this endpoint inventing a second recipe-generation path.
+
+Deliberately **not** wrapped in the standard `{"data": ...}` Resource envelope — `apiFetch` on the frontend unwraps a top-level `data` key automatically, which would strip the sibling `relaxed`/`exhausted` flags.
+
+### `POST /recipes/{recipe}/mark-made` 🔒
+
+Increments the recipe's `madeCount` by 1. Called once per recipe whenever the existing Mark-as-made flow (see [Items](#items)) is confirmed against it. Any visible recipe (curated or own) — it's a plain shared counter, not per-user state. **200**, updated recipe.
+
+---
+
 ## User goal
 
 A single, editable goal per user (singleton — no id in the URL, same pattern as [Notification preferences](#notification-preferences)). First `GET`/`PATCH` auto-creates the row with a default goal if it doesn't exist yet, so every user always has one.
@@ -388,6 +453,56 @@ Default for new users: `metricType: "waste_rate"`, `targetValue: 20`, `period: "
 
 ---
 
+## Score snapshots
+
+Read-only weekly history of the "Your Kitchen This Week" scores (Waste Saver / Food Balance — see the [Kitchen score cron](#kitchen-score-cron-not-an-http-endpoint) below), used to compute the Waste Saver streak and a week-over-week trend on the frontend. Rows are written exclusively by that cron, never by a client request — so a week only has a row if the cron actually computed one, which is what makes a missing week correctly read as a broken streak instead of a guess.
+
+### `GET /score-snapshots` 🔒
+
+**Query** — `weeks` (optional, default 12, max 52): how many of the most recent weeks to return.
+
+**200**
+```json
+{ "data": [
+  { "weekOf": "2026-08-03", "wasteScore": 82, "balanceScore": 61 },
+  { "weekOf": "2026-08-10", "wasteScore": 88, "balanceScore": null }
+] }
+```
+Ordered oldest first. `balanceScore` is `null` for a week where Food Balance didn't have enough recent usage-history entries to say anything (same "not enough data" case the live score card shows).
+
+---
+
+## Badges
+
+One-time unlocks for specific anti-waste actions, not just score thresholds. `badgeKey` is one of `rescued_10`, `first_link_recipe`, `full_week_variety`, `zero_waste_week` (see `App\Services\BadgeService::BADGES` for the canonical threshold map — mirrored in the frontend's `BADGE_CATALOG` for display copy).
+
+| `badgeKey` | target | earned when |
+|---|---|---|
+| `rescued_10` | 10 | Marked "used" via the Mark-as-made recipe flow 10 times while the item was still within 3 days of expiry (client-reported, one `progress` call per rescue) |
+| `first_link_recipe` | 1 | Imported a recipe via the "paste a link" flow at least once |
+| `full_week_variety` | 1 | The live Food Balance score's variety hit all 5 counted food groups at least once |
+| `zero_waste_week` | 1 | A weekly kitchen-score snapshot landed with zero overdue items — awarded by the cron itself, never by a client call |
+
+### `GET /badges` 🔒
+
+**200** — always all 4 keys (create-on-read the first time), regardless of progress.
+```json
+{ "data": [
+  { "badgeKey": "rescued_10", "progress": 3, "target": 10, "earnedAt": null },
+  { "badgeKey": "first_link_recipe", "progress": 1, "target": 1, "earnedAt": 1786036186000 }
+] }
+```
+
+### `POST /badges/{badgeKey}/progress` 🔒
+
+**Body**: `{ "incrementBy": 1 }` — only `1` is accepted; each call represents one real occurrence of the action, not a client-chosen jump.
+
+**200** — the updated badge row, same shape as `GET`. Idempotent past the threshold: once `earnedAt` is set, further calls leave `progress`/`earnedAt` unchanged rather than accumulating past `target`.
+
+**404** — unknown `badgeKey`.
+
+---
+
 ## Freshness cron (not an HTTP endpoint)
 
 `app:check-item-freshness` runs daily at 07:00 (`routes/console.php`). Scans all items with an `expiry_date` within 3 days (or already past), and for each one:
@@ -402,6 +517,21 @@ php artisan app:check-item-freshness
 ```
 
 **Not yet built:** `lowStock`/`recipe` kinds are not generated yet — `lowStock` needs a "usual quantity" baseline that doesn't exist (deferred `usage_history` feature), and `recipe` suggestions haven't been scoped. The frontend's Home screen still shows its own locally-computed low-stock/recipe tip cards, but those are session-only (no persisted notification behind them) until this is built.
+
+---
+
+## Kitchen score cron (not an HTTP endpoint)
+
+`app:snapshot-kitchen-scores` runs weekly, Monday at 07:30 (`routes/console.php`). For every user, computes the same Waste Saver / Food Balance scores the frontend shows live (`App\Services\KitchenScoreService` — a deliberately-kept-in-sync PHP port of `frontend/lib/thatfridge/scoring.ts`'s `computeWasteSaverScore`/`computeFoodBalanceScore`), independent of whether that user opened the app that week:
+
+- if the user has no items and no usage history at all, skips them entirely rather than storing a fabricated score — a missing week already reads as a broken streak on the frontend
+- otherwise upserts a `weekly_score_snapshots` row keyed on `(user_id, week_of)` — re-running mid-week updates the existing row rather than duplicating it
+- when the computed `overdueCount` is 0, awards the `zero_waste_week` badge (see [Badges](#badges))
+
+Run manually any time with:
+```bash
+php artisan app:snapshot-kitchen-scores
+```
 
 ---
 

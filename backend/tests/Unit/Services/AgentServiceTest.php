@@ -286,4 +286,55 @@ class AgentServiceTest extends TestCase
 
         $this->assertSame(365, $result['shelf_life_days']);
     }
+
+    public function test_tag_recipe_falls_back_to_a_reasonable_default_without_an_api_key(): void
+    {
+        config(['services.openrouter.key' => null]);
+        Http::fake();
+
+        $result = app(AgentService::class)->tagRecipe('Weeknight Pasta', [['name' => 'Pasta', 'icon' => 'leftovers']], 20);
+
+        $this->assertSame(['meal_type' => 'dinner', 'vibes' => [], 'food_focus' => ['balanced']], $result);
+        Http::assertNothingSent();
+    }
+
+    public function test_tag_recipe_uses_the_real_model_response_when_available(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => '{"meal_type": "breakfast", "vibes": ["quick_easy"], "food_focus": ["high_protein"]}']]],
+        ], 200)]);
+
+        $result = app(AgentService::class)->tagRecipe('Scrambled Eggs', [['name' => 'Eggs', 'icon' => 'eggs']], 5);
+
+        $this->assertSame(['meal_type' => 'breakfast', 'vibes' => ['quick_easy'], 'food_focus' => ['high_protein']], $result);
+    }
+
+    public function test_tag_recipe_drops_tags_outside_the_known_enums_instead_of_failing(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => '{"meal_type": "brunch", "vibes": ["comfort", "spicy"], "food_focus": ["high_protein", "keto"]}']]],
+        ], 200)]);
+
+        $result = app(AgentService::class)->tagRecipe('Something', [['name' => 'X', 'icon' => 'leftovers']], 20);
+
+        // Unknown meal_type falls back to "dinner"; unknown vibes/food_focus are silently
+        // dropped rather than rejecting the whole response over one bad tag.
+        $this->assertSame('dinner', $result['meal_type']);
+        $this->assertSame(['comfort'], $result['vibes']);
+        $this->assertSame(['high_protein'], $result['food_focus']);
+    }
+
+    public function test_tag_recipe_falls_back_when_the_model_reply_is_unparseable(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'not json at all']]],
+        ], 200)]);
+
+        $result = app(AgentService::class)->tagRecipe('Something', [['name' => 'X', 'icon' => 'leftovers']], 20);
+
+        $this->assertSame(['meal_type' => 'dinner', 'vibes' => [], 'food_focus' => ['balanced']], $result);
+    }
 }

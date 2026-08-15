@@ -30,6 +30,7 @@ import {
   deleteUsageHistoryEntryApi,
   extractMemory,
   favoriteRecipe,
+  fetchBadges,
   fetchChatHistory,
   fetchChatSessionMessages,
   fetchChatSessions,
@@ -39,12 +40,15 @@ import {
   fetchNotificationEvents,
   fetchNotificationPrefs,
   fetchRecipes,
+  fetchScoreSnapshots,
   fetchShoppingItems,
   fetchUsageHistory,
   fetchUserGoal,
   importRecipeFromLink,
   login,
   logout,
+  markRecipeMade,
+  postBadgeProgress,
   recordItemUsage,
   register,
   scanBarcode,
@@ -53,6 +57,7 @@ import {
   scanReceipt,
   sendChatMessage,
   suggestItemDetails,
+  suggestRecipes,
   type ChatAgentName,
   type UserGoalInput,
   unfavoriteRecipe,
@@ -67,16 +72,22 @@ import {
 } from "./api";
 import { ApiError, clearToken, getToken } from "./apiClient";
 import { findItem, findSectionIdForGroup, getActiveFridgeItems, getScopedItems } from "./selectors";
+import { BADGE_CATALOG } from "./badges";
+import { computeStreak } from "./streak";
 import type {
   AuthMode,
+  BadgeKey,
+  BadgeProgress,
   ChatMessage,
   ChatThread,
   CurrentUser,
   DetectedItem,
+  FoodFocus,
   FoodSubtab,
   Fridge,
   FridgeStyleKey,
   Item,
+  MealType,
   NotificationEvent,
   NotificationPrefs,
   NutritionCategory,
@@ -87,11 +98,13 @@ import type {
   RecipeSuggestion,
   Screen,
   ScanMethod,
+  ScoreSnapshot,
   Section,
   ShoppingItem,
   StorageLocation,
   UsageHistoryEntry,
   UserGoal,
+  Vibe,
 } from "./types";
 const DEFAULT_CHAT_MESSAGES: ChatMessage[] = [{ id: "m0", from: "bot", text: "Hi! Ask me anything about what's in your fridge." }];
 
@@ -114,6 +127,11 @@ function buildUsageSummary(usageHistory: UsageHistoryEntry[]): string | undefine
     .slice(0, 8)
     .map((h) => `${h.name} (used ${h.count}×)`)
     .join("\n");
+}
+
+function buildStreakSummary(scoreSnapshots: ScoreSnapshot[]): string | undefined {
+  const streak = computeStreak(scoreSnapshots);
+  return streak >= 1 ? `Waste Saver streak: ${streak} week${streak === 1 ? "" : "s"}` : undefined;
 }
 
 function deriveThreadTitle(firstMessage: string): string {
@@ -223,6 +241,10 @@ export interface ThatFridgeState {
   recipeFormLinkUrl: string;
   recipeFormLinkImporting: boolean;
   recipeFormLinkError: string | null;
+  // True once a link import has successfully prefilled this open form - checked (and reset) on
+  // save, so the first_link_recipe badge only fires for a recipe actually saved from an import,
+  // not just an import that got started then abandoned.
+  recipeFormLinkImported: boolean;
   // "Mark as made" - null recipeId means the sheet is closed. Candidates are inventory items
   // matched to the recipe's ingredients by icon (soonest-expiring one wins on duplicates,
   // unmatched ingredients don't produce a candidate) - removing one from the list entirely
@@ -232,6 +254,17 @@ export interface ThatFridgeState {
   markMadeRecipeId: string | null;
   markMadeCandidates: { id: string; ingredientName: string; itemId: string; itemName: string; icon: string }[];
   markMadeStatus: Record<string, "finished" | "remaining">;
+  // "What Should I Eat?" - floating-button mini-Chef on the Food Hub Recipes tab. mealType is
+  // single-select (re-clicking the active chip clears it); vibes/foodFocus are multi-select.
+  // results/relaxed/exhausted are null/false until findMeals() resolves at least once.
+  whatToEatOpen: boolean;
+  whatToEatMealType: MealType | null;
+  whatToEatVibes: Vibe[];
+  whatToEatFoodFocus: FoodFocus[];
+  whatToEatResults: Recipe[] | null;
+  whatToEatRelaxed: boolean;
+  whatToEatExhausted: boolean;
+  whatToEatLoading: boolean;
   newShoppingText: string;
   shoppingList: ShoppingItem[];
   shoppingSeeded: boolean;
@@ -248,6 +281,12 @@ export interface ThatFridgeState {
   // null until the initial fetch resolves - GET /user-goal always firstOrCreate()s a default
   // server-side, so this only stays null very briefly (or if the fetch itself fails).
   userGoal: UserGoal | null;
+  // Written weekly, server-side only, by app:snapshot-kitchen-scores - see streak.ts's
+  // computeStreak and scoring.ts's getScoreTrend, both of which read this instead of a
+  // client-computed history.
+  scoreSnapshots: ScoreSnapshot[];
+  badges: BadgeProgress[];
+  badgeUnlockToast: string | null;
   kitchenScope: "active" | "all";
   inventorySortMode: "category" | "expiry" | "name";
   agentInsights: Partial<Record<ChatAgentName, string>>;
@@ -333,9 +372,18 @@ export function initialState(): ThatFridgeState {
     recipeFormLinkUrl: "",
     recipeFormLinkImporting: false,
     recipeFormLinkError: null,
+    recipeFormLinkImported: false,
     markMadeRecipeId: null,
     markMadeCandidates: [],
     markMadeStatus: {},
+    whatToEatOpen: false,
+    whatToEatMealType: null,
+    whatToEatVibes: [],
+    whatToEatFoodFocus: [],
+    whatToEatResults: null,
+    whatToEatRelaxed: false,
+    whatToEatExhausted: false,
+    whatToEatLoading: false,
     newShoppingText: "",
     shoppingList: [],
     shoppingSeeded: false,
@@ -350,6 +398,9 @@ export function initialState(): ThatFridgeState {
     notificationPrefs: { expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false, crewActionsEnabled: false },
     notificationEvents: [],
     userGoal: null,
+    scoreSnapshots: [],
+    badges: [],
+    badgeUnlockToast: null,
     kitchenScope: "all",
     inventorySortMode: "category",
     agentInsights: {},
@@ -489,8 +540,22 @@ export function useThatFridge() {
       fetchUsageHistory(),
       fetchMemoryFacts(),
       fetchUserGoal(),
+      fetchScoreSnapshots(),
+      fetchBadges(),
     ]).then(
-      ([fridges, recipes, shoppingList, notificationPrefs, notificationEvents, chatHistory, usageHistory, memoryFacts, userGoal]) => {
+      ([
+        fridges,
+        recipes,
+        shoppingList,
+        notificationPrefs,
+        notificationEvents,
+        chatHistory,
+        usageHistory,
+        memoryFacts,
+        userGoal,
+        scoreSnapshots,
+        badges,
+      ]) => {
         if (cancelled) return;
         const restoredChatMessages: ChatMessage[] = chatHistory.messages.flatMap((row) => [
           { id: `u${row.id}`, from: "user" as const, text: row.user_message },
@@ -513,6 +578,8 @@ export function useThatFridge() {
           usageHistory,
           memoryFacts,
           userGoal,
+          scoreSnapshots,
+          badges,
           ...(restoredChatMessages.length ? { chatMessages: restoredChatMessages } : {}),
         });
       }
@@ -528,10 +595,12 @@ export function useThatFridge() {
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const undoActions = useRef<{ onCommit: () => void; onRestore: () => void } | null>(null);
   const qtyDebounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const badgeToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (undoTimer.current) clearTimeout(undoTimer.current);
+      if (badgeToastTimer.current) clearTimeout(badgeToastTimer.current);
       Object.values(qtyDebounceTimers.current).forEach(clearTimeout);
     };
   }, []);
@@ -655,6 +724,29 @@ export function useThatFridge() {
   };
 
   const openGoals = () => patch({ screen: "goals", showProfilePanel: false });
+  const openBadges = () => patch({ screen: "badges", showProfilePanel: false });
+
+  // Guarded by "already earned?" so an action that can fire repeatedly (e.g. every Mark-as-made
+  // "finished" near-expiry item) doesn't spam a network call once the badge is done. The 4s
+  // auto-dismiss mirrors the undo toast's timing without reusing its restore/commit machinery,
+  // since a badge unlock has no "undo".
+  const awardBadgeProgress = (badgeKey: BadgeKey, incrementBy: number = 1) => {
+    if (state.badges.find((b) => b.badgeKey === badgeKey)?.earnedAt) return;
+    postBadgeProgress(badgeKey, incrementBy)
+      .then((badge) => {
+        const wasUnearned = !state.badges.find((b) => b.badgeKey === badgeKey)?.earnedAt;
+        patch((s) => ({ badges: s.badges.some((b) => b.badgeKey === badgeKey) ? s.badges.map((b) => (b.badgeKey === badgeKey ? badge : b)) : [...s.badges, badge] }));
+        if (wasUnearned && badge.earnedAt) {
+          const label = BADGE_CATALOG.find((b) => b.key === badgeKey)?.label ?? badgeKey;
+          patch({ badgeUnlockToast: `Badge unlocked: ${label}` });
+          if (badgeToastTimer.current) clearTimeout(badgeToastTimer.current);
+          badgeToastTimer.current = setTimeout(() => patch({ badgeUnlockToast: null }), 4000);
+        }
+      })
+      .catch(() => {
+        // Best-effort - a badge is a nice-to-have, not worth surfacing a sync error banner for.
+      });
+  };
   const updateUserGoalSettings = (input: UserGoalInput) => {
     const prevGoal = state.userGoal;
     patch((s) => ({ userGoal: s.userGoal ? { ...s.userGoal, ...input } : s.userGoal }));
@@ -831,6 +923,7 @@ export function useThatFridge() {
       recipeFormLinkUrl: "",
       recipeFormLinkImporting: false,
       recipeFormLinkError: null,
+      recipeFormLinkImported: false,
     });
 
   const openEditRecipeForm = (id: string) => {
@@ -849,6 +942,7 @@ export function useThatFridge() {
       recipeFormLinkUrl: "",
       recipeFormLinkImporting: false,
       recipeFormLinkError: null,
+      recipeFormLinkImported: false,
     });
   };
 
@@ -909,6 +1003,7 @@ export function useThatFridge() {
           recipeFormLinkUrl: "",
           recipeFormLinkImporting: false,
           recipeFormLinkError: null,
+          recipeFormLinkImported: true,
         });
       } else {
         patch({
@@ -957,6 +1052,7 @@ export function useThatFridge() {
       } else {
         const created = await createRecipe(payload);
         patch((s) => ({ recipes: [...s.recipes, created], screen: "recipeDetail", selectedRecipeId: created.id }));
+        if (state.recipeFormLinkImported) awardBadgeProgress("first_link_recipe", 1);
       }
     } catch (err) {
       patch({ syncError: describeError(err, "Couldn't save the recipe.") });
@@ -1035,9 +1131,12 @@ export function useThatFridge() {
     });
   const closeMarkRecipeMade = () => patch({ markMadeRecipeId: null, markMadeCandidates: [], markMadeStatus: {} });
   const confirmMarkMade = () => {
+    const recipeId = state.markMadeRecipeId;
     const candidates = state.markMadeCandidates;
     const statusById = state.markMadeStatus;
     patch({ markMadeRecipeId: null, markMadeCandidates: [], markMadeStatus: {} });
+
+    if (recipeId) markRecipeMade(recipeId).catch(() => {});
 
     const itemIds = Array.from(new Set(candidates.map((c) => c.itemId)));
     for (const itemId of itemIds) {
@@ -1059,7 +1158,51 @@ export function useThatFridge() {
       }));
       recordUsage(item.name, item.icon, item.days, item.freshness, item.nutritionCategory);
       deleteItem(itemId).catch((err) => patch({ syncError: describeError(err, "Couldn't update the fridge for one of the items.") }));
+      if (item.days >= 0 && item.days <= 3) awardBadgeProgress("rescued_10", 1);
     }
+  };
+
+  const openWhatToEat = () =>
+    patch({
+      whatToEatOpen: true,
+      whatToEatMealType: null,
+      whatToEatVibes: [],
+      whatToEatFoodFocus: [],
+      whatToEatResults: null,
+      whatToEatRelaxed: false,
+      whatToEatExhausted: false,
+    });
+  const closeWhatToEat = () => patch({ whatToEatOpen: false });
+  const toggleWhatToEatMealType = (mealType: MealType) =>
+    patch((s) => ({ whatToEatMealType: s.whatToEatMealType === mealType ? null : mealType }));
+  const toggleWhatToEatVibe = (vibe: Vibe) =>
+    patch((s) => ({ whatToEatVibes: s.whatToEatVibes.includes(vibe) ? s.whatToEatVibes.filter((v) => v !== vibe) : [...s.whatToEatVibes, vibe] }));
+  const toggleWhatToEatFoodFocus = (foodFocus: FoodFocus) =>
+    patch((s) => ({
+      whatToEatFoodFocus: s.whatToEatFoodFocus.includes(foodFocus)
+        ? s.whatToEatFoodFocus.filter((f) => f !== foodFocus)
+        : [...s.whatToEatFoodFocus, foodFocus],
+    }));
+  const findMeals = async () => {
+    patch({ whatToEatLoading: true });
+    try {
+      const result = await suggestRecipes({ mealType: state.whatToEatMealType, vibes: state.whatToEatVibes, foodFocus: state.whatToEatFoodFocus });
+      patch({
+        whatToEatResults: result.suggestions,
+        whatToEatRelaxed: result.relaxed,
+        whatToEatExhausted: result.exhausted,
+        whatToEatLoading: false,
+      });
+    } catch (err) {
+      patch({ whatToEatLoading: false, syncError: describeError(err, "Couldn't find any meals right now.") });
+    }
+  };
+  // "Ask Chef instead" - the exhausted fallback reuses the existing Chef chat pipeline rather
+  // than inventing a second recipe-generation path server-side.
+  const askChefInstead = () => {
+    patch({ whatToEatOpen: false });
+    activateAgent("Chef");
+    patch({ screen: "chat" });
   };
 
   const onNewShoppingChange = (value: string) => patch({ newShoppingText: value });
@@ -1163,7 +1306,8 @@ export function useThatFridge() {
 
     const inventory = buildInventorySummary(state.fridges[state.activeFridge]);
     const usageSummary = buildUsageSummary(state.usageHistory);
-    sendChatMessage(trimmed, routeChatAgent(trimmed), inventory, state.currentSessionId, usageSummary)
+    const streakSummary = buildStreakSummary(state.scoreSnapshots);
+    sendChatMessage(trimmed, routeChatAgent(trimmed), inventory, state.currentSessionId, usageSummary, undefined, streakSummary)
       .then((res) => {
         const reply: ChatMessage = {
           id: "b" + Date.now(),
@@ -1223,7 +1367,8 @@ export function useThatFridge() {
     patch((s) => ({ agentInsightLoading: { ...s.agentInsightLoading, [agent]: true } }));
     const inventory = buildInventorySummary(state.fridges[state.activeFridge]);
     const usageSummary = buildUsageSummary(state.usageHistory);
-    sendChatMessage(AGENT_ACTIVATE_PROMPT[agent], agent, inventory, undefined, usageSummary, true)
+    const streakSummary = buildStreakSummary(state.scoreSnapshots);
+    sendChatMessage(AGENT_ACTIVATE_PROMPT[agent], agent, inventory, undefined, usageSummary, true, streakSummary)
       .then((res) => {
         patch((s) => ({
           agentInsights: { ...s.agentInsights, [agent]: res.agent_response },
@@ -2002,6 +2147,8 @@ export function useThatFridge() {
     toggleNotificationPref,
     openGoals,
     updateUserGoalSettings,
+    openBadges,
+    awardBadgeProgress,
     openAIDataSettings,
     deleteChatThread,
     clearAllChatData,
@@ -2052,6 +2199,13 @@ export function useThatFridge() {
     removeMarkMadeCandidate,
     closeMarkRecipeMade,
     confirmMarkMade,
+    openWhatToEat,
+    closeWhatToEat,
+    toggleWhatToEatMealType,
+    toggleWhatToEatVibe,
+    toggleWhatToEatFoodFocus,
+    findMeals,
+    askChefInstead,
     onNewShoppingChange,
     onNewShoppingKeyDown,
     addShoppingItem,

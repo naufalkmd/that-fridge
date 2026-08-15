@@ -151,6 +151,7 @@ class AgentController extends Controller
             'agent' => 'required|in:Chef,Guardian,Organizer,Shopkeeper',
             'inventory' => 'nullable|string', // JSON string of inventory for context
             'usage_history' => 'nullable|string', // frequently-used-items summary for context
+            'streak_context' => 'nullable|string', // one-line Waste Saver streak summary for context
             'session_id' => 'nullable|uuid',
             // Set by the Home tip cards / "Activate" button, not real user chat messages -
             // asks for one short plain-text sentence instead of a looser 2-3 sentence reply,
@@ -172,7 +173,8 @@ class AgentController extends Controller
             $request->input('usage_history'),
             $request->boolean('compact'),
             $memory,
-            $this->recentSessionHistory($request)
+            $this->recentSessionHistory($request),
+            $request->input('streak_context')
         );
 
         if (! $result) {

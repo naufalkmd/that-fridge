@@ -1,8 +1,12 @@
 import type {
+  BadgeKey,
+  BadgeProgress,
   CurrentUser,
+  FoodFocus,
   Fridge,
   GoalMetricType,
   GoalPeriod,
+  MealType,
   NotificationEvent,
   NotificationPrefs,
   NutritionCategory,
@@ -11,11 +15,13 @@ import type {
   RecipeCategory,
   RecipeIngredient,
   RecipeSuggestion,
+  ScoreSnapshot,
   Section,
   ShoppingItem,
   StorageLocation,
   UsageHistoryEntry,
   UserGoal,
+  Vibe,
 } from "./types";
 import { apiFetch, setToken, type RawItem, toClientItem } from "./apiClient";
 
@@ -50,6 +56,28 @@ export function favoriteRecipe(id: string): Promise<Recipe> {
 
 export function unfavoriteRecipe(id: string): Promise<Recipe> {
   return apiFetch<Recipe>(`/recipes/${id}/favorite`, { method: "DELETE" });
+}
+
+export interface WhatToEatResult {
+  suggestions: Recipe[];
+  relaxed: boolean;
+  exhausted: boolean;
+}
+
+// Deliberately not wrapped in the standard {data: ...} envelope server-side (see
+// backend/API.md's "What Should I Eat?" section) - apiFetch's automatic data-unwrapping would
+// otherwise strip the sibling relaxed/exhausted flags this response needs.
+export function suggestRecipes(params: { mealType?: MealType | null; vibes?: Vibe[]; foodFocus?: FoodFocus[] }): Promise<WhatToEatResult> {
+  const query = new URLSearchParams();
+  if (params.mealType) query.set("meal_type", params.mealType);
+  (params.vibes ?? []).forEach((v) => query.append("vibes[]", v));
+  (params.foodFocus ?? []).forEach((f) => query.append("food_focus[]", f));
+  const qs = query.toString();
+  return apiFetch<WhatToEatResult>(`/recipes/suggest${qs ? `?${qs}` : ""}`);
+}
+
+export function markRecipeMade(id: string): Promise<Recipe> {
+  return apiFetch<Recipe>(`/recipes/${id}/mark-made`, { method: "POST" });
 }
 
 export function uploadRecipeAttachment(file: File): Promise<RecipeAttachment> {
@@ -319,6 +347,18 @@ export function updateUserGoal(data: UserGoalInput): Promise<UserGoal> {
   return apiFetch<UserGoal>("/user-goal", { method: "PATCH", body: JSON.stringify(data) });
 }
 
+export function fetchScoreSnapshots(weeks: number = 12): Promise<ScoreSnapshot[]> {
+  return apiFetch<ScoreSnapshot[]>(`/score-snapshots?weeks=${weeks}`);
+}
+
+export function fetchBadges(): Promise<BadgeProgress[]> {
+  return apiFetch<BadgeProgress[]>("/badges");
+}
+
+export function postBadgeProgress(badgeKey: BadgeKey, incrementBy: number = 1): Promise<BadgeProgress> {
+  return apiFetch<BadgeProgress>(`/badges/${badgeKey}/progress`, { method: "POST", body: JSON.stringify({ incrementBy }) });
+}
+
 export function fetchNotificationEvents(): Promise<NotificationEvent[]> {
   return apiFetch<NotificationEvent[]>("/notification-events");
 }
@@ -350,11 +390,20 @@ export function sendChatMessage(
   inventory?: string,
   sessionId?: string | null,
   usageHistory?: string,
-  compact?: boolean
+  compact?: boolean,
+  streakSummary?: string
 ): Promise<SendChatMessageResult> {
   return apiFetch<SendChatMessageResult>("/chat", {
     method: "POST",
-    body: JSON.stringify({ message, agent, inventory, session_id: sessionId || undefined, usage_history: usageHistory, compact }),
+    body: JSON.stringify({
+      message,
+      agent,
+      inventory,
+      session_id: sessionId || undefined,
+      usage_history: usageHistory,
+      compact,
+      streak_context: streakSummary,
+    }),
   });
 }
 

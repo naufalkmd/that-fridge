@@ -22,6 +22,10 @@ class RecipeResource extends JsonResource
             'ingredients' => $this->ingredients,
             'steps' => $this->steps,
             'attachments' => $this->attachments ?? [],
+            'mealType' => $this->meal_type,
+            'vibes' => $this->vibes ?? [],
+            'foodFocus' => $this->food_focus ?? [],
+            'madeCount' => $this->made_count,
             'isCustom' => $this->user_id !== null,
             // index() eager-loads favoritedBy pre-filtered to the current user for efficiency;
             // store/update/favorite responses return a single recipe, so a lazy check here is

@@ -11,6 +11,7 @@ export default function ProfileDrawer() {
   const fridges = getFridgeSummaries(state);
   const settingsRows: { label: string; onClick: () => void }[] = [
     { label: "Goal", onClick: actions.openGoals },
+    { label: "Badges", onClick: actions.openBadges },
     { label: "Notifications", onClick: actions.openNotifications },
     { label: "AI Data & Memory", onClick: actions.openAIDataSettings },
     { label: "About ThatFridge", onClick: actions.openAbout },

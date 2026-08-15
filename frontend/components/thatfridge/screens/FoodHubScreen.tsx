@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Heart, MapPin, Plus, Refrigerator, RefreshCw, Sparkles, X } from "lucide-react";
+import { ChefHat, Heart, MapPin, Plus, Refrigerator, RefreshCw, Sparkles, X } from "lucide-react";
 import { FOOD_TAB_ORDER, RECIPE_CATEGORIES, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
 import {
   getExpiringOwnedItems,
@@ -140,6 +140,28 @@ export default function FoodHubScreen() {
 
   return (
     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", overflowY: "auto" }}>
+      {activeTab === "recipes" && (
+        <div
+          onClick={actions.openWhatToEat}
+          style={{
+            position: "fixed",
+            right: 20,
+            bottom: 100,
+            width: 52,
+            height: 52,
+            borderRadius: 26,
+            background: "#16325c",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 10px 22px rgba(22,50,92,0.35)",
+            cursor: "pointer",
+            zIndex: 5,
+          }}
+        >
+          <ChefHat size={22} color="#fff" strokeWidth={2.2} />
+        </div>
+      )}
       <div style={{ background: "linear-gradient(160deg, #1e4576 0%, #16325c 55%, #0a1a30 100%)" }}>
       <div className="thatfridge-wide-content" style={{ padding: "24px 20px 24px", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AgentController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\ExpiryScanController;
 use App\Http\Controllers\FridgeController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\NotificationPrefController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\RecipeController;
+use App\Http\Controllers\ScoreSnapshotController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\ShoppingItemController;
 use App\Http\Controllers\UsageHistoryController;
@@ -75,6 +77,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user-goal', [UserGoalController::class, 'show']);
     Route::patch('/user-goal', [UserGoalController::class, 'update']);
 
+    Route::get('/score-snapshots', [ScoreSnapshotController::class, 'index']);
+
+    Route::get('/badges', [BadgeController::class, 'index']);
+    Route::post('/badges/{badgeKey}/progress', [BadgeController::class, 'progress']);
+
     Route::get('/notification-events', [NotificationEventController::class, 'index']);
     Route::patch('/notification-events/{notificationEvent}', [NotificationEventController::class, 'update']);
 
@@ -90,10 +97,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/recipes', [RecipeController::class, 'index']);
     Route::post('/recipes', [RecipeController::class, 'store']);
+    Route::get('/recipes/suggest', [RecipeController::class, 'suggest']);
     Route::post('/recipes/attachments', [RecipeController::class, 'uploadAttachment']);
     Route::post('/recipes/import-link', [RecipeController::class, 'importFromLink']);
     Route::patch('/recipes/{recipe}', [RecipeController::class, 'update']);
     Route::delete('/recipes/{recipe}', [RecipeController::class, 'destroy']);
     Route::post('/recipes/{recipe}/favorite', [RecipeController::class, 'favorite']);
     Route::delete('/recipes/{recipe}/favorite', [RecipeController::class, 'unfavorite']);
+    Route::post('/recipes/{recipe}/mark-made', [RecipeController::class, 'markMade']);
 });

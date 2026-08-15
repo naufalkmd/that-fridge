@@ -78,4 +78,14 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Recipe::class, 'recipe_favorites')->withTimestamps();
     }
+
+    public function weeklyScoreSnapshots(): HasMany
+    {
+        return $this->hasMany(WeeklyScoreSnapshot::class);
+    }
+
+    public function badges(): HasMany
+    {
+        return $this->hasMany(UserBadge::class);
+    }
 }

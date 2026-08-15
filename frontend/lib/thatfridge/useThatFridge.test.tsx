@@ -521,6 +521,21 @@ describe("useThatFridge Mark as made", () => {
     vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "My Fridge", sections: [] });
     vi.mocked(api.createSection).mockImplementation((fridgeId, name) => Promise.resolve({ id: `sec-${name}`, name, items: [] }));
     vi.mocked(api.createItem).mockResolvedValue({ id: "i1", name: "Milk", icon: "milk", freshness: 90, days: 7, note: "", qty: 1 });
+    vi.mocked(api.markRecipeMade).mockResolvedValue({
+      id: "r1",
+      name: "Pancakes",
+      minutes: 20,
+      category: "breakfast",
+      ingredients: [{ icon: "milk", name: "Milk" }],
+      steps: [],
+      attachments: [],
+      mealType: null,
+      vibes: [],
+      foodFocus: [],
+      madeCount: 1,
+      isFavorite: false,
+      isCustom: true,
+    });
     vi.mocked(api.createRecipe)
       .mockResolvedValueOnce({
         id: "r1",
@@ -530,6 +545,10 @@ describe("useThatFridge Mark as made", () => {
         ingredients: [{ icon: "milk", name: "Milk" }],
         steps: [],
         attachments: [],
+        mealType: null,
+        vibes: [],
+        foodFocus: [],
+        madeCount: 0,
         isFavorite: false,
         isCustom: true,
       })
@@ -541,6 +560,10 @@ describe("useThatFridge Mark as made", () => {
         ingredients: [{ icon: "milk", name: "Milk" }],
         steps: [],
         attachments: [],
+        mealType: null,
+        vibes: [],
+        foodFocus: [],
+        madeCount: 0,
         isFavorite: false,
         isCustom: true,
       });

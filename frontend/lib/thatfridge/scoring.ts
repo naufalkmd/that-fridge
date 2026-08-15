@@ -1,6 +1,7 @@
 import { NUTRITION_CATEGORIES, guessNutritionCategory } from "./data";
 import { getScopedItems } from "./selectors";
 import type { ThatFridgeState } from "./useThatFridge";
+import type { ScoreSnapshot as ScoreSnapshotSlice } from "./types";
 
 // "Your Kitchen This Week" scoring - two lightweight, explainable scores computed entirely
 // from data the app already has (items, notification_events, usage_history). No new backend
@@ -32,7 +33,7 @@ export interface KitchenScoreResult {
 
 export interface ScoreTrend {
   delta: number;
-  days: number;
+  weekOf: string;
 }
 
 // ---- Waste Saver -----------------------------------------------------------------------
@@ -126,17 +127,37 @@ const EVENNESS_WEIGHT = 45;
 const BALANCE_SCORE_FLOOR = 20;
 const BALANCE_SCORE_CEILING = 98;
 
-export function computeFoodBalanceScore(state: ThatFridgeState): KitchenScoreResult {
-  const recentUsage = state.usageHistory.filter((h) => Date.now() - h.lastAt <= BALANCE_LOOKBACK_DAYS * 86400000);
-
-  // entry.category may be missing on rows recorded before this taxonomy existed - fall back to
-  // guessing from the icon so old usage history isn't silently dropped out of the score. Falls
-  // through to null (excluded, same as other_extras) when neither resolves to a counted group.
-  const countableUsage = recentUsage
+/**
+ * entry.category may be missing on rows recorded before this taxonomy existed - fall back to
+ * guessing from the icon so old usage history isn't silently dropped out of the score. Falls
+ * through to null (excluded, same as other_extras) when neither resolves to a counted group.
+ * Shared by computeFoodBalanceScore and hasFullFoodGroupVariety so both read "countable usage"
+ * the same way.
+ */
+function countableUsageWithin(usageHistory: ThatFridgeState["usageHistory"], lookbackDays: number) {
+  const recentUsage = usageHistory.filter((h) => Date.now() - h.lastAt <= lookbackDays * 86400000);
+  return recentUsage
     .map((h) => ({ h, category: h.category ?? guessNutritionCategory(h.icon) }))
     .filter((x): x is { h: (typeof recentUsage)[number]; category: (typeof COUNTED_CATEGORIES)[number] } =>
       (COUNTED_CATEGORIES as string[]).includes(x.category ?? "")
     );
+}
+
+function tallyByCategory(countableUsage: { h: { count: number }; category: (typeof COUNTED_CATEGORIES)[number] }[]) {
+  const groupCounts = Object.fromEntries(COUNTED_CATEGORIES.map((c) => [c, 0])) as Record<(typeof COUNTED_CATEGORIES)[number], number>;
+  for (const { h, category } of countableUsage) groupCounts[category] += h.count;
+  return groupCounts;
+}
+
+/** Powers the full_week_variety badge - true the moment every counted food group has been used. */
+export function hasFullFoodGroupVariety(state: ThatFridgeState): boolean {
+  const countableUsage = countableUsageWithin(state.usageHistory, BALANCE_LOOKBACK_DAYS);
+  const groupCounts = tallyByCategory(countableUsage);
+  return COUNTED_CATEGORIES.every((g) => groupCounts[g] > 0);
+}
+
+export function computeFoodBalanceScore(state: ThatFridgeState): KitchenScoreResult {
+  const countableUsage = countableUsageWithin(state.usageHistory, BALANCE_LOOKBACK_DAYS);
 
   if (countableUsage.length < BALANCE_MIN_ENTRIES) {
     return {
@@ -149,8 +170,7 @@ export function computeFoodBalanceScore(state: ThatFridgeState): KitchenScoreRes
     };
   }
 
-  const groupCounts = Object.fromEntries(COUNTED_CATEGORIES.map((c) => [c, 0])) as Record<(typeof COUNTED_CATEGORIES)[number], number>;
-  for (const { h, category } of countableUsage) groupCounts[category] += h.count;
+  const groupCounts = tallyByCategory(countableUsage);
 
   const total = Object.values(groupCounts).reduce((a, b) => a + b, 0);
   const usedGroups = COUNTED_CATEGORIES.filter((g) => groupCounts[g] > 0);
@@ -177,77 +197,17 @@ export function computeFoodBalanceScore(state: ThatFridgeState): KitchenScoreRes
   };
 }
 
-// ---- Trend (local, per-browser history) ----------------------------------------------------
+// ---- Trend (real weekly history, backend/API.md's "Score snapshots") -----------------------
 //
-// There's no backend table tracking score history over time, and adding one is out of scope
-// for a derived/presentational number like this - so the week-over-week trend is approximated
-// by snapshotting today's scores to localStorage (namespaced per user email) and comparing
-// against whatever's closest to 7 days old. This means the trend is per-browser (clearing site
-// data or switching devices resets it), not a synced account-level history - an explicit,
-// documented trade-off rather than fabricating one.
+// Snapshots are written server-side, weekly, by app:snapshot-kitchen-scores - independent of
+// whether the user opened the app that week. Trend compares the live score (still computed
+// instantly, client-side, above) against the most recent snapshot, so it's honest about the
+// lag rather than implying day-level precision the weekly cron can't back up.
 
-const HISTORY_KEY_PREFIX = "thatfridge_kitchen_score_history";
-const HISTORY_MAX_DAYS = 60;
-const TREND_LOOKBACK_MIN_DAYS = 5;
-const TREND_LOOKBACK_MAX_DAYS = 9;
-
-interface ScoreSnapshot {
-  date: string; // YYYY-MM-DD
-  waste: number;
-  balance: number;
-}
-
-function historyKey(userEmail: string | null | undefined): string {
-  return userEmail ? `${HISTORY_KEY_PREFIX}:${userEmail}` : HISTORY_KEY_PREFIX;
-}
-
-function loadHistory(userEmail: string | null | undefined): ScoreSnapshot[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(historyKey(userEmail));
-    return raw ? (JSON.parse(raw) as ScoreSnapshot[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-/** Idempotent per calendar day - safe to call on every Home render. */
-export function recordDailyScoreSnapshot(userEmail: string | null | undefined, waste: number | null, balance: number | null): void {
-  if (typeof window === "undefined" || waste === null || balance === null) return;
-  const today = todayKey();
-  const history = loadHistory(userEmail);
-  if (history.some((h) => h.date === today)) return;
-
-  const cutoff = Date.now() - HISTORY_MAX_DAYS * 86400000;
-  const pruned = history.filter((h) => new Date(h.date).getTime() >= cutoff);
-  pruned.push({ date: today, waste, balance });
-
-  try {
-    window.localStorage.setItem(historyKey(userEmail), JSON.stringify(pruned));
-  } catch {
-    // Storage full/unavailable - the trend just won't have today's point. Not worth surfacing.
-  }
-}
-
-function findWeekAgoSnapshot(history: ScoreSnapshot[]): ScoreSnapshot | null {
-  let best: { snap: ScoreSnapshot; diff: number } | null = null;
-  for (const snap of history) {
-    const ageDays = (Date.now() - new Date(snap.date).getTime()) / 86400000;
-    if (ageDays < TREND_LOOKBACK_MIN_DAYS || ageDays > TREND_LOOKBACK_MAX_DAYS) continue;
-    const diff = Math.abs(ageDays - 7);
-    if (!best || diff < best.diff) best = { snap, diff };
-  }
-  return best?.snap ?? null;
-}
-
-export function getScoreTrend(userEmail: string | null | undefined, key: "waste" | "balance", currentScore: number | null): ScoreTrend | null {
-  if (currentScore === null) return null;
-  const weekAgo = findWeekAgoSnapshot(loadHistory(userEmail));
-  if (!weekAgo) return null;
-  const days = Math.round((Date.now() - new Date(weekAgo.date).getTime()) / 86400000);
-  return { delta: currentScore - weekAgo[key], days };
+export function getScoreTrend(snapshots: ScoreSnapshotSlice[], key: "waste" | "balance", currentScore: number | null): ScoreTrend | null {
+  if (currentScore === null || snapshots.length === 0) return null;
+  const mostRecent = [...snapshots].sort((a, b) => (a.weekOf < b.weekOf ? 1 : a.weekOf > b.weekOf ? -1 : 0))[0];
+  const compareScore = key === "waste" ? mostRecent.wasteScore : mostRecent.balanceScore;
+  if (compareScore === null) return null;
+  return { delta: currentScore - compareScore, weekOf: mostRecent.weekOf };
 }

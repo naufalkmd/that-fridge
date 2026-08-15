@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['user_id', 'name', 'minutes', 'category', 'ingredients', 'steps', 'attachments'])]
+#[Fillable(['user_id', 'name', 'minutes', 'category', 'ingredients', 'steps', 'attachments', 'meal_type', 'vibes', 'food_focus', 'made_count'])]
 class Recipe extends Model
 {
     protected function casts(): array
@@ -16,6 +16,8 @@ class Recipe extends Model
             'ingredients' => 'array',
             'steps' => 'array',
             'attachments' => 'array',
+            'vibes' => 'array',
+            'food_focus' => 'array',
         ];
     }
 

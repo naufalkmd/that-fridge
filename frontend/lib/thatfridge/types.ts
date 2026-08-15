@@ -52,6 +52,17 @@ export interface RecipeAttachment {
   url: string;
 }
 
+// "What Should I Eat?" tags - see backend/API.md's Recipes section. mealType/tagVibes/foodFocus
+// are AI-inferred once at save time (App\Services\AgentService::tagRecipe); separate from the
+// user-chosen `category` above, which is a different taxonomy used for Food Hub's own filter
+// chips. somethingNew/useItUp are NOT stored tags - they're computed live at query time
+// (RecipeController::suggest) from madeCount and current inventory, so they can't go stale.
+export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+export type TagVibe = "comfort" | "light_fresh" | "quick_easy";
+export type LiveVibe = "something_new" | "use_it_up";
+export type Vibe = TagVibe | LiveVibe;
+export type FoodFocus = "high_protein" | "high_veg" | "low_carb" | "balanced";
+
 export interface Recipe {
   id: string;
   name: string;
@@ -60,6 +71,10 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
   steps: string[];
   attachments: RecipeAttachment[];
+  mealType: MealType | null;
+  vibes: TagVibe[];
+  foodFocus: FoodFocus[];
+  madeCount: number;
   isFavorite: boolean;
   isCustom: boolean;
 }
@@ -140,6 +155,7 @@ export type Screen =
   | "notificationHistory"
   | "aiData"
   | "goals"
+  | "badges"
   | "about";
 
 export type FoodSubtab = "recipes" | "shopping" | "guardian" | "organizer";
@@ -190,6 +206,24 @@ export interface NotificationEvent {
   message: string;
   createdAt: number;
   done: boolean;
+}
+
+// See backend/API.md's "Score snapshots" section - written weekly by app:snapshot-kitchen-scores,
+// never pushed from the client, so a missing week is a real signal (broken streak), not a gap
+// to paper over.
+export interface ScoreSnapshot {
+  weekOf: string; // "YYYY-MM-DD", Monday of that ISO week
+  wasteScore: number;
+  balanceScore: number | null;
+}
+
+export type BadgeKey = "rescued_10" | "first_link_recipe" | "full_week_variety" | "zero_waste_week";
+
+export interface BadgeProgress {
+  badgeKey: BadgeKey;
+  progress: number;
+  target: number;
+  earnedAt: number | null;
 }
 
 export type AuthMode = "login" | "signup";

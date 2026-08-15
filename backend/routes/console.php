@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('app:check-item-freshness')->dailyAt('07:00');
+Schedule::command('app:snapshot-kitchen-scores')->weeklyOn(1, '07:30');
