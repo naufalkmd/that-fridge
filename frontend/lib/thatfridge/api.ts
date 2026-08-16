@@ -59,14 +59,14 @@ export function unfavoriteRecipe(id: string): Promise<Recipe> {
 }
 
 export interface WhatToEatResult {
-  suggestions: Recipe[];
-  relaxed: boolean;
+  exact: Recipe[];
+  similar: Recipe[];
   exhausted: boolean;
 }
 
 // Deliberately not wrapped in the standard {data: ...} envelope server-side (see
 // backend/API.md's "What Should I Eat?" section) - apiFetch's automatic data-unwrapping would
-// otherwise strip the sibling relaxed/exhausted flags this response needs.
+// otherwise strip the sibling similar/exhausted fields this response needs.
 export function suggestRecipes(params: { mealType?: MealType | null; vibes?: Vibe[]; foodFocus?: FoodFocus[] }): Promise<WhatToEatResult> {
   const query = new URLSearchParams();
   if (params.mealType) query.set("meal_type", params.mealType);

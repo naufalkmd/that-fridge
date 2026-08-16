@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { routeChatAgent, useThatFridge } from "./useThatFridge";
-import { getRecipesView } from "./selectors";
+import { getRecipesView, getScopedItems } from "./selectors";
 import * as api from "./api";
 
 vi.mock("./api");
@@ -610,5 +610,89 @@ describe("useThatFridge Mark as made", () => {
     // Still counts as "have it" for the other recipe that also needs milk.
     const milkshakeView = getRecipesView(result.current.state).find((r) => r.id === "r2");
     expect(milkshakeView?.ingredientsView[0].have).toBe(true);
+  });
+});
+
+// Shared by the fridge-scope tests below - logs in through the real authenticated init-fetch
+// path (login -> fetchFridges) with joey's exact real fridge shape: two empty "New Fridge"
+// entries plus a non-empty "Garage", matching how an existing user's fridges actually arrive
+// (not via addFridge()/confirmManualAdd(), which target addFridgeIndex - the Add-item flow's
+// own fridge pointer, synced from activeFridge by openAdd(), unrelated to what's displayed
+// elsewhere).
+function mockInitFetch() {
+  vi.mocked(api.login).mockResolvedValue({ user: { name: "Joey", email: "joey@thatfridge.test" }, token: "t1" });
+  vi.mocked(api.fetchFridges).mockResolvedValue([
+    { id: "f1", name: "New Fridge", sections: [] },
+    { id: "f2", name: "New Fridge", sections: [] },
+    { id: "f3", name: "Garage", sections: [{ id: "s1", name: "Protein", items: [{ id: "i1", name: "Eggs", icon: "eggs", freshness: 90, days: 11, note: "", qty: 1 }] }] },
+  ]);
+  vi.mocked(api.fetchRecipes).mockResolvedValue([]);
+  vi.mocked(api.fetchShoppingItems).mockResolvedValue([]);
+  vi.mocked(api.fetchNotificationPrefs).mockResolvedValue({ expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false, crewActionsEnabled: false });
+  vi.mocked(api.fetchNotificationEvents).mockResolvedValue([]);
+  vi.mocked(api.fetchChatHistory).mockResolvedValue({ messages: [], session_id: null });
+  vi.mocked(api.fetchUsageHistory).mockResolvedValue([]);
+  vi.mocked(api.fetchMemoryFacts).mockResolvedValue([]);
+  vi.mocked(api.fetchUserGoal).mockResolvedValue({ metricType: "waste_rate", targetValue: 20, period: "weekly", isActive: true, updatedAt: 0 });
+  vi.mocked(api.fetchScoreSnapshots).mockResolvedValue([]);
+  vi.mocked(api.fetchBadges).mockResolvedValue([]);
+}
+
+async function loginAsJoeyWithMockedFridges(result: { current: ReturnType<typeof useThatFridge> }) {
+  mockInitFetch();
+  act(() => result.current.actions.onAuthEmailChange("joey@thatfridge.test"));
+  act(() => result.current.actions.onAuthPasswordChange("password123"));
+  await act(async () => {
+    await result.current.actions.submitAuth();
+  });
+  await waitFor(() => expect(result.current.state.fridges).toHaveLength(3));
+}
+
+describe("useThatFridge fridge scope switching", () => {
+  it("still shows every fridge's items after switching to a specific fridge and back to All Fridges", async () => {
+    const { result } = renderHook(() => useThatFridge());
+    await loginAsJoeyWithMockedFridges(result);
+
+    // Default scope ("all") already finds Garage's item, across all 3 fridges.
+    expect(getScopedItems(result.current.state).map((i) => i.name)).toEqual(["Eggs"]);
+
+    const garageIndex = result.current.state.fridges.findIndex((f) => f.name === "Garage");
+    act(() => result.current.actions.selectFridgeScope(garageIndex));
+    expect(getScopedItems(result.current.state).map((i) => i.name)).toEqual(["Eggs"]);
+
+    act(() => result.current.actions.selectFridgeScope("all"));
+    expect(result.current.state.kitchenScope).toBe("all");
+    expect(getScopedItems(result.current.state).map((i) => i.name)).toEqual(["Eggs"]);
+  });
+});
+
+describe("useThatFridge Crew insight inventory context", () => {
+  // Reported: generating a Crew member's insight while scoped to "All Fridges" said the fridge
+  // was empty even though Garage (a different, non-active fridge) clearly wasn't. Root cause:
+  // buildInventorySummary was handed just state.fridges[state.activeFridge] - a single fridge -
+  // completely ignoring kitchenScope. activeFridge defaults to 0 (the first empty "New Fridge"
+  // here, exactly joey's real shape), so the agent only ever saw that one, empty, fridge even
+  // though kitchenScope was "all" the whole time.
+  it("sends every scoped fridge's items to the agent, not just whichever fridge happens to be active", async () => {
+    const { result } = renderHook(() => useThatFridge());
+    await loginAsJoeyWithMockedFridges(result);
+    expect(result.current.state.activeFridge).toBe(0); // the first, empty "New Fridge"
+    expect(result.current.state.kitchenScope).toBe("all");
+
+    vi.mocked(api.sendChatMessage).mockResolvedValue({
+      agent: "Chef",
+      user_message: "What can I cook tonight with what I have?",
+      agent_response: "Try an omelette!",
+      session_id: null,
+      recipe_suggestion: null,
+      mocked: false,
+    });
+
+    act(() => result.current.actions.activateAgent("Chef"));
+    await waitFor(() => expect(api.sendChatMessage).toHaveBeenCalled());
+
+    const inventory = vi.mocked(api.sendChatMessage).mock.calls[0][2];
+    expect(inventory).toContain("Eggs");
+    expect(inventory).not.toBe("Fridge is currently empty.");
   });
 });

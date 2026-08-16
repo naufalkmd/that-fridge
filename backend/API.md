@@ -391,24 +391,28 @@ Reference-media upload and link-import parsing for the recipe form — unrelated
 
 ## "What Should I Eat?"
 
-A floating-button feature on the Food Hub Recipes tab: pick a meal type + vibes + food focus, get up to 3 ranked recipes from the user's own visible collection. `meal_type`/`vibes`/`food_focus` are the recipe's stored tags (see above); `something_new` and `use_it_up` are **not** tags — they're computed live, per request, against `made_count` and the user's current inventory, so they can't go stale between tagging and query time.
+A floating-button feature on the Food Hub Recipes tab: pick a meal type + vibes + food focus, get ranked recipes from the user's own visible collection, split into an **exact** tier and a **similar** tier rather than one flat list — each shown 3 at a time with its own Shuffle button to page through the rest. `meal_type`/`vibes`/`food_focus` are the recipe's stored tags (see above); `something_new` and `use_it_up` are **not** tags — they're computed live, per request, against `made_count` and the user's current inventory, so they can't go stale between tagging and query time.
 
 ### `GET /recipes/suggest` 🔒
 
 **Query** (all optional):
-- `meal_type` — one of `breakfast`\|`lunch`\|`dinner`\|`snack`. Hard filter (exact match).
+- `meal_type` — one of `breakfast`\|`lunch`\|`dinner`\|`snack`. Hard filter for the `exact` tier (exact match), also scored (see below).
 - `vibes[]` — any of `comfort`\|`light_fresh`\|`quick_easy` (matched against the recipe's stored `vibes`) plus `something_new` (recipe's `madeCount === 0`) and `use_it_up` (ingredient icons overlap the user's own items that have an `expiry_date` set, weighted by urgency: 0 days left = weight 3, 3+ days left = weight 0). Scored, not filtered — every selected vibe adds to one combined score per recipe.
-- `food_focus[]` — any of `high_protein`\|`high_veg`\|`low_carb`\|`balanced`. Hard filter (at least one overlap with the recipe's stored `foodFocus`).
+- `food_focus[]` — any of `high_protein`\|`high_veg`\|`low_carb`\|`balanced`. Hard filter for `exact` (at least one overlap with the recipe's stored `foodFocus`) **and** scored (one point per overlapping tag) — a food-focus-only search (no vibes picked) still has something to award points for, instead of every surviving candidate landing on a flat 0 and getting dropped.
 
-Recipes scoring `0` are dropped; the rest are sorted by score descending, top 3 kept. If that's empty, filters relax progressively — `food_focus` is dropped and retried, then `meal_type` — before giving up.
+**`exact`** honors every hard filter and only includes recipes that also score above 0. **`similar`** is what dropping a hard filter turns up beyond that — `food_focus` is dropped first, then `meal_type` too — real recipes that share the selected vibes/food_focus without fully satisfying the exact combination. Both tiers score against the **original** selection (relaxing which filter is *applied* doesn't change what's being *scored for*), and `similar` always excludes anything already in `exact`. A bare `meal_type`-only search (no vibes, no food_focus) never gets a `similar` tier — there's nothing left to judge similarity by once the one filter picked is gone. Each tier is capped at 12 (`RecipeController::SUGGEST_MAX_RESULTS`), sorted by score descending — the frontend shows 3 at a time per tier and shuffles through the remainder client-side rather than re-querying.
 
 **200**:
 ```json
-{ "suggestions": [ /* up to 3 recipe objects, same shape as GET /recipes */ ], "relaxed": false, "exhausted": false }
+{
+  "exact": [ /* up to 12 recipe objects, same shape as GET /recipes */ ],
+  "similar": [ /* up to 12 more, scored the same way but outside the exact filter set */ ],
+  "exhausted": false
+}
 ```
-`relaxed: true` means a hard filter had to be dropped to find anything — show that honestly ("No exact match, but here's a dinner recipe close to what you picked") rather than pretending it was an exact hit. `exhausted: true` means even the fully-relaxed search came up empty (`suggestions` is `[]`); the frontend falls back to the existing Chef chat flow (`activateAgent("Chef")`) rather than this endpoint inventing a second recipe-generation path.
+`exhausted: true` means both tiers came up empty; the frontend falls back to the existing Chef chat flow rather than this endpoint inventing a second recipe-generation path — sending a message built from whichever `meal_type`/`vibes`/`food_focus` were selected (e.g. "Can you suggest a dinner recipe that's comforting, high in protein, using what's in my fridge?"), so Chef's answer still honors the user's picks even outside the tagged-recipe pool. The same fallback is offered even when `exact`/`similar` aren't empty, in case none of the shown/shuffled matches actually appeal.
 
-Deliberately **not** wrapped in the standard `{"data": ...}` Resource envelope — `apiFetch` on the frontend unwraps a top-level `data` key automatically, which would strip the sibling `relaxed`/`exhausted` flags.
+Deliberately **not** wrapped in the standard `{"data": ...}` Resource envelope — `apiFetch` on the frontend unwraps a top-level `data` key automatically, which would strip the sibling `exhausted` flag (and the second `similar` list).
 
 ### `POST /recipes/{recipe}/mark-made` 🔒
 

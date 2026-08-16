@@ -1,8 +1,9 @@
 "use client";
 
-import { ChefHat } from "lucide-react";
+import { ChefHat, Shuffle } from "lucide-react";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
+import type { Recipe } from "@/lib/thatfridge/types";
 import type { FoodFocus, MealType, Vibe } from "@/lib/thatfridge/types";
 
 const MEAL_TYPES: { key: MealType; label: string }[] = [
@@ -42,11 +43,79 @@ function chipStyle(active: boolean): React.CSSProperties {
   };
 }
 
+// Shared by the "exact" and "similar" tiers - each pages through its own pre-shuffled list of
+// results 3 at a time via its own Shuffle button, so a thin "exact" list doesn't have to be the
+// only thing on screen: "similar" gets the exact same treatment right below it.
+function ResultsTier({
+  label,
+  results,
+  page,
+  onShuffle,
+  onOpenRecipe,
+}: {
+  label: string;
+  results: Recipe[];
+  page: number;
+  onShuffle: () => void;
+  onOpenRecipe: (id: string) => void;
+}) {
+  if (results.length === 0) return null;
+  const visible = results.slice(page * 3, page * 3 + 3);
+  const canShuffle = results.length > 3;
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.3, color: "rgba(22,50,92,0.45)", marginBottom: 8 }}>{label}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: canShuffle ? 10 : 0 }}>
+        {visible.map((recipe) => (
+          <div
+            key={recipe.id}
+            onClick={() => onOpenRecipe(recipe.id)}
+            style={{ display: "flex", alignItems: "center", gap: 12, background: "#eaf6ff", borderRadius: 16, padding: "10px 14px", cursor: "pointer" }}
+          >
+            <div style={{ position: "relative", width: 32, height: 32, flex: "none" }}>
+              <FoodIcon icon={recipe.ingredients[0]?.icon ?? "leftovers"} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{recipe.name}</div>
+              <div style={{ fontSize: 11, color: "rgba(22,50,92,0.5)" }}>{recipe.minutes} min</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {canShuffle && (
+        <div
+          onClick={onShuffle}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            padding: 11,
+            borderRadius: 14,
+            border: "1px solid rgba(22,50,92,0.14)",
+            color: "#16325c",
+            fontSize: 12.5,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          <Shuffle size={14} strokeWidth={2.4} />
+          Not feeling these? Shuffle
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function WhatToEatSheet() {
   const { state, actions } = useThatFridgeCtx();
   if (!state.whatToEatOpen) return null;
 
-  const hasResults = state.whatToEatResults !== null;
+  const hasResults = state.whatToEatExact !== null;
+  const exact = state.whatToEatExact ?? [];
+  const similar = state.whatToEatSimilar ?? [];
 
   return (
     <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)", zIndex: 10 }}>
@@ -69,12 +138,30 @@ export default function WhatToEatSheet() {
           onClick={actions.closeWhatToEat}
           style={{ width: 36, height: 5, borderRadius: 3, background: "rgba(22,50,92,0.18)", margin: "0 auto 16px", cursor: "pointer", flex: "none" }}
         />
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flex: "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flex: "none" }}>
           <ChefHat size={18} color="#16325c" strokeWidth={2.2} />
           <div style={{ fontSize: 18, fontWeight: 700 }}>What should I eat?</div>
         </div>
-        <div style={{ fontSize: 12.5, color: "rgba(22,50,92,0.5)", marginBottom: 16, flex: "none" }}>
-          Pick what sounds good and I&apos;ll pull matches from your own saved recipes.
+
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginBottom: 18, flex: "none" }}>
+          <div style={{ position: "relative", width: 56, height: 56, flex: "none", animation: "chefWalkIn .5s ease-out, bounce 2.2s ease-in-out .5s infinite" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- tiny pixel-art GIF, unoptimized like FoodIcon's sprites (Next's optimizer would flatten the animation to a single frame) */}
+            <img src="/images/thatfridge/chef.gif" alt="Chef" style={{ width: "100%", height: "100%", objectFit: "contain", imageRendering: "pixelated" }} />
+          </div>
+          <div
+            style={{
+              position: "relative",
+              background: "#eaf6ff",
+              borderRadius: "14px 14px 14px 4px",
+              padding: "9px 13px",
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: "#16325c",
+              marginBottom: 6,
+            }}
+          >
+            What are the vibes today?
+          </div>
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
@@ -124,12 +211,6 @@ export default function WhatToEatSheet() {
 
           {hasResults && (
             <div>
-              {state.whatToEatRelaxed && !state.whatToEatExhausted && (
-                <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)", marginBottom: 10, fontStyle: "italic" }}>
-                  No exact match, but here&apos;s something close to what you picked.
-                </div>
-              )}
-
               {state.whatToEatExhausted ? (
                 <div style={{ textAlign: "center", padding: "18px 10px" }}>
                   <div style={{ fontSize: 12.5, color: "rgba(22,50,92,0.55)", marginBottom: 12, lineHeight: 1.4 }}>
@@ -143,31 +224,46 @@ export default function WhatToEatSheet() {
                   </div>
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {state.whatToEatResults?.map((recipe) => (
+                <>
+                  <ResultsTier
+                    label="EXACT MATCHES"
+                    results={exact}
+                    page={state.whatToEatExactPage}
+                    onShuffle={() => actions.shuffleMeals("exact")}
+                    onOpenRecipe={actions.openRecipeDetail}
+                  />
+                  <ResultsTier
+                    label="SIMILAR MATCHES"
+                    results={similar}
+                    page={state.whatToEatSimilarPage}
+                    onShuffle={() => actions.shuffleMeals("similar")}
+                    onOpenRecipe={actions.openRecipeDetail}
+                  />
+
+                  {/* Escape hatch even when there ARE results, in case none of them (or none of
+                      the shuffled batches, in either tier) actually sound good. */}
+                  <div style={{ textAlign: "center", padding: "18px 10px 4px" }}>
+                    <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.45)", marginBottom: 10 }}>
+                      Still nothing to your liking? Let&apos;s find something.
+                    </div>
                     <div
-                      key={recipe.id}
-                      onClick={() => actions.openRecipeDetail(recipe.id)}
+                      onClick={actions.askChefInstead}
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        background: "#eaf6ff",
-                        borderRadius: 16,
-                        padding: "10px 14px",
+                        display: "inline-block",
+                        padding: "10px 18px",
+                        borderRadius: 14,
+                        background: "#fff",
+                        border: "1px solid rgba(22,50,92,0.14)",
+                        color: "#16325c",
+                        fontSize: 12.5,
+                        fontWeight: 700,
                         cursor: "pointer",
                       }}
                     >
-                      <div style={{ position: "relative", width: 32, height: 32, flex: "none" }}>
-                        <FoodIcon icon={recipe.ingredients[0]?.icon ?? "leftovers"} />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{recipe.name}</div>
-                        <div style={{ fontSize: 11, color: "rgba(22,50,92,0.5)" }}>{recipe.minutes} min</div>
-                      </div>
+                      Ask Chef instead
                     </div>
-                  ))}
-                </div>
+                  </div>
+                </>
               )}
             </div>
           )}

@@ -108,12 +108,19 @@ import type {
 } from "./types";
 const DEFAULT_CHAT_MESSAGES: ChatMessage[] = [{ id: "m0", from: "bot", text: "Hi! Ask me anything about what's in your fridge." }];
 
-function buildInventorySummary(fridge: Fridge | undefined): string | undefined {
-  if (!fridge) return undefined;
-  const lines = fridge.sections.flatMap((section) =>
-    section.items.map((item) => `${item.name} — qty ${item.qty}, ${item.location ?? "fridge"}, use within ${item.days} day${item.days === 1 ? "" : "s"}`)
-  );
-  return lines.length ? lines.join("\n") : "Fridge is currently empty.";
+// Was previously handed just state.fridges[state.activeFridge] - that ignored kitchenScope
+// entirely, so a Crew insight generated while scoped to "All Fridges" still only ever saw
+// whichever single fridge happened to be "active" (often not the one with items in it),
+// reporting the whole kitchen as empty even when another fridge clearly wasn't. Now built from
+// getScopedItems, which already honors kitchenScope the same way every other summary/score on
+// the app does.
+function buildInventorySummary(state: ThatFridgeState): string | undefined {
+  if (state.fridges.length === 0) return undefined;
+  const items = getScopedItems(state);
+  if (!items.length) return "Fridge is currently empty.";
+  return items
+    .map((item) => `${item.name} — qty ${item.qty}, ${item.location ?? "fridge"}, use within ${item.days} day${item.days === 1 ? "" : "s"}`)
+    .join("\n");
 }
 
 // Sent alongside every chat/agent-activation call so the model can actually reason about
@@ -132,6 +139,45 @@ function buildUsageSummary(usageHistory: UsageHistoryEntry[]): string | undefine
 function buildStreakSummary(scoreSnapshots: ScoreSnapshot[]): string | undefined {
   const streak = computeStreak(scoreSnapshots);
   return streak >= 1 ? `Waste Saver streak: ${streak} week${streak === 1 ? "" : "s"}` : undefined;
+}
+
+function shuffleArray<T>(items: T[]): T[] {
+  const arr = items.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Natural-language phrasing for the "Ask Chef instead" handoff - deliberately separate from
+// WhatToEatSheet.tsx's chip labels (those are UI copy, this is a sentence fragment), even
+// though both describe the same tag set.
+const WHAT_TO_EAT_MEAL_TYPE_PHRASE: Record<MealType, string> = {
+  breakfast: "breakfast",
+  lunch: "lunch",
+  dinner: "dinner",
+  snack: "snack",
+};
+const WHAT_TO_EAT_VIBE_PHRASE: Record<Vibe, string> = {
+  comfort: "comforting",
+  light_fresh: "light and fresh",
+  quick_easy: "quick and easy",
+  something_new: "something I haven't made before",
+  use_it_up: "using ingredients that are close to expiring",
+};
+const WHAT_TO_EAT_FOOD_FOCUS_PHRASE: Record<FoodFocus, string> = {
+  high_protein: "high in protein",
+  high_veg: "veggie-forward",
+  low_carb: "low carb",
+  balanced: "a balanced mix of protein, veg, and carbs",
+};
+
+function buildWhatToEatChatPrompt(mealType: MealType | null, vibes: Vibe[], foodFocus: FoodFocus[]): string {
+  const descriptors = [...vibes.map((v) => WHAT_TO_EAT_VIBE_PHRASE[v]), ...foodFocus.map((f) => WHAT_TO_EAT_FOOD_FOCUS_PHRASE[f])];
+  const subject = mealType ? `a ${WHAT_TO_EAT_MEAL_TYPE_PHRASE[mealType]} recipe` : "a recipe";
+  const descriptorClause = descriptors.length ? ` that's ${descriptors.join(", ")}` : "";
+  return `Can you suggest ${subject}${descriptorClause}, using what's in my fridge?`;
 }
 
 function deriveThreadTitle(firstMessage: string): string {
@@ -256,13 +302,23 @@ export interface ThatFridgeState {
   markMadeStatus: Record<string, "finished" | "remaining">;
   // "What Should I Eat?" - floating-button mini-Chef on the Food Hub Recipes tab. mealType is
   // single-select (re-clicking the active chip clears it); vibes/foodFocus are multi-select.
-  // results/relaxed/exhausted are null/false until findMeals() resolves at least once.
+  // The backend (RecipeController::suggest) splits matches into two tiers instead of one flat
+  // list: whatToEatExact (fully honors every selected filter) and whatToEatSimilar (real
+  // recipes that share the selected vibes/food_focus without fully qualifying - what dropping
+  // a hard filter turns up, shown as its own labeled section rather than only ever backfilling
+  // "exact" or appearing solely as an empty-results fallback). Both are null until findMeals()
+  // resolves at least once, and both are shuffled once client-side on arrival; each tier's
+  // Shuffle button just advances its own …Page counter through fixed 3-item slices of that same
+  // shuffled order (wrapping around) rather than re-fetching or re-randomizing on every press,
+  // so pressing it repeatedly cycles through every real match before ever repeating one.
   whatToEatOpen: boolean;
   whatToEatMealType: MealType | null;
   whatToEatVibes: Vibe[];
   whatToEatFoodFocus: FoodFocus[];
-  whatToEatResults: Recipe[] | null;
-  whatToEatRelaxed: boolean;
+  whatToEatExact: Recipe[] | null;
+  whatToEatExactPage: number;
+  whatToEatSimilar: Recipe[] | null;
+  whatToEatSimilarPage: number;
   whatToEatExhausted: boolean;
   whatToEatLoading: boolean;
   newShoppingText: string;
@@ -380,8 +436,10 @@ export function initialState(): ThatFridgeState {
     whatToEatMealType: null,
     whatToEatVibes: [],
     whatToEatFoodFocus: [],
-    whatToEatResults: null,
-    whatToEatRelaxed: false,
+    whatToEatExact: null,
+    whatToEatExactPage: 0,
+    whatToEatSimilar: null,
+    whatToEatSimilarPage: 0,
     whatToEatExhausted: false,
     whatToEatLoading: false,
     newShoppingText: "",
@@ -1168,8 +1226,10 @@ export function useThatFridge() {
       whatToEatMealType: null,
       whatToEatVibes: [],
       whatToEatFoodFocus: [],
-      whatToEatResults: null,
-      whatToEatRelaxed: false,
+      whatToEatExact: null,
+      whatToEatExactPage: 0,
+      whatToEatSimilar: null,
+      whatToEatSimilarPage: 0,
       whatToEatExhausted: false,
     });
   const closeWhatToEat = () => patch({ whatToEatOpen: false });
@@ -1188,8 +1248,13 @@ export function useThatFridge() {
     try {
       const result = await suggestRecipes({ mealType: state.whatToEatMealType, vibes: state.whatToEatVibes, foodFocus: state.whatToEatFoodFocus });
       patch({
-        whatToEatResults: result.suggestions,
-        whatToEatRelaxed: result.relaxed,
+        // Shuffled once here, on arrival - each tier's Shuffle button then just pages through
+        // this same fixed order (see shuffleMeals) instead of re-randomizing every press, so
+        // it never risks showing the same 3 twice before you've seen everything.
+        whatToEatExact: shuffleArray(result.exact),
+        whatToEatExactPage: 0,
+        whatToEatSimilar: shuffleArray(result.similar),
+        whatToEatSimilarPage: 0,
         whatToEatExhausted: result.exhausted,
         whatToEatLoading: false,
       });
@@ -1197,12 +1262,27 @@ export function useThatFridge() {
       patch({ whatToEatLoading: false, syncError: describeError(err, "Couldn't find any meals right now.") });
     }
   };
-  // "Ask Chef instead" - the exhausted fallback reuses the existing Chef chat pipeline rather
-  // than inventing a second recipe-generation path server-side.
+  const shuffleMeals = (tier: "exact" | "similar") => {
+    const items = tier === "exact" ? state.whatToEatExact : state.whatToEatSimilar;
+    const total = items?.length ?? 0;
+    if (total <= 3) return;
+    const pageCount = Math.ceil(total / 3);
+    if (tier === "exact") {
+      patch((s) => ({ whatToEatExactPage: (s.whatToEatExactPage + 1) % pageCount }));
+    } else {
+      patch((s) => ({ whatToEatSimilarPage: (s.whatToEatSimilarPage + 1) % pageCount }));
+    }
+  };
+  // "Ask Chef instead" - reuses the existing Chef chat pipeline rather than inventing a second
+  // recipe-generation path server-side, but builds a message from whatever meal_type/vibes/
+  // food_focus were selected so Chef's answer still honors the user's picks even for recipes
+  // outside the tagged pool (and can draw on ingredients the saved-recipe search can't see).
+  // Offered both when the search comes up empty and, via the sheet's bottom "still nothing
+  // sound good?" prompt, when there are results but none of them appeal.
   const askChefInstead = () => {
-    patch({ whatToEatOpen: false });
-    activateAgent("Chef");
-    patch({ screen: "chat" });
+    const message = buildWhatToEatChatPrompt(state.whatToEatMealType, state.whatToEatVibes, state.whatToEatFoodFocus);
+    patch({ whatToEatOpen: false, screen: "chat" });
+    sendChat(message);
   };
 
   const onNewShoppingChange = (value: string) => patch({ newShoppingText: value });
@@ -1304,7 +1384,7 @@ export function useThatFridge() {
       return;
     }
 
-    const inventory = buildInventorySummary(state.fridges[state.activeFridge]);
+    const inventory = buildInventorySummary(state);
     const usageSummary = buildUsageSummary(state.usageHistory);
     const streakSummary = buildStreakSummary(state.scoreSnapshots);
     sendChatMessage(trimmed, routeChatAgent(trimmed), inventory, state.currentSessionId, usageSummary, undefined, streakSummary)
@@ -1365,7 +1445,7 @@ export function useThatFridge() {
   const activateAgent = (agent: ChatAgentName) => {
     if (state.agentInsightLoading[agent]) return;
     patch((s) => ({ agentInsightLoading: { ...s.agentInsightLoading, [agent]: true } }));
-    const inventory = buildInventorySummary(state.fridges[state.activeFridge]);
+    const inventory = buildInventorySummary(state);
     const usageSummary = buildUsageSummary(state.usageHistory);
     const streakSummary = buildStreakSummary(state.scoreSnapshots);
     sendChatMessage(AGENT_ACTIVATE_PROMPT[agent], agent, inventory, undefined, usageSummary, true, streakSummary)
@@ -2205,6 +2285,7 @@ export function useThatFridge() {
     toggleWhatToEatVibe,
     toggleWhatToEatFoodFocus,
     findMeals,
+    shuffleMeals,
     askChefInstead,
     onNewShoppingChange,
     onNewShoppingKeyDown,

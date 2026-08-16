@@ -51,10 +51,9 @@ class RecipeControllerTest extends TestCase
 
         $response = $this->actingAs($user)->getJson('/api/recipes/suggest?meal_type=breakfast&vibes[]=comfort');
 
-        $names = collect($response->json('suggestions'))->pluck('name');
+        $names = collect($response->json('exact'))->pluck('name');
         $this->assertTrue($names->contains('Oats'));
         $this->assertFalse($names->contains('Stew'));
-        $this->assertFalse($response->json('relaxed'));
     }
 
     public function test_suggest_hard_filters_by_food_focus(): void
@@ -65,8 +64,41 @@ class RecipeControllerTest extends TestCase
 
         $response = $this->actingAs($user)->getJson('/api/recipes/suggest?vibes[]=comfort&food_focus[]=high_protein');
 
-        $names = collect($response->json('suggestions'))->pluck('name');
+        $names = collect($response->json('exact'))->pluck('name');
         $this->assertEquals(['Protein Bowl'], $names->all());
+    }
+
+    public function test_suggest_with_only_a_food_focus_selected_still_returns_matches(): void
+    {
+        // Regression: food_focus used to be a hard filter only, never scored - a recipe that
+        // survived the filter still landed on a flat 0 and got dropped by the score > 0 cutoff,
+        // so picking a food_focus chip with no vibe selected always came back empty even when a
+        // real match existed.
+        $user = User::factory()->create();
+        $this->recipeFor($user, ['name' => 'Protein Bowl', 'food_focus' => ['high_protein'], 'vibes' => []]);
+        $this->recipeFor($user, ['name' => 'Veg Bowl', 'food_focus' => ['high_veg'], 'vibes' => []]);
+
+        $response = $this->actingAs($user)->getJson('/api/recipes/suggest?food_focus[]=high_protein');
+
+        $names = collect($response->json('exact'))->pluck('name');
+        $this->assertEquals(['Protein Bowl'], $names->all());
+        $this->assertFalse($response->json('exhausted'));
+    }
+
+    public function test_suggest_with_only_a_meal_type_selected_still_returns_matches(): void
+    {
+        // Regression: with no vibes and no food_focus selected there was nothing to score, so
+        // every candidate scored 0 and got dropped - a bare meal_type search always came back
+        // empty even when matching recipes existed.
+        $user = User::factory()->create();
+        $this->recipeFor($user, ['name' => 'Pancakes', 'meal_type' => 'breakfast', 'vibes' => []]);
+        $this->recipeFor($user, ['name' => 'Stew', 'meal_type' => 'dinner', 'vibes' => []]);
+
+        $response = $this->actingAs($user)->getJson('/api/recipes/suggest?meal_type=breakfast');
+
+        $names = collect($response->json('exact'))->pluck('name');
+        $this->assertEquals(['Pancakes'], $names->all());
+        $this->assertFalse($response->json('exhausted'));
     }
 
     public function test_suggest_scores_tag_vibe_matches(): void
@@ -77,7 +109,7 @@ class RecipeControllerTest extends TestCase
 
         $response = $this->actingAs($user)->getJson('/api/recipes/suggest?vibes[]=comfort');
 
-        $names = collect($response->json('suggestions'))->pluck('name');
+        $names = collect($response->json('exact'))->pluck('name');
         $this->assertTrue($names->contains('Comfort Food'));
         $this->assertFalse($names->contains('Fresh Salad'));
     }
@@ -90,7 +122,7 @@ class RecipeControllerTest extends TestCase
 
         $response = $this->actingAs($user)->getJson('/api/recipes/suggest?vibes[]=something_new');
 
-        $names = collect($response->json('suggestions'))->pluck('name');
+        $names = collect($response->json('exact'))->pluck('name');
         $this->assertEquals(['Never Made'], $names->all());
     }
 
@@ -117,23 +149,52 @@ class RecipeControllerTest extends TestCase
 
         $response = $this->actingAs($user)->getJson('/api/recipes/suggest?vibes[]=use_it_up');
 
-        $names = collect($response->json('suggestions'))->pluck('name');
+        $names = collect($response->json('exact'))->pluck('name');
         $this->assertTrue($names->contains('Uses Expiring'));
         $this->assertFalse($names->contains('No Overlap'));
     }
 
-    public function test_suggest_relaxes_filters_progressively_before_giving_up(): void
+    public function test_suggest_puts_relaxed_matches_in_the_similar_bucket_not_exact(): void
     {
         $user = User::factory()->create();
-        // Nothing matches lunch, but something matches the vibe once meal_type is dropped.
+        // Nothing matches lunch exactly, but this still matches the vibe once meal_type is
+        // dropped - it should show up as "similar", not silently promoted into "exact".
         $this->recipeFor($user, ['name' => 'Dinner Comfort', 'meal_type' => 'dinner', 'vibes' => ['comfort']]);
 
         $response = $this->actingAs($user)->getJson('/api/recipes/suggest?meal_type=lunch&vibes[]=comfort');
 
-        $this->assertTrue($response->json('relaxed'));
+        $this->assertEquals([], $response->json('exact'));
         $this->assertFalse($response->json('exhausted'));
-        $names = collect($response->json('suggestions'))->pluck('name');
+        $names = collect($response->json('similar'))->pluck('name');
         $this->assertEquals(['Dinner Comfort'], $names->all());
+    }
+
+    public function test_suggest_returns_similar_matches_alongside_a_thin_exact_list(): void
+    {
+        // The actual ask: even when there ARE exact matches (just not many), still surface
+        // recipes that are close but not a perfect fit, in a separate, clearly distinct bucket.
+        $user = User::factory()->create();
+        $this->recipeFor($user, ['name' => 'Exact Match', 'meal_type' => 'dinner', 'vibes' => ['comfort']]);
+        $this->recipeFor($user, ['name' => 'Close But Wrong Meal', 'meal_type' => 'lunch', 'vibes' => ['comfort']]);
+
+        $response = $this->actingAs($user)->getJson('/api/recipes/suggest?meal_type=dinner&vibes[]=comfort');
+
+        $exactNames = collect($response->json('exact'))->pluck('name');
+        $similarNames = collect($response->json('similar'))->pluck('name');
+        $this->assertEquals(['Exact Match'], $exactNames->all());
+        $this->assertEquals(['Close But Wrong Meal'], $similarNames->all());
+    }
+
+    public function test_suggest_has_no_similar_tier_for_a_bare_meal_type_search(): void
+    {
+        // Nothing to judge "similarity" by once the one filter that was picked is dropped.
+        $user = User::factory()->create();
+        $this->recipeFor($user, ['name' => 'Pancakes', 'meal_type' => 'breakfast']);
+        $this->recipeFor($user, ['name' => 'Stew', 'meal_type' => 'dinner']);
+
+        $response = $this->actingAs($user)->getJson('/api/recipes/suggest?meal_type=breakfast');
+
+        $this->assertEquals([], $response->json('similar'));
     }
 
     public function test_suggest_reports_exhausted_when_nothing_matches_at_all(): void
@@ -144,7 +205,8 @@ class RecipeControllerTest extends TestCase
         $response = $this->actingAs($user)->getJson('/api/recipes/suggest?vibes[]=comfort');
 
         $this->assertTrue($response->json('exhausted'));
-        $this->assertEquals([], $response->json('suggestions'));
+        $this->assertEquals([], $response->json('exact'));
+        $this->assertEquals([], $response->json('similar'));
     }
 
     public function test_mark_made_increments_made_count(): void
@@ -156,5 +218,17 @@ class RecipeControllerTest extends TestCase
 
         $response->assertJson(['data' => ['madeCount' => 3]]);
         $this->assertDatabaseHas('recipes', ['id' => $recipe->id, 'made_count' => 3]);
+    }
+
+    public function test_suggest_returns_more_than_three_matches_for_the_frontend_to_shuffle_through(): void
+    {
+        $user = User::factory()->create();
+        for ($i = 1; $i <= 6; $i++) {
+            $this->recipeFor($user, ['name' => "Comfort Food {$i}", 'vibes' => ['comfort']]);
+        }
+
+        $response = $this->actingAs($user)->getJson('/api/recipes/suggest?vibes[]=comfort');
+
+        $this->assertCount(6, $response->json('exact'));
     }
 }

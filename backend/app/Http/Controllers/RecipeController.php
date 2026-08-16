@@ -20,6 +20,10 @@ class RecipeController extends Controller
     // meal_type/vibes/food_focus) and frontend/lib/thatfridge/types.ts.
     private const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
+    // Returned (not just the first 3 shown) so the frontend's Shuffle button can page through
+    // other real matches instead of only ever offering the same top 3.
+    private const SUGGEST_MAX_RESULTS = 12;
+
     private const TAG_VIBES = ['comfort', 'light_fresh', 'quick_easy'];
 
     private const VIBES = ['comfort', 'light_fresh', 'quick_easy', 'something_new', 'use_it_up'];
@@ -104,12 +108,21 @@ class RecipeController extends Controller
 
     /**
      * "What Should I Eat?" - ranks the user's own visible recipes (curated + custom) against
-     * their chosen meal_type/vibes/food_focus. meal_type and food_focus are hard filters;
-     * every vibe (AI-tagged or live-computed) contributes to one combined score so mixed
-     * selections rank sensibly without special-casing each combination. If nothing scores
-     * above 0, filters are progressively relaxed (drop food_focus, then meal_type) rather than
-     * returning nothing outright - the frontend falls back to the existing Chef chat flow only
-     * once every relaxation has also come up empty.
+     * their chosen meal_type/vibes/food_focus, returned as two separate tiers rather than one
+     * flat list:
+     *
+     * - "exact" honors every hard filter (meal_type exact match, food_focus overlap) and only
+     *   includes recipes that also score above 0 against whatever was selected.
+     * - "similar" is what dropping a hard filter (food_focus first, then meal_type too) turns
+     *   up beyond that - real recipes that share the selected vibes/food_focus but don't fully
+     *   satisfy the exact combination - always computed and returned alongside "exact" (not
+     *   just as an empty-results fallback), so a search with only 1-2 exact hits still has
+     *   something else to offer instead of stopping there. Scoring for both tiers is always
+     *   against the ORIGINAL selection (relaxing a filter changes what's allowed through, not
+     *   what's being scored for), so "similar" results are still ranked by actual relevance.
+     *
+     * meal_type-only searches (no vibes, no food_focus) never get a "similar" tier - there's
+     * nothing to judge similarity by once the one filter that was picked is gone.
      */
     public function suggest(Request $request)
     {
@@ -125,49 +138,61 @@ class RecipeController extends Controller
         $mealType = $data['meal_type'] ?? null;
         $vibes = $data['vibes'] ?? [];
         $foodFocus = $data['food_focus'] ?? [];
+        $hasScoringCriteria = ! empty($vibes) || ! empty($foodFocus);
 
         $recipes = Recipe::query()
             ->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $user->id))
+            ->orderBy('name')
             ->get();
 
         $expiringDaysByIcon = $this->expiringItemIcons($user);
 
-        $rank = function (?string $mealType, array $foodFocus) use ($recipes, $vibes, $expiringDaysByIcon) {
+        $rankScored = function (bool $applyMealTypeFilter, bool $applyFoodFocusFilter) use (
+            $recipes, $mealType, $foodFocus, $vibes, $hasScoringCriteria, $expiringDaysByIcon
+        ) {
             return $recipes
-                ->when($mealType, fn ($c) => $c->where('meal_type', $mealType))
-                ->when(! empty($foodFocus), fn ($c) => $c->filter(
+                ->when($applyMealTypeFilter && $mealType, fn ($c) => $c->where('meal_type', $mealType))
+                ->when($applyFoodFocusFilter && ! empty($foodFocus), fn ($c) => $c->filter(
                     fn ($r) => count(array_intersect($foodFocus, $r->food_focus ?? [])) > 0
                 ))
-                ->map(fn ($r) => ['recipe' => $r, 'score' => $this->scoreRecipe($r, $vibes, $expiringDaysByIcon)])
-                ->filter(fn ($x) => $x['score'] > 0)
-                ->sortByDesc('score')
-                ->take(3)
-                ->pluck('recipe');
+                // Always scored against the real (un-relaxed) selection, regardless of which
+                // filters this particular pass is applying.
+                ->map(fn ($r) => ['recipe' => $r, 'score' => $this->scoreRecipe($r, $vibes, $foodFocus, $expiringDaysByIcon)])
+                ->when($hasScoringCriteria, fn ($c) => $c->filter(fn ($x) => $x['score'] > 0))
+                ->sortByDesc('score');
         };
 
-        $results = $rank($mealType, $foodFocus);
-        $relaxed = false;
+        $exactScored = $rankScored(true, true);
+        $exact = $exactScored->take(self::SUGGEST_MAX_RESULTS)->pluck('recipe');
+        $exactIds = $exact->pluck('id')->all();
 
-        if ($results->isEmpty() && ! empty($foodFocus)) {
-            $results = $rank($mealType, []);
-            $relaxed = $results->isNotEmpty();
+        $similarScored = collect();
+        if ($hasScoringCriteria) {
+            if (! empty($foodFocus)) {
+                $similarScored = $similarScored->merge($rankScored(true, false));
+            }
+            if ($mealType) {
+                $similarScored = $similarScored->merge($rankScored(false, false));
+            }
         }
-        if ($results->isEmpty() && $mealType) {
-            $results = $rank(null, []);
-            $relaxed = $results->isNotEmpty();
-        }
+        $similar = $similarScored
+            ->reject(fn ($x) => in_array($x['recipe']->id, $exactIds, true))
+            ->unique(fn ($x) => $x['recipe']->id)
+            ->sortByDesc('score')
+            ->take(self::SUGGEST_MAX_RESULTS)
+            ->pluck('recipe');
 
         // Deliberately not the standard {"data": ...} Resource wrapper - apiFetch() on the
         // frontend unwraps a top-level "data" key automatically (see apiClient.ts), which
-        // would silently strip the sibling relaxed/exhausted flags this response needs.
+        // would silently strip the sibling exhausted flag this response needs.
         return response()->json([
-            'suggestions' => RecipeResource::collection($results),
-            'relaxed' => $relaxed,
-            'exhausted' => $results->isEmpty(),
+            'exact' => RecipeResource::collection($exact),
+            'similar' => RecipeResource::collection($similar),
+            'exhausted' => $exact->isEmpty() && $similar->isEmpty(),
         ]);
     }
 
-    private function scoreRecipe(Recipe $recipe, array $vibes, array $expiringDaysByIcon): float
+    private function scoreRecipe(Recipe $recipe, array $vibes, array $foodFocus, array $expiringDaysByIcon): float
     {
         $score = 0;
 
@@ -176,6 +201,12 @@ class RecipeController extends Controller
                 $score += 1;
             }
         }
+
+        // food_focus is also a hard filter above (at least one overlap required to reach this
+        // point at all when it's set) - scored too, not just filtered, so a food_focus-only
+        // search (no vibes picked) still has something to award points for instead of every
+        // surviving candidate landing on a flat 0.
+        $score += count(array_intersect($foodFocus, $recipe->food_focus ?? []));
 
         if (in_array('something_new', $vibes, true) && $recipe->made_count === 0) {
             $score += 1;
