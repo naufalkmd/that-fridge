@@ -128,6 +128,10 @@ export interface ChatThread {
 
 export type ScanMethod = "receipt" | "barcode" | "photo" | "manual";
 
+// Only asked for produce (vegetables/fruit) on manual add, where there's no purchase-receipt
+// signal to presume "just bought" from - see suggestManualDetails in useThatFridge.ts.
+export type ProduceCondition = "vibrant" | "wilting" | "past_best";
+
 export interface DetectedItem {
   id: string;
   name: string;

@@ -91,6 +91,7 @@ import type {
   NotificationEvent,
   NotificationPrefs,
   NutritionCategory,
+  ProduceCondition,
   Recipe,
   RecipeAttachment,
   RecipeCategory,
@@ -107,6 +108,20 @@ import type {
   Vibe,
 } from "./types";
 const DEFAULT_CHAT_MESSAGES: ChatMessage[] = [{ id: "m0", from: "bot", text: "Hi! Ask me anything about what's in your fridge." }];
+
+// Only these two categories get the manual-add condition question - shelf life for a can of
+// beans or a block of cheese doesn't hinge on a "does it look wilted" read the way produce does.
+const PRODUCE_CATEGORIES = new Set(["vegetables", "fruit"]);
+
+// Applied to the AI/fallback's fresh-purchase baseline once the user says how it actually looks.
+// Not derived from anything measured - deliberately rough, same "explainable over precise" stance
+// as the kitchen scores in scoring.ts. Floored at 1 day either way (see runManualAutoFill) so
+// "past its best" still gives an editable date instead of one already in the past.
+const CONDITION_SHELF_LIFE_MULTIPLIER: Record<ProduceCondition, number> = {
+  vibrant: 1,
+  wilting: 0.4,
+  past_best: 0.1,
+};
 
 // Was previously handed just state.fridges[state.activeFridge] - that ignored kitchenScope
 // entirely, so a Crew insight generated while scoped to "All Fridges" still only ever saw
@@ -256,6 +271,7 @@ export interface ThatFridgeState {
   scanImageLoading: boolean;
   scanImageError: string | null;
   manualAutoFillLoading: boolean;
+  manualAutoFillAskCondition: boolean;
   detectedAutoFillLoadingId: string | null;
   manualName: string;
   manualSectionId: string;
@@ -401,6 +417,7 @@ export function initialState(): ThatFridgeState {
     scanImageLoading: false,
     scanImageError: null,
     manualAutoFillLoading: false,
+    manualAutoFillAskCondition: false,
     detectedAutoFillLoadingId: null,
     manualName: "",
     manualSectionId: "",
@@ -2083,20 +2100,38 @@ export function useThatFridge() {
   const onManualCategoryChange = (value: string) => patch({ manualCategory: value, manualCategoryAuto: false });
   const onManualExpiryDateChange = (value: string) => patch({ manualExpiryDate: value });
   const onManualLocationChange = (location: StorageLocation) => patch({ manualLocation: location });
-  const suggestManualDetails = () => {
+  // Receipt/barcode-detected items get suggestDetectedDetails below with no condition question -
+  // a receipt line item was, by definition, just bought, so "freshly unopened" is a safe
+  // presumption. Manual add has no such signal (could be a fridge staple, could be something
+  // picked up at a farmers market days ago), so for produce specifically - where visible
+  // condition swings remaining shelf life the most - we ask instead of presuming.
+  const runManualAutoFill = (condition: ProduceCondition | null) => {
     const name = state.manualName.trim();
     if (!name || state.manualAutoFillLoading) return;
-    patch({ manualAutoFillLoading: true });
+    patch({ manualAutoFillLoading: true, manualAutoFillAskCondition: false });
     suggestItemDetails(name, state.manualIcon)
       .then(({ shelf_life_days, location }) => {
+        const days = condition ? Math.max(1, Math.round(shelf_life_days * CONDITION_SHELF_LIFE_MULTIPLIER[condition])) : shelf_life_days;
         const target = new Date();
-        target.setDate(target.getDate() + shelf_life_days);
+        target.setDate(target.getDate() + days);
         patch({ manualExpiryDate: toISODate(target), manualLocation: location, manualAutoFillLoading: false });
       })
       .catch((err) => {
         patch({ manualAutoFillLoading: false, syncError: describeError(err, "Couldn't get a suggestion for that item.") });
       });
   };
+  const suggestManualDetails = () => {
+    if (state.manualAutoFillAskCondition) {
+      patch({ manualAutoFillAskCondition: false });
+      return;
+    }
+    if (PRODUCE_CATEGORIES.has(state.manualCategory)) {
+      patch({ manualAutoFillAskCondition: true });
+      return;
+    }
+    runManualAutoFill(null);
+  };
+  const chooseManualCondition = (condition: ProduceCondition) => runManualAutoFill(condition);
   const onManualNoteChange = (value: string) => patch({ manualNote: value });
   const confirmManualAdd = async () => {
     const name = state.manualName.trim();
@@ -2349,6 +2384,7 @@ export function useThatFridge() {
     onManualExpiryDateChange,
     onManualLocationChange,
     suggestManualDetails,
+    chooseManualCondition,
     onManualNoteChange,
     confirmManualAdd,
     confirmAdd,

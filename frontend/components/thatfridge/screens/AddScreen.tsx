@@ -8,7 +8,7 @@ import { FOOD_ICON_KEYS, ICON_LABELS, NUTRITION_CATEGORIES, STORAGE_LOCATIONS } 
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 import LocationIcon from "../LocationIcon";
-import type { ScanMethod, StorageLocation } from "@/lib/thatfridge/types";
+import type { ProduceCondition, ScanMethod, StorageLocation } from "@/lib/thatfridge/types";
 
 const SCAN_METHODS: { key: ScanMethod; title: string; desc: string; Icon: typeof Receipt }[] = [
   { key: "receipt", title: "Scan receipt", desc: "Snap your grocery receipt", Icon: Receipt },
@@ -39,6 +39,12 @@ const labelStyle: React.CSSProperties = {
 };
 
 const AUTO_FILL_COLOR = "#7a5cc9";
+
+const PRODUCE_CONDITIONS: { key: ProduceCondition; label: string }[] = [
+  { key: "vibrant", label: "Still vibrant" },
+  { key: "wilting", label: "Starting to wilt" },
+  { key: "past_best", label: "Past its best" },
+];
 
 function AutoFillButton({ onClick, loading }: { onClick: () => void; loading?: boolean }) {
   return (
@@ -347,7 +353,7 @@ export default function AddScreen() {
         <div style={{ fontSize: 20, fontWeight: 800 }}>{state.addStep === -1 ? "Add to fridge" : `Add to ${targetFridge?.name || "fridge"}`}</div>
         <div
           className="thatfridge-add-header-btn"
-          onClick={actions.goHome}
+          onClick={state.addStep === 6 ? actions.skipExpiryPhoto : actions.goHome}
           style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
         >
           <X className="thatfridge-hide-desktop" size={15} color="rgba(22,50,92,0.5)" strokeWidth={2} />
@@ -867,6 +873,22 @@ export default function AddScreen() {
                 <ScanExpiryButton onClick={actions.startExpiryScanForManual} />
                 <AutoFillButton onClick={actions.suggestManualDetails} loading={state.manualAutoFillLoading} />
               </div>
+              {state.manualAutoFillAskCondition && (
+                <div style={{ marginTop: 8, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>How does it look right now?</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {PRODUCE_CONDITIONS.map((opt) => (
+                      <div
+                        key={opt.key}
+                        onClick={() => actions.chooseManualCondition(opt.key)}
+                        style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 10, background: "#f4f7fb", fontSize: 11, fontWeight: 700, color: "#16325c", cursor: "pointer" }}
+                      >
+                        {opt.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <div style={labelStyle}>NOTE (OPTIONAL)</div>
