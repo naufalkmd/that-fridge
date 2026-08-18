@@ -289,6 +289,9 @@ export interface PhotoDetectedItem {
   matched_product_id: number | null;
   confidence: number;
   confirmed: boolean;
+  // The vision call's own read of produce condition, straight off the photo - see
+  // PhotoService::detectItemsWithVision on the backend. null for non-produce/unclear items.
+  condition: "vibrant" | "wilting" | "past_best" | null;
 }
 
 export interface PhotoScanResult {

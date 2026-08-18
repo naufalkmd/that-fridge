@@ -46,6 +46,14 @@ const PRODUCE_CONDITIONS: { key: ProduceCondition; label: string }[] = [
   { key: "past_best", label: "Past its best" },
 ];
 
+// Phrased for the inline "AI noticed this is ___ in the photo" note below a photo-scan-detected
+// item, distinct from PRODUCE_CONDITIONS' button labels above since that's a different sentence shape.
+const CONDITION_NOTE_PHRASE: Record<ProduceCondition, string> = {
+  vibrant: "still vibrant",
+  wilting: "starting to wilt",
+  past_best: "past its best",
+};
+
 function AutoFillButton({ onClick, loading }: { onClick: () => void; loading?: boolean }) {
   return (
     <div
@@ -738,6 +746,11 @@ export default function AddScreen() {
                   <ScanExpiryButton onClick={() => actions.startExpiryScanForDetected(d.id)} />
                   <AutoFillButton onClick={() => actions.suggestDetectedDetails(d.id)} loading={state.detectedAutoFillLoadingId === d.id} />
                 </div>
+                {d.condition && d.condition !== "vibrant" && (
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#b5702f" }}>
+                    AI noticed this is {CONDITION_NOTE_PHRASE[d.condition]} in the photo — Auto-fill accounts for it
+                  </div>
+                )}
               </div>
             ))}
           </div>

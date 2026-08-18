@@ -61,6 +61,11 @@ Return ONLY a JSON array (no prose, no markdown fences) where each element has e
 - "matched_product_id": always null
 - "confidence": your confidence this item was correctly identified, from 0 to 1
 - "confirmed": always false
+- "condition": ONLY for loose fresh vegetables or fruit whose surface is actually visible (not
+  behind sealed packaging) - your visual read of its current condition, one of "vibrant",
+  "wilting", or "past_best". For everything else (packaged/sealed items, meat, dairy, drinks,
+  anything not vegetable/fruit, or produce you can't get a clear look at), use null. Judge only
+  what you can actually see - color, firmness, spotting, wilting - never guess from the item type.
 
 Only include items you can actually see - do not guess at items that might typically be in a fridge but aren't visible.
 If nothing identifiable is visible, return an empty array.
@@ -87,6 +92,7 @@ PROMPT;
             'matched_product_id' => null,
             'confidence' => is_numeric($item['confidence'] ?? null) ? (float) $item['confidence'] : 0.5,
             'confirmed' => false,
+            'condition' => in_array($item['condition'] ?? null, ['vibrant', 'wilting', 'past_best'], true) ? $item['condition'] : null,
         ], $items));
     }
 
@@ -104,6 +110,7 @@ PROMPT;
                 'matched_product_id' => null,
                 'confidence' => 0.95,
                 'confirmed' => false,
+                'condition' => null,
             ],
             [
                 'detected_name' => 'yogurt container',
@@ -112,6 +119,7 @@ PROMPT;
                 'matched_product_id' => null,
                 'confidence' => 0.88,
                 'confirmed' => false,
+                'condition' => null,
             ],
             [
                 'detected_name' => 'cheese package',
@@ -120,6 +128,7 @@ PROMPT;
                 'matched_product_id' => null,
                 'confidence' => 0.82,
                 'confirmed' => false,
+                'condition' => null,
             ],
             [
                 'detected_name' => 'bread loaf',
@@ -128,6 +137,16 @@ PROMPT;
                 'matched_product_id' => null,
                 'confidence' => 0.90,
                 'confirmed' => false,
+                'condition' => null,
+            ],
+            [
+                'detected_name' => 'bag of spinach, leaves visibly wilting',
+                'parsed_name' => 'Spinach',
+                'icon' => 'vegetable',
+                'matched_product_id' => null,
+                'confidence' => 0.85,
+                'confirmed' => false,
+                'condition' => 'wilting',
             ],
         ];
     }

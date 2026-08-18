@@ -128,8 +128,10 @@ export interface ChatThread {
 
 export type ScanMethod = "receipt" | "barcode" | "photo" | "manual";
 
-// Only asked for produce (vegetables/fruit) on manual add, where there's no purchase-receipt
-// signal to presume "just bought" from - see suggestManualDetails in useThatFridge.ts.
+// Asked for produce (vegetables/fruit) on manual add, where there's no purchase-receipt signal to
+// presume "just bought" from (see suggestManualDetails in useThatFridge.ts). Photo-of-fridge scans
+// skip the question entirely - the vision call reads condition straight off the photo instead (see
+// PhotoService::detectItemsWithVision on the backend, and DetectedItem.condition below).
 export type ProduceCondition = "vibrant" | "wilting" | "past_best";
 
 export interface DetectedItem {
@@ -141,6 +143,9 @@ export interface DetectedItem {
   qty: number;
   expiryDate: string;
   location: StorageLocation;
+  // Only ever set for photo-scan-detected produce - the AI's visual read, applied automatically
+  // by suggestDetectedDetails instead of asking. null for every other add method/category.
+  condition: ProduceCondition | null;
 }
 
 export type Screen =

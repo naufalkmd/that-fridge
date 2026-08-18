@@ -1899,6 +1899,7 @@ export function useThatFridge() {
             qty: Math.max(1, d.parsed_quantity || 1),
             expiryDate: "",
             location: "fridge" as StorageLocation,
+            condition: null,
           };
         });
       } else {
@@ -1906,6 +1907,7 @@ export function useThatFridge() {
         detected = result.detected_items.map((d, i) => {
           const icon = FOOD_ICON_KEYS.includes(d.icon) ? d.icon : guessIcon(d.parsed_name) || "leftovers";
           const group = guessNutritionCategoryLabel(icon);
+          const category = guessNutritionCategory(icon);
           return {
             id: "ph" + Date.now() + i,
             name: d.parsed_name,
@@ -1915,6 +1917,10 @@ export function useThatFridge() {
             qty: 1,
             expiryDate: "",
             location: "fridge" as StorageLocation,
+            // Re-gated against our own category guess (not just trusting the vision call's
+            // "vegetable"/"fruit" icon bucket) so this stays produce-only even if the model
+            // mislabels something - same PRODUCE_CATEGORIES rule manual add uses.
+            condition: category && PRODUCE_CATEGORIES.has(category) ? d.condition : null,
           };
         });
       }
@@ -1967,6 +1973,7 @@ export function useThatFridge() {
         qty: 1,
         expiryDate: toISODate(target),
         location: product.location || guessLocation(product.name),
+        condition: null,
       };
       patch({ addStep: 6, detected: [detected], barcodeLoading: false, barcodeInput: "", expiryPhotoTargetId: detected.id });
     } catch (err) {
@@ -2056,8 +2063,13 @@ export function useThatFridge() {
     patch({ detectedAutoFillLoadingId: id });
     suggestItemDetails(item.name, item.icon)
       .then(({ shelf_life_days, location }) => {
+        // item.condition only ever comes from a photo-of-fridge vision read (see
+        // captureReceiptOrPhoto) - applying it here means produce from that add method gets the
+        // same condition-adjusted estimate as manual add's picker, but without asking, since the
+        // AI already read it off the photo.
+        const days = item.condition ? Math.max(1, Math.round(shelf_life_days * CONDITION_SHELF_LIFE_MULTIPLIER[item.condition])) : shelf_life_days;
         const target = new Date();
-        target.setDate(target.getDate() + shelf_life_days);
+        target.setDate(target.getDate() + days);
         const expiryDate = toISODate(target);
         patch((s) => ({
           detected: s.detected.map((d) => (d.id === id ? { ...d, expiryDate, location } : d)),
