@@ -1,19 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { CakeSlice, EggFried, Popcorn, Sandwich, Utensils, UtensilsCrossed, Zap, type LucideIcon } from "lucide-react";
 import { guessIcon } from "@/lib/thatfridge/data";
 import type { RecipeCategory, RecipeSuggestion } from "@/lib/thatfridge/types";
 import FoodIcon from "./FoodIcon";
 
-const CATEGORY_STYLE: Record<RecipeCategory, { color: string; dark: string; label: string; emoji: string }> = {
-  breakfast: { color: "#d99a2b", dark: "#8a5f14", label: "Breakfast", emoji: "🍳" },
-  lunch: { color: "#3f8f5c", dark: "#265c39", label: "Lunch", emoji: "🥪" },
-  dinner: { color: "#2f6fb0", dark: "#1c4571", label: "Dinner", emoji: "🍽" },
-  dessert: { color: "#c1452e", dark: "#7d2c1d", label: "Dessert", emoji: "🍰" },
-  snack: { color: "#7a5cb0", dark: "#4c3873", label: "Snack", emoji: "🍿" },
-  quick: { color: "#b5702f", dark: "#74491d", label: "Quick meal", emoji: "⚡" },
+const CATEGORY_STYLE: Record<RecipeCategory, { color: string; dark: string; label: string; Icon: LucideIcon }> = {
+  breakfast: { color: "#d99a2b", dark: "#8a5f14", label: "Breakfast", Icon: EggFried },
+  lunch: { color: "#3f8f5c", dark: "#265c39", label: "Lunch", Icon: Sandwich },
+  dinner: { color: "#2f6fb0", dark: "#1c4571", label: "Dinner", Icon: UtensilsCrossed },
+  dessert: { color: "#c1452e", dark: "#7d2c1d", label: "Dessert", Icon: CakeSlice },
+  snack: { color: "#7a5cb0", dark: "#4c3873", label: "Snack", Icon: Popcorn },
+  quick: { color: "#b5702f", dark: "#74491d", label: "Quick meal", Icon: Zap },
 };
-const DEFAULT_STYLE = { color: "#16325c", dark: "#0d1f38", label: "Recipe", emoji: "🍴" };
+const DEFAULT_STYLE = { color: "#16325c", dark: "#0d1f38", label: "Recipe", Icon: Utensils };
 
 // A stepped/notched corner clip-path instead of border-radius - reads as a chunky pixel-art
 // card die-cut rather than a smooth modern card, matching the "pixelated" ask.
@@ -67,8 +68,9 @@ export default function RecipePixelCard({ suggestion }: { suggestion: RecipeSugg
             </div>
 
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 8, flex: "none" }}>
-              <div style={{ fontSize: 9.5, fontWeight: 800, color: "#fff", background: style.color, padding: "3px 9px", borderRadius: 9, letterSpacing: 0.3 }}>
-                {style.emoji} {style.label.toUpperCase()}
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9.5, fontWeight: 800, color: "#fff", background: style.color, padding: "3px 9px", borderRadius: 9, letterSpacing: 0.3 }}>
+                <style.Icon size={10} strokeWidth={2.5} />
+                {style.label.toUpperCase()}
               </div>
             </div>
 

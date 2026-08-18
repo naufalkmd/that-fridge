@@ -23,7 +23,6 @@ import type { ScoreSnapshot as ScoreSnapshotSlice } from "./types";
 
 export interface KitchenScoreResult {
   key: "waste" | "balance";
-  emoji: string;
   label: string;
   /** null = not enough data yet to say anything meaningful. */
   score: number | null;
@@ -34,6 +33,11 @@ export interface KitchenScoreResult {
 export interface ScoreTrend {
   delta: number;
   weekOf: string;
+}
+
+export interface ScoreSeriesPoint {
+  weekOf: string;
+  score: number;
 }
 
 // ---- Waste Saver -----------------------------------------------------------------------
@@ -65,7 +69,6 @@ export function computeWasteSaverScore(state: ThatFridgeState): KitchenScoreResu
   if (!hasAnyData) {
     return {
       key: "waste",
-      emoji: "🌱",
       label: "Waste Saver",
       score: null,
       headline: "Building your score — keep using ThatFridge!",
@@ -105,7 +108,6 @@ export function computeWasteSaverScore(state: ThatFridgeState): KitchenScoreResu
 
   return {
     key: "waste",
-    emoji: "🌱",
     label: "Waste Saver",
     score,
     headline: score >= 80 ? "Keeping waste low — great work" : score >= 55 ? "Doing alright, room to improve" : "A few things going stale — worth a look",
@@ -162,7 +164,6 @@ export function computeFoodBalanceScore(state: ThatFridgeState): KitchenScoreRes
   if (countableUsage.length < BALANCE_MIN_ENTRIES) {
     return {
       key: "balance",
-      emoji: "🥗",
       label: "Food Balance",
       score: null,
       headline: "Building your score — keep using ThatFridge!",
@@ -189,12 +190,33 @@ export function computeFoodBalanceScore(state: ThatFridgeState): KitchenScoreRes
 
   return {
     key: "balance",
-    emoji: "🥗",
     label: "Food Balance",
     score,
     headline: score >= 80 ? "Nice variety lately" : score >= 55 ? "Decent mix, could spread out more" : "Mostly one type of food lately",
     detail: detail + " This is a lightweight variety signal only — not nutrition or medical advice.",
   };
+}
+
+export interface FoodGroupCoverage {
+  key: string;
+  label: string;
+  used: boolean;
+}
+
+/**
+ * Per-category breakdown backing the Food Balance card's group icons + "x/5 groups" caption.
+ * Shares countableUsageWithin/tallyByCategory with computeFoodBalanceScore, and the same
+ * BALANCE_MIN_ENTRIES gate, so the two never disagree about whether there's enough data yet.
+ */
+export function getFoodGroupCoverage(state: ThatFridgeState): FoodGroupCoverage[] | null {
+  const countableUsage = countableUsageWithin(state.usageHistory, BALANCE_LOOKBACK_DAYS);
+  if (countableUsage.length < BALANCE_MIN_ENTRIES) return null;
+  const groupCounts = tallyByCategory(countableUsage);
+  return COUNTED_CATEGORIES.map((key) => ({
+    key,
+    label: NUTRITION_CATEGORIES.find((c) => c.key === key)?.label ?? key,
+    used: groupCounts[key] > 0,
+  }));
 }
 
 // ---- Trend (real weekly history, backend/API.md's "Score snapshots") -----------------------
@@ -210,4 +232,21 @@ export function getScoreTrend(snapshots: ScoreSnapshotSlice[], key: "waste" | "b
   const compareScore = key === "waste" ? mostRecent.wasteScore : mostRecent.balanceScore;
   if (compareScore === null) return null;
   return { delta: currentScore - compareScore, weekOf: mostRecent.weekOf };
+}
+
+const SPARKLINE_MAX_POINTS = 8;
+
+/**
+ * Oldest-to-newest series for the Waste Saver sparkline: real weekly snapshots plus the current
+ * live score as the final point, capped to the most recent SPARKLINE_MAX_POINTS so the line
+ * doesn't grow unbounded over a long account history.
+ */
+export function getScoreSeries(snapshots: ScoreSnapshotSlice[], key: "waste" | "balance", currentScore: number | null): ScoreSeriesPoint[] {
+  if (currentScore === null) return [];
+  const sorted = [...snapshots].sort((a, b) => (a.weekOf < b.weekOf ? -1 : a.weekOf > b.weekOf ? 1 : 0));
+  const points: ScoreSeriesPoint[] = sorted
+    .map((s) => ({ weekOf: s.weekOf, score: key === "waste" ? s.wasteScore : s.balanceScore }))
+    .filter((p): p is ScoreSeriesPoint => p.score !== null);
+  points.push({ weekOf: "now", score: currentScore });
+  return points.slice(-SPARKLINE_MAX_POINTS);
 }

@@ -1,8 +1,16 @@
 "use client";
 
-import { ChevronLeft, X } from "lucide-react";
+import { ChevronLeft, LifeBuoy, Link, Salad, Star, X, type LucideIcon } from "lucide-react";
 import { BADGE_CATALOG } from "@/lib/thatfridge/badges";
+import type { BadgeKey } from "@/lib/thatfridge/types";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
+
+const BADGE_STYLE: Record<BadgeKey, { Icon: LucideIcon; color: string; bg: string }> = {
+  rescued_10: { Icon: LifeBuoy, color: "#2f6fb0", bg: "#eaf1fb" },
+  first_link_recipe: { Icon: Link, color: "#7a5cb0", bg: "#f0ecf9" },
+  full_week_variety: { Icon: Salad, color: "#3f8f5c", bg: "#eaf6ef" },
+  zero_waste_week: { Icon: Star, color: "#d99a2b", bg: "#fbf1e0" },
+};
 
 export default function BadgesScreen() {
   const { state, actions } = useThatFridgeCtx();
@@ -29,6 +37,7 @@ export default function BadgesScreen() {
             const progress = state.badges.find((b) => b.badgeKey === badge.key);
             const earned = !!progress?.earnedAt;
             const current = Math.min(progress?.progress ?? 0, badge.target);
+            const { Icon, color, bg } = BADGE_STYLE[badge.key];
             return (
               <div
                 key={badge.key}
@@ -43,7 +52,9 @@ export default function BadgesScreen() {
                   opacity: earned ? 1 : 0.55,
                 }}
               >
-                <div style={{ fontSize: 28, flex: "none" }}>{badge.emoji}</div>
+                <div style={{ width: 44, height: 44, borderRadius: 16, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                  <Icon size={21} color={color} strokeWidth={2.2} />
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "#16325c", marginBottom: 2 }}>{badge.label}</div>
                   <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)", lineHeight: 1.35, marginBottom: earned ? 0 : 4 }}>{badge.description}</div>
