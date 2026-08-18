@@ -54,7 +54,7 @@ const CONDITION_NOTE_PHRASE: Record<ProduceCondition, string> = {
   past_best: "past its best",
 };
 
-function AutoFillButton({ onClick, loading }: { onClick: () => void; loading?: boolean }) {
+function AutoFillButton({ onClick, loading, label = "Auto-fill" }: { onClick: () => void; loading?: boolean; label?: string }) {
   return (
     <div
       onClick={loading ? undefined : onClick}
@@ -75,7 +75,7 @@ function AutoFillButton({ onClick, loading }: { onClick: () => void; loading?: b
       }}
     >
       <Sparkles size={13} strokeWidth={2.2} />
-      {loading ? "Thinking…" : "Auto-fill"}
+      {loading ? "Thinking…" : label}
     </div>
   );
 }
@@ -143,7 +143,7 @@ export default function AddScreen() {
   const [iconPickerForId, setIconPickerForId] = useState<string | null>(null);
   const expiryFileInputRef = useRef<HTMLInputElement | null>(null);
   const scanningLabel = state.scanMethod === "receipt" ? "Reading receipt…" : "Scanning fridge photo…";
-  const checkedCount = state.detected.filter((d) => d.checked).length;
+  const checkedCount = state.detected.filter((d) => d.checked && d.name.trim()).length;
   const targetFridge = state.fridges[state.addFridgeIndex];
   const sections = targetFridge?.sections || [];
 
@@ -636,10 +636,15 @@ export default function AddScreen() {
 
       {state.addStep === 2 && (
         <>
-          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", marginBottom: state.expiryScanNote ? 6 : 14 }}>
-            {state.scanMethod === "barcode"
-              ? "Found the product — double-check the details below before adding"
-              : "Found " + state.detected.length + " items — the scan can’t tell expiry or storage, so set them below or tap Auto-fill"}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: state.expiryScanNote ? 6 : 14 }}>
+            <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)" }}>
+              {state.scanMethod === "barcode"
+                ? "Found the product — double-check the details below before adding"
+                : "Found " + state.detected.length + " items — the scan can’t tell expiry or storage, so set them below or tap Auto-fill"}
+            </div>
+            {state.detected.length > 1 && (
+              <AutoFillButton onClick={actions.suggestAllDetectedDetails} loading={state.detectedAutoFillAllLoading} label="Auto-fill all" />
+            )}
           </div>
           {state.expiryScanNote && (
             <div style={{ fontSize: 12, fontWeight: 600, color: "#4a6fa5", marginBottom: 14 }}>{state.expiryScanNote}</div>
@@ -658,6 +663,8 @@ export default function AddScreen() {
                   <input
                     value={d.name}
                     onChange={(e) => actions.onDetectedNameChange(d.id, e.target.value)}
+                    placeholder="Item name"
+                    autoFocus={!d.name}
                     style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 14, fontWeight: 600, color: "#16325c", padding: 0 }}
                   />
                   <div
@@ -676,6 +683,13 @@ export default function AddScreen() {
                     }}
                   >
                     {d.checked && <Check size={13} color="#fff" strokeWidth={2.5} />}
+                  </div>
+                  <div
+                    onClick={() => actions.removeDetectedItem(d.id)}
+                    title="Remove this item"
+                    style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", cursor: "pointer" }}
+                  >
+                    <X size={14} color="rgba(22,50,92,0.35)" strokeWidth={2.2} />
                   </div>
                 </div>
 
@@ -744,7 +758,10 @@ export default function AddScreen() {
                   />
                   <LocationPicker value={d.location} onChange={(loc) => actions.onDetectedLocationChange(d.id, loc)} />
                   <ScanExpiryButton onClick={() => actions.startExpiryScanForDetected(d.id)} />
-                  <AutoFillButton onClick={() => actions.suggestDetectedDetails(d.id)} loading={state.detectedAutoFillLoadingId === d.id} />
+                  <AutoFillButton
+                    onClick={() => actions.suggestDetectedDetails(d.id)}
+                    loading={state.detectedAutoFillLoadingId === d.id || state.detectedAutoFillAllLoading}
+                  />
                 </div>
                 {d.condition && d.condition !== "vibrant" && (
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#b5702f" }}>
@@ -753,6 +770,27 @@ export default function AddScreen() {
                 )}
               </div>
             ))}
+            {state.scanMethod !== "barcode" && (
+              <div
+                onClick={actions.addBlankDetectedItem}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  padding: 14,
+                  borderRadius: 14,
+                  border: "1.5px dashed rgba(22,50,92,0.2)",
+                  color: "#4a6fa5",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                <Plus size={15} strokeWidth={2.4} />
+                Add item the scan missed
+              </div>
+            )}
           </div>
           <div onClick={actions.confirmAdd} style={{ textAlign: "center", padding: 14, borderRadius: 14, background: "#16325c", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 14 }}>
             Add {checkedCount} items

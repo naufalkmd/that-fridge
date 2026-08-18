@@ -273,6 +273,7 @@ export interface ThatFridgeState {
   manualAutoFillLoading: boolean;
   manualAutoFillAskCondition: boolean;
   detectedAutoFillLoadingId: string | null;
+  detectedAutoFillAllLoading: boolean;
   manualName: string;
   manualSectionId: string;
   manualSectionAuto: boolean;
@@ -419,6 +420,7 @@ export function initialState(): ThatFridgeState {
     manualAutoFillLoading: false,
     manualAutoFillAskCondition: false,
     detectedAutoFillLoadingId: null,
+    detectedAutoFillAllLoading: false,
     manualName: "",
     manualSectionId: "",
     manualSectionAuto: true,
@@ -2057,20 +2059,45 @@ export function useThatFridge() {
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, expiryDate: value } : d)) }));
   const onDetectedLocationChange = (id: string, location: StorageLocation) =>
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, location } : d)) }));
+  // Covers the scan missing an item entirely - drops a blank row into the same detected list so
+  // it gets the same name/icon/section/qty/expiry editing (and Auto-fill) as anything the scan
+  // did catch, rather than needing a separate manual-add detour after confirming the batch.
+  const addBlankDetectedItem = () => {
+    const fridge = state.fridges[state.addFridgeIndex];
+    if (!fridge) return;
+    const sectionId = catchAllSectionId(fridge.sections);
+    if (!sectionId) return;
+    const item: DetectedItem = {
+      id: "add" + Date.now(),
+      name: "",
+      icon: "leftovers",
+      section: sectionId,
+      checked: true,
+      qty: 1,
+      expiryDate: "",
+      location: "fridge",
+      condition: null,
+    };
+    patch((s) => ({ detected: [...s.detected, item] }));
+  };
+  const removeDetectedItem = (id: string) => patch((s) => ({ detected: s.detected.filter((d) => d.id !== id) }));
+  // item.condition only ever comes from a photo-of-fridge vision read (see
+  // captureReceiptOrPhoto) - applying it here means produce from that add method gets the same
+  // condition-adjusted estimate as manual add's picker, but without asking, since the AI already
+  // read it off the photo. Shared by the single-item and "Auto-fill all" paths below.
+  const fetchDetectedSuggestion = (item: DetectedItem) =>
+    suggestItemDetails(item.name, item.icon).then(({ shelf_life_days, location }) => {
+      const days = item.condition ? Math.max(1, Math.round(shelf_life_days * CONDITION_SHELF_LIFE_MULTIPLIER[item.condition])) : shelf_life_days;
+      const target = new Date();
+      target.setDate(target.getDate() + days);
+      return { expiryDate: toISODate(target), location };
+    });
   const suggestDetectedDetails = (id: string) => {
     const item = state.detected.find((d) => d.id === id);
-    if (!item || state.detectedAutoFillLoadingId) return;
+    if (!item || !item.name.trim() || state.detectedAutoFillLoadingId || state.detectedAutoFillAllLoading) return;
     patch({ detectedAutoFillLoadingId: id });
-    suggestItemDetails(item.name, item.icon)
-      .then(({ shelf_life_days, location }) => {
-        // item.condition only ever comes from a photo-of-fridge vision read (see
-        // captureReceiptOrPhoto) - applying it here means produce from that add method gets the
-        // same condition-adjusted estimate as manual add's picker, but without asking, since the
-        // AI already read it off the photo.
-        const days = item.condition ? Math.max(1, Math.round(shelf_life_days * CONDITION_SHELF_LIFE_MULTIPLIER[item.condition])) : shelf_life_days;
-        const target = new Date();
-        target.setDate(target.getDate() + days);
-        const expiryDate = toISODate(target);
+    fetchDetectedSuggestion(item)
+      .then(({ expiryDate, location }) => {
         patch((s) => ({
           detected: s.detected.map((d) => (d.id === id ? { ...d, expiryDate, location } : d)),
           detectedAutoFillLoadingId: null,
@@ -2078,6 +2105,28 @@ export function useThatFridge() {
       })
       .catch((err) => {
         patch({ detectedAutoFillLoadingId: null, syncError: describeError(err, "Couldn't get a suggestion for that item.") });
+      });
+  };
+  const suggestAllDetectedDetails = () => {
+    const items = state.detected.filter((d) => d.checked && d.name.trim());
+    if (!items.length || state.detectedAutoFillLoadingId || state.detectedAutoFillAllLoading) return;
+    patch({ detectedAutoFillAllLoading: true });
+    Promise.allSettled(items.map((item) => fetchDetectedSuggestion(item).then((suggestion) => ({ id: item.id, ...suggestion }))))
+      .then((results) => {
+        const succeeded = results.filter(
+          (r): r is PromiseFulfilledResult<{ id: string; expiryDate: string; location: StorageLocation }> => r.status === "fulfilled"
+        );
+        const byId = new Map(succeeded.map((r) => [r.value.id, r.value]));
+        patch((s) => ({
+          detected: s.detected.map((d) => {
+            const hit = byId.get(d.id);
+            return hit ? { ...d, expiryDate: hit.expiryDate, location: hit.location } : d;
+          }),
+          detectedAutoFillAllLoading: false,
+          ...(succeeded.length < items.length
+            ? { syncError: `Couldn't get a suggestion for ${items.length - succeeded.length} item${items.length - succeeded.length === 1 ? "" : "s"}.` }
+            : {}),
+        }));
       });
   };
 
@@ -2198,7 +2247,7 @@ export function useThatFridge() {
 
   const confirmAdd = async () => {
     const fridgeIndex = state.addFridgeIndex;
-    const toAdd = state.detected.filter((d) => d.checked);
+    const toAdd = state.detected.filter((d) => d.checked && d.name.trim());
     patch({ screen: state.lastMainScreen, addStep: 0, scanMethod: null, detected: [], expiryScanNote: null, expiryPhotoError: null });
     if (!toAdd.length) return;
 
@@ -2389,6 +2438,9 @@ export function useThatFridge() {
     onDetectedExpiryChange,
     onDetectedLocationChange,
     suggestDetectedDetails,
+    suggestAllDetectedDetails,
+    addBlankDetectedItem,
+    removeDetectedItem,
     onManualNameChange,
     onManualSectionChange,
     onManualIconChange,
