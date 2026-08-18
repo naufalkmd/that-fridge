@@ -97,7 +97,9 @@ export function computeWasteSaverScore(state: ThatFridgeState): KitchenScoreResu
   detailParts.push(
     overdueCount === 0
       ? "Nothing is sitting past its date right now — nice work staying on top of it."
-      : `${overdueCount} item${overdueCount === 1 ? " is" : "s are"} past its date and still in your fridge — clearing ${overdueCount === 1 ? "it" : "them"} out is the fastest way to raise this score.`
+      // Deliberately doesn't restate overdueCount - Home's Overview "Expiring soon" tile already
+      // shows that number a couple inches above this card, in the same viewport.
+      : "Clearing what's overdue is the fastest way to raise this score."
   );
   if (expiringEvents.length > 0) {
     detailParts.push(`You've cleared ${doneCount} of ${expiringEvents.length} expiry alerts.`);
