@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, PackageOpen, Pencil } from "lucide-react";
+import { Check, ChevronDown, PackageOpen, Pencil, ShoppingCart } from "lucide-react";
 import { FOOD_ICON_KEYS, ICON_LABELS, NUTRITION_CATEGORIES } from "@/lib/thatfridge/data";
 import { findItem } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
@@ -37,6 +37,10 @@ export default function ItemDetailSheet() {
   if (!found) return null;
   const { item, section, fridgeIndex } = found;
   const itemFridge = state.fridges[fridgeIndex];
+  // Same name-match this app already uses everywhere else to relate a shopping entry to a
+  // food item (RecipeDetailSheet's ingredient rows, Guardian/Shopkeeper suggestions) - there's
+  // no stored id linking the two records, just a consistent name comparison.
+  const onShoppingList = state.shoppingList.some((si) => !si.checked && si.name.toLowerCase() === item.name.toLowerCase());
 
   if (state.isEditingItem) {
     return (
@@ -317,6 +321,29 @@ export default function ItemDetailSheet() {
 
         <div style={{ background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: "10px 14px", marginBottom: 20 }}>
           <div style={{ fontSize: 12.5, lineHeight: 1.45, color: theme.text.primary }}>{tip}</div>
+        </div>
+
+        <div
+          onClick={() => !onShoppingList && actions.addPredictedToShopping(item.name, item.icon)}
+          title={onShoppingList ? "Already on your shopping list" : "Queue this up so it's easy to buy again"}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            padding: 11,
+            borderRadius: theme.radius.sm,
+            background: theme.bg.surface2,
+            border: `1px solid ${theme.border.hairline}`,
+            color: onShoppingList ? theme.good : theme.blue,
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: onShoppingList ? "default" : "pointer",
+            marginBottom: 20,
+          }}
+        >
+          {onShoppingList ? <Check size={14} strokeWidth={2.6} /> : <ShoppingCart size={14} strokeWidth={2.2} />}
+          {onShoppingList ? "On your shopping list" : "Add to shopping list"}
         </div>
 
         </div>
