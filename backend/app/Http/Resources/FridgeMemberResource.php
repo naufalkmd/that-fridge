@@ -20,6 +20,7 @@ class FridgeMemberResource extends JsonResource
         return [
             'id' => (string) $this->id,
             'name' => $this->name,
+            'username' => $this->username,
             'email' => $this->email,
             'role' => $this->pivot->role,
             'joinedAt' => $this->pivot->created_at?->getTimestamp() * 1000,

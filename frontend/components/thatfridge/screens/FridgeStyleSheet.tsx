@@ -12,6 +12,9 @@ export default function FridgeStyleSheet() {
   const { state, actions } = useThatFridgeCtx();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
+  // Ephemeral per-sheet-open UI state, not app-wide data - which invite-search results have
+  // already been invited this session, so the button can flip to a disabled "Invited" label.
+  const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const stylingFridge = state.fridges[state.stylingFridgeIndex];
   const currentStyle = stylingFridge?.style || "photo";
@@ -101,36 +104,108 @@ export default function FridgeStyleSheet() {
             <div style={{ fontSize: 12, color: theme.text.faint, padding: "4px 2px 12px" }}>Loading members…</div>
           ) : (
             <div style={{ borderRadius: theme.radius.md, overflow: "hidden", background: theme.bg.surface2, marginBottom: 8 }}>
-              {state.fridgeMembers.map((member, i) => (
-                <div
-                  key={member.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "11px 14px",
-                    borderBottom: i < state.fridgeMembers.length - 1 ? `1px solid ${theme.border.hairline}` : undefined,
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: theme.text.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {member.name}
-                      {member.id === state.currentUser?.id && <span style={{ color: theme.text.faint, fontWeight: 600 }}> (you)</span>}
+              {state.fridgeMembers.map((member, i) => {
+                const isMe = member.id === state.currentUser?.id;
+                return (
+                  <div
+                    key={member.id}
+                    onClick={() => !isMe && actions.openFriendProfile(member.username)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "11px 14px",
+                      borderBottom: i < state.fridgeMembers.length - 1 ? `1px solid ${theme.border.hairline}` : undefined,
+                      cursor: isMe ? "default" : "pointer",
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: theme.text.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {member.name}
+                        {isMe && <span style={{ color: theme.text.faint, fontWeight: 600 }}> (you)</span>}
+                      </div>
+                      <div style={{ fontSize: 11, color: theme.text.faint, textTransform: "uppercase", letterSpacing: 0.3 }}>{member.role}</div>
                     </div>
-                    <div style={{ fontSize: 11, color: theme.text.faint, textTransform: "uppercase", letterSpacing: 0.3 }}>{member.role}</div>
+                    {isOwner && member.role !== "owner" && (
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          actions.removeFridgeMemberAction(member.id);
+                        }}
+                        style={{ cursor: "pointer", padding: 4 }}
+                      >
+                        <X size={15} color={theme.text.faint} />
+                      </div>
+                    )}
                   </div>
-                  {isOwner && member.role !== "owner" && (
-                    <div onClick={() => actions.removeFridgeMemberAction(member.id)} style={{ cursor: "pointer", padding: 4 }}>
-                      <X size={15} color={theme.text.faint} />
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
           {isOwner && (
             <>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, margin: "24px 0 8px" }}>INVITE SOMEONE</div>
+              <input
+                value={state.inviteSearchQuery}
+                onChange={(e) => actions.onInviteSearchChange(e.target.value)}
+                placeholder="Search by username…"
+                style={{ width: "100%", border: `1px solid ${theme.border.hairline}`, outline: "none", background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: "11px 14px", fontSize: 13, color: theme.text.primary, boxSizing: "border-box", marginBottom: 8 }}
+              />
+              {state.inviteSearchLoading ? (
+                <div style={{ fontSize: 12, color: theme.text.faint, padding: "4px 2px 12px" }}>Searching…</div>
+              ) : state.inviteSearchResults.length > 0 ? (
+                <div style={{ borderRadius: theme.radius.md, overflow: "hidden", background: theme.bg.surface2, marginBottom: 8 }}>
+                  {state.inviteSearchResults.map((user, i) => {
+                    const invited = invitedIds.has(user.id);
+                    return (
+                      <div
+                        key={user.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "11px 14px",
+                          borderBottom: i < state.inviteSearchResults.length - 1 ? `1px solid ${theme.border.hairline}` : undefined,
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: theme.text.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.name}</div>
+                          <div style={{ fontSize: 11, color: theme.text.faint }}>@{user.username}</div>
+                        </div>
+                        <div
+                          onClick={() => {
+                            if (invited) return;
+                            setInvitedIds((prev) => new Set(prev).add(user.id));
+                            actions.sendFridgeInvite(user.id).catch(() => {
+                              setInvitedIds((prev) => {
+                                const next = new Set(prev);
+                                next.delete(user.id);
+                                return next;
+                              });
+                            });
+                          }}
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            textTransform: "uppercase",
+                            letterSpacing: 0.3,
+                            padding: "6px 12px",
+                            borderRadius: theme.radius.sm,
+                            cursor: invited ? "default" : "pointer",
+                            background: invited ? "transparent" : theme.amber,
+                            color: invited ? theme.text.faint : "#0a0a0c",
+                            flex: "none",
+                          }}
+                        >
+                          {invited ? "Invited" : "Invite"}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
+
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, margin: "24px 0 8px" }}>
                 JOIN REQUESTS{state.joinRequests.length ? ` (${state.joinRequests.length})` : ""}
               </div>

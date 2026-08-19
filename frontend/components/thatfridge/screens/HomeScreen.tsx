@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Bell, ChevronDown, ChevronLeft, ChevronRight, Package, Palette, Refrigerator, Sparkles, TriangleAlert, X } from "lucide-react";
+import { Bell, ChevronDown, ChevronLeft, ChevronRight, Package, Palette, Refrigerator, Sparkles, TriangleAlert, Users, UserSearch, X } from "lucide-react";
 import { getExpiringOwnedItems, getFridgeHeroViews, getGuardianItem, getLowStockItem, getRecipesView, getScopeLabel, getScopedItems } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { theme } from "@/lib/thatfridge/theme";
@@ -213,38 +213,74 @@ export default function HomeScreen() {
           {userInitials}
         </div>
         <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 20, letterSpacing: 0.5 }}>ThatFridge</div>
-        <div
-          onClick={actions.openNotificationHistory}
-          style={{
-            position: "relative",
-            width: 34,
-            height: 34,
-            borderRadius: 17,
-            background: theme.bg.surface,
-            backdropFilter: "blur(8px)",
-            border: `1px solid ${theme.border.hairline}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            flex: "none",
-          }}
-        >
-          <Bell size={16} color={theme.text.primary} strokeWidth={2} />
-          {pendingNotifications > 0 && (
-            <div
-              style={{
-                position: "absolute",
-                top: 3,
-                right: 4,
-                width: 8,
-                height: 8,
-                borderRadius: 4,
-                background: theme.bad,
-                border: `1.5px solid ${theme.bg.surface}`,
-              }}
-            />
-          )}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: "none" }}>
+          <div
+            onClick={actions.openNotificationHistory}
+            style={{
+              position: "relative",
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              background: theme.bg.surface,
+              backdropFilter: "blur(8px)",
+              border: `1px solid ${theme.border.hairline}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flex: "none",
+            }}
+          >
+            <Bell size={16} color={theme.text.primary} strokeWidth={2} />
+            {pendingNotifications > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 3,
+                  right: 4,
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  background: theme.bad,
+                  border: `1.5px solid ${theme.bg.surface}`,
+                }}
+              />
+            )}
+          </div>
+          <div
+            onClick={actions.openFindFriend}
+            title="Find a friend"
+            style={{
+              position: "relative",
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              background: theme.bg.surface,
+              backdropFilter: "blur(8px)",
+              border: `1px solid ${theme.border.hairline}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flex: "none",
+            }}
+          >
+            <UserSearch size={16} color={theme.text.primary} strokeWidth={2} />
+            {state.myInvites.length > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 3,
+                  right: 4,
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  background: theme.bad,
+                  border: `1.5px solid ${theme.bg.surface}`,
+                }}
+              />
+            )}
+          </div>
         </div>
       </div>
 
@@ -377,8 +413,18 @@ export default function HomeScreen() {
                 )}
                 <div style={{ position: "absolute", top: 22, left: "16%", width: 3, height: 3, borderRadius: "50%", background: "#eaf3fb", animation: "drip 4s ease-in infinite" }} />
                 <div style={{ position: "absolute", top: 18, left: "52%", width: 3, height: 3, borderRadius: "50%", background: "#eaf3fb", animation: "drip 4s ease-in infinite 1.3s" }} />
-                <div style={{ position: "absolute", top: 14, left: 14, background: `${theme.bg.surface}d9`, color: theme.text.primary, fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
-                  {fr.name}
+                <div style={{ position: "absolute", top: 14, left: 14, display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ background: `${theme.bg.surface}d9`, color: theme.text.primary, fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
+                    {fr.name}
+                  </div>
+                  {fr.isShared && (
+                    <div
+                      title="Shared fridge"
+                      style={{ width: 26, height: 26, borderRadius: 13, background: `${theme.bg.surface}d9`, backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}
+                    >
+                      <Users size={13} color={theme.text.primary} strokeWidth={2.2} />
+                    </div>
+                  )}
                 </div>
                 <div style={{ position: "absolute", bottom: 12, left: 16, background: `${theme.bg.canvas}8c`, backdropFilter: "blur(6px)", color: theme.text.primary, fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 20 }}>
                   {fr.itemCount} items tracked
@@ -614,6 +660,16 @@ export default function HomeScreen() {
               <div style={{ position: "absolute", top: 4, right: 5, width: 8, height: 8, borderRadius: 4, background: theme.bad, border: `1.5px solid ${theme.bg.surface}` }} />
             )}
           </div>
+          <div
+            onClick={actions.openFindFriend}
+            title="Find a friend"
+            style={{ position: "relative", width: 38, height: 38, borderRadius: 19, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
+          >
+            <UserSearch size={17} color={theme.text.primary} strokeWidth={2} />
+            {state.myInvites.length > 0 && (
+              <div style={{ position: "absolute", top: 4, right: 5, width: 8, height: 8, borderRadius: 4, background: theme.bad, border: `1.5px solid ${theme.bg.surface}` }} />
+            )}
+          </div>
         </div>
       </div>
 
@@ -737,11 +793,23 @@ export default function HomeScreen() {
                     style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%" }}
                   />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.6) 100%)" }} />
-                  <div style={{ position: "absolute", top: 12, left: 12, background: `${theme.bg.surface}e6`, color: theme.text.primary, fontSize: 12.5, fontWeight: 800, padding: "6px 11px", borderRadius: 14, whiteSpace: "nowrap" }}>
-                    {fr.name}
-                  </div>
-                  <div style={{ position: "absolute", top: 12, right: 12, background: `${theme.bg.surface}e6`, color: fr.color, fontSize: 12.5, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
-                    {fr.freshness}%
+                  <div style={{ position: "absolute", top: 12, left: 12, right: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                      <div style={{ background: `${theme.bg.surface}e6`, color: theme.text.primary, fontSize: 12.5, fontWeight: 800, padding: "6px 11px", borderRadius: 14, whiteSpace: "nowrap" }}>
+                        {fr.name}
+                      </div>
+                      {fr.isShared && (
+                        <div
+                          title="Shared fridge"
+                          style={{ width: 26, height: 26, borderRadius: 13, background: `${theme.bg.surface}e6`, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}
+                        >
+                          <Users size={13} color={theme.text.primary} strokeWidth={2.2} />
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ background: `${theme.bg.surface}e6`, color: fr.color, fontSize: 12.5, fontWeight: 800, padding: "6px 11px", borderRadius: 14, flex: "none" }}>
+                      {fr.freshness}%
+                    </div>
                   </div>
                   <div style={{ position: "absolute", bottom: 12, left: 12, background: `${theme.bg.canvas}80`, backdropFilter: "blur(6px)", color: theme.text.primary, fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 20 }}>
                     {fr.itemCount} items

@@ -342,6 +342,80 @@ describe("useThatFridge join request approve/decline", () => {
   });
 });
 
+describe("useThatFridge sendFridgeInvite", () => {
+  it("invites a user to the fridge currently open in Manage Fridge", async () => {
+    vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "Mine", role: "owner", memberCount: 1, sections: [] });
+    vi.mocked(api.fetchFridgeMembers).mockResolvedValue([]);
+    vi.mocked(api.fetchJoinRequests).mockResolvedValue([]);
+    const inviteMock = vi.mocked(api.inviteToFridge).mockResolvedValue({
+      id: "r1",
+      fridgeId: "f1",
+      requesterId: "u9",
+      requesterName: "Sam",
+      requesterUsername: "sam",
+      status: "pending",
+      createdAt: Date.now(),
+    });
+
+    const { result } = renderHook(() => useThatFridge());
+    await act(async () => {
+      await result.current.actions.addFridge();
+    });
+    act(() => {
+      result.current.actions.openStylePicker(0);
+    });
+    await waitFor(() => expect(result.current.state.fridgeMembersLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.actions.sendFridgeInvite("u9");
+    });
+
+    expect(inviteMock).toHaveBeenCalledWith("f1", "u9");
+  });
+});
+
+describe("useThatFridge acceptMyInvite/declineMyInvite", () => {
+  async function loginWithAPendingInvite() {
+    mockInitFetch();
+    vi.mocked(api.fetchMyInvites).mockResolvedValue([
+      { id: "inv1", fridgeId: "f9", fridgeName: "Riley's Kitchen", inviterName: "Riley", inviterUsername: "riley", createdAt: Date.now() },
+    ]);
+
+    const { result } = renderHook(() => useThatFridge());
+    act(() => result.current.actions.onAuthEmailChange("joey@thatfridge.test"));
+    act(() => result.current.actions.onAuthPasswordChange("password123"));
+    await act(async () => {
+      await result.current.actions.submitAuth();
+    });
+    await waitFor(() => expect(result.current.state.myInvites).toHaveLength(1));
+    return result;
+  }
+
+  it("accepting removes the invite from the list and calls the API", async () => {
+    const approveMock = vi.mocked(api.approveJoinRequest).mockResolvedValue(undefined);
+    const result = await loginWithAPendingInvite();
+
+    act(() => {
+      result.current.actions.acceptMyInvite("inv1");
+    });
+
+    expect(approveMock).toHaveBeenCalledWith("inv1");
+    expect(result.current.state.myInvites).toHaveLength(0);
+  });
+
+  it("rolls back the optimistic removal and surfaces a sync error when declining fails", async () => {
+    vi.mocked(api.declineJoinRequest).mockRejectedValue(new Error("network error"));
+    const result = await loginWithAPendingInvite();
+
+    act(() => {
+      result.current.actions.declineMyInvite("inv1");
+    });
+
+    await waitFor(() => expect(result.current.state.syncError).toBeTruthy());
+    expect(result.current.state.myInvites).toHaveLength(1);
+  });
+});
+
 describe("useThatFridge shopping list seeding", () => {
   // Regression coverage for ensureShoppingSeed: it used to require /left|remaining/i to
   // match an item's note (in addition to quantity), which incorrectly matched notes like
@@ -881,6 +955,7 @@ function mockInitFetch() {
   vi.mocked(api.fetchUserGoal).mockResolvedValue({ metricType: "waste_rate", targetValue: 20, period: "weekly", isActive: true, updatedAt: 0 });
   vi.mocked(api.fetchScoreSnapshots).mockResolvedValue([]);
   vi.mocked(api.fetchBadges).mockResolvedValue([]);
+  vi.mocked(api.fetchMyInvites).mockResolvedValue([]);
 }
 
 async function loginAsJoeyWithMockedFridges(result: { current: ReturnType<typeof useThatFridge> }) {

@@ -52,6 +52,7 @@ export interface Fridge {
 export interface FridgeMember {
   id: string;
   name: string;
+  username: string;
   email: string;
   role: FridgeRole;
   joinedAt: number;
@@ -311,5 +312,16 @@ export interface FridgeJoinRequest {
   requesterName: string;
   requesterUsername: string;
   status: JoinRequestStatus;
+  createdAt: number;
+}
+
+// A pending invite someone (a fridge owner) sent TO the current user - the "MY INVITES"
+// section on the find-a-friend screen, fetched across all fridges via fetchMyInvites().
+export interface MyInvite {
+  id: string;
+  fridgeId: string;
+  fridgeName: string;
+  inviterName: string;
+  inviterUsername: string;
   createdAt: number;
 }

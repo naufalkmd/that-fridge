@@ -1,6 +1,6 @@
 "use client";
 
-import { ChefHat, ChevronLeft, Heart, Users, X } from "lucide-react";
+import { Check, ChefHat, ChevronLeft, Heart, Mail, Users, X } from "lucide-react";
 import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 
@@ -27,6 +27,39 @@ export default function FindFriendScreen() {
       <div className="thatfridge-wide-content" style={{ flex: 1, overflowY: "auto", padding: "6px 20px 30px", boxSizing: "border-box" }}>
         {!isProfile ? (
           <>
+            {state.myInvites.length > 0 && (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                  <Mail size={12} strokeWidth={2.4} />
+                  MY INVITES
+                </div>
+                <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, overflow: "hidden", marginBottom: 18 }}>
+                  {state.myInvites.map((invite, i) => (
+                    <div
+                      key={invite.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "12px 14px",
+                        borderBottom: i < state.myInvites.length - 1 ? `1px solid ${theme.border.hairline}` : undefined,
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: theme.text.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{invite.fridgeName}</div>
+                        <div style={{ fontSize: 11, color: theme.text.faint }}>Invited by @{invite.inviterUsername}</div>
+                      </div>
+                      <div onClick={() => actions.acceptMyInvite(invite.id)} style={{ cursor: "pointer", padding: 4 }}>
+                        <Check size={17} color={theme.good} strokeWidth={2.4} />
+                      </div>
+                      <div onClick={() => actions.declineMyInvite(invite.id)} style={{ cursor: "pointer", padding: 4 }}>
+                        <X size={15} color={theme.text.faint} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
             <input
               autoFocus
               value={state.friendSearchQuery}

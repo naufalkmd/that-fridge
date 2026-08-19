@@ -244,6 +244,7 @@ export interface FridgeHeroView {
   photoSrc: string;
   photoUrl?: string | null;
   bg: string;
+  isShared: boolean;
 }
 
 export function getFridgeHeroViews(state: ThatFridgeState): FridgeHeroView[] {
@@ -264,6 +265,7 @@ export function getFridgeHeroViews(state: ThatFridgeState): FridgeHeroView[] {
       photoSrc,
       photoUrl: f.photoUrl,
       bg: def ? def.bg : "#4a89c9",
+      isShared: (f.memberCount ?? 1) > 1,
     };
   });
 }

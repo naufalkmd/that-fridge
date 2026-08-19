@@ -42,6 +42,7 @@ import {
   fetchJoinRequests,
   fetchMe,
   fetchMemoryFacts,
+  fetchMyInvites,
   fetchNotificationEvents,
   fetchNotificationPrefs,
   fetchOrganizerTally,
@@ -52,6 +53,7 @@ import {
   fetchUserGoal,
   importRecipeFromLink,
   incrementOrganizerTally,
+  inviteToFridge,
   leaveFridge as apiLeaveFridge,
   login,
   logout,
@@ -102,6 +104,7 @@ import type {
   FridgeStyleKey,
   Item,
   MealType,
+  MyInvite,
   NotificationEvent,
   NotificationPrefs,
   NutritionCategory,
@@ -372,6 +375,15 @@ export interface ThatFridgeState {
   // the current user owns it (see openStylePicker), same lazy-per-open pattern as fridgeMembers.
   joinRequests: FridgeJoinRequest[];
   joinRequestsLoading: boolean;
+  // The "INVITE SOMEONE" search inside FridgeStyleSheet - its own state slot (not shared with
+  // friendSearch* below) since Find-a-friend's search deliberately persists across a
+  // close/reopen and reusing it here would cross-contaminate the two screens.
+  inviteSearchQuery: string;
+  inviteSearchResults: UserSearchResult[];
+  inviteSearchLoading: boolean;
+  // Pending invites sent TO the current user, across all fridges - fetched at bootstrap (see
+  // the init-fetch effect) so the Home header's badge is available as soon as they're signed in.
+  myInvites: MyInvite[];
   // Find-a-friend search + the profile screen it opens into.
   friendSearchQuery: string;
   friendSearchResults: UserSearchResult[];
@@ -509,6 +521,10 @@ export function initialState(): ThatFridgeState {
     fridgeMembersLoading: false,
     joinRequests: [],
     joinRequestsLoading: false,
+    inviteSearchQuery: "",
+    inviteSearchResults: [],
+    inviteSearchLoading: false,
+    myInvites: [],
     friendSearchQuery: "",
     friendSearchResults: [],
     friendSearchLoading: false,
@@ -669,6 +685,7 @@ export function useThatFridge() {
       fetchOrganizerTally(),
       fetchScoreSnapshots(),
       fetchBadges(),
+      fetchMyInvites(),
     ]).then(
       ([
         fridges,
@@ -683,6 +700,7 @@ export function useThatFridge() {
         organizerTally,
         scoreSnapshots,
         badges,
+        myInvites,
       ]) => {
         if (cancelled) return;
         const restoredChatMessages: ChatMessage[] = chatHistory.messages.flatMap((row) => [
@@ -709,6 +727,7 @@ export function useThatFridge() {
           organizerTally,
           scoreSnapshots,
           badges,
+          myInvites,
           ...(restoredChatMessages.length ? { chatMessages: restoredChatMessages } : {}),
         });
       }
@@ -981,7 +1000,16 @@ export function useThatFridge() {
   };
 
   const openStylePicker = (i: number) => {
-    patch({ stylingFridgeIndex: i, screen: "fridgeStyle", fridgeMembers: [], fridgeMembersLoading: true, joinRequests: [], joinRequestsLoading: false });
+    patch({
+      stylingFridgeIndex: i,
+      screen: "fridgeStyle",
+      fridgeMembers: [],
+      fridgeMembersLoading: true,
+      joinRequests: [],
+      joinRequestsLoading: false,
+      inviteSearchQuery: "",
+      inviteSearchResults: [],
+    });
     const fridge = state.fridges[i];
     if (!fridge) {
       patch({ fridgeMembersLoading: false });
@@ -1015,7 +1043,7 @@ export function useThatFridge() {
       joinRequests: s.joinRequests.filter((r) => r.id !== id),
       fridges: s.fridges.map((f) => (f.id === fridge.id ? { ...f, memberCount: (f.memberCount ?? prevMembers.length) + 1 } : f)),
       fridgeMembers: request
-        ? [...s.fridgeMembers, { id: request.requesterId, name: request.requesterName, email: "", role: "member" as const, joinedAt: Date.now() }]
+        ? [...s.fridgeMembers, { id: request.requesterId, name: request.requesterName, username: request.requesterUsername, email: "", role: "member" as const, joinedAt: Date.now() }]
         : s.fridgeMembers,
     }));
     approveJoinRequest(id).catch((err) => {
@@ -1032,6 +1060,48 @@ export function useThatFridge() {
     patch((s) => ({ joinRequests: s.joinRequests.filter((r) => r.id !== id) }));
     declineJoinRequest(id).catch((err) => {
       patch({ joinRequests: prevRequests, syncError: describeError(err, "Couldn't decline that request.") });
+    });
+  };
+
+  const onInviteSearchChange = (value: string) => {
+    patch({ inviteSearchQuery: value });
+    const q = value.trim();
+    if (q.length < 2) {
+      patch({ inviteSearchResults: [], inviteSearchLoading: false });
+      return;
+    }
+    patch({ inviteSearchLoading: true });
+    searchUsers(q)
+      .then((results) => patch({ inviteSearchResults: results, inviteSearchLoading: false }))
+      .catch((err) => {
+        patch({ inviteSearchLoading: false, syncError: describeError(err, "Couldn't search right now.") });
+      });
+  };
+  const sendFridgeInvite = (userId: string) => {
+    const fridge = state.fridges[state.stylingFridgeIndex];
+    if (!fridge) return Promise.reject(new Error("No fridge selected"));
+    return inviteToFridge(fridge.id, userId).catch((err) => {
+      patch({ syncError: describeError(err, "Couldn't send that invite.") });
+      throw err;
+    });
+  };
+
+  // Accepting/declining an invite reuses the same approve/decline endpoints a fridge owner
+  // uses on an incoming request - the backend authorizes each side by who initiated the row.
+  // The newly-joined fridge itself shows up in state.fridges on next reload, consistent with
+  // this app's existing reload-based (not real-time) sync elsewhere.
+  const acceptMyInvite = (id: string) => {
+    const prevInvites = state.myInvites;
+    patch((s) => ({ myInvites: s.myInvites.filter((i) => i.id !== id) }));
+    approveJoinRequest(id).catch((err) => {
+      patch({ myInvites: prevInvites, syncError: describeError(err, "Couldn't accept that invite.") });
+    });
+  };
+  const declineMyInvite = (id: string) => {
+    const prevInvites = state.myInvites;
+    patch((s) => ({ myInvites: s.myInvites.filter((i) => i.id !== id) }));
+    declineJoinRequest(id).catch((err) => {
+      patch({ myInvites: prevInvites, syncError: describeError(err, "Couldn't decline that invite.") });
     });
   };
 
@@ -2542,6 +2612,10 @@ export function useThatFridge() {
     deleteFridge,
     approveJoinRequestAction,
     declineJoinRequestAction,
+    onInviteSearchChange,
+    sendFridgeInvite,
+    acceptMyInvite,
+    declineMyInvite,
     removeFridgeMemberAction,
     leaveFridgeAction,
     openSearch,
