@@ -34,14 +34,21 @@ export const theme = {
     muted: "rgba(234,234,236,0.58)",
     faint: "rgba(234,234,236,0.34)",
   },
-  amber: "#f5a623",
+  // Brand accent (primary CTAs, Kitchen Score puck, corner brackets, streak pill, active nav).
+  // Deliberately independent of chef/warn below - those keep the old amber value on purpose.
+  amber: "#26c6da",
   blue: "#5b8dee",
   // Re-tuned brighter than the old light-mode values (#d99a2b/#c1452e/#2f6fb0/#3f8f5c) so they
   // stay legible on near-black - same agent identity, same hue family, lifted luminance.
   agent: {
     guardian: "#ff5f56",
+    // A deeper, more saturated blue than `blue` above (generic info/links) - a different
+    // shade of the same cool-blue family, not a hue shift to purple, and far enough from
+    // the turquoise brand accent's cyan to stay distinct in the Kitchen Score arc/agent bars.
+    organizer: "#3d6fe0",
+    // Chef keeps the original amber value even though it's no longer the brand accent - its
+    // own identity color, unrelated to what CTAs/highlights use.
     chef: "#f5a623",
-    organizer: "#5b8dee",
     shopkeeper: "#39e07f",
   },
   good: "#39e07f",

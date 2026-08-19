@@ -87,7 +87,7 @@ export default function KitchenScoreSection() {
           borderRadius: theme.radius.lg,
           padding: "22px 18px 16px",
           textAlign: "center",
-          background: `radial-gradient(120% 55% at 50% -10%, rgba(245,166,35,0.06), transparent 60%), ${theme.bg.surface}`,
+          background: `radial-gradient(120% 55% at 50% -10%, ${theme.amber}0f, transparent 60%), ${theme.bg.surface}`,
           border: `1px solid ${theme.border.hairline}`,
         }}
       >

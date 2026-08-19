@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 import { House, MessageCircle, Package, Plus, Users } from "lucide-react";
 import Image from "next/image";
 import { theme } from "@/lib/thatfridge/theme";
@@ -9,7 +9,7 @@ import { useThatFridgeCtx } from "./ThatFridgeContext";
 interface NavDef {
   key: "home" | "inventory" | "chat" | "activity";
   label: string;
-  Icon: ComponentType<{ size?: number; strokeWidth?: number }>;
+  Icon: ComponentType<{ size?: number; strokeWidth?: number; color?: string; style?: CSSProperties }>;
 }
 
 const NAV_ITEMS: NavDef[] = [
@@ -72,7 +72,7 @@ export default function Sidebar() {
                 cursor: "pointer",
               }}
             >
-              <item.Icon size={17} strokeWidth={2} />
+              <item.Icon size={17} strokeWidth={2} color={active ? theme.amber : theme.text.muted} style={{ transition: "color .2s ease" }} />
               {item.label}
             </div>
           );

@@ -24,6 +24,22 @@ const labelStyle: React.CSSProperties = {
   marginBottom: 6,
 };
 
+// Desktop brand panel only - floating pixel-snowflake sprites drifting behind the
+// headline. Positions/sizes are hand-placed (not random) to keep density low over the
+// text and higher in the empty upper-right, so the animation reads as ambient texture
+// rather than clutter.
+const FROST_FLAKES: { left: string; top: string; size: number; opacity: number; duration: number; delay: number }[] = [
+  { left: "80%", top: "8%", size: 30, opacity: 0.55, duration: 9, delay: 0 },
+  { left: "16%", top: "6%", size: 18, opacity: 0.4, duration: 7, delay: 1.4 },
+  { left: "56%", top: "16%", size: 14, opacity: 0.3, duration: 6, delay: 0.8 },
+  { left: "90%", top: "30%", size: 40, opacity: 0.6, duration: 11, delay: 2 },
+  { left: "6%", top: "34%", size: 24, opacity: 0.35, duration: 8, delay: 3 },
+  { left: "70%", top: "46%", size: 17, opacity: 0.25, duration: 6.5, delay: 1 },
+  { left: "93%", top: "58%", size: 26, opacity: 0.45, duration: 9.5, delay: 2.5 },
+  { left: "82%", top: "80%", size: 20, opacity: 0.4, duration: 8.5, delay: 1.8 },
+  { left: "4%", top: "68%", size: 32, opacity: 0.5, duration: 10, delay: 0.3 },
+];
+
 export default function AuthScreen() {
   const { state, actions } = useThatFridgeCtx();
   const isLogin = state.authMode === "login";
@@ -207,7 +223,7 @@ export default function AuthScreen() {
         <div
           className="thatfridge-auth-brand-panel"
           style={{
-            background: `radial-gradient(circle at 20% 15%, rgba(245,166,35,0.08) 0, transparent 45%), ${theme.bg.surface}`,
+            background: `radial-gradient(circle at 20% 15%, ${theme.amber}14 0, transparent 45%), ${theme.bg.surface}`,
             color: theme.text.primary,
             padding: "48px 44px",
             display: "flex",
@@ -215,20 +231,43 @@ export default function AuthScreen() {
             justifyContent: "space-between",
           }}
         >
-          <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 12 }}>
-            <div
+          {FROST_FLAKES.map((f, i) => (
+            <Image
+              key={i}
+              src="/images/thatfridge/snowflake.png"
+              alt=""
+              width={f.size}
+              height={f.size}
+              unoptimized
+              className="thatfridge-frost-flake"
               style={{
-                width: 40,
-                height: 40,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flex: "none",
+                position: "absolute",
+                left: f.left,
+                top: f.top,
+                opacity: f.opacity,
+                imageRendering: "pixelated",
+                animation: `frostDrift ${f.duration}s ease-in-out ${f.delay}s infinite`,
+                pointerEvents: "none",
               }}
-            >
-              <Image src="/images/thatfridge/logo.svg" alt="ThatFridge" width={32} height={33} unoptimized style={{ objectFit: "contain" }} />
+            />
+          ))}
+
+          <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ position: "relative", width: 72, height: 72, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+              <div
+                className="thatfridge-logo-glow"
+                style={{
+                  position: "absolute",
+                  inset: -10,
+                  borderRadius: "50%",
+                  background: `radial-gradient(circle, ${theme.amber}55 0%, transparent 70%)`,
+                  filter: "blur(10px)",
+                  animation: "logoGlowPulse 3.4s ease-in-out infinite",
+                }}
+              />
+              <Image src="/images/thatfridge/logo.svg" alt="ThatFridge" width={64} height={65} unoptimized style={{ position: "relative", objectFit: "contain" }} />
             </div>
-            <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 16, letterSpacing: 0.5 }}>ThatFridge</div>
+            <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 22, letterSpacing: 0.5 }}>ThatFridge</div>
           </div>
 
           <div style={{ position: "relative", maxWidth: 340 }}>

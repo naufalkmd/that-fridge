@@ -28,7 +28,8 @@ export default function TabBar() {
 
   const renderTab = (tab: TabDef) => {
     const active = tab.key === "activity" ? state.screen === "foodHub" : state.screen === tab.key;
-    const color = active ? theme.text.primary : theme.text.faint;
+    const iconColor = active ? theme.amber : theme.text.faint;
+    const labelColor = active ? theme.text.primary : theme.text.faint;
     const pillBg = active ? theme.bg.surface2 : "transparent";
     return (
       <div
@@ -48,14 +49,14 @@ export default function TabBar() {
           ...(active ? { padding: "9px 14px" } : {}),
         }}
       >
-        <div style={{ flex: "none", display: "flex" }}>
-          <tab.Icon size={16} color={color} strokeWidth={2.2} />
+        <div style={{ flex: "none", display: "flex", transition: "color .2s ease" }}>
+          <tab.Icon size={16} color={iconColor} strokeWidth={2.2} />
         </div>
         <div
           style={{
             fontSize: 12,
             fontWeight: 700,
-            color,
+            color: labelColor,
             whiteSpace: "nowrap",
             overflow: "hidden",
             maxWidth: active ? 100 : 0,
