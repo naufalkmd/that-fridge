@@ -54,6 +54,11 @@ class User extends Authenticatable
         return $this->hasOne(UserGoal::class);
     }
 
+    public function organizerTally(): HasOne
+    {
+        return $this->hasOne(OrganizerTally::class);
+    }
+
     public function chatHistory(): HasMany
     {
         return $this->hasMany(ChatHistory::class);

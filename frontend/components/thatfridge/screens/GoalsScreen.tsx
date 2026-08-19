@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, X } from "lucide-react";
 import { computeGoalProgress, GOAL_METRIC_META } from "@/lib/thatfridge/goals";
+import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import Switch from "../Switch";
 import type { GoalMetricType, GoalPeriod } from "@/lib/thatfridge/types";
@@ -17,11 +18,11 @@ const fieldStyle: React.CSSProperties = {
   width: "100%",
   border: "none",
   outline: "none",
-  background: "#eaf6ff",
-  borderRadius: 14,
+  background: theme.bg.surface2,
+  borderRadius: theme.radius.sm,
   padding: "12px 14px",
   fontSize: 13.5,
-  color: "#16325c",
+  color: theme.text.primary,
   boxSizing: "border-box",
 };
 
@@ -52,53 +53,53 @@ export default function GoalsScreen() {
   };
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
+    <div style={{ position: "absolute", inset: 0, background: theme.bg.canvas, display: "flex", flexDirection: "column" }}>
       <div className="thatfridge-wide-content" style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 12, boxSizing: "border-box" }}>
         <div
           onClick={actions.goHome}
-          style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
+          style={{ width: 32, height: 32, borderRadius: 16, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
         >
-          <X className="thatfridge-hide-desktop" size={15} color="rgba(22,50,92,0.5)" strokeWidth={2} />
-          <ChevronLeft className="thatfridge-show-desktop" size={17} color="rgba(22,50,92,0.5)" strokeWidth={2.2} />
+          <X className="thatfridge-hide-desktop" size={15} color={theme.text.muted} strokeWidth={2} />
+          <ChevronLeft className="thatfridge-show-desktop" size={17} color={theme.text.muted} strokeWidth={2.2} />
         </div>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 800 }}>Goal</div>
-          <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)" }}>Give your kitchen score something concrete to aim for</div>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 15 }}>Goal</div>
+          <div style={{ fontSize: 11.5, color: theme.text.faint }}>Give your kitchen score something concrete to aim for</div>
         </div>
       </div>
 
       <div className="thatfridge-wide-content" style={{ flex: 1, overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
         {/* current progress */}
-        <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, padding: "14px 16px", marginBottom: 20 }}>
+        <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, padding: "14px 16px", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 13.5, fontWeight: 700 }}>{meta.label}</div>
             {goal.isActive && progress && progress.currentValue !== null && (
-              <div style={{ fontSize: 16, fontWeight: 800, color: progress.onTrack ? "#3f8f5c" : "#c1452e" }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: progress.onTrack ? theme.good : theme.bad }}>
                 {progress.currentValue}
-                {meta.unit === "%" ? "%" : ""} <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(22,50,92,0.4)" }}>/ {goal.targetValue}{meta.unit === "%" ? "%" : ""}</span>
+                {meta.unit === "%" ? "%" : ""} <span style={{ fontSize: 11, fontWeight: 600, color: theme.text.faint }}>/ {goal.targetValue}{meta.unit === "%" ? "%" : ""}</span>
               </div>
             )}
           </div>
-          <div style={{ fontSize: 12, lineHeight: 1.4, color: "rgba(22,50,92,0.55)" }}>
+          <div style={{ fontSize: 12, lineHeight: 1.4, color: theme.text.muted }}>
             {!goal.isActive ? "Goal tracking is off — turn it back on below whenever you're ready." : progress?.explanation}
           </div>
           {goal.isActive && progress?.limitationNote && (
-            <div style={{ fontSize: 10.5, lineHeight: 1.4, color: "rgba(22,50,92,0.4)", marginTop: 6 }}>{progress.limitationNote}</div>
+            <div style={{ fontSize: 10.5, lineHeight: 1.4, color: theme.text.faint, marginTop: 6 }}>{progress.limitationNote}</div>
           )}
         </div>
 
         {/* track toggle */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, padding: "13px 14px", marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, padding: "13px 14px", marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2 }}>Track this goal</div>
-            <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)" }}>Turn off anytime — your metric and target are kept</div>
+            <div style={{ fontSize: 11.5, color: theme.text.faint }}>Turn off anytime — your metric and target are kept</div>
           </div>
           <Switch on={goal.isActive} onClick={() => actions.updateUserGoalSettings({ isActive: !goal.isActive })} />
         </div>
 
         {/* metric picker */}
-        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: "rgba(22,50,92,0.45)", marginBottom: 8 }}>METRIC</div>
-        <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden", marginBottom: 6 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 8 }}>METRIC</div>
+        <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, overflow: "hidden", marginBottom: 6 }}>
           {METRIC_ORDER.map((key, i) => {
             const m = GOAL_METRIC_META[key];
             const active = goal.metricType === key;
@@ -111,26 +112,26 @@ export default function GoalsScreen() {
                   alignItems: "center",
                   gap: 12,
                   padding: "13px 14px",
-                  borderBottom: i < METRIC_ORDER.length - 1 ? "1px solid rgba(22,50,92,0.06)" : undefined,
+                  borderBottom: i < METRIC_ORDER.length - 1 ? `1px solid ${theme.border.hairline}` : undefined,
                   cursor: active ? "default" : "pointer",
-                  background: active ? "#eaf6ff" : "transparent",
+                  background: active ? theme.bg.surface2 : "transparent",
                 }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2, color: active ? "#2f6fb0" : "#16325c" }}>{m.label}</div>
-                  <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)", lineHeight: 1.35 }}>{m.description}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2, color: active ? theme.blue : theme.text.primary }}>{m.label}</div>
+                  <div style={{ fontSize: 11.5, color: theme.text.faint, lineHeight: 1.35 }}>{m.description}</div>
                 </div>
-                {active && <div style={{ width: 9, height: 9, borderRadius: 5, background: "#2f6fb0", flex: "none" }} />}
+                {active && <div style={{ width: 9, height: 9, borderRadius: 5, background: theme.blue, flex: "none" }} />}
               </div>
             );
           })}
         </div>
-        <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", lineHeight: 1.4, marginBottom: 22 }}>
+        <div style={{ fontSize: 10.5, color: theme.text.faint, lineHeight: 1.4, marginBottom: 22 }}>
           &ldquo;Money saved&rdquo; isn&apos;t offered yet — ThatFridge doesn&apos;t track prices for your items, so there&apos;s no real number to show.
         </div>
 
         {/* target + period */}
-        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: "rgba(22,50,92,0.45)", marginBottom: 8 }}>TARGET</div>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 8 }}>TARGET</div>
         <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
           <input
             type="number"
@@ -149,9 +150,9 @@ export default function GoalsScreen() {
               display: "flex",
               alignItems: "center",
               padding: "0 18px",
-              borderRadius: 14,
-              background: targetDirty && targetValid ? "#16325c" : "rgba(22,50,92,0.15)",
-              color: "#fff",
+              borderRadius: theme.radius.sm,
+              background: targetDirty && targetValid ? theme.amber : theme.bg.surface2,
+              color: targetDirty && targetValid ? "#0a0a0c" : theme.text.faint,
               fontSize: 12.5,
               fontWeight: 700,
               cursor: targetDirty && targetValid ? "pointer" : "default",
@@ -161,7 +162,7 @@ export default function GoalsScreen() {
           </div>
         </div>
         {!targetValid && (
-          <div style={{ fontSize: 11, color: "#c1452e", marginBottom: 8 }}>
+          <div style={{ fontSize: 11, color: theme.bad, marginBottom: 8 }}>
             {goal.metricType === "items_rescued" ? "Enter a number of at least 1." : "Enter a number between 1 and 100."}
           </div>
         )}
@@ -176,13 +177,13 @@ export default function GoalsScreen() {
                 style={{
                   flex: "none",
                   padding: "8px 16px",
-                  borderRadius: 14,
+                  borderRadius: theme.radius.sm,
                   fontSize: 12.5,
                   fontWeight: 700,
                   cursor: active ? "default" : "pointer",
-                  background: active ? "#16325c" : "#fff",
-                  color: active ? "#fff" : "#16325c",
-                  boxShadow: "0 4px 10px rgba(22,50,92,0.08)",
+                  background: active ? theme.bg.surface2 : theme.bg.surface,
+                  color: active ? theme.text.primary : theme.text.muted,
+                  border: `1px solid ${active ? theme.border.strong : theme.border.hairline}`,
                 }}
               >
                 {p.label}
@@ -191,7 +192,7 @@ export default function GoalsScreen() {
           })}
         </div>
 
-        <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.4)", textAlign: "center", padding: "8px 12px", lineHeight: 1.4 }}>
+        <div style={{ fontSize: 11.5, color: theme.text.faint, textAlign: "center", padding: "8px 12px", lineHeight: 1.4 }}>
           You can change your metric or target anytime — nothing here is locked in.
         </div>
       </div>

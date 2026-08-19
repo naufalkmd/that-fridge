@@ -1,5 +1,6 @@
 "use client";
 
+import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
 
 export default function UndoToast() {
@@ -17,10 +18,10 @@ export default function UndoToast() {
         alignItems: "center",
         gap: 14,
         padding: "12px 12px 12px 18px",
-        background: "#16325c",
-        color: "#fff",
-        borderRadius: 16,
-        boxShadow: "0 10px 28px rgba(22,50,92,0.3)",
+        background: theme.bg.surface,
+        color: theme.text.primary,
+        border: `1px solid ${theme.border.strong}`,
+        borderRadius: theme.radius.md,
         zIndex: 6,
         animation: "pop .2s ease-out",
         width: "calc(100% - 40px)",
@@ -31,7 +32,7 @@ export default function UndoToast() {
       </div>
       <div
         onClick={actions.undoLastRemoval}
-        style={{ fontSize: 13, fontWeight: 800, color: "#8fc3ff", cursor: "pointer", flex: "none", padding: "4px 6px" }}
+        style={{ fontSize: 13, fontWeight: 800, color: theme.blue, cursor: "pointer", flex: "none", padding: "4px 6px" }}
       >
         Undo
       </div>

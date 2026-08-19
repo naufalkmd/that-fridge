@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 
@@ -11,7 +12,7 @@ export default function MarkRecipeMadeSheet() {
   const candidateCount = state.markMadeCandidates.length;
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)", zIndex: 10 }}>
+    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 10 }}>
       <div
         style={{
           position: "absolute",
@@ -19,8 +20,8 @@ export default function MarkRecipeMadeSheet() {
           right: 0,
           bottom: 0,
           top: 60,
-          background: "#fff",
-          borderRadius: "28px 28px 0 0",
+          background: theme.bg.surface,
+          borderRadius: `${theme.radius.xl}px ${theme.radius.xl}px 0 0`,
           padding: "14px 22px 26px",
           animation: "pop .22s ease-out",
           display: "flex",
@@ -29,10 +30,10 @@ export default function MarkRecipeMadeSheet() {
       >
         <div
           onClick={actions.closeMarkRecipeMade}
-          style={{ width: 36, height: 5, borderRadius: 3, background: "rgba(22,50,92,0.18)", margin: "0 auto 16px", cursor: "pointer", flex: "none" }}
+          style={{ width: 36, height: 5, borderRadius: 3, background: theme.border.strong, margin: "0 auto 16px", cursor: "pointer", flex: "none" }}
         />
-        <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 6, flex: "none" }}>Mark as made</div>
-        <div style={{ fontSize: 12.5, color: "rgba(22,50,92,0.5)", marginBottom: 16, flex: "none" }}>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 14, marginBottom: 8, flex: "none", color: theme.text.primary }}>Mark as made</div>
+        <div style={{ fontSize: 12.5, color: theme.text.faint, marginBottom: 16, flex: "none" }}>
           {state.markMadeCandidates.length > 0
             ? "These fridge items look like a match — mark each one finished or still remaining, or remove anything you didn't actually use."
             : "None of this recipe's ingredients matched anything currently in your fridge, so there's nothing to mark used."}
@@ -40,7 +41,7 @@ export default function MarkRecipeMadeSheet() {
 
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           {state.markMadeCandidates.length > 0 && (
-            <div style={{ background: "#eaf6ff", borderRadius: 16, overflow: "hidden" }}>
+            <div style={{ background: theme.bg.surface2, borderRadius: theme.radius.md, overflow: "hidden" }}>
               {state.markMadeCandidates.map((c, i) => {
                 const status = state.markMadeStatus[c.id] ?? "finished";
                 return (
@@ -51,26 +52,26 @@ export default function MarkRecipeMadeSheet() {
                       alignItems: "center",
                       gap: 10,
                       padding: "12px 14px",
-                      borderBottom: i < state.markMadeCandidates.length - 1 ? "1px solid rgba(22,50,92,0.08)" : undefined,
+                      borderBottom: i < state.markMadeCandidates.length - 1 ? `1px solid ${theme.border.hairline}` : undefined,
                     }}
                   >
                     <div style={{ position: "relative", width: 28, height: 28, flex: "none" }}>
                       <FoodIcon icon={c.icon} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600 }}>{c.ingredientName}</div>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: theme.text.primary }}>{c.ingredientName}</div>
                     </div>
-                    <div style={{ display: "flex", background: "#fff", borderRadius: 10, padding: 2, flex: "none" }}>
+                    <div style={{ display: "flex", background: theme.bg.surface, borderRadius: theme.radius.sm, padding: 2, flex: "none" }}>
                       <div
                         onClick={() => actions.setMarkMadeStatus(c.id, "finished")}
                         style={{
                           padding: "6px 10px",
-                          borderRadius: 8,
+                          borderRadius: theme.radius.sm,
                           fontSize: 11.5,
                           fontWeight: 700,
                           cursor: "pointer",
-                          background: status === "finished" ? "#3f8f5c" : "transparent",
-                          color: status === "finished" ? "#fff" : "rgba(22,50,92,0.55)",
+                          background: status === "finished" ? theme.good : "transparent",
+                          color: status === "finished" ? "#0a0a0c" : theme.text.muted,
                         }}
                       >
                         Finished
@@ -79,12 +80,12 @@ export default function MarkRecipeMadeSheet() {
                         onClick={() => actions.setMarkMadeStatus(c.id, "remaining")}
                         style={{
                           padding: "6px 10px",
-                          borderRadius: 8,
+                          borderRadius: theme.radius.sm,
                           fontSize: 11.5,
                           fontWeight: 700,
                           cursor: "pointer",
-                          background: status === "remaining" ? "#d98c2b" : "transparent",
-                          color: status === "remaining" ? "#fff" : "rgba(22,50,92,0.55)",
+                          background: status === "remaining" ? theme.warn : "transparent",
+                          color: status === "remaining" ? "#0a0a0c" : theme.text.muted,
                         }}
                       >
                         Remaining
@@ -101,7 +102,7 @@ export default function MarkRecipeMadeSheet() {
                         justifyContent: "center",
                         flex: "none",
                         cursor: "pointer",
-                        color: "rgba(22,50,92,0.4)",
+                        color: theme.text.faint,
                       }}
                     >
                       <X size={15} strokeWidth={2.5} />
@@ -116,7 +117,7 @@ export default function MarkRecipeMadeSheet() {
         <div style={{ display: "flex", gap: 10, marginTop: 14, flex: "none" }}>
           <div
             onClick={actions.closeMarkRecipeMade}
-            style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#16325c", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+            style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: theme.radius.md, background: "transparent", border: `1px solid ${theme.border.strong}`, color: theme.text.primary, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
           >
             Cancel
           </div>
@@ -126,9 +127,9 @@ export default function MarkRecipeMadeSheet() {
               flex: 1,
               textAlign: "center",
               padding: 13,
-              borderRadius: 14,
-              background: candidateCount > 0 ? "#16325c" : "rgba(22,50,92,0.25)",
-              color: "#fff",
+              borderRadius: theme.radius.md,
+              background: candidateCount > 0 ? theme.amber : theme.bg.surface2,
+              color: candidateCount > 0 ? "#0a0a0c" : theme.text.faint,
               fontSize: 13.5,
               fontWeight: 700,
               cursor: "pointer",

@@ -3,15 +3,16 @@
 import { useRef, useState } from "react";
 import { Check, ChefHat, ChevronLeft, Hourglass, ShoppingCart, X } from "lucide-react";
 import { timeAgo } from "@/lib/thatfridge/utils";
+import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import type { NotificationEvent, NotificationKind } from "@/lib/thatfridge/types";
 
 const CLEAR_THRESHOLD = -80;
 
 const KIND_META: Record<NotificationKind, { Icon: typeof Hourglass; color: string }> = {
-  expiring: { Icon: Hourglass, color: "#c1452e" },
-  lowStock: { Icon: ShoppingCart, color: "#3f8f5c" },
-  recipe: { Icon: ChefHat, color: "#d99a2b" },
+  expiring: { Icon: Hourglass, color: theme.agent.guardian },
+  lowStock: { Icon: ShoppingCart, color: theme.agent.shopkeeper },
+  recipe: { Icon: ChefHat, color: theme.agent.chef },
 };
 
 function NotificationRow({ event, onDismiss }: { event: NotificationEvent; onDismiss: (id: string) => void }) {
@@ -37,18 +38,18 @@ function NotificationRow({ event, onDismiss }: { event: NotificationEvent; onDis
   };
 
   return (
-    <div style={{ position: "relative", borderRadius: 16, marginBottom: 10, overflow: "hidden" }}>
+    <div style={{ position: "relative", borderRadius: theme.radius.md, marginBottom: 10, overflow: "hidden" }}>
       {dragX < 0 && (
         <div
           style={{
             position: "absolute",
             inset: 0,
-            background: "#c1452e",
+            background: theme.bad,
             display: "flex",
             alignItems: "center",
             justifyContent: "flex-end",
             padding: "0 22px",
-            color: "#fff",
+            color: theme.text.primary,
             fontSize: 12.5,
             fontWeight: 700,
           }}
@@ -65,13 +66,13 @@ function NotificationRow({ event, onDismiss }: { event: NotificationEvent; onDis
           position: "relative",
           transform: `translateX(${dragX}px)`,
           transition: dragging ? "none" : "transform .2s ease",
-          background: event.done ? "#eef1f4" : "#fff",
-          borderRadius: 16,
+          background: event.done ? theme.bg.surface2 : theme.bg.surface,
+          borderRadius: theme.radius.md,
           padding: "13px 14px",
           display: "flex",
           alignItems: "center",
           gap: 12,
-          boxShadow: "0 6px 16px rgba(22,50,92,0.06)",
+          border: `1px solid ${theme.border.hairline}`,
           touchAction: "pan-y",
           userSelect: "none",
         }}
@@ -80,38 +81,38 @@ function NotificationRow({ event, onDismiss }: { event: NotificationEvent; onDis
           style={{
             width: 36,
             height: 36,
-            borderRadius: 10,
-            background: event.done ? "rgba(22,50,92,0.08)" : `${meta.color}1a`,
+            borderRadius: theme.radius.sm,
+            background: event.done ? theme.bg.surface2 : `${meta.color}1a`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             flex: "none",
           }}
         >
-          <meta.Icon size={17} color={event.done ? "rgba(22,50,92,0.35)" : meta.color} strokeWidth={2} />
+          <meta.Icon size={17} color={event.done ? theme.text.faint : meta.color} strokeWidth={2} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
               fontSize: 13,
               fontWeight: 700,
-              color: event.done ? "rgba(22,50,92,0.4)" : "#16325c",
+              color: event.done ? theme.text.faint : theme.text.primary,
               textDecoration: event.done ? "line-through" : "none",
               marginBottom: 2,
             }}
           >
             {event.message}
           </div>
-          <div style={{ fontSize: 11, color: "rgba(22,50,92,0.4)" }}>
+          <div style={{ fontSize: 11, color: theme.text.faint }}>
             {event.fridgeName} · {timeAgo(event.createdAt)}
           </div>
         </div>
         {event.done ? (
-          <Check size={17} color="#3f8f5c" strokeWidth={2.5} style={{ flex: "none" }} />
+          <Check size={17} color={theme.good} strokeWidth={2.5} style={{ flex: "none" }} />
         ) : (
           <div
             onClick={() => onDismiss(event.id)}
-            style={{ fontSize: 11.5, fontWeight: 700, color: "#2f6fb0", cursor: "pointer", padding: "6px 4px", flex: "none" }}
+            style={{ fontSize: 11.5, fontWeight: 700, color: theme.blue, cursor: "pointer", padding: "6px 4px", flex: "none" }}
           >
             Clear
           </div>
@@ -126,24 +127,24 @@ export default function NotificationHistoryScreen() {
   const events = state.notificationEvents;
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
+    <div style={{ position: "absolute", inset: 0, background: theme.bg.canvas, display: "flex", flexDirection: "column" }}>
       <div className="thatfridge-wide-content" style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 12, boxSizing: "border-box" }}>
         <div
           onClick={actions.goHome}
-          style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
+          style={{ width: 32, height: 32, borderRadius: 16, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
         >
-          <X className="thatfridge-hide-desktop" size={15} color="rgba(22,50,92,0.5)" strokeWidth={2} />
-          <ChevronLeft className="thatfridge-show-desktop" size={17} color="rgba(22,50,92,0.5)" strokeWidth={2.2} />
+          <X className="thatfridge-hide-desktop" size={15} color={theme.text.muted} strokeWidth={2} />
+          <ChevronLeft className="thatfridge-show-desktop" size={17} color={theme.text.muted} strokeWidth={2.2} />
         </div>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 800 }}>Notifications</div>
-          <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)" }}>Swipe left or tap Clear to mark as done</div>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 14 }}>Notifications</div>
+          <div style={{ fontSize: 11.5, color: theme.text.faint }}>Swipe left or tap Clear to mark as done</div>
         </div>
       </div>
 
       <div className="thatfridge-wide-content" style={{ flex: 1, overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
         {events.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(22,50,92,0.45)", fontSize: 13 }}>
+          <div style={{ textAlign: "center", padding: "60px 20px", color: theme.text.faint, fontSize: 13 }}>
             You&apos;re all caught up — no notifications yet.
           </div>
         ) : (

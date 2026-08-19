@@ -1,12 +1,15 @@
 import { NUTRITION_CATEGORIES } from "@/lib/thatfridge/data";
+import { theme } from "@/lib/thatfridge/theme";
 import type { NutritionCategory } from "@/lib/thatfridge/types";
 
+// other_extras keeps its own purple accent - the theme has no token for it (it isn't one of
+// the four crew-agent colors or a semantic status color), so it's left as a hand-picked hex.
 const CATEGORY_COLOR: Record<NutritionCategory, string> = {
-  protein: "#c1452e",
-  vegetables: "#3f8f5c",
-  fruit: "#d99a2b",
+  protein: theme.agent.guardian,
+  vegetables: theme.agent.shopkeeper,
+  fruit: theme.agent.chef,
   grains: "#b5702f",
-  dairy: "#2f6fb0",
+  dairy: theme.agent.organizer,
   other_extras: "#7a5cb0",
 };
 
@@ -25,7 +28,7 @@ export default function CategoryTag({ category }: { category: NutritionCategory 
         color,
         background: `${color}1a`,
         padding: "2px 7px",
-        borderRadius: 6,
+        borderRadius: theme.radius.sm,
         flex: "none",
         whiteSpace: "nowrap",
       }}

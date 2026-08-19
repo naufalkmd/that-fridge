@@ -2,6 +2,7 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { theme } from "@/lib/thatfridge/theme";
 
 const markdownComponents = {
   p: ({ children }: { children?: React.ReactNode }) => <p style={{ margin: "0 0 8px" }}>{children}</p>,
@@ -13,7 +14,7 @@ const markdownComponents = {
   h3: ({ children }: { children?: React.ReactNode }) => <div style={{ fontSize: 14, fontWeight: 700, margin: "0 0 6px" }}>{children}</div>,
   strong: ({ children }: { children?: React.ReactNode }) => <strong style={{ fontWeight: 800 }}>{children}</strong>,
   a: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
-    <a href={href} target="_blank" rel="noreferrer" style={{ color: "#2f6fb0", textDecoration: "underline" }}>
+    <a href={href} target="_blank" rel="noreferrer" style={{ color: theme.blue, textDecoration: "underline" }}>
       {children}
     </a>
   ),

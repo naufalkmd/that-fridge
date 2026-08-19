@@ -11,6 +11,7 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\MemoryController;
 use App\Http\Controllers\NotificationEventController;
 use App\Http\Controllers\NotificationPrefController;
+use App\Http\Controllers\OrganizerTallyController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\RecipeController;
@@ -81,6 +82,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/badges', [BadgeController::class, 'index']);
     Route::post('/badges/{badgeKey}/progress', [BadgeController::class, 'progress']);
+
+    Route::get('/organizer-tally', [OrganizerTallyController::class, 'show']);
+    Route::post('/organizer-tally/increment', [OrganizerTallyController::class, 'increment']);
 
     Route::get('/notification-events', [NotificationEventController::class, 'index']);
     Route::patch('/notification-events/{notificationEvent}', [NotificationEventController::class, 'update']);

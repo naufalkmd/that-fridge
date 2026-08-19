@@ -6,24 +6,25 @@ import { RECIPE_CATEGORIES } from "@/lib/thatfridge/data";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import AttachmentLightbox from "../AttachmentLightbox";
 import type { RecipeAttachment, RecipeCategory } from "@/lib/thatfridge/types";
+import { theme } from "@/lib/thatfridge/theme";
 
 const labelStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
   letterSpacing: 0.3,
-  color: "rgba(22,50,92,0.5)",
+  color: theme.text.faint,
   marginBottom: 6,
 };
 
 const fieldStyle: React.CSSProperties = {
   width: "100%",
-  border: "none",
+  border: `1px solid ${theme.border.hairline}`,
   outline: "none",
-  background: "#eaf6ff",
-  borderRadius: 14,
+  background: theme.bg.surface2,
+  borderRadius: theme.radius.sm,
   padding: "12px 14px",
   fontSize: 13.5,
-  color: "#16325c",
+  color: theme.text.primary,
   boxSizing: "border-box",
 };
 
@@ -143,7 +144,7 @@ export default function RecipeFormSheet() {
   };
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)", zIndex: 10 }}>
+    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 10 }}>
       <div
         style={{
           position: "absolute",
@@ -151,8 +152,8 @@ export default function RecipeFormSheet() {
           right: 0,
           bottom: 0,
           top: 60,
-          background: "#fff",
-          borderRadius: "28px 28px 0 0",
+          background: theme.bg.surface,
+          borderRadius: `${theme.radius.xl}px ${theme.radius.xl}px 0 0`,
           padding: "14px 22px 26px",
           animation: "pop .22s ease-out",
           display: "flex",
@@ -161,9 +162,9 @@ export default function RecipeFormSheet() {
       >
         <div
           onClick={actions.closeRecipeForm}
-          style={{ width: 36, height: 5, borderRadius: 3, background: "rgba(22,50,92,0.18)", margin: "0 auto 16px", cursor: "pointer", flex: "none" }}
+          style={{ width: 36, height: 5, borderRadius: 3, background: theme.border.strong, margin: "0 auto 16px", cursor: "pointer", flex: "none" }}
         />
-        <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, flex: "none" }}>{isEditing ? "Edit recipe" : "New recipe"}</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 14, marginBottom: 18, flex: "none" }}>{isEditing ? "Edit recipe" : "New recipe"}</div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           <div style={{ marginBottom: 16 }}>
@@ -183,11 +184,14 @@ export default function RecipeFormSheet() {
                   alignItems: "center",
                   gap: 6,
                   padding: "0 16px",
-                  borderRadius: 14,
-                  background: state.recipeFormLinkUrl.trim() && !state.recipeFormLinkImporting ? "#16325c" : "rgba(22,50,92,0.25)",
-                  color: "#fff",
+                  borderRadius: theme.radius.sm,
+                  background: state.recipeFormLinkUrl.trim() && !state.recipeFormLinkImporting ? theme.amber : theme.bg.surface2,
+                  color: state.recipeFormLinkUrl.trim() && !state.recipeFormLinkImporting ? "#0a0a0c" : theme.text.faint,
                   fontSize: 12.5,
                   fontWeight: 700,
+                  fontFamily: theme.fontMono,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
                   cursor: state.recipeFormLinkImporting ? "default" : "pointer",
                 }}
               >
@@ -196,7 +200,7 @@ export default function RecipeFormSheet() {
               </div>
             </div>
             {state.recipeFormLinkError && (
-              <div style={{ fontSize: 11.5, fontWeight: 600, color: "#c1452e", marginTop: 6 }}>{state.recipeFormLinkError}</div>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: theme.bad, marginTop: 6 }}>{state.recipeFormLinkError}</div>
             )}
           </div>
 
@@ -253,16 +257,16 @@ export default function RecipeFormSheet() {
                   />
                   <div
                     onClick={() => actions.removeRecipeFormIngredient(i)}
-                    style={{ width: 34, height: 34, borderRadius: 10, background: "#fdf1ee", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
+                    style={{ width: 34, height: 34, borderRadius: theme.radius.sm, background: theme.bg.surface2, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
                   >
-                    <Minus size={15} color="#c1452e" strokeWidth={2.4} />
+                    <Minus size={15} color={theme.bad} strokeWidth={2.4} />
                   </div>
                 </div>
               ))}
             </div>
             <div
               onClick={actions.addRecipeFormIngredient}
-              style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, color: "#2f6fb0", fontSize: 12.5, fontWeight: 700, cursor: "pointer", width: "fit-content" }}
+              style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, color: theme.blue, fontSize: 12.5, fontWeight: 700, cursor: "pointer", width: "fit-content" }}
             >
               <Plus size={14} strokeWidth={2.4} />
               Add ingredient
@@ -274,7 +278,7 @@ export default function RecipeFormSheet() {
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {state.recipeFormSteps.map((step, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ width: 22, height: 22, borderRadius: 11, background: "#eaf6ff", color: "#2f6fb0", fontSize: 11.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                  <div style={{ width: 22, height: 22, borderRadius: 11, background: theme.bg.surface2, color: theme.blue, fontSize: 11.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
                     {i + 1}
                   </div>
                   <input
@@ -285,16 +289,16 @@ export default function RecipeFormSheet() {
                   />
                   <div
                     onClick={() => actions.removeRecipeFormStep(i)}
-                    style={{ width: 34, height: 34, borderRadius: 10, background: "#fdf1ee", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
+                    style={{ width: 34, height: 34, borderRadius: theme.radius.sm, background: theme.bg.surface2, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
                   >
-                    <Minus size={15} color="#c1452e" strokeWidth={2.4} />
+                    <Minus size={15} color={theme.bad} strokeWidth={2.4} />
                   </div>
                 </div>
               ))}
             </div>
             <div
               onClick={actions.addRecipeFormStep}
-              style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, color: "#2f6fb0", fontSize: 12.5, fontWeight: 700, cursor: "pointer", width: "fit-content" }}
+              style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, color: theme.blue, fontSize: 12.5, fontWeight: 700, cursor: "pointer", width: "fit-content" }}
             >
               <Plus size={14} strokeWidth={2.4} />
               Add step
@@ -309,7 +313,7 @@ export default function RecipeFormSheet() {
                   <div
                     key={i}
                     onClick={() => setViewingAttachment(att)}
-                    style={{ position: "relative", width: 64, height: 64, borderRadius: 12, overflow: "hidden", background: "#000", cursor: "pointer" }}
+                    style={{ position: "relative", width: 64, height: 64, borderRadius: theme.radius.sm, overflow: "hidden", background: "#000", cursor: "pointer" }}
                   >
                     {att.type === "video" ? (
                       <>
@@ -326,7 +330,7 @@ export default function RecipeFormSheet() {
                         e.stopPropagation();
                         actions.removeRecipeFormAttachment(i);
                       }}
-                      style={{ position: "absolute", top: 3, right: 3, width: 18, height: 18, borderRadius: 9, background: "rgba(22,50,92,0.75)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                      style={{ position: "absolute", top: 3, right: 3, width: 18, height: 18, borderRadius: 9, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
                     >
                       <X size={11} color="#fff" strokeWidth={2.6} />
                     </div>
@@ -336,7 +340,7 @@ export default function RecipeFormSheet() {
             )}
             {cameraMode ? (
               <div>
-                <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", borderRadius: 16, overflow: "hidden", background: "#000", marginBottom: 10 }}>
+                <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", borderRadius: theme.radius.md, overflow: "hidden", background: "#000", marginBottom: 10 }}>
                   <video ref={cameraVideoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   <div
                     onClick={closeCameraPanel}
@@ -346,16 +350,16 @@ export default function RecipeFormSheet() {
                   </div>
                   {isRecording && (
                     <div style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.45)", padding: "3px 8px", borderRadius: 10 }}>
-                      <div style={{ width: 7, height: 7, borderRadius: 4, background: "#c1452e" }} />
+                      <div style={{ width: 7, height: 7, borderRadius: 4, background: theme.bad }} />
                       <div style={{ fontSize: 10.5, fontWeight: 700, color: "#fff" }}>REC</div>
                     </div>
                   )}
                 </div>
                 {cameraStatus === "starting" && (
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(22,50,92,0.5)", textAlign: "center", marginBottom: 8 }}>Starting camera…</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: theme.text.faint, textAlign: "center", marginBottom: 8 }}>Starting camera…</div>
                 )}
                 {cameraStatus === "error" && (
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "#c1452e", textAlign: "center", marginBottom: 8 }}>{cameraError}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: theme.bad, textAlign: "center", marginBottom: 8 }}>{cameraError}</div>
                 )}
                 {cameraStatus === "ready" && (
                   <div
@@ -366,8 +370,8 @@ export default function RecipeFormSheet() {
                       width: 54,
                       height: 54,
                       borderRadius: 27,
-                      background: cameraMode === "video" && isRecording ? "#c1452e" : "#16325c",
-                      border: "3px solid rgba(22,50,92,0.15)",
+                      background: cameraMode === "video" && isRecording ? theme.bad : theme.amber,
+                      border: `3px solid ${theme.border.hairline}`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -375,11 +379,11 @@ export default function RecipeFormSheet() {
                     }}
                   >
                     {cameraMode === "photo" ? (
-                      <Camera size={22} color="#fff" strokeWidth={2} />
+                      <Camera size={22} color="#0a0a0c" strokeWidth={2} />
                     ) : isRecording ? (
                       <Square size={18} color="#fff" fill="#fff" strokeWidth={0} />
                     ) : (
-                      <div style={{ width: 20, height: 20, borderRadius: 10, background: "#c1452e" }} />
+                      <div style={{ width: 20, height: 20, borderRadius: 10, background: theme.bad }} />
                     )}
                   </div>
                 )}
@@ -388,21 +392,21 @@ export default function RecipeFormSheet() {
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                 <div
                   onClick={() => galleryInputRef.current?.click()}
-                  style={{ display: "flex", alignItems: "center", gap: 6, color: "#2f6fb0", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
+                  style={{ display: "flex", alignItems: "center", gap: 6, color: theme.blue, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
                 >
                   <Images size={14} strokeWidth={2.2} />
                   Add from gallery
                 </div>
                 <div
                   onClick={() => setCameraMode("photo")}
-                  style={{ display: "flex", alignItems: "center", gap: 6, color: "#2f6fb0", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
+                  style={{ display: "flex", alignItems: "center", gap: 6, color: theme.blue, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
                 >
                   <Camera size={14} strokeWidth={2.2} />
                   Take photo
                 </div>
                 <div
                   onClick={() => setCameraMode("video")}
-                  style={{ display: "flex", alignItems: "center", gap: 6, color: "#2f6fb0", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
+                  style={{ display: "flex", alignItems: "center", gap: 6, color: theme.blue, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
                 >
                   <Video size={14} strokeWidth={2.2} />
                   Take video
@@ -410,7 +414,7 @@ export default function RecipeFormSheet() {
               </div>
             )}
             {state.recipeFormAttachmentUploading && (
-              <div style={{ fontSize: 11.5, fontWeight: 600, color: "rgba(22,50,92,0.5)", marginTop: 6 }}>Uploading…</div>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: theme.text.faint, marginTop: 6 }}>Uploading…</div>
             )}
             <input ref={galleryInputRef} type="file" accept="image/*,video/*" onChange={handleAttachmentFile} style={{ display: "none" }} />
           </div>
@@ -420,24 +424,24 @@ export default function RecipeFormSheet() {
               {!confirmingDelete ? (
                 <div
                   onClick={() => setConfirmingDelete(true)}
-                  style={{ textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(193,69,46,0.25)", color: "#c1452e", fontSize: 13.5, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                  style={{ textAlign: "center", padding: 13, borderRadius: theme.radius.sm, background: theme.bg.surface, border: `1px solid ${theme.bad}40`, color: theme.bad, fontSize: 13.5, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                 >
                   <Trash2 size={14} strokeWidth={2.2} />
                   Delete recipe
                 </div>
               ) : (
-                <div style={{ borderRadius: 14, padding: 14, background: "#fdf1ee", border: "1px solid rgba(193,69,46,0.25)" }}>
-                  <div style={{ fontSize: 12.5, color: "rgba(22,50,92,0.7)", marginBottom: 10 }}>Delete this recipe? This can&apos;t be undone.</div>
+                <div style={{ borderRadius: theme.radius.sm, padding: 14, background: theme.bg.surface2, border: `1px solid ${theme.bad}40` }}>
+                  <div style={{ fontSize: 12.5, color: theme.text.muted, marginBottom: 10 }}>Delete this recipe? This can&apos;t be undone.</div>
                   <div style={{ display: "flex", gap: 10 }}>
                     <div
                       onClick={() => setConfirmingDelete(false)}
-                      style={{ flex: 1, textAlign: "center", padding: 10, borderRadius: 12, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#16325c", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                      style={{ flex: 1, textAlign: "center", padding: 10, borderRadius: theme.radius.sm, background: theme.bg.surface2, border: `1px solid ${theme.border.hairline}`, color: theme.text.primary, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
                     >
                       Cancel
                     </div>
                     <div
                       onClick={() => state.recipeFormId && actions.deleteCustomRecipe(state.recipeFormId)}
-                      style={{ flex: 1, textAlign: "center", padding: 10, borderRadius: 12, background: "#c1452e", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                      style={{ flex: 1, textAlign: "center", padding: 10, borderRadius: theme.radius.sm, background: theme.bad, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
                     >
                       Yes, delete
                     </div>
@@ -451,7 +455,7 @@ export default function RecipeFormSheet() {
         <div style={{ display: "flex", gap: 10, marginTop: 14, flex: "none" }}>
           <div
             onClick={actions.closeRecipeForm}
-            style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#16325c", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+            style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: theme.radius.sm, background: theme.bg.surface2, border: `1px solid ${theme.border.hairline}`, color: theme.text.primary, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
           >
             Cancel
           </div>
@@ -461,11 +465,14 @@ export default function RecipeFormSheet() {
               flex: 1,
               textAlign: "center",
               padding: 13,
-              borderRadius: 14,
-              background: actions.isRecipeFormValid() ? "#16325c" : "rgba(22,50,92,0.25)",
-              color: "#fff",
+              borderRadius: theme.radius.sm,
+              background: actions.isRecipeFormValid() ? theme.amber : theme.bg.surface2,
+              color: actions.isRecipeFormValid() ? "#0a0a0c" : theme.text.faint,
               fontSize: 13.5,
               fontWeight: 700,
+              fontFamily: theme.fontMono,
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
               cursor: "pointer",
             }}
           >

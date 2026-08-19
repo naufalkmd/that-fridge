@@ -14,10 +14,20 @@ import {
   type ItemWithSection,
   type ShoppingRecommendation,
 } from "@/lib/thatfridge/selectors";
+import {
+  computeFoodBalanceScore,
+  computeOrganizerScore,
+  computeShopkeeperScore,
+  computeWasteSaverScore,
+  type KitchenScoreResult,
+} from "@/lib/thatfridge/scoring";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
+import { theme } from "@/lib/thatfridge/theme";
 import type { ChatAgentName } from "@/lib/thatfridge/api";
 import type { FoodSubtab, RecipeCategory } from "@/lib/thatfridge/types";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
+import { bandColor } from "../AgentScoreCard";
+import { ScoreMeter } from "../CrewScene";
 import FoodIcon from "../FoodIcon";
 import LocationIcon from "../LocationIcon";
 import MarkdownText from "../MarkdownText";
@@ -25,16 +35,16 @@ import ShoppingListPanel from "../ShoppingListPanel";
 import Switch from "../Switch";
 
 const REC_SOURCE_META: Record<ShoppingRecommendation["source"], { label: string; color: string }> = {
-  recipe: { label: "Recipe", color: "#b5702f" },
-  nutrition: { label: "Nutrition", color: "#2f6f47" },
-  habit: { label: "Habit", color: "#8a3320" },
+  recipe: { label: "Recipe", color: theme.amber },
+  nutrition: { label: "Nutrition", color: theme.good },
+  habit: { label: "Habit", color: theme.bad },
 };
 
 const TAB_META: Record<FoodSubtab, { label: string; color: string; icon: string; blurb: string }> = {
-  recipes: { label: "Recipes", color: "#d99a2b", icon: "/images/thatfridge/chef.gif", blurb: "Chef's picks from what you already have" },
-  shopping: { label: "Shopping", color: "#3f8f5c", icon: "/images/thatfridge/shopkeeper.gif", blurb: "Your list, plus what to buy again" },
-  guardian: { label: "Guardian", color: "#c1452e", icon: "/images/thatfridge/guardian.gif", blurb: "Riskiest items are listed first" },
-  organizer: { label: "Organizer", color: "#2f6fb0", icon: "/images/thatfridge/organizer.gif", blurb: "Tap a spot to move an item there" },
+  recipes: { label: "Recipes", color: theme.agent.chef, icon: "/images/thatfridge/chef.gif", blurb: "Chef's picks from what you already have" },
+  shopping: { label: "Shopping", color: theme.agent.shopkeeper, icon: "/images/thatfridge/shopkeeper.gif", blurb: "Your list, plus what to buy again" },
+  guardian: { label: "Guardian", color: theme.agent.guardian, icon: "/images/thatfridge/guardian.gif", blurb: "Riskiest items are listed first" },
+  organizer: { label: "Organizer", color: theme.agent.organizer, icon: "/images/thatfridge/organizer.gif", blurb: "Tap a spot to move an item there" },
 };
 
 const AGENT_NAME_BY_TAB: Record<FoodSubtab, ChatAgentName> = {
@@ -42,6 +52,16 @@ const AGENT_NAME_BY_TAB: Record<FoodSubtab, ChatAgentName> = {
   shopping: "Shopkeeper",
   guardian: "Guardian",
   organizer: "Organizer",
+};
+
+// Each tab is one agent's home, so it gets that same agent's Kitchen Score card - the one
+// place on this screen that says "how's this agent actually doing", not just "what does it
+// want you to look at right now".
+const SCORE_COMPUTE_BY_TAB: Record<FoodSubtab, (state: Parameters<typeof computeWasteSaverScore>[0]) => KitchenScoreResult> = {
+  recipes: computeFoodBalanceScore,
+  shopping: computeShopkeeperScore,
+  guardian: computeWasteSaverScore,
+  organizer: computeOrganizerScore,
 };
 
 const RISK_BUCKETS: { key: string; label: string; test: (f: number) => boolean; hint: string }[] = [
@@ -58,7 +78,7 @@ function RingTimer({ freshness }: { freshness: number }) {
   const color = freshColor(freshness);
   return (
     <svg width={size} height={size} style={{ flex: "none", transform: "rotate(-90deg)" }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(22,50,92,0.1)" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={theme.border.hairline} strokeWidth={stroke} />
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -111,6 +131,7 @@ export default function FoodHubScreen() {
   })).filter((g) => g.items.length > 0);
 
   const agentName = AGENT_NAME_BY_TAB[activeTab];
+  const agentScore = SCORE_COMPUTE_BY_TAB[activeTab](state);
   const insightText = state.agentInsights[agentName];
   const isActivating = !!state.agentInsightLoading[agentName];
 
@@ -139,7 +160,7 @@ export default function FoodHubScreen() {
             : "Nothing to organize yet";
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", overflowY: "auto" }}>
+    <div style={{ position: "absolute", inset: 0, background: theme.bg.canvas, overflowY: "auto" }}>
       {activeTab === "recipes" && (
         <div
           onClick={actions.openWhatToEat}
@@ -150,22 +171,22 @@ export default function FoodHubScreen() {
             width: 52,
             height: 52,
             borderRadius: 26,
-            background: "#16325c",
+            background: theme.amber,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 10px 22px rgba(22,50,92,0.35)",
+            border: `1px solid ${theme.border.strong}`,
             cursor: "pointer",
             zIndex: 5,
           }}
         >
-          <ChefHat size={22} color="#fff" strokeWidth={2.2} />
+          <ChefHat size={22} color="#0a0a0c" strokeWidth={2.2} />
         </div>
       )}
-      <div style={{ background: "linear-gradient(160deg, #1e4576 0%, #16325c 55%, #0a1a30 100%)" }}>
+      <div style={{ background: theme.bg.surface2 }}>
       <div className="thatfridge-wide-content" style={{ padding: "24px 20px 24px", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>Crew</div>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 16, color: theme.text.primary }}>Crew</div>
           <div
             onClick={() => actions.goTab("home")}
             style={{
@@ -173,11 +194,11 @@ export default function FoodHubScreen() {
               alignItems: "center",
               gap: 5,
               padding: "5px 10px",
-              borderRadius: 10,
-              background: "rgba(255,255,255,0.12)",
+              borderRadius: theme.radius.sm,
+              background: theme.bg.surface,
               fontSize: 11,
               fontWeight: 700,
-              color: "rgba(255,255,255,0.75)",
+              color: theme.text.muted,
               cursor: "pointer",
             }}
           >
@@ -197,29 +218,27 @@ export default function FoodHubScreen() {
               style={{ objectFit: "contain", imageRendering: "pixelated", filter: "drop-shadow(0 8px 14px rgba(0,0,0,0.35))" }}
             />
           </div>
-          <div style={{ background: "#fff", borderRadius: 20, boxShadow: "0 10px 24px rgba(0,0,0,0.2)", padding: "14px 16px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 8 }}>
+          <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.lg, padding: "14px 16px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 8 }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: activeMeta.color }}>{agentName}</div>
-            <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.55)", lineHeight: 1.4 }}>{heroLine}</div>
+            <div style={{ fontSize: 11.5, color: theme.text.muted, lineHeight: 1.4 }}>{heroLine}</div>
 
             {activeTab === "guardian" && allItems.length > 0 && (
               <div style={{ display: "flex", height: 6, borderRadius: 3, overflow: "hidden" }}>
-                <div style={{ width: `${(riskCount / barTotal) * 100}%`, background: "#c1452e" }} />
-                <div style={{ width: `${(watchCount / barTotal) * 100}%`, background: "#d99a2b" }} />
-                <div style={{ width: `${(freshCount / barTotal) * 100}%`, background: "#3f8f5c" }} />
+                <div style={{ width: `${(riskCount / barTotal) * 100}%`, background: theme.bad }} />
+                <div style={{ width: `${(watchCount / barTotal) * 100}%`, background: theme.warn }} />
+                <div style={{ width: `${(freshCount / barTotal) * 100}%`, background: theme.good }} />
               </div>
             )}
 
-            {insightText && (
-              <div style={{ position: "relative", fontSize: 11.5, color: "#16325c", lineHeight: 1.5, background: `${activeMeta.color}0f`, borderRadius: 12, padding: "9px 26px 9px 11px" }}>
-                <div
-                  onClick={() => actions.dismissAgentInsight(agentName)}
-                  style={{ position: "absolute", top: 7, right: 7, width: 18, height: 18, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(22,50,92,0.35)" }}
-                >
-                  <X size={12} strokeWidth={2.4} />
-                </div>
-                <MarkdownText text={insightText} />
-              </div>
-            )}
+            <div style={{ fontSize: 11.5, color: theme.text.primary, lineHeight: 1.5, background: `${bandColor(agentScore.score)}14`, borderRadius: theme.radius.sm, padding: "9px 11px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <span>{agentScore.headline}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                <span style={{ fontWeight: 800, fontVariantNumeric: "tabular-nums", color: bandColor(agentScore.score) }}>
+                  {agentScore.score !== null ? agentScore.score : "–"}
+                </span>
+                <ScoreMeter score={agentScore.score} color={activeMeta.color} float={false} />
+              </span>
+            </div>
 
             <div
               onClick={() => !isActivating && actions.activateAgent(agentName)}
@@ -230,9 +249,9 @@ export default function FoodHubScreen() {
                 justifyContent: "center",
                 gap: 6,
                 padding: 8,
-                borderRadius: 11,
+                borderRadius: theme.radius.sm,
                 background: insightText ? `${activeMeta.color}14` : activeMeta.color,
-                color: insightText ? activeMeta.color : "#fff",
+                color: insightText ? activeMeta.color : "#0a0a0c",
                 fontSize: 12,
                 fontWeight: 700,
                 cursor: isActivating ? "default" : "pointer",
@@ -244,33 +263,33 @@ export default function FoodHubScreen() {
             </div>
 
             {activeTab === "organizer" && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 2, paddingTop: 8, borderTop: "1px solid rgba(22,50,92,0.08)" }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(22,50,92,0.6)", lineHeight: 1.3 }}>Let Organizer move items for you</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 2, paddingTop: 8, borderTop: `1px solid ${theme.border.hairline}` }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: theme.text.muted, lineHeight: 1.3 }}>Let Organizer move items for you</div>
                 <Switch on={!!state.notificationPrefs.crewActionsEnabled} onClick={() => actions.toggleNotificationPref("crewActionsEnabled")} />
               </div>
             )}
 
             {activeTab === "organizer" && state.organizerMovesLoading && (
-              <div style={{ fontSize: 11, color: "rgba(22,50,92,0.45)", textAlign: "center" }}>Checking for misplaced items…</div>
+              <div style={{ fontSize: 11, color: theme.text.faint, textAlign: "center" }}>Checking for misplaced items…</div>
             )}
 
             {activeTab === "organizer" &&
               state.organizerSuggestedMoves.map((move) => {
                 const locationLabel = STORAGE_LOCATIONS.find((l) => l.key === move.location)?.label || move.location;
                 return (
-                  <div key={move.itemId} style={{ display: "flex", alignItems: "center", gap: 8, background: `${activeMeta.color}0f`, borderRadius: 10, padding: "7px 6px 7px 10px" }}>
-                    <div style={{ flex: 1, fontSize: 11.5, color: "#16325c", lineHeight: 1.3 }}>
+                  <div key={move.itemId} style={{ display: "flex", alignItems: "center", gap: 8, background: `${activeMeta.color}0f`, borderRadius: theme.radius.sm, padding: "7px 6px 7px 10px" }}>
+                    <div style={{ flex: 1, fontSize: 11.5, color: theme.text.primary, lineHeight: 1.3 }}>
                       Move <strong>{move.itemName}</strong> to {locationLabel}
                     </div>
                     <div
                       onClick={() => actions.applyOrganizerMove(move.itemId, move.location)}
-                      style={{ fontSize: 11, fontWeight: 700, color: activeMeta.color, cursor: "pointer", padding: "5px 9px", borderRadius: 8, background: "#fff", flex: "none" }}
+                      style={{ fontSize: 11, fontWeight: 700, color: activeMeta.color, cursor: "pointer", padding: "5px 9px", borderRadius: theme.radius.sm, background: theme.bg.surface, flex: "none" }}
                     >
                       Apply
                     </div>
                     <div
                       onClick={() => actions.dismissOrganizerMove(move.itemId)}
-                      style={{ cursor: "pointer", color: "rgba(22,50,92,0.3)", flex: "none", display: "flex" }}
+                      style={{ cursor: "pointer", color: theme.text.faint, flex: "none", display: "flex" }}
                     >
                       <X size={13} strokeWidth={2.4} />
                     </div>
@@ -279,6 +298,35 @@ export default function FoodHubScreen() {
               })}
           </div>
         </div>
+
+        {insightText && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontFamily: theme.fontMono, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", color: theme.text.faint, marginBottom: 8 }}>
+              {"// " + agentName.toLowerCase() + " says"}
+            </div>
+            <div
+              style={{
+                position: "relative",
+                textAlign: "left",
+                background: `linear-gradient(${activeMeta.color}12, ${activeMeta.color}12), ${theme.bg.surface2}`,
+                border: `1px solid ${theme.border.hairline}`,
+                borderLeft: `3px solid ${activeMeta.color}`,
+                borderRadius: theme.radius.sm,
+                padding: "10px 30px 10px 12px",
+              }}
+            >
+              <div
+                onClick={() => actions.dismissAgentInsight(agentName)}
+                style={{ position: "absolute", top: 8, right: 8, width: 18, height: 18, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: theme.text.faint }}
+              >
+                <X size={12} strokeWidth={2.4} />
+              </div>
+              <div style={{ fontSize: 11.5, color: theme.text.primary, lineHeight: 1.5 }}>
+                <MarkdownText text={insightText} />
+              </div>
+            </div>
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: 8 }}>
           {FOOD_TAB_ORDER.map((tab) => {
@@ -292,12 +340,12 @@ export default function FoodHubScreen() {
                   flex: 1,
                   textAlign: "center",
                   padding: "10px 4px",
-                  borderRadius: 13,
+                  borderRadius: theme.radius.sm,
                   fontSize: 12,
                   fontWeight: 700,
                   cursor: "pointer",
-                  background: active ? meta.color : "rgba(255,255,255,0.08)",
-                  color: active ? "#fff" : "rgba(255,255,255,0.55)",
+                  background: active ? meta.color : theme.bg.surface,
+                  color: active ? "#0a0a0c" : theme.text.faint,
                   transition: "background .15s ease, color .15s ease",
                 }}
               >
@@ -322,15 +370,15 @@ export default function FoodHubScreen() {
           {/* recipes pane */}
           <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", padding: "20px 20px 100px", boxSizing: "border-box" }}>
             {tonightPick && (
-              <div onClick={() => actions.openRecipeDetail(tonightPick.id)} style={{ position: "relative", background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", marginBottom: 18, cursor: "pointer" }}>
-                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c", marginBottom: 8 }}>TONIGHT&apos;S PICK</div>
+              <div onClick={() => actions.openRecipeDetail(tonightPick.id)} style={{ position: "relative", background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.lg, padding: "14px 16px", marginBottom: 18, cursor: "pointer" }}>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: theme.text.primary, marginBottom: 8 }}>TONIGHT&apos;S PICK</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ position: "relative", width: 46, height: 46, flex: "none", borderRadius: 13, background: "#f6f1e4", padding: 8, boxSizing: "border-box" }}>
+                  <div style={{ position: "relative", width: 46, height: 46, flex: "none", borderRadius: theme.radius.sm, background: theme.bg.surface2, padding: 8, boxSizing: "border-box" }}>
                     <FoodIcon icon={tonightPick.icon} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 3 }}>{tonightPick.name}</div>
-                    <div style={{ fontSize: 12, color: "rgba(22,50,92,0.5)" }}>
+                    <div style={{ fontSize: 12, color: theme.text.faint }}>
                       {tonightPick.minutes} min · {tonightPick.ratioLabel}
                     </div>
                   </div>
@@ -339,10 +387,10 @@ export default function FoodHubScreen() {
             )}
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)" }}>ALL RECIPES</div>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint }}>ALL RECIPES</div>
               <div
                 onClick={() => actions.openNewRecipeForm()}
-                style={{ display: "flex", alignItems: "center", gap: 4, color: "#2f6fb0", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
+                style={{ display: "flex", alignItems: "center", gap: 4, color: theme.blue, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
               >
                 <Plus size={14} strokeWidth={2.4} />
                 Add recipe
@@ -364,13 +412,12 @@ export default function FoodHubScreen() {
                       flex: "none",
                       whiteSpace: "nowrap",
                       padding: "7px 14px",
-                      borderRadius: 14,
+                      borderRadius: theme.radius.sm,
                       fontSize: 12.5,
                       fontWeight: 700,
                       cursor: "pointer",
-                      background: active ? "#16325c" : "#fff",
-                      color: active ? "#fff" : "#16325c",
-                      boxShadow: "0 4px 10px rgba(22,50,92,0.08)",
+                      background: active ? theme.amber : theme.bg.surface2,
+                      color: active ? "#0a0a0c" : theme.text.primary,
                     }}
                   >
                     {opt.label}
@@ -379,32 +426,32 @@ export default function FoodHubScreen() {
               })}
             </div>
 
-            <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden" }}>
+            <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, overflow: "hidden" }}>
               {filteredRecipesView.length === 0 && (
-                <div style={{ padding: "24px 14px", textAlign: "center", fontSize: 12.5, color: "rgba(22,50,92,0.45)" }}>No recipes here yet.</div>
+                <div style={{ padding: "24px 14px", textAlign: "center", fontSize: 12.5, color: theme.text.faint }}>No recipes here yet.</div>
               )}
               {filteredRecipesView.map((r) => {
                 const categoryLabel = RECIPE_CATEGORIES.find((c) => c.key === r.category)?.label;
                 return (
-                  <div key={r.id} onClick={() => actions.openRecipeDetail(r.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}>
-                    <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
+                  <div key={r.id} onClick={() => actions.openRecipeDetail(r.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: `1px solid ${theme.border.hairline}`, cursor: "pointer" }}>
+                    <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: theme.radius.sm, background: theme.bg.surface2, padding: 6, boxSizing: "border-box" }}>
                       <FoodIcon icon={r.icon} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{r.name}</div>
-                        {r.isFavorite && <Heart size={11} color="#c1452e" fill="#c1452e" strokeWidth={0} />}
+                        {r.isFavorite && <Heart size={11} color={theme.bad} fill={theme.bad} strokeWidth={0} />}
                       </div>
-                      <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.45)", display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ fontSize: 11.5, color: theme.text.faint, display: "flex", alignItems: "center", gap: 6 }}>
                         {r.minutes} min
                         {categoryLabel && (
-                          <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 0.3, color: "#2f6fb0", background: "#2f6fb01a", padding: "2px 7px", borderRadius: 8 }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 0.3, color: theme.blue, background: `${theme.blue}1a`, padding: "2px 7px", borderRadius: theme.radius.sm }}>
                             {categoryLabel.toUpperCase()}
                           </span>
                         )}
                       </div>
                     </div>
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: r.ratioColor, background: r.ratioBg, padding: "5px 10px", borderRadius: 11 }}>{r.ratioLabel}</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: r.ratioColor, background: r.ratioBg, padding: "5px 10px", borderRadius: theme.radius.sm }}>{r.ratioLabel}</div>
                   </div>
                 );
               })}
@@ -415,20 +462,20 @@ export default function FoodHubScreen() {
           <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", padding: "20px 20px 100px", boxSizing: "border-box" }}>
             {expiringOwned.length > 0 && (
               <div style={{ marginBottom: 22 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 2 }}>ALREADY HAVE — DON&apos;T REBUY</div>
-                <div style={{ fontSize: 11, color: "rgba(22,50,92,0.4)", marginBottom: 8 }}>Use these up before buying more</div>
-                <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, overflow: "hidden" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 2 }}>ALREADY HAVE — DON&apos;T REBUY</div>
+                <div style={{ fontSize: 11, color: theme.text.faint, marginBottom: 8 }}>Use these up before buying more</div>
+                <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.sm, overflow: "hidden" }}>
                   {expiringOwned.map((item, i) => (
                     <div
                       key={item.id}
-                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", borderBottom: i < expiringOwned.length - 1 ? "1px solid rgba(22,50,92,0.06)" : undefined }}
+                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", borderBottom: i < expiringOwned.length - 1 ? `1px solid ${theme.border.hairline}` : undefined }}
                     >
                       <div style={{ position: "relative", width: 22, height: 22, flex: "none" }}>
                         <FoodIcon icon={item.icon} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600 }}>
                         {item.name}
-                        {showFridgeTags && <span style={{ fontWeight: 500, color: "rgba(22,50,92,0.4)" }}> · {item.fridgeName}</span>}
+                        {showFridgeTags && <span style={{ fontWeight: 500, color: theme.text.faint }}> · {item.fridgeName}</span>}
                       </div>
                       <div style={{ fontSize: 11, fontWeight: 700, color: freshColor(item.freshness), flex: "none" }}>{daysLabel(item.days)}</div>
                     </div>
@@ -437,17 +484,17 @@ export default function FoodHubScreen() {
               </div>
             )}
 
-            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>SHOPPING LIST</div>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 8 }}>SHOPPING LIST</div>
             <ShoppingListPanel />
 
             {recommendations.length > 0 && (
               <div style={{ marginTop: 22 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>RECOMMENDED FOR YOU</div>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 8 }}>RECOMMENDED FOR YOU</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {recommendations.map((rec) => {
                     const meta = REC_SOURCE_META[rec.source];
                     return (
-                      <div key={rec.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: "10px 14px" }}>
+                      <div key={rec.id} style={{ display: "flex", alignItems: "center", gap: 12, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.sm, padding: "10px 14px" }}>
                         <div style={{ position: "relative", width: 26, height: 26, flex: "none" }}>
                           <FoodIcon icon={rec.icon} />
                         </div>
@@ -458,13 +505,13 @@ export default function FoodHubScreen() {
                               {meta.label.toUpperCase()}
                             </div>
                           </div>
-                          <div style={{ fontSize: 11, color: "rgba(22,50,92,0.45)" }}>{rec.reason}</div>
+                          <div style={{ fontSize: 11, color: theme.text.faint }}>{rec.reason}</div>
                         </div>
                         <div
                           onClick={() => actions.addPredictedToShopping(rec.name, rec.icon)}
-                          style={{ width: 30, height: 30, borderRadius: 10, background: "#16325c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
+                          style={{ width: 30, height: 30, borderRadius: theme.radius.sm, background: theme.amber, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
                         >
-                          <Plus size={16} color="#fff" strokeWidth={2.3} />
+                          <Plus size={16} color="#0a0a0c" strokeWidth={2.3} />
                         </div>
                       </div>
                     );
@@ -477,24 +524,24 @@ export default function FoodHubScreen() {
           {/* guardian pane */}
           <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", padding: "20px 20px 100px", boxSizing: "border-box" }}>
             {allItems.length === 0 && (
-              <div style={{ textAlign: "center", color: "rgba(22,50,92,0.45)", fontSize: 13, marginTop: 40 }}>
+              <div style={{ textAlign: "center", color: theme.text.faint, fontSize: 13, marginTop: 40 }}>
                 Nothing in this fridge yet — add items to have Guardian watch over them.
               </div>
             )}
             {riskGroups.map((g) => (
               <div key={g.key} style={{ marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: "rgba(22,50,92,0.55)" }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: theme.text.muted }}>
                     {g.label.toUpperCase()} ({g.items.length})
                   </div>
-                  <div style={{ fontSize: 11, color: "rgba(22,50,92,0.4)" }}>{g.hint}</div>
+                  <div style={{ fontSize: 11, color: theme.text.faint }}>{g.hint}</div>
                 </div>
-                <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden" }}>
+                <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, overflow: "hidden" }}>
                   {g.items.map((item: ItemWithSection) => (
                     <div
                       key={item.id}
                       onClick={() => actions.selectItem(item.id)}
-                      style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}
+                      style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: `1px solid ${theme.border.hairline}`, cursor: "pointer" }}
                     >
                       <RingTimer freshness={item.freshness} />
                       <div style={{ position: "relative", width: 28, height: 28, flex: "none" }}>
@@ -502,10 +549,10 @@ export default function FoodHubScreen() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{item.name}</div>
-                        <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.45)", display: "flex", alignItems: "center", gap: 4 }}>
+                        <div style={{ fontSize: 11.5, color: theme.text.faint, display: "flex", alignItems: "center", gap: 4 }}>
                           {item.sectionName} · {item.note}
                           {showFridgeTags && (
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 2, background: "rgba(22,50,92,0.06)", color: "rgba(22,50,92,0.55)", fontWeight: 700, padding: "1px 6px", borderRadius: 6 }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 2, background: theme.bg.surface2, color: theme.text.muted, fontWeight: 700, padding: "1px 6px", borderRadius: theme.radius.sm }}>
                               <MapPin size={9} strokeWidth={2.5} />
                               {item.fridgeName}
                             </span>
@@ -523,7 +570,7 @@ export default function FoodHubScreen() {
           {/* organizer pane */}
           <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", padding: "20px 20px 100px", boxSizing: "border-box" }}>
             {allItems.length === 0 && (
-              <div style={{ textAlign: "center", color: "rgba(22,50,92,0.45)", fontSize: 13, marginTop: 40 }}>
+              <div style={{ textAlign: "center", color: theme.text.faint, fontSize: 13, marginTop: 40 }}>
                 Nothing to organize yet — add items to sort them into place.
               </div>
             )}
@@ -535,23 +582,23 @@ export default function FoodHubScreen() {
                     <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: loc.color }}>
                       {loc.label.toUpperCase()} ({locItems.length})
                     </div>
-                    <div style={{ fontSize: 11, color: "rgba(22,50,92,0.4)" }}>{loc.blurb}</div>
+                    <div style={{ fontSize: 11, color: theme.text.faint }}>{loc.blurb}</div>
                   </div>
-                  <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden" }}>
+                  <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, overflow: "hidden" }}>
                     {locItems.length === 0 && (
-                      <div style={{ padding: "14px", fontSize: 12.5, color: "rgba(22,50,92,0.35)", textAlign: "center" }}>Nothing here yet</div>
+                      <div style={{ padding: "14px", fontSize: 12.5, color: theme.text.faint, textAlign: "center" }}>Nothing here yet</div>
                     )}
                     {locItems.map((item) => {
                       const current = item.location || "fridge";
                       return (
-                        <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)" }}>
+                        <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderBottom: `1px solid ${theme.border.hairline}` }}>
                           <div style={{ position: "relative", width: 26, height: 26, flex: "none" }}>
                             <FoodIcon icon={item.icon} />
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 13.5, fontWeight: 600 }}>{item.name}</div>
                             {showFridgeTags && (
-                              <div style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 10.5, fontWeight: 700, color: "rgba(22,50,92,0.4)" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 10.5, fontWeight: 700, color: theme.text.faint }}>
                                 <MapPin size={9} strokeWidth={2.5} />
                                 {item.fridgeName}
                               </div>
@@ -568,15 +615,15 @@ export default function FoodHubScreen() {
                                   style={{
                                     width: 26,
                                     height: 26,
-                                    borderRadius: 8,
-                                    background: active ? opt.color : "rgba(22,50,92,0.06)",
+                                    borderRadius: theme.radius.sm,
+                                    background: active ? opt.color : theme.bg.surface2,
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
                                     cursor: "pointer",
                                   }}
                                 >
-                                  <LocationIcon location={opt.key} size={13} color={active ? "#fff" : "rgba(22,50,92,0.4)"} />
+                                  <LocationIcon location={opt.key} size={13} color={active ? theme.text.primary : theme.text.faint} />
                                 </div>
                               );
                             })}

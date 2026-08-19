@@ -204,6 +204,14 @@ export interface UserGoal {
   updatedAt: number;
 }
 
+// Cumulative, all-time - backs the Tidiness score. itemsCheckedTotal === 0 means Organizer
+// hasn't run a sweep yet, same "not enough data" meaning as a null waste/balance score.
+export interface OrganizerTally {
+  itemsCheckedTotal: number;
+  itemsCorrectTotal: number;
+  lastCheckedAt: number | null;
+}
+
 export type NotificationKind = "expiring" | "lowStock" | "recipe";
 
 export interface NotificationEvent {

@@ -1,17 +1,18 @@
 "use client";
 
-import { Refrigerator } from "lucide-react";
+import Image from "next/image";
+import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 
 const fieldStyle: React.CSSProperties = {
   width: "100%",
   border: "none",
   outline: "none",
-  background: "#f6f8fa",
-  borderRadius: 14,
+  background: theme.bg.surface2,
+  borderRadius: theme.radius.sm,
   padding: "13px 16px",
   fontSize: 14,
-  color: "#16325c",
+  color: theme.text.primary,
   boxSizing: "border-box",
 };
 
@@ -19,7 +20,7 @@ const labelStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
   letterSpacing: 0.3,
-  color: "rgba(22,50,92,0.5)",
+  color: theme.text.faint,
   marginBottom: 6,
 };
 
@@ -33,18 +34,18 @@ export default function AuthScreen() {
   };
 
   const tabs = (
-    <div style={{ display: "flex", background: "#f6f8fa", borderRadius: 14, padding: 4, gap: 4, marginBottom: 20, width: "fit-content" }}>
+    <div style={{ display: "flex", background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: 4, gap: 4, marginBottom: 20, width: "fit-content" }}>
       <div
         onClick={() => actions.setAuthMode("login")}
         style={{
           textAlign: "center",
           padding: "9px 22px",
-          borderRadius: 11,
+          borderRadius: theme.radius.sm,
           fontSize: 13,
           fontWeight: 700,
           cursor: "pointer",
-          background: isLogin ? "#16325c" : "transparent",
-          color: isLogin ? "#fff" : "rgba(22,50,92,0.55)",
+          background: isLogin ? theme.bg.surface : "transparent",
+          color: isLogin ? theme.text.primary : theme.text.muted,
         }}
       >
         Log in
@@ -54,12 +55,12 @@ export default function AuthScreen() {
         style={{
           textAlign: "center",
           padding: "9px 22px",
-          borderRadius: 11,
+          borderRadius: theme.radius.sm,
           fontSize: 13,
           fontWeight: 700,
           cursor: "pointer",
-          background: !isLogin ? "#16325c" : "transparent",
-          color: !isLogin ? "#fff" : "rgba(22,50,92,0.55)",
+          background: !isLogin ? theme.bg.surface : "transparent",
+          color: !isLogin ? theme.text.primary : theme.text.muted,
         }}
       >
         Sign up
@@ -114,7 +115,7 @@ export default function AuthScreen() {
       )}
 
       {state.authError && (
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e" }}>{state.authError}</div>
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: theme.bad }}>{state.authError}</div>
       )}
 
       <button
@@ -123,11 +124,14 @@ export default function AuthScreen() {
           marginTop: 4,
           textAlign: "center",
           padding: 14,
-          borderRadius: 14,
-          background: "#16325c",
-          color: "#fff",
+          borderRadius: theme.radius.sm,
+          background: theme.amber,
+          color: "#0a0a0c",
           fontSize: 14,
           fontWeight: 700,
+          fontFamily: theme.fontMono,
+          textTransform: "uppercase",
+          letterSpacing: 0.5,
           cursor: "pointer",
           border: "none",
         }}
@@ -138,18 +142,18 @@ export default function AuthScreen() {
   );
 
   const switchLine = (
-    <div style={{ textAlign: "center", fontSize: 12.5, color: "rgba(22,50,92,0.55)", marginTop: 18 }}>
+    <div style={{ textAlign: "center", fontSize: 12.5, color: theme.text.muted, marginTop: 18 }}>
       {isLogin ? (
         <>
           New here?{" "}
-          <span onClick={() => actions.setAuthMode("signup")} style={{ color: "#16325c", fontWeight: 700, cursor: "pointer" }}>
+          <span onClick={() => actions.setAuthMode("signup")} style={{ color: theme.blue, fontWeight: 700, cursor: "pointer" }}>
             Create an account
           </span>
         </>
       ) : (
         <>
           Already have an account?{" "}
-          <span onClick={() => actions.setAuthMode("login")} style={{ color: "#16325c", fontWeight: 700, cursor: "pointer" }}>
+          <span onClick={() => actions.setAuthMode("login")} style={{ color: theme.blue, fontWeight: 700, cursor: "pointer" }}>
             Log in
           </span>
         </>
@@ -164,7 +168,7 @@ export default function AuthScreen() {
         style={{
           position: "absolute",
           inset: 0,
-          background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)",
+          background: theme.bg.canvas,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
@@ -177,21 +181,22 @@ export default function AuthScreen() {
             style={{
               width: 56,
               height: 56,
-              borderRadius: 18,
-              background: "#16325c",
+              borderRadius: theme.radius.lg,
+              background: theme.bg.surface2,
+              border: `1px solid ${theme.border.hairline}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               margin: "0 auto 14px",
             }}
           >
-            <Refrigerator size={26} color="#fff" strokeWidth={1.8} />
+            <Image src="/images/thatfridge/logo.svg" alt="ThatFridge" width={32} height={33} unoptimized style={{ objectFit: "contain" }} />
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.3, marginBottom: 4 }}>ThatFridge</div>
-          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)" }}>Know what&apos;s inside before you open the door.</div>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 22, letterSpacing: 0.5, marginBottom: 6 }}>ThatFridge</div>
+          <div style={{ fontSize: 13, color: theme.text.muted }}>Know what&apos;s inside before you open the door.</div>
         </div>
 
-        <div style={{ background: "#fff", borderRadius: 22, padding: 20, boxShadow: "0 10px 24px rgba(22,50,92,0.1)" }}>
+        <div style={{ background: theme.bg.surface, borderRadius: theme.radius.lg, padding: 20, border: `1px solid ${theme.border.hairline}` }}>
           {tabs}
           <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {formFields}
@@ -205,8 +210,8 @@ export default function AuthScreen() {
         <div
           className="thatfridge-auth-brand-panel"
           style={{
-            background: "radial-gradient(circle at 20% 15%, rgba(255,255,255,0.10) 0, transparent 45%), linear-gradient(160deg, #1e4576 0%, #16325c 45%, #0a1a30 100%)",
-            color: "#fff",
+            background: `radial-gradient(circle at 20% 15%, rgba(245,166,35,0.08) 0, transparent 45%), ${theme.bg.surface}`,
+            color: theme.text.primary,
             padding: "48px 44px",
             display: "flex",
             flexDirection: "column",
@@ -218,38 +223,38 @@ export default function AuthScreen() {
               style={{
                 width: 40,
                 height: 40,
-                borderRadius: 12,
-                background: "rgba(255,255,255,0.12)",
-                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: theme.radius.sm,
+                background: theme.bg.surface2,
+                border: `1px solid ${theme.border.hairline}`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flex: "none",
               }}
             >
-              <Refrigerator size={18} color="#fff" strokeWidth={1.8} />
+              <Image src="/images/thatfridge/logo.svg" alt="ThatFridge" width={24} height={25} unoptimized style={{ objectFit: "contain" }} />
             </div>
-            <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.2 }}>ThatFridge</div>
+            <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 16, letterSpacing: 0.5 }}>ThatFridge</div>
           </div>
 
           <div style={{ position: "relative", maxWidth: 340 }}>
             <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: -0.6, lineHeight: 1.18, marginBottom: 14 }}>
               Know what&apos;s inside before you open the door.
             </div>
-            <div style={{ fontSize: 14.5, lineHeight: 1.6, color: "rgba(255,255,255,0.72)" }}>
+            <div style={{ fontSize: 14.5, lineHeight: 1.6, color: theme.text.muted }}>
               Scan it, track it, and let your crew of AI helpers tell you what&apos;s about to go bad — before it does.
             </div>
           </div>
 
-          <div style={{ position: "relative", fontSize: 11.5, color: "rgba(255,255,255,0.4)" }}>© {new Date().getFullYear()} ThatFridge</div>
+          <div style={{ position: "relative", fontSize: 11.5, color: theme.text.faint }}>© {new Date().getFullYear()} ThatFridge</div>
         </div>
 
-        <div style={{ padding: "56px 64px", display: "flex", flexDirection: "column", justifyContent: "center", overflowY: "auto", minHeight: 0, background: "#fff" }}>
+        <div style={{ padding: "56px 64px", display: "flex", flexDirection: "column", justifyContent: "center", overflowY: "auto", minHeight: 0, background: theme.bg.canvas }}>
           <div style={{ maxWidth: 340, width: "100%", margin: "0 auto" }}>
             <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.4, marginBottom: 6 }}>
               {isLogin ? "Welcome back" : "Create your account"}
             </div>
-            <div style={{ fontSize: 13.5, color: "rgba(22,50,92,0.55)", marginBottom: 28 }}>
+            <div style={{ fontSize: 13.5, color: theme.text.muted, marginBottom: 28 }}>
               {isLogin ? "Log in to see what's in your fridge." : "Start tracking what's in your fridge."}
             </div>
             {tabs}

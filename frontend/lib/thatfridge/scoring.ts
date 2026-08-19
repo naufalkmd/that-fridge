@@ -22,7 +22,7 @@ import type { ScoreSnapshot as ScoreSnapshotSlice } from "./types";
 //   signal for it, and inventing one would be fake precision.
 
 export interface KitchenScoreResult {
-  key: "waste" | "balance";
+  key: "waste" | "balance" | "organizer" | "shopkeeper";
   label: string;
   /** null = not enough data yet to say anything meaningful. */
   score: number | null;
@@ -72,7 +72,7 @@ export function computeWasteSaverScore(state: ThatFridgeState): KitchenScoreResu
       label: "Waste Saver",
       score: null,
       headline: "Building your score — keep using ThatFridge!",
-      detail: "Add a few items and use some up and this will start tracking how well you're staying ahead of expiry.",
+      detail: "Add and use up a few items to start tracking this.",
     };
   }
 
@@ -93,19 +93,15 @@ export function computeWasteSaverScore(state: ThatFridgeState): KitchenScoreResu
   const raw = WASTE_BASE_SCORE - overduePenalty + responsivenessAdj + engagementBonus;
   const score = Math.max(WASTE_SCORE_FLOOR, Math.min(WASTE_SCORE_CEILING, Math.round(raw)));
 
+  // Kept short: the Kitchen Score card's Guardian tile already shows the overdue count itself
+  // as a badge, right below this text, so this only needs to add what the badge can't.
   const detailParts: string[] = [];
-  detailParts.push(
-    overdueCount === 0
-      ? "Nothing is sitting past its date right now — nice work staying on top of it."
-      // Deliberately doesn't restate overdueCount - Home's Overview "Expiring soon" tile already
-      // shows that number a couple inches above this card, in the same viewport.
-      : "Clearing what's overdue is the fastest way to raise this score."
-  );
+  detailParts.push(overdueCount === 0 ? "Nothing sitting past its date." : "A few things need clearing.");
   if (expiringEvents.length > 0) {
-    detailParts.push(`You've cleared ${doneCount} of ${expiringEvents.length} expiry alerts.`);
+    detailParts.push(`${doneCount}/${expiringEvents.length} alerts cleared.`);
   }
   if (recentUsageCount > 0) {
-    detailParts.push(`${recentUsageCount} item${recentUsageCount === 1 ? "" : "s"} used up in the last ${ENGAGEMENT_LOOKBACK_DAYS} days.`);
+    detailParts.push(`${recentUsageCount} used recently.`);
   }
 
   return {
@@ -169,7 +165,7 @@ export function computeFoodBalanceScore(state: ThatFridgeState): KitchenScoreRes
       label: "Food Balance",
       score: null,
       headline: "Building your score — keep using ThatFridge!",
-      detail: "Use up a few more items across different food groups and this will start reflecting your variety.",
+      detail: "Use up items across a few food groups to start tracking this.",
     };
   }
 
@@ -183,19 +179,18 @@ export function computeFoodBalanceScore(state: ThatFridgeState): KitchenScoreRes
   const raw = VARIETY_WEIGHT * varietyRatio + EVENNESS_WEIGHT * (1 - maxShare);
   const score = Math.max(BALANCE_SCORE_FLOOR, Math.min(BALANCE_SCORE_CEILING, Math.round(raw)));
 
+  // Kept short: the Kitchen Score card's Chef tile already shows which groups are used/missing
+  // as icons, right below this text, so this only needs the disclaimer the icons can't carry.
   const labelFor = (key: string) => NUTRITION_CATEGORIES.find((c) => c.key === key)?.label ?? key;
   const missingGroups = COUNTED_CATEGORIES.filter((g) => groupCounts[g] === 0);
-  const detail =
-    missingGroups.length === 0
-      ? "You've used items across every food group we track recently — good spread."
-      : `You've recently used ${usedGroups.map(labelFor).join(", ") || "nothing yet"} — try adding some ${missingGroups.map(labelFor).join("/")} for a wider mix.`;
+  const detail = missingGroups.length === 0 ? "Good spread this month." : `Still missing ${missingGroups.map(labelFor).join("/")}.`;
 
   return {
     key: "balance",
     label: "Food Balance",
     score,
     headline: score >= 80 ? "Nice variety lately" : score >= 55 ? "Decent mix, could spread out more" : "Mostly one type of food lately",
-    detail: detail + " This is a lightweight variety signal only — not nutrition or medical advice.",
+    detail: detail + " Not nutrition or medical advice.",
   };
 }
 
@@ -219,6 +214,92 @@ export function getFoodGroupCoverage(state: ThatFridgeState): FoodGroupCoverage[
     label: NUTRITION_CATEGORIES.find((c) => c.key === key)?.label ?? key,
     used: groupCounts[key] > 0,
   }));
+}
+
+// ---- Tidiness (Organizer) ---------------------------------------------------------------
+//
+// Unlike waste/balance, there's no synchronous "is this item in the right spot" signal -
+// organizerSuggestedMoves only exists after an on-demand AI sweep (checkOrganizerMoves in
+// useThatFridge.ts) and gets consumed as the user applies/dismisses each suggestion, so it
+// can't back a score read on every render. Instead this reads a cumulative, all-time tally
+// (organizerTally, from GET /organizer-tally) that useThatFridge.ts updates after every sweep -
+// see backend/API.md's "Organizer tally" section. Never resets, so a single messy week doesn't
+// erase a long track record the way a point-in-time check would.
+
+const ORGANIZER_MIN_CHECKED = 5;
+const ORGANIZER_SCORE_FLOOR = 20;
+const ORGANIZER_SCORE_CEILING = 98;
+
+export function computeOrganizerScore(state: ThatFridgeState): KitchenScoreResult {
+  const tally = state.organizerTally;
+
+  if (!tally || tally.itemsCheckedTotal < ORGANIZER_MIN_CHECKED) {
+    return {
+      key: "organizer",
+      label: "Tidiness",
+      score: null,
+      headline: "Building your score — keep using ThatFridge!",
+      detail: "Activate Organizer a few times (crew actions on) to start tracking this.",
+    };
+  }
+
+  const correctRatio = tally.itemsCorrectTotal / tally.itemsCheckedTotal;
+  const score = Math.max(ORGANIZER_SCORE_FLOOR, Math.min(ORGANIZER_SCORE_CEILING, Math.round(correctRatio * 100)));
+  const misplacedTotal = tally.itemsCheckedTotal - tally.itemsCorrectTotal;
+
+  return {
+    key: "organizer",
+    label: "Tidiness",
+    score,
+    headline: score >= 80 ? "Everything's got a home" : score >= 55 ? "Mostly put away right" : "Worth a tidy-up",
+    // Kept short: the ring below this text already spells out the exact correct/checked count.
+    detail: misplacedTotal === 0 ? "Everything checked was already in place." : "Most items checked were already in place.",
+  };
+}
+
+// ---- Shopkeeper (list follow-through) ----------------------------------------------------
+//
+// The only synchronous signal here is the shopping list's own checked/unchecked split - there's
+// no purchase history to tell "avoided a duplicate buy" apart from "didn't need it after all",
+// so that's not attempted (same reasoning as the file header's note on money_saved). This reads
+// as "how much of what you decided you needed has actually made it home", not shopping
+// cleverness.
+
+const SHOPKEEPER_MIN_ITEMS = 3;
+const SHOPKEEPER_SCORE_FLOOR = 20;
+const SHOPKEEPER_SCORE_CEILING = 98;
+
+export function computeShopkeeperScore(state: ThatFridgeState): KitchenScoreResult {
+  const list = state.shoppingList;
+
+  if (list.length < SHOPKEEPER_MIN_ITEMS) {
+    return {
+      key: "shopkeeper",
+      label: "Shopping List",
+      score: null,
+      headline: "Building your score — keep using ThatFridge!",
+      detail: "Add a few items to your shopping list to start tracking this.",
+    };
+  }
+
+  const checkedCount = list.filter((i) => i.checked).length;
+  const score = Math.max(SHOPKEEPER_SCORE_FLOOR, Math.min(SHOPKEEPER_SCORE_CEILING, Math.round((checkedCount / list.length) * 100)));
+
+  return {
+    key: "shopkeeper",
+    label: "Shopping List",
+    score,
+    headline: score >= 80 ? "Almost everything's picked up" : score >= 55 ? "Halfway through the list" : "A lot still on the list",
+    // Kept short: the progress bar below this text already spells out the exact picked-up count.
+    detail: checkedCount === list.length ? "Whole list picked up." : "Still picking up items on the list.",
+  };
+}
+
+/** Simple average of whichever sub-scores currently have a value - null only if all four do. */
+export function getOverallScore(results: KitchenScoreResult[]): number | null {
+  const scored = results.filter((r): r is KitchenScoreResult & { score: number } => r.score !== null);
+  if (scored.length === 0) return null;
+  return Math.round(scored.reduce((sum, r) => sum + r.score, 0) / scored.length);
 }
 
 // ---- Trend (real weekly history, backend/API.md's "Score snapshots") -----------------------

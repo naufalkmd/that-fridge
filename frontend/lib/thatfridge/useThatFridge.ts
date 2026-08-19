@@ -39,12 +39,14 @@ import {
   fetchMemoryFacts,
   fetchNotificationEvents,
   fetchNotificationPrefs,
+  fetchOrganizerTally,
   fetchRecipes,
   fetchScoreSnapshots,
   fetchShoppingItems,
   fetchUsageHistory,
   fetchUserGoal,
   importRecipeFromLink,
+  incrementOrganizerTally,
   login,
   logout,
   markRecipeMade,
@@ -91,6 +93,7 @@ import type {
   NotificationEvent,
   NotificationPrefs,
   NutritionCategory,
+  OrganizerTally,
   ProduceCondition,
   Recipe,
   RecipeAttachment,
@@ -354,6 +357,9 @@ export interface ThatFridgeState {
   // null until the initial fetch resolves - GET /user-goal always firstOrCreate()s a default
   // server-side, so this only stays null very briefly (or if the fetch itself fails).
   userGoal: UserGoal | null;
+  // Cumulative, all-time - backs the Tidiness sub-score. null until the initial fetch resolves,
+  // same firstOrCreate()-so-only-briefly-null story as userGoal above.
+  organizerTally: OrganizerTally | null;
   // Written weekly, server-side only, by app:snapshot-kitchen-scores - see streak.ts's
   // computeStreak and scoring.ts's getScoreTrend, both of which read this instead of a
   // client-computed history.
@@ -475,6 +481,7 @@ export function initialState(): ThatFridgeState {
     notificationPrefs: { expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false, crewActionsEnabled: false },
     notificationEvents: [],
     userGoal: null,
+    organizerTally: null,
     scoreSnapshots: [],
     badges: [],
     badgeUnlockToast: null,
@@ -617,6 +624,7 @@ export function useThatFridge() {
       fetchUsageHistory(),
       fetchMemoryFacts(),
       fetchUserGoal(),
+      fetchOrganizerTally(),
       fetchScoreSnapshots(),
       fetchBadges(),
     ]).then(
@@ -630,6 +638,7 @@ export function useThatFridge() {
         usageHistory,
         memoryFacts,
         userGoal,
+        organizerTally,
         scoreSnapshots,
         badges,
       ]) => {
@@ -655,6 +664,7 @@ export function useThatFridge() {
           usageHistory,
           memoryFacts,
           userGoal,
+          organizerTally,
           scoreSnapshots,
           badges,
           ...(restoredChatMessages.length ? { chatMessages: restoredChatMessages } : {}),
@@ -1506,10 +1516,16 @@ export function useThatFridge() {
         return null;
       })
     ).then((results) => {
+      const moves = results.filter((m) => m !== null);
       patch({
-        organizerSuggestedMoves: results.filter((m) => m !== null),
+        organizerSuggestedMoves: moves,
         organizerMovesLoading: false,
       });
+      // Cumulative Tidiness tally - report this sweep's checked/correct split. Best-effort: a
+      // failed report shouldn't undo the moves the user can already see and act on above.
+      incrementOrganizerTally({ checked: items.length, correct: items.length - moves.length })
+        .then((tally) => patch({ organizerTally: tally }))
+        .catch(() => {});
     });
   };
 

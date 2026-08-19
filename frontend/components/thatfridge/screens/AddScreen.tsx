@@ -9,6 +9,7 @@ import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 import LocationIcon from "../LocationIcon";
 import type { ProduceCondition, ScanMethod, StorageLocation } from "@/lib/thatfridge/types";
+import { theme } from "@/lib/thatfridge/theme";
 
 const SCAN_METHODS: { key: ScanMethod; title: string; desc: string; Icon: typeof Receipt }[] = [
   { key: "receipt", title: "Scan receipt", desc: "Snap your grocery receipt", Icon: Receipt },
@@ -19,14 +20,13 @@ const SCAN_METHODS: { key: ScanMethod; title: string; desc: string; Icon: typeof
 
 const fieldStyle: React.CSSProperties = {
   width: "100%",
-  border: "none",
+  border: `1px solid ${theme.border.hairline}`,
   outline: "none",
-  background: "#fff",
-  boxShadow: "0 6px 16px rgba(22,50,92,0.06)",
-  borderRadius: 14,
+  background: theme.bg.surface2,
+  borderRadius: theme.radius.sm,
   padding: "12px 14px",
   fontSize: 13.5,
-  color: "#16325c",
+  color: theme.text.primary,
   boxSizing: "border-box",
 };
 
@@ -34,7 +34,7 @@ const labelStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
   letterSpacing: 0.3,
-  color: "rgba(22,50,92,0.5)",
+  color: theme.text.faint,
   marginBottom: 6,
 };
 
@@ -64,7 +64,7 @@ function AutoFillButton({ onClick, loading, label = "Auto-fill" }: { onClick: ()
         alignItems: "center",
         gap: 4,
         padding: "0 10px",
-        borderRadius: 10,
+        borderRadius: theme.radius.sm,
         background: `${AUTO_FILL_COLOR}1a`,
         color: AUTO_FILL_COLOR,
         fontSize: 11.5,
@@ -80,7 +80,7 @@ function AutoFillButton({ onClick, loading, label = "Auto-fill" }: { onClick: ()
   );
 }
 
-const SCAN_EXPIRY_COLOR = "#2f6fb0";
+const SCAN_EXPIRY_COLOR = theme.blue;
 
 // Sits next to AutoFillButton wherever it appears - reading the real printed date off the
 // package is strictly more accurate than guessing from the item's name alone, so both are
@@ -96,7 +96,7 @@ function ScanExpiryButton({ onClick }: { onClick: () => void }) {
         justifyContent: "center",
         width: 30,
         padding: "0 8px",
-        borderRadius: 10,
+        borderRadius: theme.radius.sm,
         background: `${SCAN_EXPIRY_COLOR}1a`,
         color: SCAN_EXPIRY_COLOR,
         cursor: "pointer",
@@ -121,15 +121,15 @@ function LocationPicker({ value, onChange }: { value: StorageLocation; onChange:
             style={{
               width: 26,
               height: 26,
-              borderRadius: 8,
-              background: active ? opt.color : "#eaf6ff",
+              borderRadius: theme.radius.md,
+              background: active ? opt.color : theme.bg.surface2,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
             }}
           >
-            <LocationIcon location={opt.key} size={13} color={active ? "#fff" : "rgba(22,50,92,0.4)"} />
+            <LocationIcon location={opt.key} size={13} color={active ? "#fff" : theme.text.faint} />
           </div>
         );
       })}
@@ -350,7 +350,7 @@ export default function AddScreen() {
       style={{
         position: "absolute",
         inset: 0,
-        background: "linear-gradient(180deg,#eaf6ff,#cfe8fb)",
+        background: theme.bg.canvas,
         display: "flex",
         flexDirection: "column",
         animation: "slideUpSheet .32s cubic-bezier(0.32,0.72,0,1)",
@@ -358,33 +358,33 @@ export default function AddScreen() {
     >
     <div className="thatfridge-wide-content" style={{ flex: 1, display: "flex", flexDirection: "column", padding: "28px 20px 30px", boxSizing: "border-box" }}>
       <div className="thatfridge-add-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
-        <div style={{ fontSize: 20, fontWeight: 800 }}>{state.addStep === -1 ? "Add to fridge" : `Add to ${targetFridge?.name || "fridge"}`}</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 15 }}>{state.addStep === -1 ? "Add to fridge" : `Add to ${targetFridge?.name || "fridge"}`}</div>
         <div
           className="thatfridge-add-header-btn"
           onClick={state.addStep === 6 ? actions.skipExpiryPhoto : actions.goHome}
-          style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+          style={{ width: 32, height: 32, borderRadius: 16, background: theme.bg.surface2, border: `1px solid ${theme.border.hairline}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
         >
-          <X className="thatfridge-hide-desktop" size={15} color="rgba(22,50,92,0.5)" strokeWidth={2} />
-          <ChevronLeft className="thatfridge-show-desktop" size={17} color="rgba(22,50,92,0.5)" strokeWidth={2.2} />
+          <X className="thatfridge-hide-desktop" size={15} color={theme.text.faint} strokeWidth={2} />
+          <ChevronLeft className="thatfridge-show-desktop" size={17} color={theme.text.faint} strokeWidth={2.2} />
         </div>
       </div>
 
       {state.addStep === -1 && (
         <>
-          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", marginBottom: 16 }}>Which fridge are you adding to?</div>
+          <div style={{ fontSize: 13, color: theme.text.muted, marginBottom: 16 }}>Which fridge are you adding to?</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {state.fridges.map((f, i) => {
               const itemCount = f.sections.reduce((n, sec) => n + sec.items.length, 0);
               return (
-                <div key={f.id} onClick={() => actions.selectAddFridge(i)} style={{ display: "flex", alignItems: "center", gap: 14, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, padding: 16, cursor: "pointer" }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 12, background: "#eaf6ff", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-                    <Refrigerator size={19} color="#4a6fa5" strokeWidth={2} />
+                <div key={f.id} onClick={() => actions.selectAddFridge(i)} style={{ display: "flex", alignItems: "center", gap: 14, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, padding: 16, cursor: "pointer" }}>
+                  <div style={{ width: 40, height: 40, borderRadius: theme.radius.sm, background: theme.bg.surface2, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                    <Refrigerator size={19} color={theme.blue} strokeWidth={2} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 2 }}>{f.name}</div>
-                    <div style={{ fontSize: 12, color: "rgba(22,50,92,0.5)" }}>{itemCount} item{itemCount === 1 ? "" : "s"}</div>
+                    <div style={{ fontSize: 12, color: theme.text.faint }}>{itemCount} item{itemCount === 1 ? "" : "s"}</div>
                   </div>
-                  <ChevronRight size={17} color="rgba(22,50,92,0.3)" />
+                  <ChevronRight size={17} color={theme.text.faint} />
                 </div>
               );
             })}
@@ -394,18 +394,18 @@ export default function AddScreen() {
 
       {state.addStep === 0 && (
         <>
-          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", marginBottom: 16 }}>Choose how you&apos;d like to add items</div>
+          <div style={{ fontSize: 13, color: theme.text.muted, marginBottom: 16 }}>Choose how you&apos;d like to add items</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {SCAN_METHODS.map((m) => (
-              <div key={m.key} onClick={() => actions.chooseMethod(m.key)} style={{ display: "flex", alignItems: "center", gap: 14, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, padding: 16, cursor: "pointer" }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: "#eaf6ff", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-                  <m.Icon size={19} color="#4a6fa5" strokeWidth={2} />
+              <div key={m.key} onClick={() => actions.chooseMethod(m.key)} style={{ display: "flex", alignItems: "center", gap: 14, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, padding: 16, cursor: "pointer" }}>
+                <div style={{ width: 40, height: 40, borderRadius: theme.radius.sm, background: theme.bg.surface2, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                  <m.Icon size={19} color={theme.blue} strokeWidth={2} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 2 }}>{m.title}</div>
-                  <div style={{ fontSize: 12, color: "rgba(22,50,92,0.5)" }}>{m.desc}</div>
+                  <div style={{ fontSize: 12, color: theme.text.faint }}>{m.desc}</div>
                 </div>
-                <ChevronRight size={17} color="rgba(22,50,92,0.3)" />
+                <ChevronRight size={17} color={theme.text.faint} />
               </div>
             ))}
           </div>
@@ -416,8 +416,8 @@ export default function AddScreen() {
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
           {barcodeMode === "camera" ? (
             <>
-              <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", textAlign: "center" }}>Point your camera at the barcode</div>
-              <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", borderRadius: 20, overflow: "hidden", background: "#000" }}>
+              <div style={{ fontSize: 13, color: theme.text.muted, textAlign: "center" }}>Point your camera at the barcode</div>
+              <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", borderRadius: theme.radius.lg, overflow: "hidden", background: "#000" }}>
                 <video ref={barcodeVideoRef} muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 {cameraStatus === "scanning" && (
                   <div
@@ -435,13 +435,13 @@ export default function AddScreen() {
                 )}
               </div>
               {cameraStatus === "starting" && (
-                <div style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(22,50,92,0.5)", textAlign: "center" }}>Starting camera…</div>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: theme.text.faint, textAlign: "center" }}>Starting camera…</div>
               )}
-              {cameraError && <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center" }}>{cameraError}</div>}
+              {cameraError && <div style={{ fontSize: 12.5, fontWeight: 600, color: theme.bad, textAlign: "center" }}>{cameraError}</div>}
             </>
           ) : (
             <>
-              <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)" }}>Type or paste the barcode number printed under it</div>
+              <div style={{ fontSize: 13, color: theme.text.muted }}>Type or paste the barcode number printed under it</div>
               <input
                 autoFocus
                 inputMode="numeric"
@@ -456,11 +456,14 @@ export default function AddScreen() {
                 style={{
                   textAlign: "center",
                   padding: 14,
-                  borderRadius: 14,
-                  background: state.barcodeInput.trim() && !state.barcodeLoading ? "#16325c" : "rgba(22,50,92,0.25)",
-                  color: "#fff",
+                  borderRadius: theme.radius.sm,
+                  background: state.barcodeInput.trim() && !state.barcodeLoading ? theme.amber : theme.bg.surface2,
+                  color: state.barcodeInput.trim() && !state.barcodeLoading ? "#0a0a0c" : theme.text.faint,
                   fontSize: 14,
                   fontWeight: 700,
+                  fontFamily: theme.fontMono,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
                   cursor: "pointer",
                 }}
               >
@@ -470,22 +473,22 @@ export default function AddScreen() {
           )}
 
           {state.barcodeLoading && barcodeMode === "camera" && (
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(22,50,92,0.5)", textAlign: "center" }}>Looking up product…</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: theme.text.faint, textAlign: "center" }}>Looking up product…</div>
           )}
-          {state.barcodeError && <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center" }}>{state.barcodeError}</div>}
-          {photoDecodeLoading && <div style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(22,50,92,0.5)", textAlign: "center" }}>Reading photo…</div>}
-          {photoDecodeError && <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center" }}>{photoDecodeError}</div>}
+          {state.barcodeError && <div style={{ fontSize: 12.5, fontWeight: 600, color: theme.bad, textAlign: "center" }}>{state.barcodeError}</div>}
+          {photoDecodeLoading && <div style={{ fontSize: 12.5, fontWeight: 600, color: theme.text.faint, textAlign: "center" }}>Reading photo…</div>}
+          {photoDecodeError && <div style={{ fontSize: 12.5, fontWeight: 600, color: theme.bad, textAlign: "center" }}>{photoDecodeError}</div>}
 
           <div style={{ display: "flex", justifyContent: "center", gap: 18 }}>
             <div
               onClick={() => barcodePhotoInputRef.current?.click()}
-              style={{ fontSize: 12.5, fontWeight: 700, color: "#4a6fa5", cursor: "pointer", textDecoration: "underline" }}
+              style={{ fontSize: 12.5, fontWeight: 700, color: theme.blue, cursor: "pointer", textDecoration: "underline" }}
             >
               Upload a photo
             </div>
             <div
               onClick={() => setBarcodeMode(barcodeMode === "camera" ? "manual" : "camera")}
-              style={{ fontSize: 12.5, fontWeight: 700, color: "#4a6fa5", cursor: "pointer", textDecoration: "underline" }}
+              style={{ fontSize: 12.5, fontWeight: 700, color: theme.blue, cursor: "pointer", textDecoration: "underline" }}
             >
               {barcodeMode === "camera" ? "Enter manually" : "Use camera instead"}
             </div>
@@ -496,17 +499,17 @@ export default function AddScreen() {
 
       {state.addStep === 6 && (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", textAlign: "center" }}>
+          <div style={{ fontSize: 13, color: theme.text.muted, textAlign: "center" }}>
             Line up the printed expiry / best-before date, then tap to capture
           </div>
-          <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", borderRadius: 20, overflow: "hidden", background: "#000" }}>
+          <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", borderRadius: theme.radius.lg, overflow: "hidden", background: "#000" }}>
             <video ref={expiryVideoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
           {expiryCameraStatus === "starting" && (
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(22,50,92,0.5)", textAlign: "center" }}>Starting camera…</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: theme.text.faint, textAlign: "center" }}>Starting camera…</div>
           )}
           {expiryCameraError && (
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center" }}>{expiryCameraError}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: theme.bad, textAlign: "center" }}>{expiryCameraError}</div>
           )}
           {expiryCameraStatus === "ready" && (
             <div
@@ -516,24 +519,23 @@ export default function AddScreen() {
                 width: 64,
                 height: 64,
                 borderRadius: 32,
-                background: "#16325c",
+                background: theme.amber,
                 border: "4px solid rgba(255,255,255,0.85)",
-                boxShadow: "0 6px 16px rgba(22,50,92,0.3)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
               }}
             >
-              <Camera size={26} color="#fff" strokeWidth={2} />
+              <Camera size={26} color="#0a0a0c" strokeWidth={2} />
             </div>
           )}
 
           {state.expiryPhotoLoading && (
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(22,50,92,0.6)", textAlign: "center" }}>Reading the date…</div>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: theme.text.muted, textAlign: "center" }}>Reading the date…</div>
           )}
           {state.expiryPhotoError && (
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center", padding: "0 20px" }}>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: theme.bad, textAlign: "center", padding: "0 20px" }}>
               {state.expiryPhotoError}
             </div>
           )}
@@ -541,13 +543,13 @@ export default function AddScreen() {
           <div style={{ display: "flex", justifyContent: "center", gap: 18 }}>
             <div
               onClick={() => expiryFileInputRef.current?.click()}
-              style={{ fontSize: 12.5, fontWeight: 700, color: "#4a6fa5", cursor: "pointer", textDecoration: "underline" }}
+              style={{ fontSize: 12.5, fontWeight: 700, color: theme.blue, cursor: "pointer", textDecoration: "underline" }}
             >
               Upload a photo
             </div>
             <div
               onClick={actions.skipExpiryPhoto}
-              style={{ fontSize: 12.5, fontWeight: 700, color: "#4a6fa5", cursor: "pointer", textDecoration: "underline" }}
+              style={{ fontSize: 12.5, fontWeight: 700, color: theme.blue, cursor: "pointer", textDecoration: "underline" }}
             >
               Skip — enter manually
             </div>
@@ -568,17 +570,17 @@ export default function AddScreen() {
 
       {state.addStep === 1 && (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", textAlign: "center" }}>
+          <div style={{ fontSize: 13, color: theme.text.muted, textAlign: "center" }}>
             {state.scanMethod === "receipt" ? "Line up the whole receipt, then tap to capture" : "Line up the inside of your fridge, then tap to capture"}
           </div>
-          <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", borderRadius: 20, overflow: "hidden", background: "#000" }}>
+          <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", borderRadius: theme.radius.lg, overflow: "hidden", background: "#000" }}>
             <video ref={scanVideoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
           {scanCameraStatus === "starting" && (
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(22,50,92,0.5)", textAlign: "center" }}>Starting camera…</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: theme.text.faint, textAlign: "center" }}>Starting camera…</div>
           )}
           {scanCameraError && (
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center" }}>{scanCameraError}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: theme.bad, textAlign: "center" }}>{scanCameraError}</div>
           )}
           {scanCameraStatus === "ready" && !state.scanImageLoading && (
             <div
@@ -588,34 +590,33 @@ export default function AddScreen() {
                 width: 64,
                 height: 64,
                 borderRadius: 32,
-                background: "#16325c",
+                background: theme.amber,
                 border: "4px solid rgba(255,255,255,0.85)",
-                boxShadow: "0 6px 16px rgba(22,50,92,0.3)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
               }}
             >
-              <Camera size={26} color="#fff" strokeWidth={2} />
+              <Camera size={26} color="#0a0a0c" strokeWidth={2} />
             </div>
           )}
 
-          {state.scanImageLoading && <div style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(22,50,92,0.6)", textAlign: "center" }}>{scanningLabel}</div>}
+          {state.scanImageLoading && <div style={{ fontSize: 13.5, fontWeight: 600, color: theme.text.muted, textAlign: "center" }}>{scanningLabel}</div>}
           {state.scanImageError && (
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center", padding: "0 20px" }}>{state.scanImageError}</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: theme.bad, textAlign: "center", padding: "0 20px" }}>{state.scanImageError}</div>
           )}
 
           <div style={{ display: "flex", justifyContent: "center", gap: 18 }}>
             <div
               onClick={() => scanFileInputRef.current?.click()}
-              style={{ fontSize: 12.5, fontWeight: 700, color: "#4a6fa5", cursor: "pointer", textDecoration: "underline" }}
+              style={{ fontSize: 12.5, fontWeight: 700, color: theme.blue, cursor: "pointer", textDecoration: "underline" }}
             >
               Upload a photo
             </div>
             <div
               onClick={() => actions.chooseMethod("manual")}
-              style={{ fontSize: 12.5, fontWeight: 700, color: "#4a6fa5", cursor: "pointer", textDecoration: "underline" }}
+              style={{ fontSize: 12.5, fontWeight: 700, color: theme.blue, cursor: "pointer", textDecoration: "underline" }}
             >
               Skip — enter manually
             </div>
@@ -637,7 +638,7 @@ export default function AddScreen() {
       {state.addStep === 2 && (
         <>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: state.expiryScanNote ? 6 : 14 }}>
-            <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)" }}>
+            <div style={{ fontSize: 13, color: theme.text.muted }}>
               {state.scanMethod === "barcode"
                 ? "Found the product — double-check the details below before adding"
                 : "Found " + state.detected.length + " items — the scan can’t tell expiry or storage, so set them below or tap Auto-fill"}
@@ -647,11 +648,11 @@ export default function AddScreen() {
             )}
           </div>
           {state.expiryScanNote && (
-            <div style={{ fontSize: 12, fontWeight: 600, color: "#4a6fa5", marginBottom: 14 }}>{state.expiryScanNote}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: theme.blue, marginBottom: 14 }}>{state.expiryScanNote}</div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, minHeight: 0, overflowY: "auto" }}>
             {state.detected.map((d) => (
-              <div key={d.id} style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+              <div key={d.id} style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.sm, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div
                     onClick={() => setIconPickerForId(iconPickerForId === d.id ? null : d.id)}
@@ -665,16 +666,16 @@ export default function AddScreen() {
                     onChange={(e) => actions.onDetectedNameChange(d.id, e.target.value)}
                     placeholder="Item name"
                     autoFocus={!d.name}
-                    style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 14, fontWeight: 600, color: "#16325c", padding: 0 }}
+                    style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 14, fontWeight: 600, color: theme.text.primary, padding: 0 }}
                   />
                   <div
                     onClick={() => actions.toggleDetected(d.id)}
                     style={{
                       width: 22,
                       height: 22,
-                      borderRadius: 7,
-                      border: `1.5px solid ${d.checked ? "#2f6fb0" : "rgba(22,50,92,0.25)"}`,
-                      background: d.checked ? "#2f6fb0" : "transparent",
+                      borderRadius: theme.radius.sm,
+                      border: `1.5px solid ${d.checked ? theme.blue : theme.border.strong}`,
+                      background: d.checked ? theme.blue : "transparent",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -689,12 +690,12 @@ export default function AddScreen() {
                     title="Remove this item"
                     style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", cursor: "pointer" }}
                   >
-                    <X size={14} color="rgba(22,50,92,0.35)" strokeWidth={2.2} />
+                    <X size={14} color={theme.text.faint} strokeWidth={2.2} />
                   </div>
                 </div>
 
                 {iconPickerForId === d.id && (
-                  <div style={{ maxHeight: 180, overflowY: "auto", background: "#eaf6ff", borderRadius: 12, padding: 10 }}>
+                  <div style={{ maxHeight: 180, overflowY: "auto", background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: 10 }}>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                       {FOOD_ICON_KEYS.map((key) => (
                         <div
@@ -707,9 +708,9 @@ export default function AddScreen() {
                           style={{
                             width: 38,
                             height: 38,
-                            borderRadius: 12,
-                            background: "#fff",
-                            border: `2px solid ${d.icon === key ? "#2f6fb0" : "transparent"}`,
+                            borderRadius: theme.radius.sm,
+                            background: theme.bg.surface,
+                            border: `2px solid ${d.icon === key ? theme.blue : "transparent"}`,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -730,7 +731,7 @@ export default function AddScreen() {
                   <select
                     value={d.section}
                     onChange={(e) => actions.onDetectedSectionChange(d.id, e.target.value)}
-                    style={{ flex: 1, border: "none", outline: "none", background: "#eaf6ff", borderRadius: 10, padding: "8px 10px", fontSize: 12.5, color: "#16325c", appearance: "none" }}
+                    style={{ flex: 1, border: "none", outline: "none", background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: "8px 10px", fontSize: 12.5, color: theme.text.primary, appearance: "none" }}
                   >
                     {sections.map((sec) => (
                       <option key={sec.id} value={sec.id}>
@@ -738,13 +739,13 @@ export default function AddScreen() {
                       </option>
                     ))}
                   </select>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#eaf6ff", borderRadius: 10, padding: "0 8px", flex: "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: "0 8px", flex: "none" }}>
                     <div onClick={() => actions.adjustDetectedQty(d.id, -1)} style={{ cursor: "pointer", padding: 4, display: "flex" }}>
-                      <Minus size={12} color="#16325c" strokeWidth={2.4} />
+                      <Minus size={12} color={theme.text.primary} strokeWidth={2.4} />
                     </div>
-                    <div style={{ fontSize: 12.5, fontWeight: 700, color: "#16325c", minWidth: 14, textAlign: "center" }}>{d.qty}</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: theme.text.primary, minWidth: 14, textAlign: "center" }}>{d.qty}</div>
                     <div onClick={() => actions.adjustDetectedQty(d.id, 1)} style={{ cursor: "pointer", padding: 4, display: "flex" }}>
-                      <Plus size={12} color="#16325c" strokeWidth={2.4} />
+                      <Plus size={12} color={theme.text.primary} strokeWidth={2.4} />
                     </div>
                   </div>
                 </div>
@@ -754,7 +755,7 @@ export default function AddScreen() {
                     type="date"
                     value={d.expiryDate}
                     onChange={(e) => actions.onDetectedExpiryChange(d.id, e.target.value)}
-                    style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "#eaf6ff", borderRadius: 10, padding: "8px 10px", fontSize: 12.5, color: "#16325c" }}
+                    style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: "8px 10px", fontSize: 12.5, color: theme.text.primary }}
                   />
                   <LocationPicker value={d.location} onChange={(loc) => actions.onDetectedLocationChange(d.id, loc)} />
                   <ScanExpiryButton onClick={() => actions.startExpiryScanForDetected(d.id)} />
@@ -764,7 +765,7 @@ export default function AddScreen() {
                   />
                 </div>
                 {d.condition && d.condition !== "vibrant" && (
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#b5702f" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: theme.warn }}>
                     AI noticed this is {CONDITION_NOTE_PHRASE[d.condition]} in the photo — Auto-fill accounts for it
                   </div>
                 )}
@@ -779,9 +780,9 @@ export default function AddScreen() {
                   justifyContent: "center",
                   gap: 6,
                   padding: 14,
-                  borderRadius: 14,
-                  border: "1.5px dashed rgba(22,50,92,0.2)",
-                  color: "#4a6fa5",
+                  borderRadius: theme.radius.sm,
+                  border: `1.5px dashed ${theme.border.strong}`,
+                  color: theme.blue,
                   fontSize: 13,
                   fontWeight: 700,
                   cursor: "pointer",
@@ -792,7 +793,23 @@ export default function AddScreen() {
               </div>
             )}
           </div>
-          <div onClick={actions.confirmAdd} style={{ textAlign: "center", padding: 14, borderRadius: 14, background: "#16325c", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 14 }}>
+          <div
+            onClick={actions.confirmAdd}
+            style={{
+              textAlign: "center",
+              padding: 14,
+              borderRadius: theme.radius.sm,
+              background: theme.amber,
+              color: "#0a0a0c",
+              fontSize: 14,
+              fontWeight: 700,
+              fontFamily: theme.fontMono,
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
+              cursor: "pointer",
+              marginTop: 14,
+            }}
+          >
             Add {checkedCount} items
           </div>
         </>
@@ -800,7 +817,7 @@ export default function AddScreen() {
 
       {state.addStep === 3 && (
         <>
-          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", marginBottom: 16 }}>Fill in the details for this item</div>
+          <div style={{ fontSize: 13, color: theme.text.muted, marginBottom: 16 }}>Fill in the details for this item</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1, minHeight: 0, overflowY: "auto" }}>
             <div>
               <div style={labelStyle}>NAME</div>
@@ -816,25 +833,25 @@ export default function AddScreen() {
               <div style={labelStyle}>PICTURE</div>
               <div
                 onClick={() => setShowIconPicker((v) => !v)}
-                style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: "8px 12px", cursor: "pointer" }}
+                style={{ display: "flex", alignItems: "center", gap: 10, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.sm, padding: "8px 12px", cursor: "pointer" }}
               >
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: "#eaf6ff", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                <div style={{ width: 32, height: 32, borderRadius: theme.radius.sm, background: theme.bg.surface2, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
                   <div style={{ position: "relative", width: 20, height: 20 }}>
                     <FoodIcon icon={state.manualIcon} />
                   </div>
                 </div>
-                <div style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: "#16325c" }}>
+                <div style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: theme.text.primary }}>
                   {ICON_LABELS[state.manualIcon] || "Choose a picture"}
                 </div>
                 <ChevronDown
                   size={16}
-                  color="rgba(22,50,92,0.4)"
+                  color={theme.text.faint}
                   strokeWidth={2.2}
                   style={{ transform: showIconPicker ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}
                 />
               </div>
               {showIconPicker && (
-                <div style={{ marginTop: 8, maxHeight: 220, overflowY: "auto", background: "#fff", borderRadius: 14, padding: 10, boxShadow: "0 6px 16px rgba(22,50,92,0.06)" }}>
+                <div style={{ marginTop: 8, maxHeight: 220, overflowY: "auto", background: theme.bg.surface, borderRadius: theme.radius.sm, padding: 10, border: `1px solid ${theme.border.hairline}` }}>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                     {FOOD_ICON_KEYS.map((key) => (
                       <div
@@ -847,9 +864,9 @@ export default function AddScreen() {
                         style={{
                           width: 44,
                           height: 44,
-                          borderRadius: 14,
-                          background: "#eaf6ff",
-                          border: `2px solid ${state.manualIcon === key ? "#2f6fb0" : "transparent"}`,
+                          borderRadius: theme.radius.sm,
+                          background: theme.bg.surface2,
+                          border: `2px solid ${state.manualIcon === key ? theme.blue : "transparent"}`,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -876,13 +893,13 @@ export default function AddScreen() {
                       onClick={() => actions.onManualCategoryChange(c.key)}
                       style={{
                         padding: "7px 12px",
-                        borderRadius: 12,
+                        borderRadius: theme.radius.sm,
                         fontSize: 12,
                         fontWeight: 700,
                         cursor: "pointer",
-                        background: active ? "#16325c" : "#fff",
-                        color: active ? "#fff" : "#16325c",
-                        boxShadow: active ? "none" : "0 4px 10px rgba(22,50,92,0.06)",
+                        background: active ? theme.amber : theme.bg.surface,
+                        color: active ? "#0a0a0c" : theme.text.primary,
+                        border: active ? "none" : `1px solid ${theme.border.hairline}`,
                       }}
                     >
                       {c.label}
@@ -925,14 +942,14 @@ export default function AddScreen() {
                 <AutoFillButton onClick={actions.suggestManualDetails} loading={state.manualAutoFillLoading} />
               </div>
               {state.manualAutoFillAskCondition && (
-                <div style={{ marginTop: 8, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: 10 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>How does it look right now?</div>
+                <div style={{ marginTop: 8, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.sm, padding: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: theme.text.faint, marginBottom: 8 }}>How does it look right now?</div>
                   <div style={{ display: "flex", gap: 6 }}>
                     {PRODUCE_CONDITIONS.map((opt) => (
                       <div
                         key={opt.key}
                         onClick={() => actions.chooseManualCondition(opt.key)}
-                        style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 10, background: "#f4f7fb", fontSize: 11, fontWeight: 700, color: "#16325c", cursor: "pointer" }}
+                        style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: theme.radius.sm, background: theme.bg.surface2, fontSize: 11, fontWeight: 700, color: theme.text.primary, cursor: "pointer" }}
                       >
                         {opt.label}
                       </div>
@@ -956,11 +973,14 @@ export default function AddScreen() {
             style={{
               textAlign: "center",
               padding: 14,
-              borderRadius: 14,
-              background: state.manualName.trim() ? "#16325c" : "rgba(22,50,92,0.25)",
-              color: "#fff",
+              borderRadius: theme.radius.sm,
+              background: state.manualName.trim() ? theme.amber : theme.bg.surface2,
+              color: state.manualName.trim() ? "#0a0a0c" : theme.text.faint,
               fontSize: 14,
               fontWeight: 700,
+              fontFamily: theme.fontMono,
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
               cursor: "pointer",
               marginTop: 14,
             }}

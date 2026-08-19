@@ -3,6 +3,7 @@
 import { ChevronLeft, Refrigerator } from "lucide-react";
 import { getScopeLabel, getScopedItems } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
+import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 
@@ -17,17 +18,17 @@ export default function SearchScreen() {
     : [];
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
+    <div style={{ position: "absolute", inset: 0, background: theme.bg.canvas, display: "flex", flexDirection: "column" }}>
       <div className="thatfridge-wide-content" style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 10, boxSizing: "border-box" }}>
         <div onClick={actions.goHome} style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
-          <ChevronLeft size={20} color="#16325c" strokeWidth={2.2} />
+          <ChevronLeft size={20} color={theme.text.primary} strokeWidth={2.2} />
         </div>
         <input
           autoFocus
           value={state.searchQuery}
           onChange={(e) => actions.onSearchChange(e.target.value)}
           placeholder="Search your fridge…"
-          style={{ flex: 1, border: "none", outline: "none", background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.08)", borderRadius: 14, padding: "11px 16px", fontSize: 14, color: "#16325c" }}
+          style={{ flex: 1, border: `1px solid ${theme.border.hairline}`, outline: "none", background: theme.bg.surface, borderRadius: theme.radius.sm, padding: "11px 16px", fontSize: 14, color: theme.text.primary }}
         />
       </div>
       <div className="thatfridge-wide-content" style={{ flex: "none", padding: "0 20px 10px", boxSizing: "border-box" }}>
@@ -38,11 +39,11 @@ export default function SearchScreen() {
             alignItems: "center",
             gap: 5,
             padding: "5px 10px",
-            borderRadius: 10,
-            background: "rgba(22,50,92,0.06)",
+            borderRadius: theme.radius.sm,
+            background: theme.bg.surface2,
             fontSize: 11,
             fontWeight: 700,
-            color: "rgba(22,50,92,0.55)",
+            color: theme.text.muted,
             cursor: "pointer",
           }}
         >
@@ -57,7 +58,7 @@ export default function SearchScreen() {
               <div
                 key={label}
                 onClick={() => actions.onSearchChange(label)}
-                style={{ background: "#fff", border: "1px solid rgba(22,50,92,0.1)", boxShadow: "0 4px 10px rgba(22,50,92,0.05)", borderRadius: 14, padding: "8px 13px", fontSize: 12, fontWeight: 600, color: "#16325c", cursor: "pointer" }}
+                style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.sm, padding: "8px 13px", fontSize: 12, fontWeight: 600, color: theme.text.primary, cursor: "pointer" }}
               >
                 {label}
               </div>
@@ -65,15 +66,15 @@ export default function SearchScreen() {
           </div>
         )}
         {results.length > 0 && (
-          <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden" }}>
+          <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, overflow: "hidden" }}>
             {results.map((item) => (
-              <div key={item.id} onClick={() => actions.selectItem(item.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}>
-                <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
+              <div key={item.id} onClick={() => actions.selectItem(item.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: `1px solid ${theme.border.hairline}`, cursor: "pointer" }}>
+                <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: theme.radius.sm, background: theme.bg.surface2, padding: 6, boxSizing: "border-box" }}>
                   <FoodIcon icon={item.icon} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{item.name}</div>
-                  <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.45)" }}>
+                  <div style={{ fontSize: 11.5, color: theme.text.faint }}>
                     {item.sectionName}
                     {showFridgeTags && <span> · {item.fridgeName}</span>}
                   </div>
@@ -84,7 +85,7 @@ export default function SearchScreen() {
           </div>
         )}
         {q.length > 0 && results.length === 0 && (
-          <div style={{ textAlign: "center", color: "rgba(22,50,92,0.45)", fontSize: 13, marginTop: 30 }}>No items match &quot;{state.searchQuery}&quot;</div>
+          <div style={{ textAlign: "center", color: theme.text.faint, fontSize: 13, marginTop: 30 }}>No items match &quot;{state.searchQuery}&quot;</div>
         )}
       </div>
     </div>

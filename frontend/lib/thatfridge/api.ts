@@ -10,6 +10,7 @@ import type {
   NotificationEvent,
   NotificationPrefs,
   NutritionCategory,
+  OrganizerTally,
   Recipe,
   RecipeAttachment,
   RecipeCategory,
@@ -348,6 +349,19 @@ export interface UserGoalInput {
 
 export function updateUserGoal(data: UserGoalInput): Promise<UserGoal> {
   return apiFetch<UserGoal>("/user-goal", { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export function fetchOrganizerTally(): Promise<OrganizerTally> {
+  return apiFetch<OrganizerTally>("/organizer-tally");
+}
+
+export interface OrganizerTallyIncrementInput {
+  checked: number;
+  correct: number;
+}
+
+export function incrementOrganizerTally(data: OrganizerTallyIncrementInput): Promise<OrganizerTally> {
+  return apiFetch<OrganizerTally>("/organizer-tally/increment", { method: "POST", body: JSON.stringify(data) });
 }
 
 export function fetchScoreSnapshots(weeks: number = 12): Promise<ScoreSnapshot[]> {

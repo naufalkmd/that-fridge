@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Refrigerator } from "lucide-react";
+import Image from "next/image";
 import type { Screen } from "@/lib/thatfridge/types";
+import { theme } from "@/lib/thatfridge/theme";
 import { ThatFridgeProvider, useThatFridgeCtx } from "./ThatFridgeContext";
 import TabBar from "./TabBar";
 import Sidebar from "./Sidebar";
@@ -31,7 +32,7 @@ import AboutScreen from "./screens/AboutScreen";
 import AuthScreen from "./screens/AuthScreen";
 
 // These four render as a dimmed backdrop + slide-up sheet on top of whatever was already on
-// screen (see each file's `rgba(22,50,92,0.32)` backdrop), not as a full replacement screen.
+// screen (see each file's `rgba(0,0,0,0.5)` backdrop), not as a full replacement screen.
 const SHEET_SCREENS = new Set<Screen>(["itemDetail", "fridgeStyle", "recipeDetail", "recipeForm"]);
 
 function BaseScreen({ screen }: { screen: Screen }) {
@@ -110,9 +111,9 @@ const shellStyle: React.CSSProperties = {
   maxWidth: 480,
   margin: "0 auto",
   overflow: "hidden",
-  background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)",
-  fontFamily: "-apple-system, system-ui, sans-serif",
-  color: "#16325c",
+  background: theme.bg.canvas,
+  fontFamily: theme.fontMono,
+  color: theme.text.primary,
 };
 
 function AppShell() {
@@ -132,7 +133,7 @@ function AppShell() {
         className="thatfridge-shell thatfridge-auth-shell"
         style={{ ...shellStyle, display: "flex", alignItems: "center", justifyContent: "center", gap: 12, fontSize: 14, fontWeight: 600 }}
       >
-        <Refrigerator size={20} color="#16325c" strokeWidth={1.8} />
+        <Image src="/images/thatfridge/logo.svg" alt="" width={20} height={21} unoptimized style={{ objectFit: "contain" }} />
         Loading your fridge…
       </div>
     );

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Bell, ChevronDown, ChevronLeft, ChevronRight, Package, Palette, Refrigerator, Sparkles, TriangleAlert, X } from "lucide-react";
 import { getExpiringOwnedItems, getFridgeHeroViews, getGuardianItem, getLowStockItem, getRecipesView, getScopeLabel, getScopedItems } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
+import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import CrewScene from "../CrewScene";
 import FoodIcon from "../FoodIcon";
@@ -69,9 +70,9 @@ function SwipeToClear({ marginBottom, onClear, children }: { marginBottom: numbe
   };
 
   return (
-    <div style={{ position: "relative", marginBottom, borderRadius: 18, overflow: "hidden" }}>
-      <div style={{ position: "absolute", inset: 0, background: "#c1452e", display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 22px" }}>
-        <X size={17} color="#fff" strokeWidth={2.4} />
+    <div style={{ position: "relative", marginBottom, borderRadius: theme.radius.md, overflow: "hidden" }}>
+      <div style={{ position: "absolute", inset: 0, background: theme.bad, display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 22px" }}>
+        <X size={17} color={theme.text.primary} strokeWidth={2.4} />
       </div>
       <div
         onPointerDown={onPointerDown}
@@ -165,7 +166,7 @@ export default function HomeScreen() {
   const fridgesRowRef = useRef<HTMLDivElement>(null);
   const recipesRowRef = useRef<HTMLDivElement>(null);
   const scrollRowBy = (ref: React.RefObject<HTMLDivElement | null>, delta: number) => ref.current?.scrollBy({ left: delta, behavior: "smooth" });
-  const rowArrowStyle: React.CSSProperties = { width: 28, height: 28, borderRadius: 14, background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" };
+  const rowArrowStyle: React.CSSProperties = { width: 28, height: 28, borderRadius: 14, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" };
 
   // The right-edge fade only makes sense while there's actually more to scroll to - shown
   // unconditionally, it sits on top of (and washes out) whatever card lands at the visible
@@ -194,11 +195,12 @@ export default function HomeScreen() {
             width: 34,
             height: 34,
             borderRadius: 17,
-            background: "#16325c",
+            background: theme.bg.surface2,
+            border: `1px solid ${theme.border.hairline}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "#fff",
+            color: theme.text.primary,
             fontSize: 13,
             fontWeight: 800,
             cursor: "pointer",
@@ -207,7 +209,7 @@ export default function HomeScreen() {
         >
           {userInitials}
         </div>
-        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>ThatFridge</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 20, letterSpacing: 0.5 }}>ThatFridge</div>
         <div
           onClick={actions.openNotificationHistory}
           style={{
@@ -215,9 +217,9 @@ export default function HomeScreen() {
             width: 34,
             height: 34,
             borderRadius: 17,
-            background: "rgba(255,255,255,0.75)",
+            background: theme.bg.surface,
             backdropFilter: "blur(8px)",
-            border: "1px solid rgba(22,50,92,0.1)",
+            border: `1px solid ${theme.border.hairline}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -225,7 +227,7 @@ export default function HomeScreen() {
             flex: "none",
           }}
         >
-          <Bell size={16} color="#16325c" strokeWidth={2} />
+          <Bell size={16} color={theme.text.primary} strokeWidth={2} />
           {pendingNotifications > 0 && (
             <div
               style={{
@@ -235,8 +237,8 @@ export default function HomeScreen() {
                 width: 8,
                 height: 8,
                 borderRadius: 4,
-                background: "#c1452e",
-                border: "1.5px solid #fff",
+                background: theme.bad,
+                border: `1.5px solid ${theme.bg.surface}`,
               }}
             />
           )}
@@ -252,21 +254,21 @@ export default function HomeScreen() {
             alignItems: "center",
             gap: 6,
             padding: "7px 12px",
-            borderRadius: 12,
-            background: "#fff",
-            boxShadow: "0 4px 10px rgba(22,50,92,0.08)",
+            borderRadius: theme.radius.sm,
+            background: theme.bg.surface,
+            border: `1px solid ${theme.border.hairline}`,
             cursor: "pointer",
             fontSize: 12.5,
             fontWeight: 700,
-            color: "#16325c",
+            color: theme.text.primary,
           }}
         >
-          <Refrigerator size={14} color="#16325c" strokeWidth={2.2} />
+          <Refrigerator size={14} color={theme.text.primary} strokeWidth={2.2} />
           {getScopeLabel(state)}
-          <ChevronDown size={13} color="#16325c" strokeWidth={2.2} />
+          <ChevronDown size={13} color={theme.text.primary} strokeWidth={2.2} />
         </div>
         {showScopeMenu && (
-          <div style={{ position: "absolute", left: 0, top: "calc(100% + 6px)", background: "#fff", borderRadius: 12, boxShadow: "0 10px 24px rgba(22,50,92,0.14)", padding: 6, zIndex: 5, minWidth: 160 }}>
+          <div style={{ position: "absolute", left: 0, top: "calc(100% + 6px)", background: theme.bg.surface, borderRadius: theme.radius.sm, border: `1px solid ${theme.border.hairline}`, padding: 6, zIndex: 5, minWidth: 160 }}>
             {(
               [{ id: "all" as const, name: "All Fridges" }, ...state.fridges.map((f, i) => ({ id: i, name: f.name }))]
             ).map((opt) => {
@@ -280,12 +282,12 @@ export default function HomeScreen() {
                   }}
                   style={{
                     padding: "8px 10px",
-                    borderRadius: 8,
+                    borderRadius: theme.radius.sm,
                     fontSize: 12.5,
                     fontWeight: 600,
                     cursor: "pointer",
-                    color: active ? "#2f6fb0" : "#16325c",
-                    background: active ? "#eaf6ff" : "transparent",
+                    color: active ? theme.blue : theme.text.primary,
+                    background: active ? theme.bg.surface2 : "transparent",
                   }}
                 >
                   {opt.name}
@@ -298,33 +300,33 @@ export default function HomeScreen() {
 
       {/* overview */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Overview</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 13, marginBottom: 11 }}>Overview</div>
         <div style={{ display: "flex", gap: 10 }}>
           {[
-            { label: "Items", value: totalItemCount, color: "#2f6fb0", bg: "#eaf1fb", Icon: Package, onClick: () => actions.goTab("inventory") },
+            { label: "Items", value: totalItemCount, color: theme.blue, bg: `${theme.blue}1a`, Icon: Package, onClick: () => actions.goTab("inventory") },
             {
               label: "Expiring soon",
               value: expiringCount,
-              color: "#c1452e",
-              bg: "#fbeae7",
+              color: theme.bad,
+              bg: `${theme.bad}1a`,
               Icon: TriangleAlert,
               onClick: () => {
                 actions.setInventorySortMode("expiry");
                 actions.goTab("inventory");
               },
             },
-            { label: "Suggestions", value: suggestionCount, color: "#3f8f5c", bg: "#eaf6ef", Icon: Sparkles, onClick: actions.openRecipesHub },
+            { label: "Suggestions", value: suggestionCount, color: theme.good, bg: `${theme.good}1a`, Icon: Sparkles, onClick: actions.openRecipesHub },
           ].map((k) => (
             <div
               key={k.label}
               onClick={k.onClick}
-              style={{ flex: 1, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, padding: "12px 8px", textAlign: "center", cursor: "pointer" }}
+              style={{ flex: 1, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, padding: "12px 8px", textAlign: "center", cursor: "pointer" }}
             >
-              <div style={{ width: 28, height: 28, borderRadius: 9, background: k.bg, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px" }}>
+              <div style={{ width: 28, height: 28, borderRadius: theme.radius.sm, background: k.bg, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px" }}>
                 <k.Icon size={14} color={k.color} strokeWidth={2.2} />
               </div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: "#16325c" }}>{k.value}</div>
-              <div style={{ fontSize: 10, color: "rgba(22,50,92,0.5)", marginTop: 2 }}>{k.label}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: theme.text.primary }}>{k.value}</div>
+              <div style={{ fontSize: 10, color: theme.text.faint, marginTop: 2 }}>{k.label}</div>
             </div>
           ))}
         </div>
@@ -349,7 +351,7 @@ export default function HomeScreen() {
                   position: "relative",
                   width: "100%",
                   height: 236,
-                  borderRadius: 28,
+                  borderRadius: theme.radius.xl,
                   overflow: "hidden",
                   background: fr.bg,
                   animation: "glow 5s ease-in-out infinite",
@@ -373,13 +375,13 @@ export default function HomeScreen() {
                 )}
                 <div style={{ position: "absolute", top: 22, left: "16%", width: 3, height: 3, borderRadius: "50%", background: "#eaf3fb", animation: "drip 4s ease-in infinite" }} />
                 <div style={{ position: "absolute", top: 18, left: "52%", width: 3, height: 3, borderRadius: "50%", background: "#eaf3fb", animation: "drip 4s ease-in infinite 1.3s" }} />
-                <div style={{ position: "absolute", top: 14, left: 14, background: "rgba(255,255,255,0.85)", color: "#16325c", fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
+                <div style={{ position: "absolute", top: 14, left: 14, background: `${theme.bg.surface}d9`, color: theme.text.primary, fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
                   {fr.name}
                 </div>
-                <div style={{ position: "absolute", bottom: 12, left: 16, background: "rgba(22,50,92,0.55)", backdropFilter: "blur(6px)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 20 }}>
+                <div style={{ position: "absolute", bottom: 12, left: 16, background: `${theme.bg.canvas}8c`, backdropFilter: "blur(6px)", color: theme.text.primary, fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 20 }}>
                   {fr.itemCount} items tracked
                 </div>
-                <div style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,0.85)", color: fr.color, fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
+                <div style={{ position: "absolute", top: 14, right: 14, background: `${theme.bg.surface}d9`, color: fr.color, fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
                   {fr.freshness}% fresh
                 </div>
                 <div
@@ -391,7 +393,7 @@ export default function HomeScreen() {
                     width: 30,
                     height: 30,
                     borderRadius: 15,
-                    background: "rgba(255,255,255,0.85)",
+                    background: `${theme.bg.surface}d9`,
                     backdropFilter: "blur(6px)",
                     display: "flex",
                     alignItems: "center",
@@ -400,7 +402,7 @@ export default function HomeScreen() {
                     zIndex: 2,
                   }}
                 >
-                  <Palette size={16} color="#16325c" strokeWidth={2} />
+                  <Palette size={16} color={theme.text.primary} strokeWidth={2} />
                 </div>
               </div>
             </div>
@@ -410,9 +412,9 @@ export default function HomeScreen() {
               style={{
                 width: "100%",
                 height: 236,
-                borderRadius: 28,
-                background: "rgba(255,255,255,0.5)",
-                border: "2px dashed rgba(22,50,92,0.22)",
+                borderRadius: theme.radius.xl,
+                background: `${theme.bg.surface}80`,
+                border: `2px dashed ${theme.border.strong}`,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -422,15 +424,29 @@ export default function HomeScreen() {
                 boxSizing: "border-box",
               }}
             >
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#16325c" }}>Add another fridge</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: theme.text.primary }}>Add another fridge</div>
               <input
                 value={state.newFridgeName}
                 onChange={(e) => actions.onNewFridgeNameChange(e.target.value)}
                 onKeyDown={(e) => actions.onNewFridgeNameKeyDown(e.key)}
                 placeholder="e.g. Garage, Office…"
-                style={{ width: "100%", border: "none", outline: "none", background: "#fff", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#16325c", boxSizing: "border-box" }}
+                style={{ width: "100%", border: "none", outline: "none", background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: "10px 14px", fontSize: 13, color: theme.text.primary, boxSizing: "border-box" }}
               />
-              <div onClick={actions.addFridge} style={{ background: "#16325c", color: "#fff", fontSize: 13, fontWeight: 700, padding: "9px 18px", borderRadius: 12, cursor: "pointer" }}>
+              <div
+                onClick={actions.addFridge}
+                style={{
+                  background: theme.amber,
+                  color: "#0a0a0c",
+                  fontFamily: theme.fontMono,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  padding: "9px 18px",
+                  borderRadius: theme.radius.sm,
+                  cursor: "pointer",
+                }}
+              >
                 Add fridge
               </div>
             </div>
@@ -441,7 +457,7 @@ export default function HomeScreen() {
             <div
               key={i}
               onClick={() => actions.selectHero(i)}
-              style={{ width: 7, height: 7, borderRadius: 4, background: i === heroSlide ? "#16325c" : "rgba(22,50,92,0.25)", cursor: "pointer" }}
+              style={{ width: 7, height: 7, borderRadius: 4, background: i === heroSlide ? theme.text.primary : theme.border.strong, cursor: "pointer" }}
             />
           ))}
         </div>
@@ -450,7 +466,7 @@ export default function HomeScreen() {
 
       {/* meet your crew */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Your crew</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 13, marginBottom: 11 }}>Your crew</div>
         <CrewScene />
       </div>
 
@@ -465,16 +481,16 @@ export default function HomeScreen() {
         >
           <div
             onClick={() => actions.selectItem(guardianItem.id)}
-            style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", cursor: "pointer" }}
+            style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.lg, padding: "14px 16px", cursor: "pointer" }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <TriangleAlert size={15} color="#d99a2b" strokeWidth={2.2} />
-                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>EXPIRING SOON</div>
+                <TriangleAlert size={15} color={theme.warn} strokeWidth={2.2} />
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: theme.text.primary }}>EXPIRING SOON</div>
               </div>
-              <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#c1452e", background: "#c1452e1a", padding: "2px 7px", borderRadius: 6 }}>GUARDIAN</div>
+              <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: theme.agent.guardian, background: `${theme.agent.guardian}1a`, padding: "2px 7px", borderRadius: 6 }}>GUARDIAN</div>
             </div>
-            <MarkdownText text={guardianMessage} style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }} />
+            <MarkdownText text={guardianMessage} style={{ fontSize: 13.5, lineHeight: 1.4, color: theme.text.primary }} />
           </div>
         </SwipeToClear>
       )}
@@ -485,12 +501,12 @@ export default function HomeScreen() {
           marginBottom={18}
           onClear={() => setDismissedLowStockFor(lowStockItem.id)}
         >
-          <div onClick={actions.openShoppingHub} style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", cursor: "pointer" }}>
+          <div onClick={actions.openShoppingHub} style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.lg, padding: "14px 16px", cursor: "pointer" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>LOW STOCK</div>
-              <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#3f8f5c", background: "#3f8f5c1a", padding: "2px 7px", borderRadius: 6 }}>SHOPKEEPER</div>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: theme.text.primary }}>LOW STOCK</div>
+              <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: theme.agent.shopkeeper, background: `${theme.agent.shopkeeper}1a`, padding: "2px 7px", borderRadius: 6 }}>SHOPKEEPER</div>
             </div>
-            <MarkdownText text={shopkeeperMessage} style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }} />
+            <MarkdownText text={shopkeeperMessage} style={{ fontSize: 13.5, lineHeight: 1.4, color: theme.text.primary }} />
           </div>
         </SwipeToClear>
       )}
@@ -503,13 +519,13 @@ export default function HomeScreen() {
         >
           <div
             onClick={actions.openRecipesHub}
-            style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", cursor: "pointer" }}
+            style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.lg, padding: "14px 16px", cursor: "pointer" }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>CHEF&apos;S PICK</div>
-              <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#d99a2b", background: "#d99a2b1a", padding: "2px 7px", borderRadius: 6 }}>CHEF</div>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: theme.text.primary }}>CHEF&apos;S PICK</div>
+              <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: theme.agent.chef, background: `${theme.agent.chef}1a`, padding: "2px 7px", borderRadius: 6 }}>CHEF</div>
             </div>
-            <MarkdownText text={chefMessage} style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }} />
+            <MarkdownText text={chefMessage} style={{ fontSize: 13.5, lineHeight: 1.4, color: theme.text.primary }} />
           </div>
         </SwipeToClear>
       )}
@@ -520,21 +536,21 @@ export default function HomeScreen() {
       {/* header: title/greeting/fridge-scope toggle on the left, overview stats + bell on the right */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20, marginBottom: 28 }}>
         <div>
-          <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: -0.4, marginBottom: 3 }}>Home</div>
-          <div style={{ fontSize: 12.5, color: "rgba(22,50,92,0.55)", marginBottom: 10 }}>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 20, letterSpacing: 0.5, marginBottom: 6 }}>Home</div>
+          <div style={{ fontSize: 12.5, color: theme.text.muted, marginBottom: 10 }}>
             Welcome back{firstName ? `, ${firstName}` : ""} — here&apos;s what&apos;s going on in your kitchen.
           </div>
           <div style={{ position: "relative", width: "fit-content" }}>
             <div
               onClick={() => setShowScopeMenu((v) => !v)}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 12, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#16325c" }}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: theme.radius.sm, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: theme.text.primary }}
             >
-              <Refrigerator size={14} color="#16325c" strokeWidth={2.2} />
+              <Refrigerator size={14} color={theme.text.primary} strokeWidth={2.2} />
               {getScopeLabel(state)}
-              <ChevronDown size={13} color="#16325c" strokeWidth={2.2} />
+              <ChevronDown size={13} color={theme.text.primary} strokeWidth={2.2} />
             </div>
             {showScopeMenu && (
-              <div style={{ position: "absolute", left: 0, top: "calc(100% + 6px)", background: "#fff", borderRadius: 12, boxShadow: "0 10px 24px rgba(22,50,92,0.14)", padding: 6, zIndex: 5, minWidth: 180 }}>
+              <div style={{ position: "absolute", left: 0, top: "calc(100% + 6px)", background: theme.bg.surface, borderRadius: theme.radius.sm, border: `1px solid ${theme.border.hairline}`, padding: 6, zIndex: 5, minWidth: 180 }}>
                 {([{ id: "all" as const, name: "All Fridges" }, ...state.fridges.map((f, i) => ({ id: i, name: f.name }))]).map((opt) => {
                   const active = opt.id === "all" ? state.kitchenScope === "all" : state.kitchenScope === "active" && state.activeFridge === opt.id;
                   return (
@@ -544,7 +560,7 @@ export default function HomeScreen() {
                         actions.selectFridgeScope(opt.id);
                         setShowScopeMenu(false);
                       }}
-                      style={{ padding: "8px 10px", borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: "pointer", color: active ? "#2f6fb0" : "#16325c", background: active ? "#eaf6ff" : "transparent" }}
+                      style={{ padding: "8px 10px", borderRadius: theme.radius.sm, fontSize: 12.5, fontWeight: 600, cursor: "pointer", color: active ? theme.blue : theme.text.primary, background: active ? theme.bg.surface2 : "transparent" }}
                     >
                       {opt.name}
                     </div>
@@ -558,42 +574,42 @@ export default function HomeScreen() {
         <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "none" }}>
           <div style={{ display: "flex", gap: 10 }}>
             {[
-              { label: "Items tracked", value: totalItemCount, color: "#2f6fb0", bg: "rgba(47,111,176,0.12)", Icon: Package, onClick: () => actions.goTab("inventory") },
+              { label: "Items tracked", value: totalItemCount, color: theme.blue, bg: `${theme.blue}1a`, Icon: Package, onClick: () => actions.goTab("inventory") },
               {
                 label: "Expiring soon",
                 value: expiringCount,
-                color: "#c1452e",
-                bg: "rgba(193,69,46,0.12)",
+                color: theme.bad,
+                bg: `${theme.bad}1a`,
                 Icon: TriangleAlert,
                 onClick: () => {
                   actions.setInventorySortMode("expiry");
                   actions.goTab("inventory");
                 },
               },
-              { label: "Suggestions", value: suggestionCount, color: "#3f8f5c", bg: "rgba(63,143,92,0.12)", Icon: Sparkles, onClick: actions.openRecipesHub },
+              { label: "Suggestions", value: suggestionCount, color: theme.good, bg: `${theme.good}1a`, Icon: Sparkles, onClick: actions.openRecipesHub },
             ].map((k) => (
               <div
                 key={k.label}
                 onClick={k.onClick}
-                style={{ display: "flex", alignItems: "center", gap: 9, background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 14, padding: "10px 13px", cursor: "pointer" }}
+                style={{ display: "flex", alignItems: "center", gap: 9, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.sm, padding: "10px 13px", cursor: "pointer" }}
               >
-                <div style={{ width: 28, height: 28, borderRadius: 9, background: k.bg, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                <div style={{ width: 28, height: 28, borderRadius: theme.radius.sm, background: k.bg, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
                   <k.Icon size={13} color={k.color} strokeWidth={2.2} />
                 </div>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1 }}>{k.value}</div>
-                  <div style={{ fontSize: 9.5, color: "rgba(22,50,92,0.55)", fontWeight: 600, marginTop: 2 }}>{k.label}</div>
+                  <div style={{ fontSize: 9.5, color: theme.text.muted, fontWeight: 600, marginTop: 2 }}>{k.label}</div>
                 </div>
               </div>
             ))}
           </div>
           <div
             onClick={actions.openNotificationHistory}
-            style={{ position: "relative", width: 38, height: 38, borderRadius: 19, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
+            style={{ position: "relative", width: 38, height: 38, borderRadius: 19, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
           >
-            <Bell size={17} color="#16325c" strokeWidth={2} />
+            <Bell size={17} color={theme.text.primary} strokeWidth={2} />
             {pendingNotifications > 0 && (
-              <div style={{ position: "absolute", top: 4, right: 5, width: 8, height: 8, borderRadius: 4, background: "#c1452e", border: "1.5px solid #fff" }} />
+              <div style={{ position: "absolute", top: 4, right: 5, width: 8, height: 8, borderRadius: 4, background: theme.bad, border: `1.5px solid ${theme.bg.surface}` }} />
             )}
           </div>
         </div>
@@ -608,24 +624,24 @@ export default function HomeScreen() {
       <div style={{ marginBottom: 28 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
-            <div style={{ fontSize: 15.5, fontWeight: 800 }}>Needs attention</div>
-            <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.55)" }}>
+            <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 13 }}>Needs attention</div>
+            <div style={{ fontSize: 11.5, color: theme.text.muted }}>
               {expiringItems.length === 0 ? "All caught up" : `${expiringItems.length} item${expiringItems.length === 1 ? "" : "s"} expiring soon`}
             </div>
           </div>
           {expiringItems.length > 0 && (
             <div style={{ display: "flex", gap: 6 }}>
               <button onClick={() => scrollRowBy(attnRowRef, -300)} style={rowArrowStyle}>
-                <ChevronLeft size={14} color="#16325c" strokeWidth={2.4} />
+                <ChevronLeft size={14} color={theme.text.primary} strokeWidth={2.4} />
               </button>
               <button onClick={() => scrollRowBy(attnRowRef, 300)} style={rowArrowStyle}>
-                <ChevronRight size={14} color="#16325c" strokeWidth={2.4} />
+                <ChevronRight size={14} color={theme.text.primary} strokeWidth={2.4} />
               </button>
             </div>
           )}
         </div>
         {expiringItems.length === 0 ? (
-          <div style={{ background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 22, padding: 20, fontSize: 12.5, color: "rgba(22,50,92,0.5)" }}>
+          <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.lg, padding: 20, fontSize: 12.5, color: theme.text.faint }}>
             Nothing expiring soon — you&apos;re all set.
           </div>
         ) : (
@@ -640,14 +656,14 @@ export default function HomeScreen() {
                 <div
                   key={item.id}
                   onClick={() => actions.selectItem(item.id)}
-                  style={{ scrollSnapAlign: "start", flex: "none", width: 200, display: "flex", alignItems: "center", gap: 10, background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 16, padding: "10px 12px", cursor: "pointer" }}
+                  style={{ scrollSnapAlign: "start", flex: "none", width: 200, display: "flex", alignItems: "center", gap: 10, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, padding: "10px 12px", cursor: "pointer" }}
                 >
-                  <div style={{ position: "relative", width: 36, height: 36, borderRadius: 11, background: "#f9fbfd", display: "flex", alignItems: "center", justifyContent: "center", flex: "none", padding: 6, boxSizing: "border-box" }}>
+                  <div style={{ position: "relative", width: 36, height: 36, borderRadius: theme.radius.sm, background: theme.bg.surface2, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", padding: 6, boxSizing: "border-box" }}>
                     <FoodIcon icon={item.icon} />
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-                    <div style={{ fontSize: 10, color: "rgba(22,50,92,0.5)", marginBottom: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.fridgeName}</div>
+                    <div style={{ fontSize: 10, color: theme.text.faint, marginBottom: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.fridgeName}</div>
                     <div style={{ display: "inline-block", fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, color: freshColor(item.freshness), background: `${freshColor(item.freshness)}1a` }}>
                       {daysLabel(item.days)}
                     </div>
@@ -656,7 +672,7 @@ export default function HomeScreen() {
               ))}
             </div>
             {attnCanScrollRight && (
-              <div style={{ position: "absolute", top: 0, right: 0, bottom: 6, width: 44, background: "linear-gradient(90deg, transparent, #eaf6ff)", pointerEvents: "none" }} />
+              <div style={{ position: "absolute", top: 0, right: 0, bottom: 6, width: 44, background: `linear-gradient(90deg, transparent, ${theme.bg.canvas})`, pointerEvents: "none" }} />
             )}
           </div>
         )}
@@ -666,18 +682,18 @@ export default function HomeScreen() {
       <div style={{ marginBottom: 28 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
-            <div style={{ fontSize: 15.5, fontWeight: 800 }}>Your fridges</div>
-            <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.55)" }}>
+            <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 13 }}>Your fridges</div>
+            <div style={{ fontSize: 11.5, color: theme.text.muted }}>
               {fridgeCount} space{fridgeCount === 1 ? "" : "s"}
             </div>
           </div>
           {fridgeCount > 1 && (
             <div style={{ display: "flex", gap: 6 }}>
               <button onClick={() => scrollRowBy(fridgesRowRef, -320)} style={rowArrowStyle}>
-                <ChevronLeft size={14} color="#16325c" strokeWidth={2.4} />
+                <ChevronLeft size={14} color={theme.text.primary} strokeWidth={2.4} />
               </button>
               <button onClick={() => scrollRowBy(fridgesRowRef, 320)} style={rowArrowStyle}>
-                <ChevronRight size={14} color="#16325c" strokeWidth={2.4} />
+                <ChevronRight size={14} color={theme.text.primary} strokeWidth={2.4} />
               </button>
             </div>
           )}
@@ -701,15 +717,15 @@ export default function HomeScreen() {
                     position: "relative",
                     width: 300,
                     height: 190,
-                    borderRadius: 20,
+                    borderRadius: theme.radius.lg,
                     overflow: "hidden",
                     cursor: "pointer",
                     transform: isActive ? "scale(1.1)" : "scale(0.93)",
                     opacity: isActive ? 1 : 0.6,
                     zIndex: isActive ? 4 : 1,
-                    // Blur radius kept small enough that the active card's shadow doesn't spread
-                    // across the row gap and wash over the (lower z-index) neighboring card.
-                    boxShadow: isActive ? "0 12px 22px rgba(22,50,92,0.28)" : "0 8px 18px rgba(22,50,92,0.16)",
+                    // Border replaces the old drop shadow for elevation — strong on the active
+                    // card, hairline on the others - so it doesn't spread across the row gap.
+                    border: `1px solid ${isActive ? theme.border.strong : theme.border.hairline}`,
                     transition: "transform .24s cubic-bezier(.22,.9,.34,1), opacity .24s ease, box-shadow .24s ease",
                   }}
                 >
@@ -718,14 +734,14 @@ export default function HomeScreen() {
                     alt="Fridge preview"
                     style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%" }}
                   />
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(22,50,92,0.1) 0%, rgba(22,50,92,0.5) 100%)" }} />
-                  <div style={{ position: "absolute", top: 12, left: 12, background: "rgba(255,255,255,0.9)", color: "#16325c", fontSize: 12.5, fontWeight: 800, padding: "6px 11px", borderRadius: 14, whiteSpace: "nowrap" }}>
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.6) 100%)" }} />
+                  <div style={{ position: "absolute", top: 12, left: 12, background: `${theme.bg.surface}e6`, color: theme.text.primary, fontSize: 12.5, fontWeight: 800, padding: "6px 11px", borderRadius: 14, whiteSpace: "nowrap" }}>
                     {fr.name}
                   </div>
-                  <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.9)", color: fr.color, fontSize: 12.5, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
+                  <div style={{ position: "absolute", top: 12, right: 12, background: `${theme.bg.surface}e6`, color: fr.color, fontSize: 12.5, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
                     {fr.freshness}%
                   </div>
-                  <div style={{ position: "absolute", bottom: 12, left: 12, background: "rgba(22,50,92,0.5)", backdropFilter: "blur(6px)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 20 }}>
+                  <div style={{ position: "absolute", bottom: 12, left: 12, background: `${theme.bg.canvas}80`, backdropFilter: "blur(6px)", color: theme.text.primary, fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 20 }}>
                     {fr.itemCount} items
                   </div>
                   {isActive && (
@@ -747,11 +763,10 @@ export default function HomeScreen() {
                         backdropFilter: "blur(6px)",
                         border: "1px solid rgba(255,255,255,0.14)",
                         cursor: "pointer",
-                        boxShadow: "0 8px 16px rgba(10, 30, 60, 0.16)",
                       }}
                     >
-                      <Palette size={13} color="#fff" strokeWidth={2.2} />
-                      <div style={{ fontSize: 10.5, fontWeight: 800, color: "#fff" }}>Customize</div>
+                      <Palette size={13} color={theme.text.primary} strokeWidth={2.2} />
+                      <div style={{ fontSize: 10.5, fontWeight: 800, color: theme.text.primary }}>Customize</div>
                     </div>
                   )}
                 </div>
@@ -763,9 +778,9 @@ export default function HomeScreen() {
                 flex: "none",
                 width: 300,
                 height: 190,
-                borderRadius: 20,
-                background: "rgba(255,255,255,0.5)",
-                border: "2px dashed rgba(22,50,92,0.22)",
+                borderRadius: theme.radius.lg,
+                background: `${theme.bg.surface}80`,
+                border: `2px dashed ${theme.border.strong}`,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -775,31 +790,45 @@ export default function HomeScreen() {
                 boxSizing: "border-box",
               }}
             >
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#16325c" }}>Add another fridge</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: theme.text.primary }}>Add another fridge</div>
               <input
                 value={state.newFridgeName}
                 onChange={(e) => actions.onNewFridgeNameChange(e.target.value)}
                 onKeyDown={(e) => actions.onNewFridgeNameKeyDown(e.key)}
                 placeholder="e.g. Garage, Office…"
-                style={{ width: "100%", border: "none", outline: "none", background: "#fff", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#16325c", boxSizing: "border-box" }}
+                style={{ width: "100%", border: "none", outline: "none", background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: "10px 14px", fontSize: 13, color: theme.text.primary, boxSizing: "border-box" }}
               />
-              <div onClick={actions.addFridge} style={{ background: "#16325c", color: "#fff", fontSize: 13, fontWeight: 700, padding: "9px 18px", borderRadius: 12, cursor: "pointer" }}>
+              <div
+                onClick={actions.addFridge}
+                style={{
+                  background: theme.amber,
+                  color: "#0a0a0c",
+                  fontFamily: theme.fontMono,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  padding: "9px 18px",
+                  borderRadius: theme.radius.sm,
+                  cursor: "pointer",
+                }}
+              >
                 Add fridge
               </div>
             </div>
           </div>
           {fridgesCanScrollRight && (
-            <div style={{ position: "absolute", top: -18, right: 0, bottom: -22, width: 44, background: "linear-gradient(90deg, transparent, #eaf6ff)", pointerEvents: "none" }} />
+            <div style={{ position: "absolute", top: -18, right: 0, bottom: -22, width: 44, background: `linear-gradient(90deg, transparent, ${theme.bg.canvas})`, pointerEvents: "none" }} />
           )}
         </div>
       </div>
 
       {/* Your crew: scene on the left, tips + recipe ideas on the right */}
-      <div style={{ background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 22, padding: 20, display: "grid", gridTemplateColumns: "minmax(0, 0.82fr) minmax(0, 1fr)", gap: 22 }}>
+      <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.lg, padding: 20, display: "grid", gridTemplateColumns: "minmax(0, 0.82fr) minmax(0, 1fr)", gap: 22 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={{ fontSize: 14.5, fontWeight: 800 }}>Your crew</div>
-            <div onClick={actions.openRecipesHub} style={{ fontSize: 11.5, fontWeight: 700, color: "#2f6fb0", cursor: "pointer" }}>
+            <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 13 }}>Your crew</div>
+            <div onClick={actions.openRecipesHub} style={{ fontSize: 11.5, fontWeight: 700, color: theme.blue, cursor: "pointer" }}>
               Open →
             </div>
           </div>
@@ -808,45 +837,45 @@ export default function HomeScreen() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 18, minWidth: 0 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, color: "rgba(22,50,92,0.55)", marginBottom: 10 }}>Crew tips</div>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, color: theme.text.muted, marginBottom: 10 }}>Crew tips</div>
             {!guardianVisible && !lowStockVisible && !chefVisible ? (
-              <div style={{ fontSize: 12, color: "rgba(22,50,92,0.5)" }}>No tips right now — check back after your next shop.</div>
+              <div style={{ fontSize: 12, color: theme.text.faint }}>No tips right now — check back after your next shop.</div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {guardianVisible && guardianItem && (
                   <div
                     onClick={() => actions.selectItem(guardianItem.id)}
-                    style={{ padding: "10px 12px", borderRadius: 12, background: "#f9fbfd", borderLeft: "3px solid #c1452e", cursor: "pointer" }}
+                    style={{ padding: "10px 12px", borderRadius: theme.radius.sm, background: theme.bg.surface2, borderLeft: `3px solid ${theme.agent.guardian}`, cursor: "pointer" }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
                       <div style={{ fontSize: 12, fontWeight: 800 }}>Guardian</div>
-                      <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.3, color: "#c1452e", background: "#c1452e1a", padding: "2px 6px", borderRadius: 5 }}>ALERT</div>
+                      <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.3, color: theme.agent.guardian, background: `${theme.agent.guardian}1a`, padding: "2px 6px", borderRadius: 5 }}>ALERT</div>
                     </div>
-                    <MarkdownText text={guardianMessage} style={{ fontSize: 11, lineHeight: 1.45, color: "rgba(22,50,92,0.75)" }} />
+                    <MarkdownText text={guardianMessage} style={{ fontSize: 11, lineHeight: 1.45, color: theme.text.muted }} />
                   </div>
                 )}
                 {chefVisible && (
                   <div
                     onClick={actions.openRecipesHub}
-                    style={{ padding: "10px 12px", borderRadius: 12, background: "#f9fbfd", borderLeft: "3px solid #d99a2b", cursor: "pointer" }}
+                    style={{ padding: "10px 12px", borderRadius: theme.radius.sm, background: theme.bg.surface2, borderLeft: `3px solid ${theme.agent.chef}`, cursor: "pointer" }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
                       <div style={{ fontSize: 12, fontWeight: 800 }}>Chef</div>
-                      <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.3, color: "#d99a2b", background: "#d99a2b1a", padding: "2px 6px", borderRadius: 5 }}>PICK</div>
+                      <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.3, color: theme.agent.chef, background: `${theme.agent.chef}1a`, padding: "2px 6px", borderRadius: 5 }}>PICK</div>
                     </div>
-                    <MarkdownText text={chefMessage} style={{ fontSize: 11, lineHeight: 1.45, color: "rgba(22,50,92,0.75)" }} />
+                    <MarkdownText text={chefMessage} style={{ fontSize: 11, lineHeight: 1.45, color: theme.text.muted }} />
                   </div>
                 )}
                 {lowStockVisible && lowStockItem && (
                   <div
                     onClick={actions.openShoppingHub}
-                    style={{ padding: "10px 12px", borderRadius: 12, background: "#f9fbfd", borderLeft: "3px solid #3f8f5c", cursor: "pointer" }}
+                    style={{ padding: "10px 12px", borderRadius: theme.radius.sm, background: theme.bg.surface2, borderLeft: `3px solid ${theme.agent.shopkeeper}`, cursor: "pointer" }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
                       <div style={{ fontSize: 12, fontWeight: 800 }}>Shopkeeper</div>
-                      <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.3, color: "#3f8f5c", background: "#3f8f5c1a", padding: "2px 6px", borderRadius: 5 }}>LOW STOCK</div>
+                      <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.3, color: theme.agent.shopkeeper, background: `${theme.agent.shopkeeper}1a`, padding: "2px 6px", borderRadius: 5 }}>LOW STOCK</div>
                     </div>
-                    <MarkdownText text={shopkeeperMessage} style={{ fontSize: 11, lineHeight: 1.45, color: "rgba(22,50,92,0.75)" }} />
+                    <MarkdownText text={shopkeeperMessage} style={{ fontSize: 11, lineHeight: 1.45, color: theme.text.muted }} />
                   </div>
                 )}
               </div>
@@ -854,16 +883,16 @@ export default function HomeScreen() {
           </div>
 
           <div>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, color: "rgba(22,50,92,0.55)", marginBottom: 10 }}>Recipe ideas</div>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4, color: theme.text.muted, marginBottom: 10 }}>Recipe ideas</div>
             {recipeIdeas.length === 0 ? (
-              <div style={{ fontSize: 12, color: "rgba(22,50,92,0.5)" }}>Add a few more items and recipe ideas will show up here.</div>
+              <div style={{ fontSize: 12, color: theme.text.faint }}>Add a few more items and recipe ideas will show up here.</div>
             ) : (
               <div ref={recipesRowRef} className="thatfridge-scroll-row" style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 2 }}>
                 {recipeIdeas.slice(0, 8).map((r) => (
                   <div
                     key={r.id}
                     onClick={() => actions.openRecipeDetail(r.id)}
-                    style={{ flex: "none", width: 112, borderRadius: 12, overflow: "hidden", background: "#f9fbfd", cursor: "pointer" }}
+                    style={{ flex: "none", width: 112, borderRadius: theme.radius.sm, overflow: "hidden", background: theme.bg.surface2, cursor: "pointer" }}
                   >
                     <div style={{ position: "relative", width: "100%", height: 54, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <FoodIcon icon={r.icon} />

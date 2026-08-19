@@ -1,7 +1,9 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { House, MessageCircle, Package, Plus, Refrigerator as FridgeIcon, Users } from "lucide-react";
+import { House, MessageCircle, Package, Plus, Users } from "lucide-react";
+import Image from "next/image";
+import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
 
 interface NavDef {
@@ -32,11 +34,20 @@ export default function Sidebar() {
   return (
     <aside
       className="thatfridge-sidebar"
-      style={{ flexDirection: "column", gap: 24, background: "#16325c", color: "#fff", padding: "22px 16px", height: "100%", boxSizing: "border-box" }}
+      style={{
+        flexDirection: "column",
+        gap: 24,
+        background: theme.bg.surface,
+        color: theme.text.primary,
+        padding: "22px 16px",
+        height: "100%",
+        boxSizing: "border-box",
+        borderRight: `1px solid ${theme.border.hairline}`,
+      }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 6px" }}>
-        <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-          <FridgeIcon size={17} color="#fff" strokeWidth={1.8} />
+        <div style={{ width: 32, height: 32, borderRadius: theme.radius.sm, background: theme.bg.surface2, border: `1px solid ${theme.border.hairline}`, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+          <Image src="/images/thatfridge/logo.svg" alt="ThatFridge" width={20} height={21} unoptimized style={{ objectFit: "contain" }} />
         </div>
         <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.2 }}>ThatFridge</div>
       </div>
@@ -53,11 +64,11 @@ export default function Sidebar() {
                 alignItems: "center",
                 gap: 11,
                 padding: "10px 12px",
-                borderRadius: 11,
+                borderRadius: theme.radius.sm,
                 fontSize: 13.5,
                 fontWeight: 600,
-                color: active ? "#fff" : "rgba(255,255,255,0.68)",
-                background: active ? "rgba(255,255,255,0.14)" : "transparent",
+                color: active ? theme.text.primary : theme.text.muted,
+                background: active ? theme.bg.surface2 : "transparent",
                 cursor: "pointer",
               }}
             >
@@ -70,7 +81,7 @@ export default function Sidebar() {
 
       {state.fridges.length > 0 && (
         <div>
-          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", padding: "0 12px", marginBottom: 6 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: theme.text.faint, padding: "0 12px", marginBottom: 6 }}>
             Your fridges
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -78,12 +89,12 @@ export default function Sidebar() {
               onClick={() => actions.selectFridgeScope("all")}
               style={{
                 padding: "8px 12px",
-                borderRadius: 11,
+                borderRadius: theme.radius.sm,
                 fontSize: 12.5,
                 fontWeight: 600,
                 cursor: "pointer",
-                color: state.kitchenScope === "all" ? "#fff" : "rgba(255,255,255,0.68)",
-                background: state.kitchenScope === "all" ? "rgba(255,255,255,0.1)" : "transparent",
+                color: state.kitchenScope === "all" ? theme.text.primary : theme.text.muted,
+                background: state.kitchenScope === "all" ? theme.bg.surface2 : "transparent",
               }}
             >
               All Fridges
@@ -96,12 +107,12 @@ export default function Sidebar() {
                   onClick={() => actions.selectFridgeScope(i)}
                   style={{
                     padding: "8px 12px",
-                    borderRadius: 11,
+                    borderRadius: theme.radius.sm,
                     fontSize: 12.5,
                     fontWeight: 600,
                     cursor: "pointer",
-                    color: active ? "#fff" : "rgba(255,255,255,0.68)",
-                    background: active ? "rgba(255,255,255,0.1)" : "transparent",
+                    color: active ? theme.text.primary : theme.text.muted,
+                    background: active ? theme.bg.surface2 : "transparent",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
@@ -123,11 +134,14 @@ export default function Sidebar() {
           justifyContent: "center",
           gap: 8,
           padding: "11px 14px",
-          borderRadius: 11,
-          background: "#fff",
-          color: "#16325c",
+          borderRadius: theme.radius.sm,
+          background: theme.amber,
+          color: "#0a0a0c",
           fontWeight: 700,
           fontSize: 13.5,
+          fontFamily: theme.fontMono,
+          textTransform: "uppercase",
+          letterSpacing: 0.5,
           cursor: "pointer",
         }}
       >
@@ -139,16 +153,16 @@ export default function Sidebar() {
 
       <div
         onClick={actions.openProfile}
-        style={{ display: "flex", alignItems: "center", gap: 10, padding: 8, borderRadius: 11, cursor: "pointer" }}
+        style={{ display: "flex", alignItems: "center", gap: 10, padding: 8, borderRadius: theme.radius.sm, cursor: "pointer" }}
       >
-        <div style={{ width: 32, height: 32, borderRadius: 10, background: "rgba(255,255,255,0.14)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flex: "none" }}>
+        <div style={{ width: 32, height: 32, borderRadius: theme.radius.sm, background: theme.bg.surface2, border: `1px solid ${theme.border.hairline}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flex: "none" }}>
           {userInitials}
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {state.currentUser?.name || "Friend"}
           </div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div style={{ fontSize: 11, color: theme.text.faint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {state.currentUser?.email || ""}
           </div>
         </div>

@@ -6,6 +6,7 @@ import { NUTRITION_CATEGORIES, STORAGE_LOCATIONS, guessNutritionCategory } from 
 import { getScopeLabel, getScopedItems, type ItemWithSection } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import type { NutritionCategory, StorageLocation } from "@/lib/thatfridge/types";
+import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import CategoryTag from "../CategoryTag";
 import FoodIcon from "../FoodIcon";
@@ -20,7 +21,7 @@ function LocationTag({ location }: { location: StorageLocation }) {
         display: "inline-flex",
         alignItems: "center",
         padding: "3px 5px",
-        borderRadius: 6,
+        borderRadius: theme.radius.sm,
         color: meta.color,
         background: `${meta.color}1a`,
         flex: "none",
@@ -45,19 +46,19 @@ function QtyStepper({ qty, onChange }: { qty: number; onChange: (delta: number) 
           e.stopPropagation();
           onChange(-1);
         }}
-        style={{ width: 20, height: 20, borderRadius: 10, background: "#eef4fa", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+        style={{ width: 20, height: 20, borderRadius: 10, background: theme.bg.surface2, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
       >
-        <Minus size={11} color="#16325c" strokeWidth={2.4} />
+        <Minus size={11} color={theme.text.primary} strokeWidth={2.4} />
       </div>
-      <div style={{ fontSize: 12, fontWeight: 700, color: "#16325c", minWidth: 14, textAlign: "center" }}>{qty}</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: theme.text.primary, minWidth: 14, textAlign: "center" }}>{qty}</div>
       <div
         onClick={(e) => {
           e.stopPropagation();
           onChange(1);
         }}
-        style={{ width: 20, height: 20, borderRadius: 10, background: "#eef4fa", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+        style={{ width: 20, height: 20, borderRadius: 10, background: theme.bg.surface2, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
       >
-        <Plus size={11} color="#16325c" strokeWidth={2.4} />
+        <Plus size={11} color={theme.text.primary} strokeWidth={2.4} />
       </div>
     </div>
   );
@@ -99,16 +100,16 @@ export default function InventoryScreen() {
     <div className="thatfridge-inventory-mobile" style={{ position: "absolute", inset: 0, overflowY: "auto", padding: "28px 20px 180px" }}>
       {/* header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>Inventory</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 16, letterSpacing: 0.5 }}>Inventory</div>
         <div
           onClick={actions.openSearch}
           style={{
             width: 34,
             height: 34,
             borderRadius: 17,
-            background: "rgba(255,255,255,0.75)",
+            background: theme.bg.surface,
             backdropFilter: "blur(8px)",
-            border: "1px solid rgba(22,50,92,0.1)",
+            border: `1px solid ${theme.border.hairline}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -116,7 +117,7 @@ export default function InventoryScreen() {
             flex: "none",
           }}
         >
-          <Search size={16} color="#16325c" strokeWidth={2} />
+          <Search size={16} color={theme.text.primary} strokeWidth={2} />
         </div>
       </div>
 
@@ -127,11 +128,11 @@ export default function InventoryScreen() {
           alignItems: "center",
           gap: 5,
           padding: "5px 10px",
-          borderRadius: 10,
-          background: "rgba(22,50,92,0.06)",
+          borderRadius: theme.radius.sm,
+          background: theme.bg.surface2,
           fontSize: 11,
           fontWeight: 700,
-          color: "rgba(22,50,92,0.55)",
+          color: theme.text.muted,
           cursor: "pointer",
           marginBottom: 18,
           width: "fit-content",
@@ -146,13 +147,13 @@ export default function InventoryScreen() {
         <div style={{ position: "relative" }}>
           <div
             onClick={() => setShowSortMenu((v) => !v)}
-            style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 10, background: "#fff", boxShadow: "0 4px 10px rgba(22,50,92,0.08)", cursor: "pointer", fontSize: 11.5, fontWeight: 700, color: "#16325c" }}
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: theme.radius.sm, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, cursor: "pointer", fontSize: 11.5, fontWeight: 700, color: theme.text.primary }}
           >
-            <ListFilter size={13} color="#16325c" strokeWidth={2.2} />
+            <ListFilter size={13} color={theme.text.primary} strokeWidth={2.2} />
             {SORT_OPTIONS.find((o) => o.key === state.inventorySortMode)?.label}
           </div>
           {showSortMenu && (
-            <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", borderRadius: 12, boxShadow: "0 10px 24px rgba(22,50,92,0.14)", padding: 6, zIndex: 5, minWidth: 120 }}>
+            <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: theme.bg.surface, borderRadius: theme.radius.sm, border: `1px solid ${theme.border.hairline}`, padding: 6, zIndex: 5, minWidth: 120 }}>
               {SORT_OPTIONS.map((opt) => (
                 <div
                   key={opt.key}
@@ -162,12 +163,12 @@ export default function InventoryScreen() {
                   }}
                   style={{
                     padding: "8px 10px",
-                    borderRadius: 8,
+                    borderRadius: theme.radius.sm,
                     fontSize: 12.5,
                     fontWeight: 600,
                     cursor: "pointer",
-                    color: state.inventorySortMode === opt.key ? "#2f6fb0" : "#16325c",
-                    background: state.inventorySortMode === opt.key ? "#eaf6ff" : "transparent",
+                    color: state.inventorySortMode === opt.key ? theme.blue : theme.text.primary,
+                    background: state.inventorySortMode === opt.key ? theme.bg.surface2 : "transparent",
                   }}
                 >
                   {opt.label}
@@ -189,13 +190,13 @@ export default function InventoryScreen() {
                 flex: "none",
                 whiteSpace: "nowrap",
                 padding: "7px 14px",
-                borderRadius: 14,
+                borderRadius: theme.radius.sm,
                 fontSize: 12.5,
                 fontWeight: 700,
                 cursor: "pointer",
-                background: active ? "#16325c" : "#fff",
-                color: active ? "#fff" : "#16325c",
-                boxShadow: "0 4px 10px rgba(22,50,92,0.08)",
+                background: active ? theme.text.primary : theme.bg.surface,
+                color: active ? "#0a0a0c" : theme.text.primary,
+                border: active ? "none" : `1px solid ${theme.border.hairline}`,
               }}
             >
               {cat.name}
@@ -209,33 +210,33 @@ export default function InventoryScreen() {
           <div key={g.id} style={{ marginBottom: 22 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
               <div style={{ fontSize: 15, fontWeight: 700 }}>{g.name}</div>
-              <div style={{ fontSize: 12, color: "rgba(22,50,92,0.45)" }}>{g.items.length} items</div>
+              <div style={{ fontSize: 12, color: theme.text.faint }}>{g.items.length} items</div>
             </div>
-            <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden" }}>
+            <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, overflow: "hidden" }}>
               {g.items.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => actions.selectItem(item.id)}
-                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: `1px solid ${theme.border.hairline}`, cursor: "pointer" }}
                 >
-                  <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
+                  <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: theme.radius.sm, background: theme.bg.surface2, padding: 6, boxSizing: "border-box" }}>
                     <FoodIcon icon={item.icon} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
                       {item.name}
-                      {showFridgeTags && <span style={{ fontWeight: 500, color: "rgba(22,50,92,0.4)" }}> · {item.fridgeName}</span>}
-                      {item.opened && <PackageOpen size={12} color="#2f6fb0" strokeWidth={2.4} />}
+                      {showFridgeTags && <span style={{ fontWeight: 500, color: theme.text.faint }}> · {item.fridgeName}</span>}
+                      {item.opened && <PackageOpen size={12} color={theme.blue} strokeWidth={2.4} />}
                       <LocationTag location={item.location || "fridge"} />
                       <CategoryTag category={item.nutritionCategory} />
                     </div>
-                    <div style={{ height: 4, borderRadius: 2, background: "rgba(22,50,92,0.08)", overflow: "hidden" }}>
+                    <div style={{ height: 4, borderRadius: 2, background: theme.bg.surface2, overflow: "hidden" }}>
                       <div style={{ height: "100%", borderRadius: 2, width: `${item.freshness}%`, background: freshColor(item.freshness) }} />
                     </div>
                   </div>
                   <div style={{ textAlign: "right", flex: "none" }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: freshColor(item.freshness) }}>{daysLabel(item.days)}</div>
-                    <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", marginTop: 2 }}>{item.note}</div>
+                    <div style={{ fontSize: 10.5, color: theme.text.faint, marginTop: 2 }}>{item.note}</div>
                     <QtyStepper qty={item.qty} onChange={(delta) => actions.adjustItemQty(item.id, delta)} />
                   </div>
                 </div>
@@ -244,34 +245,34 @@ export default function InventoryScreen() {
           </div>
         ))
       ) : (
-        <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden", marginBottom: 22 }}>
+        <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, overflow: "hidden", marginBottom: 22 }}>
           {sortedItems.map((item) => (
             <div
               key={item.id}
               onClick={() => actions.selectItem(item.id)}
-              style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}
+              style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: `1px solid ${theme.border.hairline}`, cursor: "pointer" }}
             >
-              <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
+              <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: theme.radius.sm, background: theme.bg.surface2, padding: 6, boxSizing: "border-box" }}>
                 <FoodIcon icon={item.icon} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
                   {item.name}
-                  {item.opened && <PackageOpen size={12} color="#2f6fb0" strokeWidth={2.4} />}
+                  {item.opened && <PackageOpen size={12} color={theme.blue} strokeWidth={2.4} />}
                   <LocationTag location={item.location || "fridge"} />
                   <CategoryTag category={item.nutritionCategory} />
                 </div>
-                <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", marginBottom: 4 }}>
+                <div style={{ fontSize: 10.5, color: theme.text.faint, marginBottom: 4 }}>
                   {item.sectionName}
                   {showFridgeTags && <span> · {item.fridgeName}</span>}
                 </div>
-                <div style={{ height: 4, borderRadius: 2, background: "rgba(22,50,92,0.08)", overflow: "hidden" }}>
+                <div style={{ height: 4, borderRadius: 2, background: theme.bg.surface2, overflow: "hidden" }}>
                   <div style={{ height: "100%", borderRadius: 2, width: `${item.freshness}%`, background: freshColor(item.freshness) }} />
                 </div>
               </div>
               <div style={{ textAlign: "right", flex: "none" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: freshColor(item.freshness) }}>{daysLabel(item.days)}</div>
-                <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", marginTop: 2 }}>{item.note}</div>
+                <div style={{ fontSize: 10.5, color: theme.text.faint, marginTop: 2 }}>{item.note}</div>
                 <QtyStepper qty={item.qty} onChange={(delta) => actions.adjustItemQty(item.id, delta)} />
               </div>
             </div>
@@ -284,17 +285,17 @@ export default function InventoryScreen() {
     <div className="thatfridge-inventory-wide">
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24, marginBottom: 22 }}>
         <div>
-          <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, marginBottom: 6 }}>Inventory</div>
-          <div style={{ fontSize: 13.5, color: "rgba(22,50,92,0.55)" }}>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 21, letterSpacing: 0.5, marginBottom: 8 }}>Inventory</div>
+          <div style={{ fontSize: 13.5, color: theme.text.muted }}>
             {allItems.length} item{allItems.length === 1 ? "" : "s"} · {getScopeLabel(state)}
           </div>
         </div>
         <div
           onClick={actions.openSearch}
-          style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 12, padding: "9px 14px", width: 240, cursor: "pointer", flex: "none" }}
+          style={{ display: "flex", alignItems: "center", gap: 8, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.sm, padding: "9px 14px", width: 240, cursor: "pointer", flex: "none" }}
         >
-          <Search size={15} color="rgba(22,50,92,0.5)" strokeWidth={2} />
-          <span style={{ fontSize: 13, color: "rgba(22,50,92,0.4)" }}>Search inventory…</span>
+          <Search size={15} color={theme.text.faint} strokeWidth={2} />
+          <span style={{ fontSize: 13, color: theme.text.faint }}>Search inventory…</span>
         </div>
       </div>
 
@@ -307,13 +308,13 @@ export default function InventoryScreen() {
               onClick={() => setCategoryFilter(cat.id)}
               style={{
                 padding: "8px 14px",
-                borderRadius: 20,
+                borderRadius: theme.radius.lg,
                 fontSize: 12.5,
                 fontWeight: 700,
                 cursor: "pointer",
-                background: active ? "#16325c" : "#fff",
-                color: active ? "#fff" : "rgba(22,50,92,0.55)",
-                border: active ? "1px solid #16325c" : "1px solid rgba(22,50,92,0.09)",
+                background: active ? theme.text.primary : theme.bg.surface,
+                color: active ? "#0a0a0c" : theme.text.muted,
+                border: active ? `1px solid ${theme.text.primary}` : `1px solid ${theme.border.hairline}`,
               }}
             >
               {cat.name}
@@ -323,13 +324,13 @@ export default function InventoryScreen() {
         <div style={{ position: "relative", marginLeft: "auto" }}>
           <div
             onClick={() => setShowSortMenu((v) => !v)}
-            style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, fontWeight: 700, color: "rgba(22,50,92,0.55)", padding: "8px 14px", borderRadius: 20, background: "#fff", border: "1px solid rgba(22,50,92,0.09)", cursor: "pointer" }}
+            style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, fontWeight: 700, color: theme.text.muted, padding: "8px 14px", borderRadius: theme.radius.lg, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, cursor: "pointer" }}
           >
             <ListFilter size={13} strokeWidth={2.2} />
             Sort: {SORT_OPTIONS.find((o) => o.key === state.inventorySortMode)?.label}
           </div>
           {showSortMenu && (
-            <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", borderRadius: 12, boxShadow: "0 10px 24px rgba(22,50,92,0.14)", padding: 6, zIndex: 5, minWidth: 130 }}>
+            <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: theme.bg.surface, borderRadius: theme.radius.sm, border: `1px solid ${theme.border.hairline}`, padding: 6, zIndex: 5, minWidth: 130 }}>
               {SORT_OPTIONS.map((opt) => (
                 <div
                   key={opt.key}
@@ -339,12 +340,12 @@ export default function InventoryScreen() {
                   }}
                   style={{
                     padding: "8px 10px",
-                    borderRadius: 8,
+                    borderRadius: theme.radius.sm,
                     fontSize: 12.5,
                     fontWeight: 600,
                     cursor: "pointer",
-                    color: state.inventorySortMode === opt.key ? "#2f6fb0" : "#16325c",
-                    background: state.inventorySortMode === opt.key ? "#eaf6ff" : "transparent",
+                    color: state.inventorySortMode === opt.key ? theme.blue : theme.text.primary,
+                    background: state.inventorySortMode === opt.key ? theme.bg.surface2 : "transparent",
                   }}
                 >
                   {opt.label}
@@ -356,7 +357,7 @@ export default function InventoryScreen() {
       </div>
 
       {sortedItems.length === 0 ? (
-        <div style={{ fontSize: 13, color: "rgba(22,50,92,0.5)" }}>No items in this category yet.</div>
+        <div style={{ fontSize: 13, color: theme.text.faint }}>No items in this category yet.</div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>
           {sortedItems.map((item) => {
@@ -366,9 +367,9 @@ export default function InventoryScreen() {
                 key={item.id}
                 onClick={() => actions.selectItem(item.id)}
                 style={{
-                  background: "#fff",
-                  boxShadow: "0 6px 20px rgba(22,50,92,0.07)",
-                  borderRadius: 16,
+                  background: theme.bg.surface,
+                  border: `1px solid ${theme.border.hairline}`,
+                  borderRadius: theme.radius.md,
                   padding: 16,
                   cursor: "pointer",
                   borderTop: `3px solid ${meta.color}`,
@@ -378,7 +379,7 @@ export default function InventoryScreen() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-                  <div style={{ position: "relative", width: 40, height: 40, borderRadius: 12, background: "#f6f1e4", padding: 7, boxSizing: "border-box" }}>
+                  <div style={{ position: "relative", width: 40, height: 40, borderRadius: theme.radius.sm, background: theme.bg.surface2, padding: 7, boxSizing: "border-box" }}>
                     <FoodIcon icon={item.icon} />
                   </div>
                   <LocationTag location={item.location || "fridge"} />
@@ -386,16 +387,16 @@ export default function InventoryScreen() {
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13.5, fontWeight: 700, flexWrap: "wrap" }}>
                     {item.name}
-                    {item.opened && <PackageOpen size={12} color="#2f6fb0" strokeWidth={2.4} />}
+                    {item.opened && <PackageOpen size={12} color={theme.blue} strokeWidth={2.4} />}
                     <CategoryTag category={item.nutritionCategory} />
                   </div>
-                  <div style={{ fontSize: 11, color: "rgba(22,50,92,0.5)", marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: theme.text.faint, marginTop: 2 }}>
                     {item.sectionName}
                     {showFridgeTags && <span> · {item.fridgeName}</span>}
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: "auto" }}>
-                  <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(22,50,92,0.08)", overflow: "hidden" }}>
+                  <div style={{ flex: 1, height: 4, borderRadius: 2, background: theme.bg.surface2, overflow: "hidden" }}>
                     <div style={{ height: "100%", borderRadius: 2, width: `${item.freshness}%`, background: freshColor(item.freshness) }} />
                   </div>
                   <div style={{ fontSize: 10.5, fontWeight: 700, color: freshColor(item.freshness), flex: "none" }}>{daysLabel(item.days)}</div>

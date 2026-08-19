@@ -8,24 +8,25 @@ import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import CategoryTag from "../CategoryTag";
 import FoodIcon from "../FoodIcon";
+import { theme } from "@/lib/thatfridge/theme";
 
 const labelStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
   letterSpacing: 0.3,
-  color: "rgba(22,50,92,0.5)",
+  color: theme.text.faint,
   marginBottom: 6,
 };
 
 const fieldStyle: React.CSSProperties = {
   width: "100%",
-  border: "none",
+  border: `1px solid ${theme.border.hairline}`,
   outline: "none",
-  background: "#eaf6ff",
-  borderRadius: 14,
+  background: theme.bg.surface2,
+  borderRadius: theme.radius.sm,
   padding: "12px 14px",
   fontSize: 13.5,
-  color: "#16325c",
+  color: theme.text.primary,
   boxSizing: "border-box",
 };
 
@@ -39,7 +40,7 @@ export default function ItemDetailSheet() {
 
   if (state.isEditingItem) {
     return (
-      <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)", zIndex: 10 }}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 10 }}>
         <div
           style={{
             position: "absolute",
@@ -47,8 +48,8 @@ export default function ItemDetailSheet() {
             right: 0,
             bottom: 0,
             top: 60,
-            background: "#fff",
-            borderRadius: "28px 28px 0 0",
+            background: theme.bg.surface,
+            borderRadius: `${theme.radius.xl}px ${theme.radius.xl}px 0 0`,
             padding: "14px 22px 30px",
             animation: "pop .22s ease-out",
             display: "flex",
@@ -60,9 +61,9 @@ export default function ItemDetailSheet() {
               setShowIconPicker(false);
               actions.cancelEditItem();
             }}
-            style={{ width: 36, height: 5, borderRadius: 3, background: "rgba(22,50,92,0.18)", margin: "0 auto 20px", cursor: "pointer", flex: "none" }}
+            style={{ width: 36, height: 5, borderRadius: 3, background: theme.border.strong, margin: "0 auto 20px", cursor: "pointer", flex: "none" }}
           />
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, flex: "none" }}>Edit item</div>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 14, marginBottom: 18, flex: "none" }}>Edit item</div>
 
           <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           <div style={{ marginBottom: 14 }}>
@@ -95,25 +96,25 @@ export default function ItemDetailSheet() {
             <div style={labelStyle}>PICTURE</div>
             <div
               onClick={() => setShowIconPicker((v) => !v)}
-              style={{ display: "flex", alignItems: "center", gap: 10, background: "#eaf6ff", borderRadius: 14, padding: "8px 12px", cursor: "pointer" }}
+              style={{ display: "flex", alignItems: "center", gap: 10, background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: "8px 12px", cursor: "pointer" }}
             >
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+              <div style={{ width: 36, height: 36, borderRadius: theme.radius.sm, background: theme.bg.surface, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
                 <div style={{ position: "relative", width: 22, height: 22 }}>
                   <FoodIcon icon={state.editIcon} />
                 </div>
               </div>
-              <div style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: "#16325c" }}>
+              <div style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: theme.text.primary }}>
                 {ICON_LABELS[state.editIcon] || "Choose a picture"}
               </div>
               <ChevronDown
                 size={16}
-                color="rgba(22,50,92,0.4)"
+                color={theme.text.faint}
                 strokeWidth={2.2}
                 style={{ transform: showIconPicker ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}
               />
             </div>
             {showIconPicker && (
-              <div style={{ marginTop: 8, maxHeight: 220, overflowY: "auto", background: "#eaf6ff", borderRadius: 14, padding: 10 }}>
+              <div style={{ marginTop: 8, maxHeight: 220, overflowY: "auto", background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: 10 }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                   {FOOD_ICON_KEYS.map((key) => (
                     <div
@@ -126,9 +127,9 @@ export default function ItemDetailSheet() {
                       style={{
                         width: 48,
                         height: 48,
-                        borderRadius: 14,
-                        background: "#fff",
-                        border: `2px solid ${state.editIcon === key ? "#2f6fb0" : "transparent"}`,
+                        borderRadius: theme.radius.sm,
+                        background: theme.bg.surface,
+                        border: `2px solid ${state.editIcon === key ? theme.blue : "transparent"}`,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -156,12 +157,12 @@ export default function ItemDetailSheet() {
                     onClick={() => actions.onEditCategoryChange(c.key)}
                     style={{
                       padding: "7px 12px",
-                      borderRadius: 12,
+                      borderRadius: theme.radius.sm,
                       fontSize: 12,
                       fontWeight: 700,
                       cursor: "pointer",
-                      background: active ? "#16325c" : "#eaf6ff",
-                      color: active ? "#fff" : "#16325c",
+                      background: active ? theme.amber : theme.bg.surface2,
+                      color: active ? "#0a0a0c" : theme.text.primary,
                     }}
                   >
                     {c.label}
@@ -196,7 +197,7 @@ export default function ItemDetailSheet() {
             <div onClick={() => {
             setShowIconPicker(false);
             actions.cancelEditItem();
-          }} style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#16325c", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
+          }} style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: theme.radius.sm, background: theme.bg.surface2, border: `1px solid ${theme.border.hairline}`, color: theme.text.primary, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
               Cancel
             </div>
             <div
@@ -208,18 +209,21 @@ export default function ItemDetailSheet() {
                 flex: 1,
                 textAlign: "center",
                 padding: 13,
-                borderRadius: 14,
-                background: state.editName.trim() ? "#16325c" : "rgba(22,50,92,0.25)",
-                color: "#fff",
+                borderRadius: theme.radius.sm,
+                background: state.editName.trim() ? theme.amber : theme.bg.surface2,
+                color: state.editName.trim() ? "#0a0a0c" : theme.text.faint,
                 fontSize: 13.5,
                 fontWeight: 700,
+                fontFamily: theme.fontMono,
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
                 cursor: "pointer",
               }}
             >
               Save
             </div>
           </div>
-          <div onClick={actions.discardItemWasted} style={{ textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#c1452e", fontSize: 13.5, fontWeight: 700, cursor: "pointer", flex: "none" }}>
+          <div onClick={actions.discardItemWasted} style={{ textAlign: "center", padding: 13, borderRadius: theme.radius.sm, background: theme.bg.surface2, border: `1px solid ${theme.border.hairline}`, color: theme.bad, fontSize: 13.5, fontWeight: 700, cursor: "pointer", flex: "none" }}>
             Throw away
           </div>
         </div>
@@ -238,7 +242,7 @@ export default function ItemDetailSheet() {
         : `${item.name} is holding up well — no action needed.`;
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)", zIndex: 10 }}>
+    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 10 }}>
       <div
         style={{
           position: "absolute",
@@ -246,18 +250,18 @@ export default function ItemDetailSheet() {
           right: 0,
           bottom: 0,
           top: 60,
-          background: "#fff",
-          borderRadius: "28px 28px 0 0",
+          background: theme.bg.surface,
+          borderRadius: `${theme.radius.xl}px ${theme.radius.xl}px 0 0`,
           padding: "14px 22px 34px",
           animation: "pop .22s ease-out",
           display: "flex",
           flexDirection: "column",
         }}
       >
-        <div onClick={actions.goHome} style={{ width: 36, height: 5, borderRadius: 3, background: "rgba(22,50,92,0.18)", margin: "0 auto 20px", cursor: "pointer", flex: "none" }} />
+        <div onClick={actions.goHome} style={{ width: 36, height: 5, borderRadius: 3, background: theme.border.strong, margin: "0 auto 20px", cursor: "pointer", flex: "none" }} />
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, position: "relative" }}>
-          <div style={{ width: 88, height: 88, background: "#eaf6ff", borderRadius: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 88, height: 88, background: theme.bg.surface2, borderRadius: theme.radius.lg, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div style={{ position: "relative", width: 52, height: 52 }}>
               <FoodIcon icon={item.icon} />
             </div>
@@ -274,59 +278,59 @@ export default function ItemDetailSheet() {
               width: 30,
               height: 30,
               borderRadius: 15,
-              background: "#16325c",
+              background: theme.amber,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
             }}
           >
-            <Pencil size={14} color="#fff" strokeWidth={2.2} />
+            <Pencil size={14} color="#0a0a0c" strokeWidth={2.2} />
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 2, flexWrap: "wrap" }}>
           <div style={{ textAlign: "center", fontSize: 20, fontWeight: 700 }}>{item.name}</div>
           {item.opened && (
-            <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#2f6fb0", background: "#2f6fb01a", padding: "2px 7px", borderRadius: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: theme.blue, background: `${theme.blue}1a`, padding: "2px 7px", borderRadius: theme.radius.sm }}>
               <PackageOpen size={10} strokeWidth={2.4} />
               OPENED
             </div>
           )}
           <CategoryTag category={item.nutritionCategory} />
         </div>
-        <div style={{ textAlign: "center", fontSize: 12.5, color: "rgba(22,50,92,0.45)", marginBottom: 18 }}>
+        <div style={{ textAlign: "center", fontSize: 12.5, color: theme.text.faint, marginBottom: 18 }}>
           {itemFridge?.name} · {section.name}
         </div>
 
-        <div style={{ background: "#eaf6ff", borderRadius: 16, padding: "14px 16px", marginBottom: 14 }}>
+        <div style={{ background: theme.bg.surface2, borderRadius: theme.radius.md, padding: "14px 16px", marginBottom: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 600, marginBottom: 6 }}>
             <span>Freshness</span>
             <span style={{ color: freshColor(item.freshness) }}>{item.freshness}%</span>
           </div>
-          <div style={{ height: 6, borderRadius: 3, background: "rgba(22,50,92,0.08)", overflow: "hidden", marginBottom: 10 }}>
+          <div style={{ height: 6, borderRadius: 3, background: theme.border.hairline, overflow: "hidden", marginBottom: 10 }}>
             <div style={{ height: "100%", borderRadius: 3, width: `${item.freshness}%`, background: freshColor(item.freshness) }} />
           </div>
-          <div style={{ fontSize: 12.5, color: "rgba(22,50,92,0.6)" }}>
+          <div style={{ fontSize: 12.5, color: theme.text.muted }}>
             {daysLabel(item.days)} · {item.note}
           </div>
         </div>
 
-        <div style={{ background: "#eef2f7", borderRadius: 14, padding: "10px 14px", marginBottom: 20 }}>
-          <div style={{ fontSize: 12.5, lineHeight: 1.45, color: "#16325c" }}>{tip}</div>
+        <div style={{ background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: "10px 14px", marginBottom: 20 }}>
+          <div style={{ fontSize: 12.5, lineHeight: 1.45, color: theme.text.primary }}>{tip}</div>
         </div>
 
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: "none" }}>
           {item.opened ? (
-            <div style={{ textAlign: "center", padding: 11, borderRadius: 14, background: "rgba(22,50,92,0.06)", color: "rgba(22,50,92,0.4)", fontSize: 13, fontWeight: 700 }}>
+            <div style={{ textAlign: "center", padding: 11, borderRadius: theme.radius.sm, background: theme.bg.surface2, color: theme.text.faint, fontSize: 13, fontWeight: 700 }}>
               Opened
             </div>
           ) : (
             <div
               onClick={actions.markUsed}
               title="Opened but not finished - stays in your fridge, just tracked as opened"
-              style={{ textAlign: "center", padding: 11, borderRadius: 14, background: "#eaf6ff", color: "#2f6fb0", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+              style={{ textAlign: "center", padding: 11, borderRadius: theme.radius.sm, background: theme.bg.surface2, color: theme.blue, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
             >
               Opened it
             </div>
@@ -335,14 +339,14 @@ export default function ItemDetailSheet() {
             <div
               onClick={actions.markItemConsumed}
               title="Finished it - counts toward your Food Balance score"
-              style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#16325c", color: "#fff", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+              style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: theme.radius.sm, background: theme.amber, color: "#0a0a0c", fontSize: 13.5, fontWeight: 700, fontFamily: theme.fontMono, textTransform: "uppercase", letterSpacing: 0.5, cursor: "pointer" }}
             >
               Used it up
             </div>
             <div
               onClick={actions.discardItemWasted}
               title="Threw it out - doesn't count toward your Food Balance score"
-              style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#c1452e", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+              style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: theme.radius.sm, background: theme.bg.surface, border: `1px solid ${theme.bad}40`, color: theme.bad, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
             >
               Throw away
             </div>

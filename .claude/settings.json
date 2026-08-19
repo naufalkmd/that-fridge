@@ -39,7 +39,9 @@
       "Bash(curl -s -o /dev/null -w \"http_code: %{http_code}\\\\n\" http://localhost:3001)",
       "Bash(git stash *)",
       "Bash(echo \"---exit: $?---\")",
-      "Bash(grep -rn *)"
+      "Bash(grep -rn *)",
+      "Bash(grep -n \"class=\\\\\"header\\\\\"\\\\|class=\\\\\"topbar\\\\\"\\\\|class=\\\\\"stats-row\\\\\"\\\\|Needs attention\\\\|t-attn\\\\|row-track-wrap\\\\|</div>$\" /private/tmp/claude-501/-Users-naufalkmd-Github-ThatFridge/105b4f4c-79e8-4908-8a9e-45a5210ea2db/scratchpad/home-redesign-mockup.html)",
+      "Bash(grep -n \"thatfridge-home-wide\\\\|^  \\);$\\\\|^}\" /Users/naufalkmd/Github/ThatFridge/frontend/components/thatfridge/screens/HomeScreen.tsx)"
     ],
     "additionalDirectories": [
       "/private/tmp",

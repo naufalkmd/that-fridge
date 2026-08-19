@@ -507,6 +507,38 @@ One-time unlocks for specific anti-waste actions, not just score thresholds. `ba
 
 ---
 
+## Organizer tally
+
+Cumulative, all-time counts backing the "Tidiness" score — how many items Organizer has checked across every sweep, and how many of those were already in the location Organizer would have suggested. One row per user (`firstOrCreate`-on-read, like User goal). Never resets; a bad week doesn't erase past good habits, mirroring how the other three sub-scores read "recent behavior" rather than "right now only."
+
+### `GET /organizer-tally` 🔒
+
+**200** (or **201** the very first time, since `firstOrCreate()` creates the row)
+```json
+{ "data": { "itemsCheckedTotal": 42, "itemsCorrectTotal": 35, "lastCheckedAt": 1786036186000 } }
+```
+A fresh account reads `{ "itemsCheckedTotal": 0, "itemsCorrectTotal": 0, "lastCheckedAt": null }` — the frontend treats `itemsCheckedTotal === 0` as "not enough data yet", same as Waste Saver/Food Balance before their own minimums are met.
+
+### `POST /organizer-tally/increment` 🔒
+
+Called once per full Organizer sweep (`checkOrganizerMoves()` on the frontend, after every item in the active fridge has been checked against its AI-suggested location) — not per item.
+
+**Body**:
+```json
+{ "checked": 6, "correct": 5 }
+```
+
+| field | notes |
+|---|---|
+| `checked` | integer, `min:1` — how many items were checked this sweep |
+| `correct` | integer, `min:0`, must not exceed `checked` — how many were already in the right spot |
+
+**200** — the updated, cumulative tally, same shape as `GET`.
+
+**422** — `correct` greater than `checked`, in the standard [validation error shape](#error-shape).
+
+---
+
 ## Freshness cron (not an HTTP endpoint)
 
 `app:check-item-freshness` runs daily at 07:00 (`routes/console.php`). Scans all items with an `expiry_date` within 3 days (or already past), and for each one:

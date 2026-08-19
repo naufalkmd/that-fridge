@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
 
 export default function SyncErrorToast() {
@@ -25,10 +26,9 @@ export default function SyncErrorToast() {
         alignItems: "center",
         gap: 14,
         padding: "12px 16px",
-        background: "#c1452e",
-        color: "#fff",
-        borderRadius: 16,
-        boxShadow: "0 10px 28px rgba(193,69,46,0.35)",
+        background: theme.bad,
+        color: theme.text.primary,
+        borderRadius: theme.radius.md,
         zIndex: 6,
         animation: "pop .2s ease-out",
         width: "calc(100% - 40px)",

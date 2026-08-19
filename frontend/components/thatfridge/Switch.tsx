@@ -1,3 +1,5 @@
+import { theme } from "@/lib/thatfridge/theme";
+
 export default function Switch({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
     <div
@@ -8,7 +10,7 @@ export default function Switch({ on, onClick }: { on: boolean; onClick: () => vo
         width: 44,
         height: 26,
         borderRadius: 13,
-        background: on ? "#2f6fb0" : "rgba(22,50,92,0.15)",
+        background: on ? theme.blue : theme.bg.surface2,
         padding: 3,
         cursor: "pointer",
         flex: "none",
@@ -20,8 +22,8 @@ export default function Switch({ on, onClick }: { on: boolean; onClick: () => vo
           width: 20,
           height: 20,
           borderRadius: 10,
-          background: "#fff",
-          boxShadow: "0 1px 3px rgba(22,50,92,0.3)",
+          background: theme.text.primary,
+          border: `1px solid ${theme.border.hairline}`,
           transform: on ? "translateX(18px)" : "translateX(0)",
           transition: "transform 0.15s ease",
         }}

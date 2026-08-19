@@ -2,6 +2,7 @@
 
 import type { ComponentType } from "react";
 import { House, MessageCircle, Package, Plus, Users } from "lucide-react";
+import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
 
 interface TabDef {
@@ -27,8 +28,8 @@ export default function TabBar() {
 
   const renderTab = (tab: TabDef) => {
     const active = tab.key === "activity" ? state.screen === "foodHub" : state.screen === tab.key;
-    const color = active ? "#16325c" : "rgba(22,50,92,0.4)";
-    const pillBg = active ? "#eaf6ff" : "transparent";
+    const color = active ? theme.text.primary : theme.text.faint;
+    const pillBg = active ? theme.bg.surface2 : "transparent";
     return (
       <div
         key={tab.key}
@@ -82,10 +83,10 @@ export default function TabBar() {
         justifyContent: "space-between",
         gap: 4,
         padding: 6,
-        background: "rgba(255,255,255,0.85)",
+        background: theme.bg.surface,
         backdropFilter: "blur(16px)",
         borderRadius: 26,
-        boxShadow: "0 10px 28px rgba(22,50,92,0.16)",
+        border: `1px solid ${theme.border.hairline}`,
         zIndex: 4,
       }}
     >
@@ -102,17 +103,16 @@ export default function TabBar() {
             width: 58,
             height: 58,
             borderRadius: 29,
-            background: "#16325c",
+            background: theme.amber,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
-            boxShadow: "0 10px 22px rgba(22,50,92,0.35)",
-            border: "4px solid rgba(255,255,255,0.85)",
+            border: `4px solid ${theme.bg.surface}`,
             transition: "transform .15s ease",
           }}
         >
-          <Plus size={24} color="#fff" strokeWidth={2.4} />
+          <Plus size={24} color="#0a0a0c" strokeWidth={2.4} />
         </div>
       </div>
 

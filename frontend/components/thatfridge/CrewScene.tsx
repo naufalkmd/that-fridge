@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { computeFoodBalanceScore, computeOrganizerScore, computeShopkeeperScore, computeWasteSaverScore } from "@/lib/thatfridge/scoring";
+import { theme } from "@/lib/thatfridge/theme";
 import type { NotificationKind } from "@/lib/thatfridge/types";
 import type { ThatFridgeActions } from "@/lib/thatfridge/useThatFridge";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
@@ -9,12 +11,15 @@ import { useThatFridgeCtx } from "./ThatFridgeContext";
 type CrewId = "chef" | "guardian" | "organizer" | "shopkeeper";
 type PathPoint = { leftPct: number; topPct: number };
 
-// Each crew member wanders along `path` - a line (2+ points) drawn directly onto
-// pixel-art-source.png with tools/walkable-path-drawer.html, so as long as every
-// point was drawn on visible floor, the character can never end up anywhere else
-// (no roam-distance-vs-sprite-size margin math needed, unlike the old fixed-box
-// approach). chef -> the mid-left counter patch, organizer -> the top-right patch,
-// guardian -> the bottom-left patch, shopkeeper -> the bottom-right patch.
+// Each crew member wanders along `path` - a line (2+ points), ideally placed on visible
+// floor with tools/walkable-path-drawer.html so the character can never end up anywhere
+// else (no roam-distance-vs-sprite-size margin math needed, unlike the old fixed-box
+// approach). pixel-art-source.png (scene.webp, background made transparent) is a 4-room
+// floor plan: chef -> the kitchen (top-left), organizer -> the stock room (top-right),
+// guardian -> the health/pharmacy room (bottom-left), shopkeeper -> the produce/grocery
+// room (bottom-right). These paths were estimated from a percentage-grid overlay rather
+// than drawn interactively - re-check them with the drawer tool if a crew member ever
+// looks like it's clipping furniture.
 const ZONES: {
   id: CrewId;
   label: string;
@@ -26,18 +31,25 @@ const ZONES: {
   {
     id: "chef",
     label: "Kitchen",
-    color: "#d99a2b",
+    color: theme.agent.chef,
+    // Drawn with tools/walkable-path-drawer.html against the scene.webp floor plan (kitchen
+    // occupies the top-left room) - see the "Room layouts" comment above.
     path: [
-      { leftPct: 13.4, topPct: 27.11 },
-      { leftPct: 37.4, topPct: 27.11 },
-      { leftPct: 37.93, topPct: 29.35 },
-      { leftPct: 48.33, topPct: 27.11 },
-      { leftPct: 37.4, topPct: 31.96 },
-      { leftPct: 37.67, topPct: 34.94 },
-      { leftPct: 33.4, topPct: 42.76 },
-      { leftPct: 21.4, topPct: 44.25 },
-      { leftPct: 13.93, topPct: 41.27 },
-      { leftPct: 30.2, topPct: 52.07 },
+      { leftPct: 12.4, topPct: 28.4 },
+      { leftPct: 15.87, topPct: 27.65 },
+      { leftPct: 30, topPct: 26.91 },
+      { leftPct: 35.6, topPct: 28.4 },
+      { leftPct: 47.33, topPct: 28.03 },
+      { leftPct: 41.2, topPct: 29.52 },
+      { leftPct: 40.13, topPct: 33.24 },
+      { leftPct: 36.4, topPct: 34.36 },
+      { leftPct: 35.6, topPct: 44.79 },
+      { leftPct: 20.4, topPct: 45.16 },
+      { leftPct: 26.53, topPct: 46.28 },
+      { leftPct: 30, topPct: 50.75 },
+      { leftPct: 23.6, topPct: 44.79 },
+      { leftPct: 16.4, topPct: 44.05 },
+      { leftPct: 12.93, topPct: 39.95 },
     ],
     notifKind: "recipe",
     onClick: (a) => a.openRecipesHub(),
@@ -45,31 +57,32 @@ const ZONES: {
   {
     id: "organizer",
     label: "Organizer",
-    color: "#2f6fb0",
+    color: theme.agent.organizer,
+    // Stock Room, top-right.
     path: [
-      { leftPct: 59, topPct: 32.14 },
-      { leftPct: 61.4, topPct: 29.91 },
-      { leftPct: 69.4, topPct: 30.28 },
-      { leftPct: 75.27, topPct: 31.03 },
-      { leftPct: 85.67, topPct: 32.14 },
-      { leftPct: 86.73, topPct: 40.71 },
-      { leftPct: 78.47, topPct: 41.08 },
-      { leftPct: 77.67, topPct: 33.63 },
+      { leftPct: 59.07, topPct: 29.89 },
+      { leftPct: 71.33, topPct: 29.89 },
+      { leftPct: 74.27, topPct: 31.38 },
+      { leftPct: 87.33, topPct: 31.38 },
+      { leftPct: 87.6, topPct: 40.32 },
+      { leftPct: 77.73, topPct: 40.69 },
+      { leftPct: 77.47, topPct: 33.62 },
     ],
     onClick: (a) => a.openOrganizerTab(),
   },
   {
     id: "guardian",
     label: "Guardian",
-    color: "#c1452e",
+    color: theme.agent.guardian,
+    // Health/pharmacy room, bottom-left.
     path: [
-      { leftPct: 9.13, topPct: 74.98 },
-      { leftPct: 21.67, topPct: 75.36 },
-      { leftPct: 25.67, topPct: 74.98 },
-      { leftPct: 25.93, topPct: 86.53 },
-      { leftPct: 20.07, topPct: 85.04 },
-      { leftPct: 19.8, topPct: 80.57 },
-      { leftPct: 33.4, topPct: 82.43 },
+      { leftPct: 8.93, topPct: 77.4 },
+      { leftPct: 21.73, topPct: 77.77 },
+      { leftPct: 26, topPct: 74.42 },
+      { leftPct: 27.87, topPct: 86.71 },
+      { leftPct: 18.53, topPct: 87.08 },
+      { leftPct: 18.27, topPct: 81.12 },
+      { leftPct: 36.13, topPct: 80.75 },
     ],
     notifKind: "expiring",
     onClick: (a) => a.openGuardianTab(),
@@ -77,37 +90,40 @@ const ZONES: {
   {
     id: "shopkeeper",
     label: "Shop",
-    color: "#3f8f5c",
+    color: theme.agent.shopkeeper,
+    // Produce/grocery room, bottom-right.
     path: [
-      { leftPct: 60.33, topPct: 67.16 },
-      { leftPct: 65.93, topPct: 68.65 },
-      { leftPct: 74.2, topPct: 67.91 },
-      { leftPct: 80.33, topPct: 67.53 },
-      { leftPct: 86.47, topPct: 72.75 },
-      { leftPct: 88.07, topPct: 74.24 },
-      { leftPct: 87.8, topPct: 83.92 },
-      { leftPct: 84.33, topPct: 89.14 },
-      { leftPct: 81.67, topPct: 90.26 },
-      { leftPct: 66.2, topPct: 89.51 },
-      { leftPct: 65.4, topPct: 86.53 },
-      { leftPct: 58.2, topPct: 86.9 },
-      { leftPct: 57.13, topPct: 75.73 },
-      { leftPct: 53.93, topPct: 75.73 },
+      { leftPct: 59.76, topPct: 67.38 },
+      { leftPct: 67.49, topPct: 68.13 },
+      { leftPct: 68.83, topPct: 69.99 },
+      { leftPct: 73.36, topPct: 69.62 },
+      { leftPct: 75.49, topPct: 68.5 },
+      { leftPct: 80.03, topPct: 67.75 },
+      { leftPct: 84.83, topPct: 68.5 },
+      { leftPct: 87.49, topPct: 73.34 },
+      { leftPct: 87.76, topPct: 82.28 },
+      { leftPct: 87.23, topPct: 86.38 },
+      { leftPct: 83.49, topPct: 88.99 },
+      { leftPct: 65.63, topPct: 88.99 },
+      { leftPct: 62.16, topPct: 87.13 },
+      { leftPct: 57.36, topPct: 88.24 },
+      { leftPct: 57.63, topPct: 75.58 },
+      { leftPct: 53.89, topPct: 74.46 },
     ],
     notifKind: "lowStock",
     onClick: (a) => a.openShoppingHub(),
   },
 ];
 
-// 48px was the original size tuned by eye against the mobile CSS container - not the
-// background art's native 1186px file resolution, which is unrelated to how big
-// anything actually renders on screen. That mobile container is the 480px app-shell
+// 56px was tuned by eye against the mobile CSS container - not the background art's
+// native pixel-art-source.png resolution, which is unrelated to how big anything
+// actually renders on screen. That mobile container is the 480px app-shell
 // max-width (ThatFridgeApp.tsx) minus the "Your crew" section's 20px side padding
 // (HomeScreen.tsx) = 440px. Expressed as a % of that instead of a fixed px value, the
 // sprite stays the same size RELATIVE TO THE ROOM at any container width - mobile's
 // ~440px card or desktop's ~600px one - instead of looking proportionally smaller on
 // wider desktop layouts the way a fixed px size would.
-const SPRITE_WIDTH_PCT = (48 / 440) * 100;
+const SPRITE_WIDTH_PCT = (56 / 440) * 100;
 
 // How a character walks its path: step through the points strictly in order - 1, 2,
 // 3, ... N, then back down to 1, repeat - never jumping to a point out of sequence.
@@ -190,12 +206,59 @@ function alertMessage(id: CrewId, count: number): string | null {
   return null;
 }
 
+// A tiny 5-pip meter over each crew member's head, one pip per 20 score points, filled in
+// that agent's own color - a game-HUD-style "how's this one doing" readout you get without
+// having to tap through to their card. All 5 dim when there's no score yet, same as the dash
+// AgentScoreCard shows for null.
+const SCORE_METER_PIPS = 5;
+const SCORE_METER_STEP = 100 / SCORE_METER_PIPS;
+
+// Exported so other screens can show the same "this agent's score" pip meter this file puts
+// over each walking crew member's head - one visual language wherever an agent's score needs
+// a quick readout, not a different one per screen. `float`, on by default, floats the meter
+// bottom-anchored above a `position:relative` parent (a crew member's head); pass `float=false`
+// to render it as a plain inline chip instead, e.g. next to a score number in running text.
+export function ScoreMeter({ score, color, float = true }: { score: number | null; color: string; float?: boolean }) {
+  const filled = score === null ? 0 : Math.max(0, Math.min(SCORE_METER_PIPS, Math.round(score / SCORE_METER_STEP)));
+  return (
+    <div
+      style={{
+        ...(float
+          ? { position: "absolute", bottom: "100%", marginBottom: 4, left: "50%", transform: "translateX(-50%)" }
+          : {}),
+        display: "flex",
+        gap: 2.5,
+        padding: "5px 6px",
+        borderRadius: 4,
+        background: "rgba(0,0,0,0.7)",
+        border: "1px solid rgba(255,255,255,0.18)",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.5)",
+        zIndex: 1,
+        flexShrink: 0,
+      }}
+    >
+      {Array.from({ length: SCORE_METER_PIPS }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            width: 6,
+            height: 16,
+            borderRadius: 1.5,
+            background: i < filled ? color : "rgba(255,255,255,0.2)",
+            boxShadow: i < filled ? `0 0 4px ${color}` : "none",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function TypingDots() {
   return (
     <div style={{ display: "flex", gap: 3, justifyContent: "center", padding: "3px 0" }}>
-      <div style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(22,50,92,0.35)", animation: "bounce 1.1s ease-in-out infinite" }} />
-      <div style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(22,50,92,0.35)", animation: "bounce 1.1s ease-in-out infinite .15s" }} />
-      <div style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(22,50,92,0.35)", animation: "bounce 1.1s ease-in-out infinite .3s" }} />
+      <div style={{ width: 4, height: 4, borderRadius: "50%", background: theme.text.faint, animation: "bounce 1.1s ease-in-out infinite" }} />
+      <div style={{ width: 4, height: 4, borderRadius: "50%", background: theme.text.faint, animation: "bounce 1.1s ease-in-out infinite .15s" }} />
+      <div style={{ width: 4, height: 4, borderRadius: "50%", background: theme.text.faint, animation: "bounce 1.1s ease-in-out infinite .3s" }} />
     </div>
   );
 }
@@ -203,10 +266,12 @@ function TypingDots() {
 function CrewCharacter({
   zone,
   count,
+  score,
   onOpenNotifications,
 }: {
   zone: (typeof ZONES)[number];
   count: number;
+  score: number | null;
   onOpenNotifications: () => void;
 }) {
   const [lineIndex, setLineIndex] = useState(0);
@@ -263,6 +328,7 @@ function CrewCharacter({
           cursor: "pointer",
         }}
       >
+        <ScoreMeter score={score} color={zone.color} />
         <div
           onClick={(e) => {
             if (isShowingAlert) {
@@ -273,23 +339,22 @@ function CrewCharacter({
           style={{
             position: "absolute",
             bottom: "100%",
-            marginBottom: 8,
+            marginBottom: 40,
             left: "50%",
             transform: "translateX(-50%)",
-            background: "#fff",
+            background: theme.bg.surface,
             border: `1.5px solid ${zone.color}`,
-            borderRadius: 10,
+            borderRadius: theme.radius.sm,
             padding: "4px 8px",
             fontSize: 9,
             fontWeight: isShowingAlert ? 800 : 600,
-            color: isShowingAlert ? zone.color : "#16325c",
+            color: isShowingAlert ? zone.color : theme.text.primary,
             whiteSpace: "normal",
             textAlign: "center",
             width: 100,
             lineHeight: 1.25,
             zIndex: 2,
             cursor: isShowingAlert ? "pointer" : "default",
-            boxShadow: "0 4px 10px rgba(22,50,92,0.1)",
           }}
         >
           {typing ? <TypingDots /> : currentMessage}
@@ -301,7 +366,7 @@ function CrewCharacter({
               transform: "translateX(-50%) rotate(45deg)",
               width: 6,
               height: 6,
-              background: "#fff",
+              background: theme.bg.surface,
               borderRight: `1.5px solid ${zone.color}`,
               borderBottom: `1.5px solid ${zone.color}`,
             }}
@@ -329,15 +394,24 @@ export default function CrewScene() {
     pendingByKind[event.kind] += 1;
   }
 
+  // Same Kitchen Score results AgentScoreCard reads, just keyed by CrewId instead of
+  // KitchenScoreResult["key"] to match ZONES above.
+  const scoreByZone: Record<CrewId, number | null> = {
+    chef: computeFoodBalanceScore(state).score,
+    guardian: computeWasteSaverScore(state).score,
+    organizer: computeOrganizerScore(state).score,
+    shopkeeper: computeShopkeeperScore(state).score,
+  };
+
   return (
-    <div style={{ position: "relative", width: "100%", aspectRatio: "1186 / 849" }}>
+    <div style={{ position: "relative", width: "100%", aspectRatio: "1180 / 842" }}>
       <Image src="/images/thatfridge/pixel-art-source.png" alt="Your crew's spaces" fill sizes="480px" style={{ objectFit: "contain", imageRendering: "pixelated" }} />
 
       {ZONES.map((zone) => {
         const count = zone.notifKind ? pendingByKind[zone.notifKind] : 0;
         return (
           <div key={zone.id} onClick={() => zone.onClick(actions)}>
-            <CrewCharacter zone={zone} count={count} onOpenNotifications={actions.openNotificationHistory} />
+            <CrewCharacter zone={zone} count={count} score={scoreByZone[zone.id]} onOpenNotifications={actions.openNotificationHistory} />
           </div>
         );
       })}

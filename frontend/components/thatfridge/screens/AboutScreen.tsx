@@ -3,13 +3,14 @@
 import Image from "next/image";
 import { ChevronLeft, Refrigerator, X } from "lucide-react";
 import { AGENTS } from "@/lib/thatfridge/data";
+import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 
 const AGENT_ACCENT: Record<string, string> = {
-  chef: "#d99a2b",
-  guardian: "#c1452e",
-  organizer: "#2f6fb0",
-  shopkeeper: "#3f8f5c",
+  chef: theme.agent.chef,
+  guardian: theme.agent.guardian,
+  organizer: theme.agent.organizer,
+  shopkeeper: theme.agent.shopkeeper,
 };
 
 const AGENT_ICON: Record<string, string> = {
@@ -25,16 +26,16 @@ export default function AboutScreen() {
   const { actions } = useThatFridgeCtx();
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
+    <div style={{ position: "absolute", inset: 0, background: theme.bg.canvas, display: "flex", flexDirection: "column" }}>
       <div className="thatfridge-wide-content" style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 12, boxSizing: "border-box" }}>
         <div
           onClick={actions.goHome}
-          style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
+          style={{ width: 32, height: 32, borderRadius: 16, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
         >
-          <X className="thatfridge-hide-desktop" size={15} color="rgba(22,50,92,0.5)" strokeWidth={2} />
-          <ChevronLeft className="thatfridge-show-desktop" size={17} color="rgba(22,50,92,0.5)" strokeWidth={2.2} />
+          <X className="thatfridge-hide-desktop" size={15} color={theme.text.muted} strokeWidth={2} />
+          <ChevronLeft className="thatfridge-show-desktop" size={17} color={theme.text.muted} strokeWidth={2.2} />
         </div>
-        <div style={{ fontSize: 18, fontWeight: 800 }}>About ThatFridge</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 14 }}>About ThatFridge</div>
       </div>
 
       <div className="thatfridge-wide-content" style={{ flex: 1, overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
@@ -43,29 +44,29 @@ export default function AboutScreen() {
             style={{
               width: 64,
               height: 64,
-              borderRadius: 20,
-              background: "#16325c",
+              borderRadius: theme.radius.lg,
+              background: theme.bg.surface2,
+              border: `1px solid ${theme.border.hairline}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               marginBottom: 14,
-              boxShadow: "0 10px 24px rgba(22,50,92,0.18)",
             }}
           >
-            <Refrigerator size={30} color="#fff" strokeWidth={1.8} />
+            <Refrigerator size={30} color={theme.amber} strokeWidth={1.8} />
           </div>
-          <div style={{ fontSize: 19, fontWeight: 800, marginBottom: 4 }}>ThatFridge</div>
-          <div style={{ fontSize: 12, color: "rgba(22,50,92,0.45)", fontWeight: 600, marginBottom: 10 }}>Version {APP_VERSION}</div>
-          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.6)", lineHeight: 1.5, maxWidth: 300 }}>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 19, letterSpacing: 0.5, marginBottom: 5 }}>ThatFridge</div>
+          <div style={{ fontSize: 12, color: theme.text.faint, fontWeight: 600, marginBottom: 10 }}>Version {APP_VERSION}</div>
+          <div style={{ fontSize: 13, color: theme.text.muted, lineHeight: 1.5, maxWidth: 300 }}>
             A calmer way to track what&apos;s in your fridge — four little agents keep watch on freshness, storage,
             meals and shopping so you don&apos;t have to.
           </div>
         </div>
 
-        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: "rgba(22,50,92,0.45)", marginBottom: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 8 }}>
           MEET YOUR CREW
         </div>
-        <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden", marginBottom: 20 }}>
+        <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, overflow: "hidden", marginBottom: 20 }}>
           {AGENTS.map((agent, i) => (
             <div
               key={agent.id}
@@ -74,7 +75,7 @@ export default function AboutScreen() {
                 alignItems: "center",
                 gap: 12,
                 padding: "13px 14px",
-                borderBottom: i < AGENTS.length - 1 ? "1px solid rgba(22,50,92,0.06)" : undefined,
+                borderBottom: i < AGENTS.length - 1 ? `1px solid ${theme.border.hairline}` : undefined,
               }}
             >
               <div
@@ -83,7 +84,7 @@ export default function AboutScreen() {
                   width: 34,
                   height: 34,
                   flex: "none",
-                  borderRadius: 10,
+                  borderRadius: theme.radius.sm,
                   background: `${AGENT_ACCENT[agent.id]}1a`,
                 }}
               >
@@ -98,14 +99,14 @@ export default function AboutScreen() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2, color: AGENT_ACCENT[agent.id] }}>{agent.name}</div>
-                <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)", lineHeight: 1.35 }}>{agent.summary}</div>
+                <div style={{ fontSize: 11.5, color: theme.text.faint, lineHeight: 1.35 }}>{agent.summary}</div>
               </div>
             </div>
           ))}
         </div>
 
-        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: "rgba(22,50,92,0.45)", marginBottom: 8 }}>BUILD INFO</div>
-        <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden", marginBottom: 20 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 8 }}>BUILD INFO</div>
+        <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, overflow: "hidden", marginBottom: 20 }}>
           {[
             { label: "Version", value: APP_VERSION },
             { label: "Platform", value: "Web" },
@@ -117,16 +118,24 @@ export default function AboutScreen() {
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "12px 14px",
-                borderBottom: i < arr.length - 1 ? "1px solid rgba(22,50,92,0.06)" : undefined,
+                borderBottom: i < arr.length - 1 ? `1px solid ${theme.border.hairline}` : undefined,
               }}
             >
               <div style={{ fontSize: 13.5, fontWeight: 600 }}>{row.label}</div>
-              <div style={{ fontSize: 13, color: "rgba(22,50,92,0.5)" }}>{row.value}</div>
+              <div style={{ fontSize: 13, color: theme.text.faint }}>{row.value}</div>
             </div>
           ))}
         </div>
 
-        <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.4)", textAlign: "center", padding: "8px 12px" }}>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 8 }}>CREDITS</div>
+        <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, overflow: "hidden", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px" }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600 }}>Pixel typeface</div>
+            <div style={{ fontSize: 13, color: theme.text.faint }}>PixelMix by Andrew Tyler</div>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 11.5, color: theme.text.faint, textAlign: "center", padding: "8px 12px" }}>
           Made with care for people who forget what&apos;s in the back of the fridge.
         </div>
       </div>

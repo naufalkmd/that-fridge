@@ -1,6 +1,7 @@
 "use client";
 
 import { ChefHat, Shuffle } from "lucide-react";
+import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 import type { Recipe } from "@/lib/thatfridge/types";
@@ -33,13 +34,12 @@ function chipStyle(active: boolean): React.CSSProperties {
     flex: "none",
     whiteSpace: "nowrap",
     padding: "7px 14px",
-    borderRadius: 14,
+    borderRadius: theme.radius.sm,
     fontSize: 12.5,
     fontWeight: 700,
     cursor: "pointer",
-    background: active ? "#16325c" : "#fff",
-    color: active ? "#fff" : "#16325c",
-    boxShadow: "0 4px 10px rgba(22,50,92,0.08)",
+    background: active ? theme.amber : theme.bg.surface2,
+    color: active ? "#0a0a0c" : theme.text.primary,
   };
 }
 
@@ -65,20 +65,20 @@ function ResultsTier({
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.3, color: "rgba(22,50,92,0.45)", marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 8 }}>{label}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: canShuffle ? 10 : 0 }}>
         {visible.map((recipe) => (
           <div
             key={recipe.id}
             onClick={() => onOpenRecipe(recipe.id)}
-            style={{ display: "flex", alignItems: "center", gap: 12, background: "#eaf6ff", borderRadius: 16, padding: "10px 14px", cursor: "pointer" }}
+            style={{ display: "flex", alignItems: "center", gap: 12, background: theme.bg.surface2, borderRadius: theme.radius.md, padding: "10px 14px", cursor: "pointer" }}
           >
             <div style={{ position: "relative", width: 32, height: 32, flex: "none" }}>
               <FoodIcon icon={recipe.ingredients[0]?.icon ?? "leftovers"} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{recipe.name}</div>
-              <div style={{ fontSize: 11, color: "rgba(22,50,92,0.5)" }}>{recipe.minutes} min</div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: theme.text.primary }}>{recipe.name}</div>
+              <div style={{ fontSize: 11, color: theme.text.faint }}>{recipe.minutes} min</div>
             </div>
           </div>
         ))}
@@ -93,9 +93,9 @@ function ResultsTier({
             justifyContent: "center",
             gap: 6,
             padding: 11,
-            borderRadius: 14,
-            border: "1px solid rgba(22,50,92,0.14)",
-            color: "#16325c",
+            borderRadius: theme.radius.md,
+            border: `1px solid ${theme.border.strong}`,
+            color: theme.text.primary,
             fontSize: 12.5,
             fontWeight: 700,
             cursor: "pointer",
@@ -118,7 +118,7 @@ export default function WhatToEatSheet() {
   const similar = state.whatToEatSimilar ?? [];
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)", zIndex: 10 }}>
+    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 10 }}>
       <div
         style={{
           position: "absolute",
@@ -126,8 +126,8 @@ export default function WhatToEatSheet() {
           right: 0,
           bottom: 0,
           top: 60,
-          background: "#fff",
-          borderRadius: "28px 28px 0 0",
+          background: theme.bg.surface,
+          borderRadius: `${theme.radius.xl}px ${theme.radius.xl}px 0 0`,
           padding: "14px 22px 26px",
           animation: "pop .22s ease-out",
           display: "flex",
@@ -136,11 +136,11 @@ export default function WhatToEatSheet() {
       >
         <div
           onClick={actions.closeWhatToEat}
-          style={{ width: 36, height: 5, borderRadius: 3, background: "rgba(22,50,92,0.18)", margin: "0 auto 16px", cursor: "pointer", flex: "none" }}
+          style={{ width: 36, height: 5, borderRadius: 3, background: theme.border.strong, margin: "0 auto 16px", cursor: "pointer", flex: "none" }}
         />
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flex: "none" }}>
-          <ChefHat size={18} color="#16325c" strokeWidth={2.2} />
-          <div style={{ fontSize: 18, fontWeight: 700 }}>What should I eat?</div>
+          <ChefHat size={18} color={theme.text.primary} strokeWidth={2.2} />
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 14, color: theme.text.primary }}>What should I eat?</div>
         </div>
 
         <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginBottom: 18, flex: "none" }}>
@@ -151,12 +151,12 @@ export default function WhatToEatSheet() {
           <div
             style={{
               position: "relative",
-              background: "#eaf6ff",
+              background: theme.bg.surface2,
               borderRadius: "14px 14px 14px 4px",
               padding: "9px 13px",
               fontSize: 12.5,
               fontWeight: 600,
-              color: "#16325c",
+              color: theme.text.primary,
               marginBottom: 6,
             }}
           >
@@ -165,7 +165,7 @@ export default function WhatToEatSheet() {
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.3, color: "rgba(22,50,92,0.45)", marginBottom: 8 }}>MEAL TYPE</div>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 8 }}>MEAL TYPE</div>
           <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 18, paddingBottom: 2 }}>
             {MEAL_TYPES.map((opt) => (
               <div key={opt.key} onClick={() => actions.toggleWhatToEatMealType(opt.key)} style={chipStyle(state.whatToEatMealType === opt.key)}>
@@ -174,7 +174,7 @@ export default function WhatToEatSheet() {
             ))}
           </div>
 
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.3, color: "rgba(22,50,92,0.45)", marginBottom: 8 }}>VIBES</div>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 8 }}>VIBES</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
             {VIBES.map((opt) => (
               <div key={opt.key} onClick={() => actions.toggleWhatToEatVibe(opt.key)} style={chipStyle(state.whatToEatVibes.includes(opt.key))}>
@@ -183,7 +183,7 @@ export default function WhatToEatSheet() {
             ))}
           </div>
 
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.3, color: "rgba(22,50,92,0.45)", marginBottom: 8 }}>FOOD FOCUS</div>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 8 }}>FOOD FOCUS</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
             {FOOD_FOCUS.map((opt) => (
               <div key={opt.key} onClick={() => actions.toggleWhatToEatFoodFocus(opt.key)} style={chipStyle(state.whatToEatFoodFocus.includes(opt.key))}>
@@ -197,11 +197,14 @@ export default function WhatToEatSheet() {
             style={{
               textAlign: "center",
               padding: 13,
-              borderRadius: 14,
-              background: state.whatToEatLoading ? "rgba(22,50,92,0.25)" : "#16325c",
-              color: "#fff",
+              borderRadius: theme.radius.md,
+              background: state.whatToEatLoading ? theme.bg.surface2 : theme.amber,
+              color: state.whatToEatLoading ? theme.text.faint : "#0a0a0c",
               fontSize: 13.5,
               fontWeight: 700,
+              fontFamily: theme.fontMono,
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
               cursor: state.whatToEatLoading ? "default" : "pointer",
               marginBottom: 18,
             }}
@@ -213,12 +216,12 @@ export default function WhatToEatSheet() {
             <div>
               {state.whatToEatExhausted ? (
                 <div style={{ textAlign: "center", padding: "18px 10px" }}>
-                  <div style={{ fontSize: 12.5, color: "rgba(22,50,92,0.55)", marginBottom: 12, lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 12.5, color: theme.text.muted, marginBottom: 12, lineHeight: 1.4 }}>
                     Nothing in your saved recipes matches that combination yet.
                   </div>
                   <div
                     onClick={actions.askChefInstead}
-                    style={{ display: "inline-block", padding: "11px 20px", borderRadius: 14, background: "#16325c", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                    style={{ display: "inline-block", padding: "11px 20px", borderRadius: theme.radius.md, background: theme.amber, color: "#0a0a0c", fontSize: 13, fontWeight: 700, fontFamily: theme.fontMono, textTransform: "uppercase", letterSpacing: 0.5, cursor: "pointer" }}
                   >
                     Ask Chef instead
                   </div>
@@ -243,7 +246,7 @@ export default function WhatToEatSheet() {
                   {/* Escape hatch even when there ARE results, in case none of them (or none of
                       the shuffled batches, in either tier) actually sound good. */}
                   <div style={{ textAlign: "center", padding: "18px 10px 4px" }}>
-                    <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.45)", marginBottom: 10 }}>
+                    <div style={{ fontSize: 11.5, color: theme.text.faint, marginBottom: 10 }}>
                       Still nothing to your liking? Let&apos;s find something.
                     </div>
                     <div
@@ -251,10 +254,10 @@ export default function WhatToEatSheet() {
                       style={{
                         display: "inline-block",
                         padding: "10px 18px",
-                        borderRadius: 14,
-                        background: "#fff",
-                        border: "1px solid rgba(22,50,92,0.14)",
-                        color: "#16325c",
+                        borderRadius: theme.radius.md,
+                        background: "transparent",
+                        border: `1px solid ${theme.border.strong}`,
+                        color: theme.text.primary,
                         fontSize: 12.5,
                         fontWeight: 700,
                         cursor: "pointer",
