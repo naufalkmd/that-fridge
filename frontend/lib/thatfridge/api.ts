@@ -408,8 +408,24 @@ export function sendChatMessage(
   sessionId?: string | null,
   usageHistory?: string,
   compact?: boolean,
-  streakSummary?: string
+  streakSummary?: string,
+  image?: File
 ): Promise<SendChatMessageResult> {
+  // A photo attachment needs multipart FormData (like scanFridgePhoto) - plain JSON has
+  // nowhere to put binary file data. Every other call keeps the cheaper JSON body.
+  if (image) {
+    const formData = new FormData();
+    formData.append("message", message);
+    formData.append("agent", agent);
+    if (inventory) formData.append("inventory", inventory);
+    if (sessionId) formData.append("session_id", sessionId);
+    if (usageHistory) formData.append("usage_history", usageHistory);
+    if (compact) formData.append("compact", "1");
+    if (streakSummary) formData.append("streak_context", streakSummary);
+    formData.append("image", image);
+    return apiFetch<SendChatMessageResult>("/chat", { method: "POST", body: formData });
+  }
+
   return apiFetch<SendChatMessageResult>("/chat", {
     method: "POST",
     body: JSON.stringify({

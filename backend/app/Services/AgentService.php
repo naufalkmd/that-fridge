@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 
 class AgentService
@@ -15,8 +16,12 @@ class AgentService
      * (see AgentController::send, which assembles this from chat_history). That was making
      * "show me the recipe" right after Chef proposed one read as a context-free, ambiguous
      * request every time, so it kept re-asking instead of ever committing to a recipe.
+     *
+     * $image (Quick Chat's photo-attach button) switches the final user turn from a plain
+     * string to the multimodal `content` array format OpenRouterVisionService already uses
+     * for the fridge-photo scan flow - same underlying model, just a different call shape.
      */
-    public function chat($message, $agent = 'Chef', $inventory = null, $usageHistory = null, $compact = false, $memory = null, $history = [], $streakContext = null)
+    public function chat($message, $agent = 'Chef', $inventory = null, $usageHistory = null, $compact = false, $memory = null, $history = [], $streakContext = null, ?UploadedFile $image = null)
     {
         // Mock response if no API key (for testing)
         if (! $this->client->available()) {
@@ -28,13 +33,17 @@ class AgentService
 
             // Non-compact Chef replies can carry a trailing <<<RECIPE_SUGGESTION>>> JSON block
             // on top of the normal prose - give those a bit more room than the 1000-token
-            // default so a real recipe suggestion doesn't get truncated mid-JSON.
-            $maxTokens = (! $compact && $agent === 'Chef') ? 1300 : 1000;
+            // default so a real recipe suggestion doesn't get truncated mid-JSON. A photo
+            // attachment also gets the larger budget - describing what's in an image runs
+            // longer than a plain-text reply.
+            $maxTokens = (! $compact && ($agent === 'Chef' || $image)) ? 1300 : 1000;
+
+            $userContent = $image ? $this->buildImageContent($message, $image) : $message;
 
             $result = $this->client->complete([
                 ['role' => 'system', 'content' => $systemPrompt],
                 ...$history,
-                ['role' => 'user', 'content' => $message],
+                ['role' => 'user', 'content' => $userContent],
             ], $maxTokens);
 
             if ($result['ok']) {
@@ -63,6 +72,21 @@ class AgentService
 
             return null;
         }
+    }
+
+    /**
+     * Same data-URL shape OpenRouterVisionService::analyzeImage builds for the fridge-photo
+     * scan flow - inlined here rather than shared since that service's return contract
+     * (parsed JSON) doesn't fit a conversational chat reply.
+     */
+    private function buildImageContent(string $message, UploadedFile $image): array
+    {
+        $dataUrl = 'data:'.$image->getMimeType().';base64,'.base64_encode(file_get_contents($image->getRealPath()));
+
+        return [
+            ['type' => 'text', 'text' => $message],
+            ['type' => 'image_url', 'image_url' => ['url' => $dataUrl]],
+        ];
     }
 
     /**

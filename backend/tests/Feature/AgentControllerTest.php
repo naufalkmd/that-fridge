@@ -6,6 +6,7 @@ use App\Models\ChatHistory;
 use App\Models\User;
 use App\Models\UserMemory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -144,6 +145,53 @@ class AgentControllerTest extends TestCase
 
         $response->assertStatus(500);
         $this->assertDatabaseCount('chat_history', 0);
+    }
+
+    public function test_chat_rejects_a_non_image_attachment(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->post('/api/chat', [
+            'message' => 'What is this?',
+            'agent' => 'Chef',
+            'image' => UploadedFile::fake()->create('notes.txt', 10, 'text/plain'),
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('image');
+    }
+
+    // Quick Chat's photo-attach button - confirms the attached image reaches the model as
+    // the same multimodal `content` array shape OpenRouterVisionService already uses for
+    // the fridge-photo scan flow (see AgentService::buildImageContent), not dropped on the
+    // floor the way a plain-string `content` would.
+    public function test_chat_sends_an_attached_image_to_the_model_as_multimodal_content(): void
+    {
+        $user = User::factory()->create();
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'That looks like a fridge full of veggies!']]],
+        ], 200)]);
+
+        $response = $this->actingAs($user)->post('/api/chat', [
+            'message' => 'What do you see in this photo?',
+            'agent' => 'Chef',
+            'image' => UploadedFile::fake()->image('fridge.jpg'),
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['agent_response' => 'That looks like a fridge full of veggies!']);
+
+        Http::assertSent(function ($request) {
+            $userTurn = collect($request->data()['messages'])->firstWhere('role', 'user');
+            $content = $userTurn['content'];
+
+            return is_array($content)
+                && $content[0]['type'] === 'text'
+                && $content[0]['text'] === 'What do you see in this photo?'
+                && $content[1]['type'] === 'image_url'
+                && str_starts_with($content[1]['image_url']['url'], 'data:image/jpeg;base64,');
+        });
     }
 
     public function test_history_only_returns_the_authenticated_users_latest_session(): void

@@ -108,6 +108,38 @@ describe("useThatFridge sendChat", () => {
 
     expect(sendChatMessageMock).toHaveBeenCalledTimes(2);
   });
+
+  // Quick Chat's photo-attach button (ChatScreen.tsx) - covers both the request (image
+  // forwarded, a default prompt used when there's no caption) and the optimistic sent bubble
+  // (a local thumbnail, not just a filename).
+  it("sends an attached photo through to the API and shows a thumbnail in the sent bubble, defaulting the message when there's no caption", async () => {
+    const sendChatMessageMock = vi.mocked(api.sendChatMessage).mockResolvedValueOnce({
+      agent: "Chef",
+      user_message: "What do you see in this photo?",
+      agent_response: "That's a fridge full of veggies!",
+      session_id: "session-1",
+      recipe_suggestion: null,
+      mocked: false,
+    });
+
+    const { result } = renderHook(() => useThatFridge());
+    const photo = new File(["fake-image-bytes"], "fridge.jpg", { type: "image/jpeg" });
+
+    await act(async () => {
+      result.current.actions.sendMessage(photo);
+    });
+
+    expect(sendChatMessageMock).toHaveBeenCalledTimes(1);
+    const [message, , , , , , , image] = sendChatMessageMock.mock.calls[0];
+    expect(message).toBe("What do you see in this photo?");
+    expect(image).toBe(photo);
+
+    const userMsg = result.current.state.chatMessages.find((m) => m.from === "user" && m.attachmentUrl);
+    expect(userMsg?.attachmentName).toBe("fridge.jpg");
+    expect(userMsg?.attachmentUrl).toMatch(/^blob:/);
+
+    await waitFor(() => expect(result.current.state.isTyping).toBe(false));
+  });
 });
 
 describe("useThatFridge shopping list seeding", () => {

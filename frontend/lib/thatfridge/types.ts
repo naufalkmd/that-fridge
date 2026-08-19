@@ -115,6 +115,10 @@ export interface ChatMessage {
   from: "bot" | "user";
   text: string;
   attachmentName?: string;
+  // Local object URL for the attached photo's thumbnail - not persisted server-side, so this
+  // (like the rest of the message beyond agent/user text) is gone on reload, same as a
+  // restored session's other transient bits.
+  attachmentUrl?: string;
   mocked?: boolean;
   suggestedRecipe?: RecipeSuggestion | null;
 }

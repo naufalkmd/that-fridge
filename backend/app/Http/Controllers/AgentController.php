@@ -158,6 +158,10 @@ class AgentController extends Controller
             // so those small fixed-size cards read consistently instead of one being a plain
             // sentence and another a bolded, bulleted mini-essay.
             'compact' => 'nullable|boolean',
+            // Quick Chat's photo-attach button - same constraints as PhotoController::scan.
+            // Not persisted (see AgentController::send's chatHistory()->create() below, which
+            // never writes it) - stateless, same as the fridge-photo scan flow.
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
         ]);
 
         // Read directly from the DB rather than having the client fetch-and-forward these
@@ -174,7 +178,8 @@ class AgentController extends Controller
             $request->boolean('compact'),
             $memory,
             $this->recentSessionHistory($request),
-            $request->input('streak_context')
+            $request->input('streak_context'),
+            $request->file('image')
         );
 
         if (! $result) {

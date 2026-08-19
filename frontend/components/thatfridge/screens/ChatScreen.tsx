@@ -111,7 +111,8 @@ function getSpeechRecognitionCtor() {
 
 export default function ChatScreen() {
   const { state, actions, chatScrollRef } = useThatFridgeCtx();
-  const [attachmentName, setAttachmentName] = useState<string | null>(null);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentPreviewUrl, setAttachmentPreviewUrl] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [voiceSupported] = useState(() => !!getSpeechRecognitionCtor());
 
@@ -166,13 +167,29 @@ export default function ChatScreen() {
 
   const handleFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setAttachmentName(file.name);
+    if (file) {
+      setAttachmentFile(file);
+      setAttachmentPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(file);
+      });
+    }
     e.target.value = "";
   };
 
+  const clearAttachment = () => {
+    if (attachmentPreviewUrl) URL.revokeObjectURL(attachmentPreviewUrl);
+    setAttachmentFile(null);
+    setAttachmentPreviewUrl(null);
+  };
+
   const handleSend = () => {
-    actions.sendMessage(attachmentName ?? undefined);
-    setAttachmentName(null);
+    actions.sendMessage(attachmentFile ?? undefined);
+    // sendMessage/sendChat creates its own object URL for the sent bubble - this one (the
+    // composer preview) is no longer needed once send fires.
+    if (attachmentPreviewUrl) URL.revokeObjectURL(attachmentPreviewUrl);
+    setAttachmentFile(null);
+    setAttachmentPreviewUrl(null);
   };
 
   return (
@@ -251,14 +268,16 @@ export default function ChatScreen() {
                     {m.text && <MarkdownText text={m.text} />}
                   </div>
                 ) : (
-                  <div style={{ maxWidth: "78%", background: theme.amber, color: "#0a0a0c", borderRadius: "16px 4px 16px 16px", padding: "11px 14px", fontSize: 13.5, lineHeight: 1.5 }}>
-                    {m.attachmentName && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: m.text ? 6 : 0, fontSize: 12, fontWeight: 700, opacity: 0.85 }}>
-                        <Paperclip size={13} />
-                        {m.attachmentName}
-                      </div>
+                  <div style={{ maxWidth: "78%", background: theme.amber, color: "#0a0a0c", borderRadius: "16px 4px 16px 16px", padding: m.attachmentUrl ? 6 : "11px 14px", fontSize: 13.5, lineHeight: 1.5 }}>
+                    {m.attachmentUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element -- local blob: URL, next/image can't optimize it
+                      <img
+                        src={m.attachmentUrl}
+                        alt={m.attachmentName || "Attached photo"}
+                        style={{ display: "block", width: "100%", maxWidth: 220, borderRadius: 10, marginBottom: m.text ? 8 : 0 }}
+                      />
                     )}
-                    {m.text}
+                    {m.text && <div style={{ padding: m.attachmentUrl ? "0 8px 5px" : 0 }}>{m.text}</div>}
                   </div>
                 )}
               </div>
@@ -296,15 +315,20 @@ export default function ChatScreen() {
 
       <div className="thatfridge-chat-footer" style={{ flex: "none", padding: "8px 0 80px", background: "rgba(19,19,22,0.85)", backdropFilter: "blur(12px)", borderTop: `1px solid ${theme.border.hairline}` }}>
         <div className="thatfridge-wide-content thatfridge-wide-content--chat" style={{ padding: "0 14px", boxSizing: "border-box" }}>
-          {attachmentName && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: "6px 10px", marginBottom: 8, fontSize: 12, fontWeight: 600, color: theme.text.primary, width: "fit-content" }}>
-              <Paperclip size={13} />
-              <span style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{attachmentName}</span>
-              <X size={13} style={{ cursor: "pointer" }} onClick={() => setAttachmentName(null)} />
+          {attachmentPreviewUrl && (
+            <div style={{ position: "relative", width: 56, height: 56, marginBottom: 8 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- local blob: URL, next/image can't optimize it */}
+              <img src={attachmentPreviewUrl} alt={attachmentFile?.name || "Attached photo"} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: theme.radius.sm, border: `1px solid ${theme.border.hairline}` }} />
+              <div
+                onClick={clearAttachment}
+                style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: 9, background: theme.bg.canvas, border: `1px solid ${theme.border.strong}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+              >
+                <X size={11} color={theme.text.primary} />
+              </div>
             </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <input ref={fileInputRef} type="file" onChange={handleFileChosen} style={{ display: "none" }} />
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChosen} style={{ display: "none" }} />
             <div
               onClick={() => fileInputRef.current?.click()}
               style={{ width: 38, height: 38, borderRadius: 19, background: theme.bg.surface2, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
@@ -314,7 +338,7 @@ export default function ChatScreen() {
             <input
               value={state.chatDraft}
               onChange={(e) => actions.onDraftChange(e.target.value)}
-              onKeyDown={(e) => actions.onChatKeyDown(e.key)}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder={isListening ? "Listening…" : "Ask about your fridge…"}
               style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: theme.bg.surface2, borderRadius: 20, padding: "11px 16px", fontSize: 13.5, color: theme.text.primary }}
             />

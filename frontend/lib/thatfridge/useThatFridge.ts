@@ -1400,23 +1400,25 @@ export function useThatFridge() {
       })
       .catch((err) => patch({ syncError: describeError(err, "Couldn't load that conversation.") }));
   };
-  const sendChat = (text: string, attachmentName?: string) => {
+  const sendChat = (text: string, attachmentFile?: File) => {
     if (state.isTyping) return;
     const trimmed = (text || "").trim();
-    if (!trimmed && !attachmentName) return;
-    const userMsg: ChatMessage = { id: "u" + Date.now(), from: "user", text: trimmed, attachmentName };
+    if (!trimmed && !attachmentFile) return;
+
+    // Local-only preview so the sent bubble shows the actual photo, not just its filename -
+    // never uploaded anywhere itself, just read back by the <img> tag in ChatScreen.
+    const attachmentUrl = attachmentFile ? URL.createObjectURL(attachmentFile) : undefined;
+    const userMsg: ChatMessage = { id: "u" + Date.now(), from: "user", text: trimmed, attachmentName: attachmentFile?.name, attachmentUrl };
     patch((s) => ({ chatMessages: [...s.chatMessages, userMsg], chatDraft: "", isTyping: true }));
 
-    if (!trimmed) {
-      const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: `Thanks for sharing "${attachmentName}" — I'll take a look!` };
-      patch((s) => ({ chatMessages: [...s.chatMessages, reply], isTyping: false }));
-      return;
-    }
+    // A bare photo with no caption still needs some instruction for the model, and `message`
+    // is required server-side - default to a generic prompt rather than blocking send.
+    const messageForApi = trimmed || "What do you see in this photo?";
 
     const inventory = buildInventorySummary(state);
     const usageSummary = buildUsageSummary(state.usageHistory);
     const streakSummary = buildStreakSummary(state.scoreSnapshots);
-    sendChatMessage(trimmed, routeChatAgent(trimmed), inventory, state.currentSessionId, usageSummary, undefined, streakSummary)
+    sendChatMessage(messageForApi, routeChatAgent(messageForApi), inventory, state.currentSessionId, usageSummary, undefined, streakSummary, attachmentFile)
       .then((res) => {
         const reply: ChatMessage = {
           id: "b" + Date.now(),
@@ -1430,7 +1432,7 @@ export function useThatFridge() {
         // Fire-and-forget: extracts/updates remembered facts from this exchange. Never
         // awaited, so a slow or failed extraction can never delay the reply already shown.
         const prevFacts = state.memoryFacts;
-        extractMemory(trimmed, res.agent_response)
+        extractMemory(messageForApi, res.agent_response)
           .then((facts) => {
             patch({ memoryFacts: facts });
             const newlyAdded = facts.filter((f) => !prevFacts.includes(f));
@@ -1459,10 +1461,7 @@ export function useThatFridge() {
         patch((s) => ({ chatMessages: [...s.chatMessages, reply], isTyping: false }));
       });
   };
-  const sendMessage = (attachmentName?: string) => sendChat(state.chatDraft, attachmentName);
-  const onChatKeyDown = (key: string) => {
-    if (key === "Enter") sendMessage();
-  };
+  const sendMessage = (attachmentFile?: File) => sendChat(state.chatDraft, attachmentFile);
   const askQuick = (label: string) => sendChat(label);
 
   const AGENT_ACTIVATE_PROMPT: Record<ChatAgentName, string> = {
@@ -2408,7 +2407,6 @@ export function useThatFridge() {
     addPredictedToShopping,
     onSearchChange,
     onDraftChange,
-    onChatKeyDown,
     startNewChat,
     openChatHistory,
     closeChatHistory,
