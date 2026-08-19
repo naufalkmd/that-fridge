@@ -149,7 +149,7 @@ export default function HomeScreen() {
   }, [guardianVisible, chefVisible, lowStockVisible, hasItems]);
 
   const dotCount = heroSlideCount;
-  const pendingNotifications = state.notificationEvents.filter((n) => !n.done).length;
+  const pendingNotifications = state.notificationEvents.filter((n) => !n.done).length + state.myJoinRequests.length + state.myInvites.length;
   const expiringItems = getExpiringOwnedItems(state, 6);
 
   const userInitials = (state.currentUser?.name || "Friend")

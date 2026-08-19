@@ -1,11 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Check, ChefHat, ChevronLeft, Hourglass, ShoppingCart, X } from "lucide-react";
+import { Check, ChefHat, ChevronLeft, Hourglass, Mail, ShoppingCart, UserPlus, X } from "lucide-react";
 import { timeAgo } from "@/lib/thatfridge/utils";
 import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
-import type { NotificationEvent, NotificationKind } from "@/lib/thatfridge/types";
+import type { MyInvite, MyJoinRequest, NotificationEvent, NotificationKind } from "@/lib/thatfridge/types";
 
 const CLEAR_THRESHOLD = -80;
 
@@ -122,9 +122,55 @@ function NotificationRow({ event, onDismiss }: { event: NotificationEvent; onDis
   );
 }
 
+// Both are pending actions needing an explicit accept/decline, not a dismiss - a distinct row
+// shell from NotificationRow above, reusing the same name/username + Check/X pair already
+// established for this in FridgeStyleSheet's JOIN REQUESTS and FindFriendScreen's MY INVITES.
+type PendingItem = { kind: "request"; data: MyJoinRequest } | { kind: "invite"; data: MyInvite };
+
+function PendingRow({ item, onAccept, onDecline }: { item: PendingItem; onAccept: () => void; onDecline: () => void }) {
+  const isRequest = item.kind === "request";
+  const Icon = isRequest ? UserPlus : Mail;
+  const primary = isRequest
+    ? `@${item.data.requesterUsername} wants to join ${item.data.fridgeName}`
+    : `Invited to ${item.data.fridgeName} by @${item.data.inviterUsername}`;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "13px 14px",
+        marginBottom: 10,
+        borderRadius: theme.radius.md,
+        background: theme.bg.surface,
+        border: `1px solid ${theme.border.hairline}`,
+      }}
+    >
+      <div style={{ width: 36, height: 36, borderRadius: theme.radius.sm, background: `${theme.blue}1a`, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+        <Icon size={17} color={theme.blue} strokeWidth={2} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: theme.text.primary, lineHeight: 1.3 }}>{primary}</div>
+        <div style={{ fontSize: 11, color: theme.text.faint, marginTop: 2 }}>{timeAgo(item.data.createdAt)}</div>
+      </div>
+      <div onClick={onAccept} style={{ cursor: "pointer", padding: 4 }}>
+        <Check size={17} color={theme.good} strokeWidth={2.4} />
+      </div>
+      <div onClick={onDecline} style={{ cursor: "pointer", padding: 4 }}>
+        <X size={15} color={theme.text.faint} />
+      </div>
+    </div>
+  );
+}
+
 export default function NotificationHistoryScreen() {
   const { state, actions } = useThatFridgeCtx();
   const events = state.notificationEvents;
+  const pending: PendingItem[] = [
+    ...state.myJoinRequests.map((data): PendingItem => ({ kind: "request", data })),
+    ...state.myInvites.map((data): PendingItem => ({ kind: "invite", data })),
+  ].sort((a, b) => b.data.createdAt - a.data.createdAt);
 
   return (
     <div style={{ position: "absolute", inset: 0, background: theme.bg.canvas, display: "flex", flexDirection: "column" }}>
@@ -143,7 +189,19 @@ export default function NotificationHistoryScreen() {
       </div>
 
       <div className="thatfridge-wide-content" style={{ flex: 1, overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
-        {events.length === 0 ? (
+        {pending.length > 0 && (
+          <div style={{ marginBottom: 18 }}>
+            {pending.map((item) => (
+              <PendingRow
+                key={`${item.kind}-${item.data.id}`}
+                item={item}
+                onAccept={() => (item.kind === "request" ? actions.approveMyJoinRequestAction(item.data.id) : actions.acceptMyInvite(item.data.id))}
+                onDecline={() => (item.kind === "request" ? actions.declineMyJoinRequestAction(item.data.id) : actions.declineMyInvite(item.data.id))}
+              />
+            ))}
+          </div>
+        )}
+        {events.length === 0 && pending.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px", color: theme.text.faint, fontSize: 13 }}>
             You&apos;re all caught up — no notifications yet.
           </div>

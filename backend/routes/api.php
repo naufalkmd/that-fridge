@@ -68,8 +68,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/fridges/{fridge}/join-requests', [FridgeJoinRequestController::class, 'index']);
     Route::post('/fridges/{fridge}/join-requests', [FridgeJoinRequestController::class, 'store']);
+    Route::get('/fridges/{fridge}/invites', [FridgeJoinRequestController::class, 'sentInvites']);
     Route::post('/fridges/{fridge}/invites', [FridgeJoinRequestController::class, 'invite']);
     Route::get('/invites', [FridgeJoinRequestController::class, 'myInvites']);
+    Route::get('/join-requests', [FridgeJoinRequestController::class, 'myRequests']);
     Route::post('/join-requests/{joinRequest}/approve', [FridgeJoinRequestController::class, 'approve']);
     Route::post('/join-requests/{joinRequest}/decline', [FridgeJoinRequestController::class, 'decline']);
 

@@ -11,6 +11,7 @@ import type {
   GoalPeriod,
   MealType,
   MyInvite,
+  MyJoinRequest,
   NotificationEvent,
   NotificationPrefs,
   NutritionCategory,
@@ -214,8 +215,16 @@ export function inviteToFridge(fridgeId: string, userId: string): Promise<Fridge
   return apiFetch<FridgeJoinRequest>(`/fridges/${fridgeId}/invites`, { method: "POST", body: JSON.stringify({ userId }) });
 }
 
+export function fetchSentInvites(fridgeId: string): Promise<FridgeJoinRequest[]> {
+  return apiFetch<FridgeJoinRequest[]>(`/fridges/${fridgeId}/invites`);
+}
+
 export function fetchMyInvites(): Promise<MyInvite[]> {
   return apiFetch<MyInvite[]>("/invites");
+}
+
+export function fetchMyJoinRequests(): Promise<MyJoinRequest[]> {
+  return apiFetch<MyJoinRequest[]>("/join-requests");
 }
 
 export function approveJoinRequest(id: string): Promise<void> {

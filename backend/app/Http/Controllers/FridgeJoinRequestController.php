@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\FridgeJoinRequestResource;
 use App\Http\Resources\MyInviteResource;
+use App\Http\Resources\MyRequestResource;
 use App\Models\Fridge;
 use App\Models\FridgeJoinRequest;
 use App\Models\User;
@@ -105,6 +106,25 @@ class FridgeJoinRequestController extends Controller
     }
 
     /**
+     * Pending invites the owner has sent for this fridge, awaiting the invited person's
+     * response - owner-only, the "Manage fridge" sheet's INVITES SENT section, so an owner can
+     * see (and cancel) an invite instead of just waiting on it silently.
+     */
+    public function sentInvites(Request $request, Fridge $fridge)
+    {
+        $this->authorize('manageMembers', $fridge);
+
+        $invites = $fridge->joinRequests()
+            ->where('status', 'pending')
+            ->where('initiated_by', 'owner')
+            ->with('requester')
+            ->orderBy('created_at')
+            ->get();
+
+        return FridgeJoinRequestResource::collection($invites);
+    }
+
+    /**
      * Every pending invite sent TO the current user, across all fridges - the "MY INVITES"
      * entry point (find-a-friend screen), since an invite needs to be visible without having
      * to stumble onto the inviter's profile.
@@ -122,13 +142,40 @@ class FridgeJoinRequestController extends Controller
     }
 
     /**
+     * Every pending request to join a fridge the current user owns, across all their fridges -
+     * the Notifications page's counterpart to myInvites() above, so an incoming request is
+     * visible there too, not just in that one fridge's Manage Fridge sheet.
+     */
+    public function myRequests(Request $request)
+    {
+        $fridgeIds = $request->user()->fridges()->pluck('id');
+
+        $requests = FridgeJoinRequest::whereIn('fridge_id', $fridgeIds)
+            ->where('status', 'pending')
+            ->where('initiated_by', 'requester')
+            ->with(['fridge', 'requester'])
+            ->orderBy('created_at')
+            ->get();
+
+        return MyRequestResource::collection($requests);
+    }
+
+    /**
      * Approve a pending request/invite - attaches the target as a member. Who's allowed to
      * call this depends on which side initiated it: the fridge owner approves an incoming
      * request; the invited person accepts their own invite.
      */
     public function approve(Request $request, FridgeJoinRequest $joinRequest)
     {
-        $this->authorizeRespond($request, $joinRequest);
+        // Strictly the non-initiating side, unlike decline() below - an owner "approving" their
+        // own sent invite would silently add the invited person without their consent, which is
+        // exactly what needing acceptance was meant to prevent. Only the invited person can
+        // accept their own invite; only the owner can approve someone else's request.
+        if ($joinRequest->initiated_by === 'owner') {
+            abort_if($request->user()->id !== $joinRequest->requester_id, 403);
+        } else {
+            $this->authorize('manageMembers', $joinRequest->fridge);
+        }
 
         $this->attachMember($joinRequest->fridge, $joinRequest->requester);
         $joinRequest->update(['status' => 'accepted']);
@@ -137,24 +184,24 @@ class FridgeJoinRequestController extends Controller
     }
 
     /**
-     * Decline a pending request/invite - no membership is created.
+     * Decline a pending request/invite - no membership is created. Unlike approve() above, an
+     * owner-initiated invite can be declined by either side: the invited person turning it
+     * down, or the owner canceling an invite they no longer want outstanding - both just mean
+     * "this doesn't happen," so both are safe to allow.
      */
     public function decline(Request $request, FridgeJoinRequest $joinRequest)
     {
-        $this->authorizeRespond($request, $joinRequest);
+        if ($joinRequest->initiated_by === 'owner') {
+            $isInvitee = $request->user()->id === $joinRequest->requester_id;
+            $isOwner = $joinRequest->fridge->isOwner($request->user());
+            abort_unless($isInvitee || $isOwner, 403);
+        } else {
+            $this->authorize('manageMembers', $joinRequest->fridge);
+        }
 
         $joinRequest->update(['status' => 'declined']);
 
         return response()->noContent();
-    }
-
-    private function authorizeRespond(Request $request, FridgeJoinRequest $joinRequest): void
-    {
-        if ($joinRequest->initiated_by === 'owner') {
-            abort_if($request->user()->id !== $joinRequest->requester_id, 403);
-        } else {
-            $this->authorize('manageMembers', $joinRequest->fridge);
-        }
     }
 
     /**

@@ -191,6 +191,52 @@ class FridgeJoinRequestControllerTest extends TestCase
         $this->assertDatabaseHas('fridge_join_requests', ['id' => $invite->id, 'status' => 'declined']);
     }
 
+    public function test_the_owner_can_cancel_an_invite_they_sent_but_a_stranger_cannot(): void
+    {
+        $owner = User::factory()->create();
+        $invitee = User::factory()->create();
+        $stranger = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
+        $invite = FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $invitee->id, 'status' => 'pending', 'initiated_by' => 'owner']);
+
+        $this->actingAs($stranger)->postJson("/api/join-requests/{$invite->id}/decline")->assertStatus(403);
+
+        $response = $this->actingAs($owner)->postJson("/api/join-requests/{$invite->id}/decline");
+        $response->assertStatus(204);
+        $this->assertDatabaseHas('fridge_join_requests', ['id' => $invite->id, 'status' => 'declined']);
+        $this->assertDatabaseMissing('fridge_members', ['fridge_id' => $fridge->id, 'user_id' => $invitee->id]);
+    }
+
+    public function test_sent_invites_lists_only_pending_owner_initiated_invites_for_that_fridge(): void
+    {
+        $owner = User::factory()->create();
+        $invitee = User::factory()->create();
+        $requester = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
+        $otherFridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Other']);
+        $sentInvite = FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $invitee->id, 'status' => 'pending', 'initiated_by' => 'owner']);
+        // Not a sent invite - an incoming request, already covered by index().
+        FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $requester->id, 'status' => 'pending', 'initiated_by' => 'requester']);
+        // A different fridge's sent invite - shouldn't leak in here.
+        FridgeJoinRequest::create(['fridge_id' => $otherFridge->id, 'requester_id' => User::factory()->create()->id, 'status' => 'pending', 'initiated_by' => 'owner']);
+
+        $response = $this->actingAs($owner)->getJson("/api/fridges/{$fridge->id}/invites");
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(1, 'data');
+        $response->assertJson(['data' => [['id' => (string) $sentInvite->id, 'requesterId' => (string) $invitee->id]]]);
+    }
+
+    public function test_only_the_owner_can_list_sent_invites(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
+        $fridge->members()->attach($member->id, ['role' => 'member']);
+
+        $this->actingAs($member)->getJson("/api/fridges/{$fridge->id}/invites")->assertStatus(403);
+    }
+
     public function test_inviting_a_user_who_already_requested_to_join_approves_them_immediately(): void
     {
         $owner = User::factory()->create();
@@ -255,6 +301,31 @@ class FridgeJoinRequestControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonCount(1, 'data');
         $response->assertJson(['data' => [['fridgeName' => "Jordan's Kitchen", 'inviterUsername' => 'jordan']]]);
+    }
+
+    public function test_my_requests_lists_pending_requests_across_every_fridge_i_own(): void
+    {
+        $owner = User::factory()->create();
+        $requesterA = User::factory()->create(['username' => 'alice']);
+        $requesterB = User::factory()->create(['username' => 'bob']);
+        $someoneElse = User::factory()->create();
+        $fridgeA = Fridge::create(['user_id' => $owner->id, 'name' => 'Kitchen']);
+        $fridgeB = Fridge::create(['user_id' => $owner->id, 'name' => 'Garage']);
+        FridgeJoinRequest::create(['fridge_id' => $fridgeA->id, 'requester_id' => $requesterA->id, 'status' => 'pending', 'initiated_by' => 'requester']);
+        FridgeJoinRequest::create(['fridge_id' => $fridgeB->id, 'requester_id' => $requesterB->id, 'status' => 'pending', 'initiated_by' => 'requester']);
+        // Not a request - an invite I sent - shouldn't appear here.
+        FridgeJoinRequest::create(['fridge_id' => $fridgeA->id, 'requester_id' => $someoneElse->id, 'status' => 'pending', 'initiated_by' => 'owner']);
+        // A different owner's fridge - shouldn't leak in even though it's also a real request.
+        $otherFridge = Fridge::create(['user_id' => $someoneElse->id, 'name' => 'Not Mine']);
+        FridgeJoinRequest::create(['fridge_id' => $otherFridge->id, 'requester_id' => $requesterA->id, 'status' => 'pending', 'initiated_by' => 'requester']);
+
+        $response = $this->actingAs($owner)->getJson('/api/join-requests');
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(2, 'data');
+        $byFridge = collect($response->json('data'))->keyBy('fridgeName');
+        $this->assertEquals('alice', $byFridge['Kitchen']['requesterUsername']);
+        $this->assertEquals('bob', $byFridge['Garage']['requesterUsername']);
     }
 
     public function test_a_newly_approved_member_can_actually_manage_items_in_the_shared_fridge(): void

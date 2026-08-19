@@ -40,9 +40,11 @@ import {
   fetchFridges,
   fetchFriendProfile,
   fetchJoinRequests,
+  fetchSentInvites,
   fetchMe,
   fetchMemoryFacts,
   fetchMyInvites,
+  fetchMyJoinRequests,
   fetchNotificationEvents,
   fetchNotificationPrefs,
   fetchOrganizerTally,
@@ -105,6 +107,7 @@ import type {
   Item,
   MealType,
   MyInvite,
+  MyJoinRequest,
   NotificationEvent,
   NotificationPrefs,
   NutritionCategory,
@@ -385,6 +388,10 @@ export interface ThatFridgeState {
   // the current user owns it (see openStylePicker), same lazy-per-open pattern as fridgeMembers.
   joinRequests: FridgeJoinRequest[];
   joinRequestsLoading: boolean;
+  // Invites the owner has sent for whichever fridge FridgeStyleSheet has open, awaiting the
+  // invited person's response - same lazy-per-open, owner-only pattern as joinRequests.
+  sentInvites: FridgeJoinRequest[];
+  sentInvitesLoading: boolean;
   // The "INVITE SOMEONE" search inside FridgeStyleSheet - its own state slot (not shared with
   // friendSearch* below) since Find-a-friend's search deliberately persists across a
   // close/reopen and reusing it here would cross-contaminate the two screens.
@@ -394,6 +401,9 @@ export interface ThatFridgeState {
   // Pending invites sent TO the current user, across all fridges - fetched at bootstrap (see
   // the init-fetch effect) so the Home header's badge is available as soon as they're signed in.
   myInvites: MyInvite[];
+  // Pending requests to join a fridge the current user owns, across all their fridges - the
+  // Notifications page's counterpart to myInvites above, same bootstrap-fetch treatment.
+  myJoinRequests: MyJoinRequest[];
   // Find-a-friend search + the profile screen it opens into.
   friendSearchQuery: string;
   friendSearchResults: UserSearchResult[];
@@ -533,10 +543,13 @@ export function initialState(): ThatFridgeState {
     fridgeMembersLoading: false,
     joinRequests: [],
     joinRequestsLoading: false,
+    sentInvites: [],
+    sentInvitesLoading: false,
     inviteSearchQuery: "",
     inviteSearchResults: [],
     inviteSearchLoading: false,
     myInvites: [],
+    myJoinRequests: [],
     friendSearchQuery: "",
     friendSearchResults: [],
     friendSearchLoading: false,
@@ -698,6 +711,7 @@ export function useThatFridge() {
       fetchScoreSnapshots(),
       fetchBadges(),
       fetchMyInvites(),
+      fetchMyJoinRequests(),
     ]).then(
       ([
         fridges,
@@ -713,6 +727,7 @@ export function useThatFridge() {
         scoreSnapshots,
         badges,
         myInvites,
+        myJoinRequests,
       ]) => {
         if (cancelled) return;
         const restoredChatMessages: ChatMessage[] = chatHistory.messages.flatMap((row) => [
@@ -740,6 +755,7 @@ export function useThatFridge() {
           scoreSnapshots,
           badges,
           myInvites,
+          myJoinRequests,
           ...(restoredChatMessages.length ? { chatMessages: restoredChatMessages } : {}),
         });
       }
@@ -1019,6 +1035,8 @@ export function useThatFridge() {
       fridgeMembersLoading: true,
       joinRequests: [],
       joinRequestsLoading: false,
+      sentInvites: [],
+      sentInvitesLoading: false,
       inviteSearchQuery: "",
       inviteSearchResults: [],
     });
@@ -1040,6 +1058,13 @@ export function useThatFridge() {
         .then((requests) => patch({ joinRequests: requests, joinRequestsLoading: false }))
         .catch((err) => {
           patch({ joinRequestsLoading: false, syncError: describeError(err, "Couldn't load join requests.") });
+        });
+
+      patch({ sentInvitesLoading: true });
+      fetchSentInvites(fridge.id)
+        .then((invites) => patch({ sentInvites: invites, sentInvitesLoading: false }))
+        .catch((err) => {
+          patch({ sentInvitesLoading: false, syncError: describeError(err, "Couldn't load sent invites.") });
         });
     }
   };
@@ -1092,9 +1117,34 @@ export function useThatFridge() {
   const sendFridgeInvite = (userId: string) => {
     const fridge = state.fridges[state.stylingFridgeIndex];
     if (!fridge) return Promise.reject(new Error("No fridge selected"));
-    return inviteToFridge(fridge.id, userId).catch((err) => {
-      patch({ syncError: describeError(err, "Couldn't send that invite.") });
-      throw err;
+    return inviteToFridge(fridge.id, userId)
+      .then((entry) => {
+        if (entry.status === "pending") {
+          // The common case - awaiting the invited person's own response, so it shows up in
+          // this sheet's INVITES SENT section without needing a refetch.
+          patch((s) => ({ sentInvites: [...s.sentInvites, entry] }));
+        } else {
+          // invite() auto-approves when the target already had a pending request of their own
+          // on this fridge (see its doc comment) - reflect the resulting membership immediately,
+          // same shape as approveJoinRequestAction's optimistic update.
+          patch((s) => ({
+            fridges: s.fridges.map((f) => (f.id === fridge.id ? { ...f, memberCount: (f.memberCount ?? s.fridgeMembers.length) + 1 } : f)),
+            fridgeMembers: [...s.fridgeMembers, { id: entry.requesterId, name: entry.requesterName, username: entry.requesterUsername, email: "", role: "member" as const, joinedAt: Date.now() }],
+          }));
+        }
+        return entry;
+      })
+      .catch((err) => {
+        patch({ syncError: describeError(err, "Couldn't send that invite.") });
+        throw err;
+      });
+  };
+
+  const cancelSentInviteAction = (id: string) => {
+    const prevInvites = state.sentInvites;
+    patch((s) => ({ sentInvites: s.sentInvites.filter((i) => i.id !== id) }));
+    declineJoinRequest(id).catch((err) => {
+      patch({ sentInvites: prevInvites, syncError: describeError(err, "Couldn't cancel that invite.") });
     });
   };
 
@@ -1114,6 +1164,33 @@ export function useThatFridge() {
     patch((s) => ({ myInvites: s.myInvites.filter((i) => i.id !== id) }));
     declineJoinRequest(id).catch((err) => {
       patch({ myInvites: prevInvites, syncError: describeError(err, "Couldn't decline that invite.") });
+    });
+  };
+
+  // The Notifications-page counterpart to acceptMyInvite/declineMyInvite above, for an incoming
+  // request rather than a received invite - same reused endpoints, same optimistic shape.
+  // Approving bumps memberCount on the matching fridge (mirroring approveJoinRequestAction) but
+  // doesn't touch state.fridgeMembers, which stays lazily loaded per-open Manage Fridge sheet.
+  const approveMyJoinRequestAction = (id: string) => {
+    const prevRequests = state.myJoinRequests;
+    const request = prevRequests.find((r) => r.id === id);
+    patch((s) => ({
+      myJoinRequests: s.myJoinRequests.filter((r) => r.id !== id),
+      fridges: request ? s.fridges.map((f) => (f.id === request.fridgeId ? { ...f, memberCount: (f.memberCount ?? 1) + 1 } : f)) : s.fridges,
+    }));
+    approveJoinRequest(id).catch((err) => {
+      patch((s) => ({
+        myJoinRequests: prevRequests,
+        fridges: request ? s.fridges.map((f) => (f.id === request.fridgeId ? { ...f, memberCount: Math.max(1, (f.memberCount ?? 2) - 1) } : f)) : s.fridges,
+      }));
+      patch({ syncError: describeError(err, "Couldn't approve that request.") });
+    });
+  };
+  const declineMyJoinRequestAction = (id: string) => {
+    const prevRequests = state.myJoinRequests;
+    patch((s) => ({ myJoinRequests: s.myJoinRequests.filter((r) => r.id !== id) }));
+    declineJoinRequest(id).catch((err) => {
+      patch({ myJoinRequests: prevRequests, syncError: describeError(err, "Couldn't decline that request.") });
     });
   };
 
@@ -2637,8 +2714,11 @@ export function useThatFridge() {
     declineJoinRequestAction,
     onInviteSearchChange,
     sendFridgeInvite,
+    cancelSentInviteAction,
     acceptMyInvite,
     declineMyInvite,
+    approveMyJoinRequestAction,
+    declineMyJoinRequestAction,
     removeFridgeMemberAction,
     leaveFridgeAction,
     openSearch,

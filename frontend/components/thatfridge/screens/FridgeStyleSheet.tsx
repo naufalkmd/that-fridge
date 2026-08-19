@@ -12,9 +12,6 @@ export default function FridgeStyleSheet() {
   const { state, actions } = useThatFridgeCtx();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
-  // Ephemeral per-sheet-open UI state, not app-wide data - which invite-search results have
-  // already been invited this session, so the button can flip to a disabled "Invited" label.
-  const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const stylingFridge = state.fridges[state.stylingFridgeIndex];
   const currentStyle = stylingFridge?.style || "photo";
@@ -157,7 +154,7 @@ export default function FridgeStyleSheet() {
               ) : state.inviteSearchResults.length > 0 ? (
                 <div style={{ borderRadius: theme.radius.md, overflow: "hidden", background: theme.bg.surface2, marginBottom: 8 }}>
                   {state.inviteSearchResults.map((user, i) => {
-                    const invited = invitedIds.has(user.id);
+                    const invited = state.sentInvites.some((inv) => inv.requesterId === user.id) || state.fridgeMembers.some((m) => m.id === user.id);
                     return (
                       <div
                         key={user.id}
@@ -174,17 +171,7 @@ export default function FridgeStyleSheet() {
                           <div style={{ fontSize: 11, color: theme.text.faint }}>@{user.username}</div>
                         </div>
                         <div
-                          onClick={() => {
-                            if (invited) return;
-                            setInvitedIds((prev) => new Set(prev).add(user.id));
-                            actions.sendFridgeInvite(user.id).catch(() => {
-                              setInvitedIds((prev) => {
-                                const next = new Set(prev);
-                                next.delete(user.id);
-                                return next;
-                              });
-                            });
-                          }}
+                          onClick={() => !invited && actions.sendFridgeInvite(user.id)}
                           style={{
                             fontSize: 11,
                             fontWeight: 700,
@@ -205,6 +192,38 @@ export default function FridgeStyleSheet() {
                   })}
                 </div>
               ) : null}
+
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, margin: "24px 0 8px" }}>
+                INVITES SENT{state.sentInvites.length ? ` (${state.sentInvites.length})` : ""}
+              </div>
+              {state.sentInvitesLoading ? (
+                <div style={{ fontSize: 12, color: theme.text.faint, padding: "4px 2px 12px" }}>Loading invites…</div>
+              ) : state.sentInvites.length === 0 ? (
+                <div style={{ fontSize: 12, color: theme.text.faint, padding: "4px 2px 12px" }}>No invites awaiting a response.</div>
+              ) : (
+                <div style={{ borderRadius: theme.radius.md, overflow: "hidden", background: theme.bg.surface2, marginBottom: 8 }}>
+                  {state.sentInvites.map((inv, i) => (
+                    <div
+                      key={inv.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "11px 14px",
+                        borderBottom: i < state.sentInvites.length - 1 ? `1px solid ${theme.border.hairline}` : undefined,
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: theme.text.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inv.requesterName}</div>
+                        <div style={{ fontSize: 11, color: theme.text.faint }}>@{inv.requesterUsername} · Invited, awaiting response</div>
+                      </div>
+                      <div onClick={() => actions.cancelSentInviteAction(inv.id)} title="Cancel invite" style={{ cursor: "pointer", padding: 4 }}>
+                        <X size={15} color={theme.text.faint} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, margin: "24px 0 8px" }}>
                 JOIN REQUESTS{state.joinRequests.length ? ` (${state.joinRequests.length})` : ""}

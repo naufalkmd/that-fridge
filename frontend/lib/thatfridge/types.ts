@@ -327,3 +327,15 @@ export interface MyInvite {
   inviterUsername: string;
   createdAt: number;
 }
+
+// A pending request to join a fridge the current user owns - the cross-fridge counterpart to
+// MyInvite above, aggregated across every fridge they own (see fetchMyJoinRequests), so it can
+// show up on the Notifications page without needing that specific fridge's Manage Fridge open.
+export interface MyJoinRequest {
+  id: string;
+  fridgeId: string;
+  fridgeName: string;
+  requesterName: string;
+  requesterUsername: string;
+  createdAt: number;
+}

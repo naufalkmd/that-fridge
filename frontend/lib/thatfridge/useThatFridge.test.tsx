@@ -358,6 +358,7 @@ describe("useThatFridge join request approve/decline", () => {
     vi.mocked(api.fetchJoinRequests).mockResolvedValue([
       { id: "r1", fridgeId: "f1", requesterId: "u2", requesterName: "Riley", requesterUsername: "riley", status: "pending", createdAt: Date.now() },
     ]);
+    vi.mocked(api.fetchSentInvites).mockResolvedValue([]);
 
     const { result } = renderHook(() => useThatFridge());
     await act(async () => {
@@ -402,6 +403,7 @@ describe("useThatFridge sendFridgeInvite", () => {
     vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "Mine", role: "owner", memberCount: 1, sections: [] });
     vi.mocked(api.fetchFridgeMembers).mockResolvedValue([]);
     vi.mocked(api.fetchJoinRequests).mockResolvedValue([]);
+    vi.mocked(api.fetchSentInvites).mockResolvedValue([]);
     const inviteMock = vi.mocked(api.inviteToFridge).mockResolvedValue({
       id: "r1",
       fridgeId: "f1",
@@ -426,6 +428,86 @@ describe("useThatFridge sendFridgeInvite", () => {
     });
 
     expect(inviteMock).toHaveBeenCalledWith("f1", "u9");
+    expect(result.current.state.sentInvites).toHaveLength(1);
+    expect(result.current.state.sentInvites[0].requesterUsername).toBe("sam");
+  });
+
+  it("reflects an immediate membership instead when invite() auto-approves an existing request", async () => {
+    vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "Mine", role: "owner", memberCount: 1, sections: [] });
+    vi.mocked(api.fetchFridgeMembers).mockResolvedValue([]);
+    vi.mocked(api.fetchJoinRequests).mockResolvedValue([]);
+    vi.mocked(api.fetchSentInvites).mockResolvedValue([]);
+    vi.mocked(api.inviteToFridge).mockResolvedValue({
+      id: "r1",
+      fridgeId: "f1",
+      requesterId: "u9",
+      requesterName: "Sam",
+      requesterUsername: "sam",
+      status: "accepted",
+      createdAt: Date.now(),
+    });
+
+    const { result } = renderHook(() => useThatFridge());
+    await act(async () => {
+      await result.current.actions.addFridge();
+    });
+    act(() => {
+      result.current.actions.openStylePicker(0);
+    });
+    await waitFor(() => expect(result.current.state.fridgeMembersLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.actions.sendFridgeInvite("u9");
+    });
+
+    expect(result.current.state.sentInvites).toHaveLength(0);
+    expect(result.current.state.fridgeMembers).toHaveLength(1);
+    expect(result.current.state.fridges[0].memberCount).toBe(2);
+  });
+});
+
+describe("useThatFridge cancelSentInviteAction", () => {
+  async function setUpAnOwnedFridgeWithASentInvite() {
+    vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "Mine", role: "owner", memberCount: 1, sections: [] });
+    vi.mocked(api.fetchFridgeMembers).mockResolvedValue([]);
+    vi.mocked(api.fetchJoinRequests).mockResolvedValue([]);
+    vi.mocked(api.fetchSentInvites).mockResolvedValue([
+      { id: "inv1", fridgeId: "f1", requesterId: "u9", requesterName: "Sam", requesterUsername: "sam", status: "pending", createdAt: Date.now() },
+    ]);
+
+    const { result } = renderHook(() => useThatFridge());
+    await act(async () => {
+      await result.current.actions.addFridge();
+    });
+    act(() => {
+      result.current.actions.openStylePicker(0);
+    });
+    await waitFor(() => expect(result.current.state.sentInvites).toHaveLength(1));
+    return result;
+  }
+
+  it("removes the invite from the list and calls the API", async () => {
+    const declineMock = vi.mocked(api.declineJoinRequest).mockResolvedValue(undefined);
+    const result = await setUpAnOwnedFridgeWithASentInvite();
+
+    act(() => {
+      result.current.actions.cancelSentInviteAction("inv1");
+    });
+
+    expect(declineMock).toHaveBeenCalledWith("inv1");
+    expect(result.current.state.sentInvites).toHaveLength(0);
+  });
+
+  it("rolls back the optimistic removal and surfaces a sync error on failure", async () => {
+    vi.mocked(api.declineJoinRequest).mockRejectedValue(new Error("network error"));
+    const result = await setUpAnOwnedFridgeWithASentInvite();
+
+    act(() => {
+      result.current.actions.cancelSentInviteAction("inv1");
+    });
+
+    await waitFor(() => expect(result.current.state.syncError).toBeTruthy());
+    expect(result.current.state.sentInvites).toHaveLength(1);
   });
 });
 
@@ -468,6 +550,63 @@ describe("useThatFridge acceptMyInvite/declineMyInvite", () => {
 
     await waitFor(() => expect(result.current.state.syncError).toBeTruthy());
     expect(result.current.state.myInvites).toHaveLength(1);
+  });
+});
+
+describe("useThatFridge approveMyJoinRequestAction/declineMyJoinRequestAction", () => {
+  async function loginWithAPendingRequest() {
+    mockInitFetch();
+    vi.mocked(api.fetchFridges).mockResolvedValue([{ id: "f9", name: "Mine", role: "owner", memberCount: 1, sections: [] }]);
+    vi.mocked(api.fetchMyJoinRequests).mockResolvedValue([
+      { id: "req1", fridgeId: "f9", fridgeName: "Mine", requesterName: "Riley", requesterUsername: "riley", createdAt: Date.now() },
+    ]);
+
+    const { result } = renderHook(() => useThatFridge());
+    act(() => result.current.actions.onAuthEmailChange("joey@thatfridge.test"));
+    act(() => result.current.actions.onAuthPasswordChange("password123"));
+    await act(async () => {
+      await result.current.actions.submitAuth();
+    });
+    await waitFor(() => expect(result.current.state.myJoinRequests).toHaveLength(1));
+    return result;
+  }
+
+  it("approving removes the request, bumps the fridge's member count, and calls the API", async () => {
+    const approveMock = vi.mocked(api.approveJoinRequest).mockResolvedValue(undefined);
+    const result = await loginWithAPendingRequest();
+
+    act(() => {
+      result.current.actions.approveMyJoinRequestAction("req1");
+    });
+
+    expect(approveMock).toHaveBeenCalledWith("req1");
+    expect(result.current.state.myJoinRequests).toHaveLength(0);
+    expect(result.current.state.fridges.find((f) => f.id === "f9")?.memberCount).toBe(2);
+  });
+
+  it("rolls back the optimistic removal and member count and surfaces a sync error on failure", async () => {
+    vi.mocked(api.approveJoinRequest).mockRejectedValue(new Error("network error"));
+    const result = await loginWithAPendingRequest();
+
+    act(() => {
+      result.current.actions.approveMyJoinRequestAction("req1");
+    });
+
+    await waitFor(() => expect(result.current.state.syncError).toBeTruthy());
+    expect(result.current.state.myJoinRequests).toHaveLength(1);
+    expect(result.current.state.fridges.find((f) => f.id === "f9")?.memberCount).toBe(1);
+  });
+
+  it("declining removes the request and calls the API", async () => {
+    const declineMock = vi.mocked(api.declineJoinRequest).mockResolvedValue(undefined);
+    const result = await loginWithAPendingRequest();
+
+    act(() => {
+      result.current.actions.declineMyJoinRequestAction("req1");
+    });
+
+    expect(declineMock).toHaveBeenCalledWith("req1");
+    expect(result.current.state.myJoinRequests).toHaveLength(0);
   });
 });
 
@@ -1014,6 +1153,7 @@ function mockInitFetch() {
   vi.mocked(api.fetchScoreSnapshots).mockResolvedValue([]);
   vi.mocked(api.fetchBadges).mockResolvedValue([]);
   vi.mocked(api.fetchMyInvites).mockResolvedValue([]);
+  vi.mocked(api.fetchMyJoinRequests).mockResolvedValue([]);
 }
 
 async function loginAsJoeyWithMockedFridges(result: { current: ReturnType<typeof useThatFridge> }) {
