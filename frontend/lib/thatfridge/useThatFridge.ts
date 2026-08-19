@@ -827,7 +827,7 @@ export function useThatFridge() {
   const onFriendSearchChange = (value: string) => {
     patch({ friendSearchQuery: value });
     const q = value.trim();
-    if (!q) {
+    if (q.length < 2) {
       patch({ friendSearchResults: [], friendSearchLoading: false });
       return;
     }

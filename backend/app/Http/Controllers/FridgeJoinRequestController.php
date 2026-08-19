@@ -55,7 +55,19 @@ class FridgeJoinRequestController extends Controller
     {
         $this->authorize('manageMembers', $joinRequest->fridge);
 
-        $joinRequest->fridge->members()->attach($joinRequest->requester_id, ['role' => 'member']);
+        // Guard against a double-click/two-tab approve racing itself: fridge_members has a
+        // unique (fridge_id, user_id) index, so a second concurrent attach() would 500. The
+        // membership check narrows the window; the catch covers what's left of it rather than
+        // trusting a check-then-act to be atomic.
+        if (! $joinRequest->fridge->isMember($joinRequest->requester)) {
+            try {
+                $joinRequest->fridge->members()->attach($joinRequest->requester_id, ['role' => 'member']);
+            } catch (\Illuminate\Database\QueryException $e) {
+                if (! $joinRequest->fridge->isMember($joinRequest->requester)) {
+                    throw $e;
+                }
+            }
+        }
         $joinRequest->update(['status' => 'accepted']);
 
         return response()->noContent();

@@ -94,6 +94,26 @@ class FridgeJoinRequestControllerTest extends TestCase
         $this->assertDatabaseHas('fridge_join_requests', ['id' => $joinRequest->id, 'status' => 'accepted']);
     }
 
+    public function test_approving_an_already_approved_request_again_does_not_error(): void
+    {
+        // Simulates a double-click/two-tab race: the requester is already a member (as if a
+        // first approve() call already went through) by the time a second approve() call for
+        // the same request lands - it must stay idempotent, not 500 on the unique constraint.
+        $owner = User::factory()->create();
+        $requester = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
+        $fridge->members()->attach($requester->id, ['role' => 'member']);
+        $joinRequest = FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $requester->id, 'status' => 'pending']);
+
+        $response = $this->actingAs($owner)->postJson("/api/join-requests/{$joinRequest->id}/approve");
+
+        $response->assertStatus(204);
+        // Owner's own row (auto-attached on fridge creation) + the requester's - no duplicate
+        // requester row from re-attaching.
+        $this->assertDatabaseCount('fridge_members', 2);
+        $this->assertDatabaseHas('fridge_join_requests', ['id' => $joinRequest->id, 'status' => 'accepted']);
+    }
+
     public function test_declining_a_request_does_not_create_a_membership(): void
     {
         $owner = User::factory()->create();

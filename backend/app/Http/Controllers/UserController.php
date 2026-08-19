@@ -17,7 +17,10 @@ class UserController extends Controller
     public function search(Request $request)
     {
         $data = $request->validate([
-            'q' => ['required', 'string', 'min:1', 'max:255'],
+            // min:2 - a single-character prefix is the cheapest way to sweep the whole
+            // username space (26 requests covers every user); two characters raises that to
+            // 676, on top of the throttle and the 20-result cap.
+            'q' => ['required', 'string', 'min:2', 'max:255'],
         ]);
 
         $users = User::where('username', 'like', $data['q'].'%')

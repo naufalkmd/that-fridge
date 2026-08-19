@@ -19,6 +19,16 @@ class UserControllerTest extends TestCase
         $response->assertStatus(401);
     }
 
+    public function test_search_rejects_a_single_character_query(): void
+    {
+        $me = User::factory()->create();
+        User::factory()->create(['username' => 'jordan_diaz']);
+
+        $response = $this->actingAs($me)->getJson('/api/users/search?q=j');
+
+        $response->assertStatus(422);
+    }
+
     public function test_search_matches_by_username_prefix(): void
     {
         $me = User::factory()->create();

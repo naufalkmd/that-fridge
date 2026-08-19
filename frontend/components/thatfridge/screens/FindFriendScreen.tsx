@@ -36,7 +36,7 @@ export default function FindFriendScreen() {
             />
             {state.friendSearchLoading ? (
               <div style={{ textAlign: "center", color: theme.text.faint, fontSize: 13, marginTop: 30 }}>Searching…</div>
-            ) : state.friendSearchQuery.trim().length === 0 ? (
+            ) : state.friendSearchQuery.trim().length < 2 ? (
               <div style={{ textAlign: "center", color: theme.text.faint, fontSize: 13, marginTop: 30 }}>Search for someone by their username to see their fridges.</div>
             ) : state.friendSearchResults.length === 0 ? (
               <div style={{ textAlign: "center", color: theme.text.faint, fontSize: 13, marginTop: 30 }}>No one matches &quot;{state.friendSearchQuery}&quot;</div>
