@@ -21,6 +21,9 @@ export default function RecipeDetailSheet() {
     category: null,
     isFavorite: false,
     isCustom: false,
+    isMine: false,
+    ownerName: null,
+    ownerUsername: null,
     attachments: [],
     ratioLabel: "",
     icon: "",
@@ -48,7 +51,7 @@ export default function RecipeDetailSheet() {
               >
                 <Heart size={14} color={theme.text.primary} fill={selectedRecipe.isFavorite ? theme.amber : "none"} strokeWidth={2.2} />
               </div>
-              {selectedRecipe.isCustom && (
+              {selectedRecipe.isMine && (
                 <div
                   onClick={() => actions.openEditRecipeForm(selectedRecipe.id)}
                   title="Edit recipe"
@@ -60,6 +63,9 @@ export default function RecipeDetailSheet() {
             </div>
           </div>
           <div style={{ textAlign: "center", fontSize: 19, fontWeight: 700, marginBottom: 2, color: theme.text.primary }}>{selectedRecipe.name}</div>
+          {!selectedRecipe.isMine && selectedRecipe.isCustom && selectedRecipe.ownerUsername && (
+            <div style={{ textAlign: "center", fontSize: 11.5, color: theme.text.faint, marginBottom: 4 }}>by @{selectedRecipe.ownerUsername}</div>
+          )}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 18, flexWrap: "wrap" }}>
             <div style={{ fontSize: 12.5, color: theme.text.faint }}>
               {selectedRecipe.minutes} min · {selectedRecipe.ratioLabel}

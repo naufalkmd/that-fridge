@@ -27,6 +27,12 @@ class RecipeResource extends JsonResource
             'foodFocus' => $this->food_focus ?? [],
             'madeCount' => $this->made_count,
             'isCustom' => $this->user_id !== null,
+            // Real ownership, distinct from isCustom (curated-vs-not) - a favorited recipe
+            // belonging to someone else is isCustom: true but isMine: false, which is what
+            // the frontend gates edit/delete on.
+            'isMine' => $this->user_id === $request->user()->id,
+            'ownerName' => $this->user_id !== null ? $this->user?->name : null,
+            'ownerUsername' => $this->user_id !== null ? $this->user?->username : null,
             // index() eager-loads favoritedBy pre-filtered to the current user for efficiency;
             // store/update/favorite responses return a single recipe, so a lazy check here is
             // one cheap query rather than something worth eager-loading everywhere.

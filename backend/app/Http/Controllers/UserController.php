@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\RecipeResource;
 use App\Http\Resources\UserProfileResource;
 use App\Http\Resources\UserSearchResource;
 use App\Models\User;
@@ -58,6 +59,13 @@ class UserController extends Controller
             ]);
 
         $user->setAttribute('profileFridges', $fridges);
+
+        $recipes = $user->recipes()
+            ->with(['favoritedBy' => fn ($q) => $q->where('users.id', $viewer->id), 'user:id,name,username'])
+            ->orderBy('name')
+            ->get();
+
+        $user->setAttribute('profileRecipes', RecipeResource::collection($recipes));
 
         return new UserProfileResource($user);
     }

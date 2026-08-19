@@ -231,4 +231,72 @@ class RecipeControllerTest extends TestCase
 
         $this->assertCount(6, $response->json('exact'));
     }
+
+    public function test_a_user_can_favorite_another_users_custom_recipe(): void
+    {
+        $owner = User::factory()->create();
+        $favoriter = User::factory()->create();
+        $recipe = $this->recipeFor($owner);
+
+        $response = $this->actingAs($favoriter)->postJson("/api/recipes/{$recipe->id}/favorite");
+
+        $response->assertStatus(200);
+        $response->assertJson(['data' => ['isFavorite' => true, 'isMine' => false]]);
+        $this->assertDatabaseHas('recipe_favorites', ['user_id' => $favoriter->id, 'recipe_id' => $recipe->id]);
+    }
+
+    public function test_a_user_can_unfavorite_another_users_custom_recipe(): void
+    {
+        $owner = User::factory()->create();
+        $favoriter = User::factory()->create();
+        $recipe = $this->recipeFor($owner);
+        $favoriter->favoriteRecipes()->attach($recipe->id);
+
+        $response = $this->actingAs($favoriter)->deleteJson("/api/recipes/{$recipe->id}/favorite");
+
+        $response->assertStatus(200);
+        $this->assertDatabaseMissing('recipe_favorites', ['user_id' => $favoriter->id, 'recipe_id' => $recipe->id]);
+    }
+
+    public function test_a_user_still_cannot_update_or_delete_someone_elses_recipe(): void
+    {
+        // Regression guard: broadening RecipePolicy::view() to unconditionally true (so
+        // favorite/unfavorite/markMade work on anyone's recipe) must not have loosened
+        // update/delete, which stay owner-only.
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $recipe = $this->recipeFor($owner);
+
+        $this->actingAs($other)->patchJson("/api/recipes/{$recipe->id}", ['name' => 'Hijacked'])->assertStatus(403);
+        $this->actingAs($other)->deleteJson("/api/recipes/{$recipe->id}")->assertStatus(403);
+    }
+
+    public function test_index_includes_a_favorited_recipe_from_another_user_but_not_an_unfavorited_one(): void
+    {
+        $owner = User::factory()->create();
+        $viewer = User::factory()->create();
+        $favorited = $this->recipeFor($owner, ['name' => 'Favorited From Owner']);
+        $untouched = $this->recipeFor($owner, ['name' => 'Never Favorited']);
+        $viewer->favoriteRecipes()->attach($favorited->id);
+
+        $response = $this->actingAs($viewer)->getJson('/api/recipes');
+
+        $names = collect($response->json('data'))->pluck('name');
+        $this->assertTrue($names->contains('Favorited From Owner'));
+        $this->assertFalse($names->contains('Never Favorited'));
+    }
+
+    public function test_recipe_resource_reports_owner_name_for_a_custom_recipe_and_null_for_curated(): void
+    {
+        $owner = User::factory()->create(['name' => 'Jordan Diaz', 'username' => 'jordan_diaz']);
+        $viewer = User::factory()->create();
+        $custom = $this->recipeFor($owner, ['name' => "Jordan's Chili"]);
+        $curated = $this->recipeFor(null, ['name' => 'Curated Chili']);
+
+        $customResponse = $this->actingAs($viewer)->postJson("/api/recipes/{$custom->id}/favorite");
+        $curatedResponse = $this->actingAs($viewer)->postJson("/api/recipes/{$curated->id}/favorite");
+
+        $customResponse->assertJson(['data' => ['ownerUsername' => 'jordan_diaz', 'ownerName' => 'Jordan Diaz']]);
+        $curatedResponse->assertJson(['data' => ['ownerUsername' => null, 'ownerName' => null]]);
+    }
 }

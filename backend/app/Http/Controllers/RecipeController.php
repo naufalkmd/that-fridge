@@ -31,15 +31,20 @@ class RecipeController extends Controller
     private const FOOD_FOCUS = ['high_protein', 'high_veg', 'low_carb', 'balanced'];
 
     /**
-     * Every curated (user_id null) recipe, plus this user's own custom recipes.
+     * Every curated (user_id null) recipe, this user's own custom recipes, plus any custom
+     * recipe of someone else's they've favorited from that person's profile - otherwise a
+     * favorite would succeed but the recipe would never actually show up anywhere for the
+     * favoriter.
      */
     public function index(Request $request)
     {
         $user = $request->user();
 
         $recipes = Recipe::query()
-            ->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $user->id))
-            ->with(['favoritedBy' => fn ($q) => $q->where('users.id', $user->id)])
+            ->where(fn ($q) => $q->whereNull('user_id')
+                ->orWhere('user_id', $user->id)
+                ->orWhereHas('favoritedBy', fn ($q2) => $q2->where('users.id', $user->id)))
+            ->with(['favoritedBy' => fn ($q) => $q->where('users.id', $user->id), 'user:id,name,username'])
             ->orderBy('name')
             ->get();
 
@@ -141,7 +146,10 @@ class RecipeController extends Controller
         $hasScoringCriteria = ! empty($vibes) || ! empty($foodFocus);
 
         $recipes = Recipe::query()
-            ->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $user->id))
+            ->where(fn ($q) => $q->whereNull('user_id')
+                ->orWhere('user_id', $user->id)
+                ->orWhereHas('favoritedBy', fn ($q2) => $q2->where('users.id', $user->id)))
+            ->with('user:id,name,username')
             ->orderBy('name')
             ->get();
 

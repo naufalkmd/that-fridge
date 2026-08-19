@@ -149,6 +149,7 @@ describe("useThatFridge sendJoinRequest", () => {
       name: "Riley",
       username: "riley",
       fridges: [{ id: "f1", name: "Riley's Kitchen", memberCount: 1, role: null, requestStatus: null }],
+      recipes: [],
     });
 
     const { result } = renderHook(() => useThatFridge());
@@ -189,6 +190,109 @@ describe("useThatFridge sendJoinRequest", () => {
 
     await waitFor(() => expect(result.current.state.syncError).toBeTruthy());
     expect(result.current.state.friendProfile?.fridges[0].requestStatus).toBeNull();
+  });
+});
+
+describe("useThatFridge toggleFavoriteFriendRecipe", () => {
+  const friendRecipe = {
+    id: "rec1",
+    name: "Chili",
+    minutes: 30,
+    category: null,
+    ingredients: [{ icon: "leftovers", name: "Beans" }],
+    steps: ["Cook it"],
+    attachments: [],
+    mealType: null,
+    vibes: [],
+    foodFocus: [],
+    madeCount: 0,
+    isFavorite: false,
+    isCustom: true,
+    isMine: false,
+    ownerName: "Riley",
+    ownerUsername: "riley",
+  };
+
+  async function openAFriendProfileWithARecipe() {
+    vi.mocked(api.fetchFriendProfile).mockResolvedValue({
+      id: "u2",
+      name: "Riley",
+      username: "riley",
+      fridges: [],
+      recipes: [friendRecipe],
+    });
+
+    const { result } = renderHook(() => useThatFridge());
+    act(() => {
+      result.current.actions.openFriendProfile("riley");
+    });
+    await waitFor(() => expect(result.current.state.friendProfile).not.toBeNull());
+    return result;
+  }
+
+  it("optimistically favorites a friend's recipe and calls the API", async () => {
+    const favoriteMock = vi.mocked(api.favoriteRecipe).mockResolvedValue({ ...friendRecipe, isFavorite: true });
+    const result = await openAFriendProfileWithARecipe();
+
+    act(() => {
+      result.current.actions.toggleFavoriteFriendRecipe("rec1");
+    });
+
+    expect(favoriteMock).toHaveBeenCalledWith("rec1");
+    expect(result.current.state.friendProfile?.recipes[0].isFavorite).toBe(true);
+  });
+
+  it("rolls back the optimistic favorite and surfaces a sync error on failure", async () => {
+    vi.mocked(api.favoriteRecipe).mockRejectedValue(new Error("network error"));
+    const result = await openAFriendProfileWithARecipe();
+
+    act(() => {
+      result.current.actions.toggleFavoriteFriendRecipe("rec1");
+    });
+
+    await waitFor(() => expect(result.current.state.syncError).toBeTruthy());
+    expect(result.current.state.friendProfile?.recipes[0].isFavorite).toBe(false);
+  });
+});
+
+describe("useThatFridge edit/delete gating on isMine", () => {
+  it("does not open the edit form or delete a custom recipe favorited from someone else", async () => {
+    mockInitFetch();
+    // mockInitFetch() defaults fetchRecipes to [] - override after, not before, calling it.
+    vi.mocked(api.fetchRecipes).mockResolvedValue([
+      {
+        id: "rec1",
+        name: "Riley's Chili",
+        minutes: 30,
+        category: null,
+        ingredients: [{ icon: "leftovers", name: "Beans" }],
+        steps: ["Cook it"],
+        attachments: [],
+        mealType: null,
+        vibes: [],
+        foodFocus: [],
+        madeCount: 0,
+        isFavorite: true,
+        isCustom: true,
+        isMine: false,
+        ownerName: "Riley",
+        ownerUsername: "riley",
+      },
+    ]);
+    const { result } = renderHook(() => useThatFridge());
+    act(() => result.current.actions.onAuthEmailChange("joey@thatfridge.test"));
+    act(() => result.current.actions.onAuthPasswordChange("password123"));
+    await act(async () => {
+      await result.current.actions.submitAuth();
+    });
+    await waitFor(() => expect(result.current.state.recipes).toHaveLength(1));
+
+    act(() => result.current.actions.openEditRecipeForm("rec1"));
+    expect(result.current.state.screen).not.toBe("recipeForm");
+
+    act(() => result.current.actions.deleteCustomRecipe("rec1"));
+    expect(result.current.state.recipes).toHaveLength(1);
+    expect(api.deleteRecipe).not.toHaveBeenCalled();
   });
 });
 
@@ -667,6 +771,9 @@ describe("useThatFridge Mark as made", () => {
       madeCount: 1,
       isFavorite: false,
       isCustom: true,
+      isMine: true,
+      ownerName: null,
+      ownerUsername: null,
     });
     vi.mocked(api.createRecipe)
       .mockResolvedValueOnce({
@@ -683,6 +790,9 @@ describe("useThatFridge Mark as made", () => {
         madeCount: 0,
         isFavorite: false,
         isCustom: true,
+        isMine: true,
+        ownerName: null,
+        ownerUsername: null,
       })
       .mockResolvedValueOnce({
         id: "r2",
@@ -698,6 +808,9 @@ describe("useThatFridge Mark as made", () => {
         madeCount: 0,
         isFavorite: false,
         isCustom: true,
+        isMine: true,
+        ownerName: null,
+        ownerUsername: null,
       });
 
     const { result } = renderHook(() => useThatFridge());

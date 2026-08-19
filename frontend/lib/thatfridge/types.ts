@@ -94,6 +94,9 @@ export interface Recipe {
   madeCount: number;
   isFavorite: boolean;
   isCustom: boolean;
+  isMine: boolean;
+  ownerName: string | null;
+  ownerUsername: string | null;
 }
 
 export interface FridgeStyleDef {
@@ -296,6 +299,7 @@ export interface FriendProfile {
   name: string;
   username: string;
   fridges: FriendFridgeSummary[];
+  recipes: Recipe[];
 }
 
 // A pending request to join a fridge - only ever fetched for a fridge the current user owns

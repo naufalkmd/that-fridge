@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Fridge;
 use App\Models\FridgeJoinRequest;
+use App\Models\Recipe;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -116,5 +117,41 @@ class UserControllerTest extends TestCase
         $this->assertEquals('pending', $byName['Requested']['requestStatus']);
         $this->assertNull($byName['Untouched']['role']);
         $this->assertNull($byName['Untouched']['requestStatus']);
+    }
+
+    public function test_profile_shows_the_targets_custom_recipes_but_not_curated_ones(): void
+    {
+        $viewer = User::factory()->create();
+        $target = User::factory()->create(['username' => 'jordan']);
+        Recipe::create([
+            'user_id' => $target->id, 'name' => "Jordan's Chili", 'minutes' => 30,
+            'ingredients' => [['name' => 'Beans', 'icon' => 'leftovers']], 'steps' => ['Cook it'],
+        ]);
+        Recipe::create([
+            'user_id' => null, 'name' => 'Curated Chili', 'minutes' => 30,
+            'ingredients' => [['name' => 'Beans', 'icon' => 'leftovers']], 'steps' => ['Cook it'],
+        ]);
+
+        $response = $this->actingAs($viewer)->getJson('/api/users/jordan/profile');
+
+        $response->assertStatus(200);
+        $names = collect($response->json('data.recipes'))->pluck('name');
+        $this->assertEquals(["Jordan's Chili"], $names->all());
+    }
+
+    public function test_profile_recipes_reflect_the_viewers_own_favorite_and_mine_status(): void
+    {
+        $viewer = User::factory()->create();
+        $target = User::factory()->create(['username' => 'jordan']);
+        $recipe = Recipe::create([
+            'user_id' => $target->id, 'name' => "Jordan's Chili", 'minutes' => 30,
+            'ingredients' => [['name' => 'Beans', 'icon' => 'leftovers']], 'steps' => ['Cook it'],
+        ]);
+        $viewer->favoriteRecipes()->attach($recipe->id);
+
+        $response = $this->actingAs($viewer)->getJson('/api/users/jordan/profile');
+
+        $response->assertStatus(200);
+        $response->assertJson(['data' => ['recipes' => [['isFavorite' => true, 'isMine' => false, 'ownerUsername' => 'jordan']]]]);
     }
 }

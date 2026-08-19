@@ -449,6 +449,7 @@ export default function FoodHubScreen() {
                             {categoryLabel.toUpperCase()}
                           </span>
                         )}
+                        {!r.isMine && r.isCustom && r.ownerUsername && <span>by @{r.ownerUsername}</span>}
                       </div>
                     </div>
                     <div style={{ fontSize: 11.5, fontWeight: 700, color: r.ratioColor, background: r.ratioBg, padding: "5px 10px", borderRadius: theme.radius.sm }}>{r.ratioLabel}</div>

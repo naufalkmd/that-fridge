@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, Users, X } from "lucide-react";
+import { ChefHat, ChevronLeft, Heart, Users, X } from "lucide-react";
 import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 
@@ -111,6 +111,43 @@ export default function FindFriendScreen() {
                         Request to join
                       </div>
                     )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, margin: "20px 0 8px" }}>RECIPES</div>
+            {state.friendProfile.recipes.length === 0 ? (
+              <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, padding: 20, textAlign: "center", fontSize: 12.5, color: theme.text.faint, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                <ChefHat size={22} color={theme.text.faint} strokeWidth={1.8} />
+                {state.friendProfile.name} hasn&apos;t saved any recipes yet.
+              </div>
+            ) : (
+              <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, overflow: "hidden" }}>
+                {state.friendProfile.recipes.map((recipe, i) => (
+                  <div
+                    key={recipe.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "13px 14px",
+                      borderBottom: i < state.friendProfile!.recipes.length - 1 ? `1px solid ${theme.border.hairline}` : undefined,
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>{recipe.name}</div>
+                      <div style={{ fontSize: 11.5, color: theme.text.faint }}>
+                        {recipe.minutes} min{recipe.category ? ` · ${recipe.category}` : ""}
+                      </div>
+                    </div>
+                    <div
+                      onClick={() => actions.toggleFavoriteFriendRecipe(recipe.id)}
+                      title={recipe.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                      style={{ width: 30, height: 30, borderRadius: 15, background: theme.bg.surface2, border: `1px solid ${theme.border.hairline}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
+                    >
+                      <Heart size={14} color={theme.text.primary} fill={recipe.isFavorite ? theme.amber : "none"} strokeWidth={2.2} />
+                    </div>
                   </div>
                 ))}
               </div>

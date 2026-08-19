@@ -114,6 +114,9 @@ export interface RecipeView {
   category: RecipeCategory | null;
   isFavorite: boolean;
   isCustom: boolean;
+  isMine: boolean;
+  ownerName: string | null;
+  ownerUsername: string | null;
   attachments: RecipeAttachment[];
   haveCount: number;
   total: number;
@@ -146,6 +149,9 @@ export function getRecipesView(state: ThatFridgeState): RecipeView[] {
       category: r.category,
       isFavorite: r.isFavorite,
       isCustom: r.isCustom,
+      isMine: r.isMine,
+      ownerName: r.ownerName,
+      ownerUsername: r.ownerUsername,
       attachments: r.attachments,
       ingredientsView,
       stepsView: r.steps.map((text, i) => ({ text, n: i + 1 })),

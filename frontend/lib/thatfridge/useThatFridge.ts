@@ -861,6 +861,24 @@ export function useThatFridge() {
       patch({ friendProfile: prevProfile, syncError: describeError(err, "Couldn't send that request.") });
     });
   };
+  // Favoriting from a friend's profile only updates state.friendProfile, not state.recipes -
+  // the recipe shows up in the user's own Food Hub / Favorites tab on next fetch, matching
+  // this app's existing reload-based (not real-time) sync elsewhere.
+  const toggleFavoriteFriendRecipe = (recipeId: string) => {
+    if (!state.friendProfile) return;
+    const prevProfile = state.friendProfile;
+    const recipe = state.friendProfile.recipes.find((r) => r.id === recipeId);
+    if (!recipe) return;
+    const nextFavorite = !recipe.isFavorite;
+    patch((s) => ({
+      friendProfile: s.friendProfile
+        ? { ...s.friendProfile, recipes: s.friendProfile.recipes.map((r) => (r.id === recipeId ? { ...r, isFavorite: nextFavorite } : r)) }
+        : s.friendProfile,
+    }));
+    (nextFavorite ? favoriteRecipe(recipeId) : unfavoriteRecipe(recipeId)).catch((err) => {
+      patch({ friendProfile: prevProfile, syncError: describeError(err, "Couldn't update favorites.") });
+    });
+  };
 
   const openNotifications = () => patch({ screen: "notifications", showProfilePanel: false });
   const openNotificationHistory = () => patch({ screen: "notificationHistory" });
@@ -1176,7 +1194,7 @@ export function useThatFridge() {
 
   const openEditRecipeForm = (id: string) => {
     const recipe = state.recipes.find((r) => r.id === id);
-    if (!recipe || !recipe.isCustom) return;
+    if (!recipe || !recipe.isMine) return;
     patch({
       screen: "recipeForm",
       recipeFormId: id,
@@ -1333,7 +1351,7 @@ export function useThatFridge() {
 
   const deleteCustomRecipe = (id: string) => {
     const recipe = state.recipes.find((r) => r.id === id);
-    if (!recipe || !recipe.isCustom) return;
+    if (!recipe || !recipe.isMine) return;
     patch({ recipes: state.recipes.filter((r) => r.id !== id), screen: "foodHub", selectedRecipeId: null });
     apiDeleteRecipe(id).catch((err) => {
       patch((s) => ({ recipes: [...s.recipes, recipe] }));
@@ -2498,6 +2516,7 @@ export function useThatFridge() {
     openFriendProfile,
     closeFriendProfile,
     sendJoinRequest,
+    toggleFavoriteFriendRecipe,
     openNotifications,
     openNotificationHistory,
     dismissNotificationWithUndo,
