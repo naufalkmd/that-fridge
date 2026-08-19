@@ -14,6 +14,10 @@ beforeEach(() => {
   // sane default so tests that don't care about memory extraction don't hit an unhandled
   // rejection from calling .then() on the auto-mock's default `undefined` return value.
   vi.mocked(api.extractMemory).mockResolvedValue([]);
+  // checkOrganizerMoves() fires this fire-and-forget after every sweep, same reasoning as
+  // extractMemory above - give every test a sane default so tests that don't care about the
+  // Tidiness tally don't hit an unhandled rejection either.
+  vi.mocked(api.incrementOrganizerTally).mockResolvedValue({ itemsCheckedTotal: 0, itemsCorrectTotal: 0, lastCheckedAt: null });
 });
 
 describe("routeChatAgent", () => {
