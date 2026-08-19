@@ -28,16 +28,20 @@ import {
   deleteRecipe as apiDeleteRecipe,
   deleteShoppingItem,
   deleteUsageHistoryEntryApi,
+  approveJoinRequest,
+  declineJoinRequest,
   extractMemory,
   favoriteRecipe,
   fetchBadges,
   fetchChatHistory,
   fetchChatSessionMessages,
   fetchChatSessions,
+  fetchFridgeMembers,
   fetchFridges,
+  fetchFriendProfile,
+  fetchJoinRequests,
   fetchMe,
   fetchMemoryFacts,
-  fetchFridgeMembers,
   fetchNotificationEvents,
   fetchNotificationPrefs,
   fetchOrganizerTally,
@@ -48,7 +52,6 @@ import {
   fetchUserGoal,
   importRecipeFromLink,
   incrementOrganizerTally,
-  joinFridge,
   leaveFridge as apiLeaveFridge,
   login,
   logout,
@@ -56,12 +59,13 @@ import {
   postBadgeProgress,
   recordItemUsage,
   register,
-  regenerateInviteCode,
   removeFridgeMember as apiRemoveFridgeMember,
+  requestJoinFridge,
   scanBarcode,
   scanExpiryPhoto,
   scanFridgePhoto,
   scanReceipt,
+  searchUsers,
   sendChatMessage,
   suggestItemDetails,
   suggestRecipes,
@@ -91,7 +95,9 @@ import type {
   DetectedItem,
   FoodFocus,
   FoodSubtab,
+  FriendProfile,
   Fridge,
+  FridgeJoinRequest,
   FridgeMember,
   FridgeStyleKey,
   Item,
@@ -114,6 +120,7 @@ import type {
   StorageLocation,
   UsageHistoryEntry,
   UserGoal,
+  UserSearchResult,
   Vibe,
 } from "./types";
 const DEFAULT_CHAT_MESSAGES: ChatMessage[] = [{ id: "m0", from: "bot", text: "Hi! Ask me anything about what's in your fridge." }];
@@ -244,6 +251,7 @@ export interface ThatFridgeState {
   currentUser: CurrentUser | null;
   authMode: AuthMode;
   authName: string;
+  authUsername: string;
   authEmail: string;
   authPassword: string;
   authConfirmPassword: string;
@@ -253,7 +261,6 @@ export interface ThatFridgeState {
   activeFridge: number;
   heroSlide: number;
   newFridgeName: string;
-  newFridgeCode: string;
   showProfilePanel: boolean;
   selectedItemId: string | null;
   isEditingItem: boolean;
@@ -361,6 +368,16 @@ export interface ThatFridgeState {
   // doc comment in types.ts for why this stays out of the core fridges list.
   fridgeMembers: FridgeMember[];
   fridgeMembersLoading: boolean;
+  // Pending join requests for whichever fridge FridgeStyleSheet has open - only fetched when
+  // the current user owns it (see openStylePicker), same lazy-per-open pattern as fridgeMembers.
+  joinRequests: FridgeJoinRequest[];
+  joinRequestsLoading: boolean;
+  // Find-a-friend search + the profile screen it opens into.
+  friendSearchQuery: string;
+  friendSearchResults: UserSearchResult[];
+  friendSearchLoading: boolean;
+  friendProfile: FriendProfile | null;
+  friendProfileLoading: boolean;
   undoMessage: string | null;
   syncError: string | null;
   notificationPrefs: NotificationPrefs;
@@ -402,6 +419,7 @@ export function initialState(): ThatFridgeState {
     currentUser: null,
     authMode: "login",
     authName: "",
+    authUsername: "",
     authEmail: "",
     authPassword: "",
     authConfirmPassword: "",
@@ -411,7 +429,6 @@ export function initialState(): ThatFridgeState {
     activeFridge: 0,
     heroSlide: 0,
     newFridgeName: "",
-    newFridgeCode: "",
     showProfilePanel: false,
     selectedItemId: null,
     isEditingItem: false,
@@ -490,6 +507,13 @@ export function initialState(): ThatFridgeState {
     stylingFridgeIndex: 0,
     fridgeMembers: [],
     fridgeMembersLoading: false,
+    joinRequests: [],
+    joinRequestsLoading: false,
+    friendSearchQuery: "",
+    friendSearchResults: [],
+    friendSearchLoading: false,
+    friendProfile: null,
+    friendProfileLoading: false,
     undoMessage: null,
     syncError: null,
     notificationPrefs: { expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false, crewActionsEnabled: false },
@@ -543,6 +567,7 @@ export function useThatFridge() {
 
   const setAuthMode = (mode: AuthMode) => patch({ authMode: mode, authError: null });
   const onAuthNameChange = (value: string) => patch({ authName: value });
+  const onAuthUsernameChange = (value: string) => patch({ authUsername: value });
   const onAuthEmailChange = (value: string) => patch({ authEmail: value });
   const onAuthPasswordChange = (value: string) => patch({ authPassword: value });
   const onAuthConfirmPasswordChange = (value: string) => patch({ authConfirmPassword: value });
@@ -554,9 +579,11 @@ export function useThatFridge() {
     if (state.authMode === "signup") {
       const name = state.authName.trim();
       if (!name) return patch({ authError: "Enter your name." });
+      const username = state.authUsername.trim();
+      if (!username) return patch({ authError: "Enter a username." });
       if (password !== state.authConfirmPassword) return patch({ authError: "Passwords don't match." });
       try {
-        const { user } = await register(name, email, password);
+        const { user } = await register(name, username, email, password);
         patch({
           isAuthenticated: true,
           isLoading: true,
@@ -593,6 +620,7 @@ export function useThatFridge() {
       lastMainScreen: "home",
       authMode: "login",
       authName: "",
+      authUsername: "",
       authEmail: "",
       authPassword: "",
       authConfirmPassword: "",
@@ -790,29 +818,49 @@ export function useThatFridge() {
     if (key === "Enter") addFridge();
   };
 
-  const onNewFridgeCodeChange = (value: string) => patch({ newFridgeCode: value });
-  const joinFridgeByCode = async () => {
-    const code = state.newFridgeCode.trim();
-    if (!code) return;
-    patch({ newFridgeCode: "" });
-    try {
-      const fridge = await joinFridge(code);
-      patch((s) => {
-        const fridges = [...s.fridges, fridge];
-        return { fridges, heroSlide: fridges.length - 1, activeFridge: fridges.length - 1 };
-      });
-    } catch (err) {
-      patch({ syncError: describeError(err, "Couldn't join that fridge - check the code and try again.") });
-    }
-  };
-  const onNewFridgeCodeKeyDown = (key: string) => {
-    if (key === "Enter") joinFridgeByCode();
-  };
-
   const openProfile = () => patch({ showProfilePanel: true });
   const closeProfile = () => patch({ showProfilePanel: false });
   const selectFridgeFromProfile = (i: number) =>
     patch({ kitchenScope: "active", activeFridge: i, heroSlide: i, showProfilePanel: false, screen: "home" });
+
+  const openFindFriend = () => patch({ screen: "findFriend", showProfilePanel: false, friendSearchQuery: "", friendSearchResults: [] });
+  const onFriendSearchChange = (value: string) => {
+    patch({ friendSearchQuery: value });
+    const q = value.trim();
+    if (!q) {
+      patch({ friendSearchResults: [], friendSearchLoading: false });
+      return;
+    }
+    patch({ friendSearchLoading: true });
+    searchUsers(q)
+      .then((results) => patch({ friendSearchResults: results, friendSearchLoading: false }))
+      .catch((err) => {
+        patch({ friendSearchLoading: false, syncError: describeError(err, "Couldn't search right now.") });
+      });
+  };
+  const openFriendProfile = (username: string) => {
+    patch({ screen: "friendProfile", friendProfileLoading: true, friendProfile: null });
+    fetchFriendProfile(username)
+      .then((profile) => patch({ friendProfile: profile, friendProfileLoading: false }))
+      .catch((err) => {
+        patch({ friendProfileLoading: false, syncError: describeError(err, "Couldn't load that profile.") });
+      });
+  };
+  // Back from a friend's profile to the search results - unlike openFindFriend, doesn't
+  // reset the query/results, so the list the user tapped into is still there.
+  const closeFriendProfile = () => patch({ screen: "findFriend" });
+  const sendJoinRequest = (fridgeId: string) => {
+    if (!state.friendProfile) return;
+    const prevProfile = state.friendProfile;
+    patch((s) => ({
+      friendProfile: s.friendProfile
+        ? { ...s.friendProfile, fridges: s.friendProfile.fridges.map((f) => (f.id === fridgeId ? { ...f, requestStatus: "pending" } : f)) }
+        : s.friendProfile,
+    }));
+    requestJoinFridge(fridgeId).catch((err) => {
+      patch({ friendProfile: prevProfile, syncError: describeError(err, "Couldn't send that request.") });
+    });
+  };
 
   const openNotifications = () => patch({ screen: "notifications", showProfilePanel: false });
   const openNotificationHistory = () => patch({ screen: "notificationHistory" });
@@ -915,7 +963,7 @@ export function useThatFridge() {
   };
 
   const openStylePicker = (i: number) => {
-    patch({ stylingFridgeIndex: i, screen: "fridgeStyle", fridgeMembers: [], fridgeMembersLoading: true });
+    patch({ stylingFridgeIndex: i, screen: "fridgeStyle", fridgeMembers: [], fridgeMembersLoading: true, joinRequests: [], joinRequestsLoading: false });
     const fridge = state.fridges[i];
     if (!fridge) {
       patch({ fridgeMembersLoading: false });
@@ -926,17 +974,47 @@ export function useThatFridge() {
       .catch((err) => {
         patch({ fridgeMembersLoading: false, syncError: describeError(err, "Couldn't load the fridge's members.") });
       });
+
+    // Only the owner can see/act on join requests - no point fetching them for a member.
+    if (fridge.role === "owner") {
+      patch({ joinRequestsLoading: true });
+      fetchJoinRequests(fridge.id)
+        .then((requests) => patch({ joinRequests: requests, joinRequestsLoading: false }))
+        .catch((err) => {
+          patch({ joinRequestsLoading: false, syncError: describeError(err, "Couldn't load join requests.") });
+        });
+    }
   };
   const closeStylePicker = () => patch({ screen: "home" });
 
-  const regenerateFridgeInviteCode = () => {
+  const approveJoinRequestAction = (id: string) => {
     const fridge = state.fridges[state.stylingFridgeIndex];
     if (!fridge) return;
-    regenerateInviteCode(fridge.id)
-      .then((code) => {
-        patch((s) => ({ fridges: s.fridges.map((f) => (f.id === fridge.id ? { ...f, inviteCode: code } : f)) }));
-      })
-      .catch((err) => patch({ syncError: describeError(err, "Couldn't regenerate the invite code.") }));
+    const prevRequests = state.joinRequests;
+    const prevMembers = state.fridgeMembers;
+    const request = prevRequests.find((r) => r.id === id);
+    patch((s) => ({
+      joinRequests: s.joinRequests.filter((r) => r.id !== id),
+      fridges: s.fridges.map((f) => (f.id === fridge.id ? { ...f, memberCount: (f.memberCount ?? prevMembers.length) + 1 } : f)),
+      fridgeMembers: request
+        ? [...s.fridgeMembers, { id: request.requesterId, name: request.requesterName, email: "", role: "member" as const, joinedAt: Date.now() }]
+        : s.fridgeMembers,
+    }));
+    approveJoinRequest(id).catch((err) => {
+      patch((s) => ({
+        joinRequests: prevRequests,
+        fridgeMembers: prevMembers,
+        fridges: s.fridges.map((f) => (f.id === fridge.id ? { ...f, memberCount: prevMembers.length } : f)),
+      }));
+      patch({ syncError: describeError(err, "Couldn't approve that request.") });
+    });
+  };
+  const declineJoinRequestAction = (id: string) => {
+    const prevRequests = state.joinRequests;
+    patch((s) => ({ joinRequests: s.joinRequests.filter((r) => r.id !== id) }));
+    declineJoinRequest(id).catch((err) => {
+      patch({ joinRequests: prevRequests, syncError: describeError(err, "Couldn't decline that request.") });
+    });
   };
 
   const removeFridgeMemberAction = (userId: string) => {
@@ -2400,6 +2478,7 @@ export function useThatFridge() {
   const actions = {
     setAuthMode,
     onAuthNameChange,
+    onAuthUsernameChange,
     onAuthEmailChange,
     onAuthPasswordChange,
     onAuthConfirmPasswordChange,
@@ -2411,12 +2490,14 @@ export function useThatFridge() {
     onNewFridgeNameChange,
     onNewFridgeNameKeyDown,
     addFridge,
-    onNewFridgeCodeChange,
-    onNewFridgeCodeKeyDown,
-    joinFridgeByCode,
     openProfile,
     closeProfile,
     selectFridgeFromProfile,
+    openFindFriend,
+    onFriendSearchChange,
+    openFriendProfile,
+    closeFriendProfile,
+    sendJoinRequest,
     openNotifications,
     openNotificationHistory,
     dismissNotificationWithUndo,
@@ -2440,7 +2521,8 @@ export function useThatFridge() {
     renameFridge,
     renameFridgeBlur,
     deleteFridge,
-    regenerateFridgeInviteCode,
+    approveJoinRequestAction,
+    declineJoinRequestAction,
     removeFridgeMemberAction,
     leaveFridgeAction,
     openSearch,

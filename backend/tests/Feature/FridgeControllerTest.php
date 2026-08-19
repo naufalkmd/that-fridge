@@ -50,7 +50,6 @@ class FridgeControllerTest extends TestCase
         $fridgeId = $response->json('data.id');
         $this->assertDatabaseHas('fridge_members', ['fridge_id' => $fridgeId, 'user_id' => $user->id, 'role' => 'owner']);
         $response->assertJson(['data' => ['role' => 'owner', 'member_count' => 1]]);
-        $this->assertNotNull($response->json('data.invite_code'));
     }
 
     public function test_a_joined_non_owner_member_can_rename_and_restyle_the_fridge(): void

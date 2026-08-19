@@ -40,7 +40,6 @@ export interface Fridge {
   style?: FridgeStyleKey;
   photoUrl?: string | null;
   sections: Section[];
-  inviteCode?: string;
   // The current user's role on this fridge - not the current user's fridge count etc, just
   // theirs on this one.
   role?: FridgeRole;
@@ -187,7 +186,9 @@ export type Screen =
   | "aiData"
   | "goals"
   | "badges"
-  | "about";
+  | "about"
+  | "findFriend"
+  | "friendProfile";
 
 export type FoodSubtab = "recipes" | "shopping" | "guardian" | "organizer";
 
@@ -270,5 +271,41 @@ export type AuthMode = "login" | "signup";
 export interface CurrentUser {
   id: string;
   name: string;
+  username: string;
   email: string;
+}
+
+export interface UserSearchResult {
+  id: string;
+  name: string;
+  username: string;
+}
+
+export type JoinRequestStatus = "pending" | "accepted" | "declined";
+
+export interface FriendFridgeSummary {
+  id: string;
+  name: string;
+  memberCount: number;
+  role: FridgeRole | null;
+  requestStatus: JoinRequestStatus | null;
+}
+
+export interface FriendProfile {
+  id: string;
+  name: string;
+  username: string;
+  fridges: FriendFridgeSummary[];
+}
+
+// A pending request to join a fridge - only ever fetched for a fridge the current user owns
+// (see fetchJoinRequests), the "Manage fridge" sheet's JOIN REQUESTS section.
+export interface FridgeJoinRequest {
+  id: string;
+  fridgeId: string;
+  requesterId: string;
+  requesterName: string;
+  requesterUsername: string;
+  status: JoinRequestStatus;
+  createdAt: number;
 }

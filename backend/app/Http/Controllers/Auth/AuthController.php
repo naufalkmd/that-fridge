@@ -15,12 +15,14 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:255', 'alpha_dash', 'unique:users,username'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
         ]);
 
         $user = User::create([
             'name' => $data['name'],
+            'username' => $data['username'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
         ]);
@@ -74,14 +76,15 @@ class AuthController extends Controller
 
     /**
      * Shared shape for the "current user" payload returned by register/login/me. Needs its
-     * own id now (not just name/email) - the shared-fridge member list renders "(you)" and
-     * disables self-removal by comparing against it.
+     * own id (the shared-fridge member list renders "(you)" and disables self-removal by
+     * comparing against it) and username (find-a-friend search matches on this).
      */
     private function userPayload(User $user): array
     {
         return [
             'id' => (string) $user->id,
             'name' => $user->name,
+            'username' => $user->username,
             'email' => $user->email,
         ];
     }

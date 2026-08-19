@@ -5,9 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Resources\FridgeResource;
 use App\Models\Fridge;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 
 class FridgeController extends Controller
 {
@@ -50,7 +47,6 @@ class FridgeController extends Controller
         $fridge = Fridge::create([
             ...$data,
             'user_id' => $request->user()->id,
-            'invite_code' => $this->generateUniqueInviteCode(),
         ]);
         // Fridge::booted() attaches the owner as a member automatically.
 
@@ -88,39 +84,5 @@ class FridgeController extends Controller
         $fridge->delete();
 
         return response()->noContent();
-    }
-
-    /**
-     * Join an existing fridge via its shareable invite code. Any authenticated user - the
-     * code itself is the access control, same trust model as a shared link.
-     */
-    public function join(Request $request)
-    {
-        $data = $request->validate([
-            'code' => ['required', 'string'],
-        ]);
-
-        $fridge = Fridge::where('invite_code', strtoupper(trim($data['code'])))->first();
-
-        if (! $fridge) {
-            throw ValidationException::withMessages(['code' => 'That invite code doesn\'t match a fridge.']);
-        }
-
-        if ($fridge->isMember($request->user())) {
-            throw ValidationException::withMessages(['code' => 'You\'re already a member of this fridge.']);
-        }
-
-        $fridge->members()->attach($request->user()->id, ['role' => 'member']);
-
-        return new FridgeResource($this->withCurrentUser($request)->find($fridge->id));
-    }
-
-    private function generateUniqueInviteCode(): string
-    {
-        do {
-            $code = Str::upper(Str::random(8));
-        } while (DB::table('fridges')->where('invite_code', $code)->exists());
-
-        return $code;
     }
 }

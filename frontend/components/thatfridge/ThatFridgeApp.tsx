@@ -29,6 +29,7 @@ import AIDataScreen from "./screens/AIDataScreen";
 import GoalsScreen from "./screens/GoalsScreen";
 import BadgesScreen from "./screens/BadgesScreen";
 import AboutScreen from "./screens/AboutScreen";
+import FindFriendScreen from "./screens/FindFriendScreen";
 import AuthScreen from "./screens/AuthScreen";
 
 // These four render as a dimmed backdrop + slide-up sheet on top of whatever was already on
@@ -63,6 +64,9 @@ function BaseScreen({ screen }: { screen: Screen }) {
       return <BadgesScreen />;
     case "about":
       return <AboutScreen />;
+    case "findFriend":
+    case "friendProfile":
+      return <FindFriendScreen />;
     default:
       return null;
   }

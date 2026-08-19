@@ -2,7 +2,7 @@
 
 import { useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
-import { Check, ChevronRight, Copy, ImagePlus, RefreshCw, X } from "lucide-react";
+import { Check, ChevronRight, ImagePlus, X } from "lucide-react";
 import { FRIDGE_STYLES } from "@/lib/thatfridge/data";
 import { compressAndScaleImage } from "@/lib/thatfridge/image";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
@@ -12,21 +12,12 @@ export default function FridgeStyleSheet() {
   const { state, actions } = useThatFridgeCtx();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
-  const [codeCopied, setCodeCopied] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const stylingFridge = state.fridges[state.stylingFridgeIndex];
   const currentStyle = stylingFridge?.style || "photo";
   const itemCount = stylingFridge?.sections.reduce((n, sec) => n + sec.items.length, 0) || 0;
   const canDelete = state.fridges.length > 1;
   const isOwner = stylingFridge?.role === "owner";
-
-  const copyInviteCode = () => {
-    if (!stylingFridge?.inviteCode) return;
-    navigator.clipboard.writeText(stylingFridge.inviteCode).then(() => {
-      setCodeCopied(true);
-      setTimeout(() => setCodeCopied(false), 1500);
-    });
-  };
 
   const options: { key: string; label: string; photo: string }[] = [
     { key: "photo", label: "Original photo", photo: "/images/thatfridge/fridge-hero.png" },
@@ -106,28 +97,6 @@ export default function FridgeStyleSheet() {
           )}
 
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, margin: "24px 0 8px" }}>MEMBERS</div>
-          <div
-            onClick={copyInviteCode}
-            style={{ cursor: "pointer", borderRadius: theme.radius.md, padding: 14, background: theme.bg.surface2, display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}
-          >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 3 }}>INVITE CODE — TAP TO COPY</div>
-              <div style={{ fontSize: 15, fontWeight: 700, fontFamily: theme.fontMono, letterSpacing: 2, color: theme.text.primary }}>
-                {stylingFridge?.inviteCode || "—"}
-              </div>
-            </div>
-            {codeCopied ? <Check size={17} color={theme.good} strokeWidth={2.4} /> : <Copy size={16} color={theme.text.faint} />}
-          </div>
-          {isOwner && (
-            <div
-              onClick={actions.regenerateFridgeInviteCode}
-              style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", padding: "2px 2px 12px", width: "fit-content" }}
-            >
-              <RefreshCw size={12} color={theme.blue} strokeWidth={2.2} />
-              <div style={{ fontSize: 12, fontWeight: 700, color: theme.blue }}>Regenerate code</div>
-            </div>
-          )}
-
           {state.fridgeMembersLoading ? (
             <div style={{ fontSize: 12, color: theme.text.faint, padding: "4px 2px 12px" }}>Loading members…</div>
           ) : (
@@ -158,6 +127,45 @@ export default function FridgeStyleSheet() {
                 </div>
               ))}
             </div>
+          )}
+
+          {isOwner && (
+            <>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, margin: "24px 0 8px" }}>
+                JOIN REQUESTS{state.joinRequests.length ? ` (${state.joinRequests.length})` : ""}
+              </div>
+              {state.joinRequestsLoading ? (
+                <div style={{ fontSize: 12, color: theme.text.faint, padding: "4px 2px 12px" }}>Loading requests…</div>
+              ) : state.joinRequests.length === 0 ? (
+                <div style={{ fontSize: 12, color: theme.text.faint, padding: "4px 2px 12px" }}>No pending requests.</div>
+              ) : (
+                <div style={{ borderRadius: theme.radius.md, overflow: "hidden", background: theme.bg.surface2, marginBottom: 8 }}>
+                  {state.joinRequests.map((r, i) => (
+                    <div
+                      key={r.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "11px 14px",
+                        borderBottom: i < state.joinRequests.length - 1 ? `1px solid ${theme.border.hairline}` : undefined,
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: theme.text.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.requesterName}</div>
+                        <div style={{ fontSize: 11, color: theme.text.faint }}>@{r.requesterUsername}</div>
+                      </div>
+                      <div onClick={() => actions.approveJoinRequestAction(r.id)} style={{ cursor: "pointer", padding: 4 }}>
+                        <Check size={17} color={theme.good} strokeWidth={2.4} />
+                      </div>
+                      <div onClick={() => actions.declineJoinRequestAction(r.id)} style={{ cursor: "pointer", padding: 4 }}>
+                        <X size={15} color={theme.text.faint} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.bad, margin: "24px 0 8px" }}>DANGER ZONE</div>
@@ -222,7 +230,7 @@ export default function FridgeStyleSheet() {
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2, color: theme.bad }}>Leave this fridge</div>
                 <div style={{ fontSize: 11.5, color: theme.text.faint }}>
-                  {canDelete ? "You'll need a new invite code to rejoin" : "You need at least one fridge"}
+                  {canDelete ? "You'll need to send a new join request to get back in" : "You need at least one fridge"}
                 </div>
               </div>
             </div>

@@ -23,7 +23,6 @@ class FridgeResource extends JsonResource
             'name' => $this->name,
             'style' => $this->style,
             'photo_url' => $this->photo_url,
-            'invite_code' => $this->invite_code,
             'role' => $currentMembership?->pivot->role,
             'member_count' => $this->when($this->members_count !== null, $this->members_count),
             'sections' => SectionResource::collection($this->whenLoaded('sections')),

@@ -1,0 +1,61 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Resources\UserProfileResource;
+use App\Http\Resources\UserSearchResource;
+use App\Models\User;
+use Illuminate\Http\Request;
+
+class UserController extends Controller
+{
+    /**
+     * Find-a-friend search - prefix match on username, capped and rate-limited (see the
+     * 'throttle:20,1' route middleware) since this is the first endpoint in the app with any
+     * user-enumeration surface.
+     */
+    public function search(Request $request)
+    {
+        $data = $request->validate([
+            'q' => ['required', 'string', 'min:1', 'max:255'],
+        ]);
+
+        $users = User::where('username', 'like', $data['q'].'%')
+            ->where('id', '!=', $request->user()->id)
+            ->orderBy('username')
+            ->limit(20)
+            ->get();
+
+        return UserSearchResource::collection($users);
+    }
+
+    /**
+     * A friend's public profile - their name/username plus the fridges THEY OWN (not ones
+     * they've merely joined, and not fridge contents - just enough to decide whether to
+     * request access to one). Each fridge is annotated with the viewer's own role/request
+     * status so the frontend can render "Member" / "Requested" / "Request to join" per row
+     * without a second round-trip.
+     */
+    public function profile(Request $request, User $user)
+    {
+        $viewer = $request->user();
+
+        $fridges = $user->fridges()
+            ->withCount('members')
+            ->with(['members' => fn ($q) => $q->where('users.id', $viewer->id)])
+            ->with(['joinRequests' => fn ($q) => $q->where('requester_id', $viewer->id)])
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($fridge) => [
+                'id' => (string) $fridge->id,
+                'name' => $fridge->name,
+                'memberCount' => $fridge->members_count,
+                'role' => $fridge->members->first()?->pivot->role,
+                'requestStatus' => $fridge->joinRequests->first()?->status,
+            ]);
+
+        $user->setAttribute('profileFridges', $fridges);
+
+        return new UserProfileResource($user);
+    }
+}

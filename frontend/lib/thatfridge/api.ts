@@ -3,7 +3,9 @@ import type {
   BadgeProgress,
   CurrentUser,
   FoodFocus,
+  FriendProfile,
   Fridge,
+  FridgeJoinRequest,
   FridgeMember,
   GoalMetricType,
   GoalPeriod,
@@ -23,6 +25,7 @@ import type {
   StorageLocation,
   UsageHistoryEntry,
   UserGoal,
+  UserSearchResult,
   Vibe,
 } from "./types";
 import { apiFetch, setToken, type RawItem, toClientItem } from "./apiClient";
@@ -109,7 +112,6 @@ interface RawFridge {
   name: string;
   style: string | null;
   photo_url: string | null;
-  invite_code?: string | null;
   role?: string | null;
   member_count?: number;
   sections: RawSection[];
@@ -125,7 +127,6 @@ function toClientFridge(raw: RawFridge): Fridge {
     name: raw.name,
     style: (raw.style as Fridge["style"]) ?? undefined,
     photoUrl: raw.photo_url ?? undefined,
-    inviteCode: raw.invite_code ?? undefined,
     role: (raw.role as Fridge["role"]) ?? undefined,
     memberCount: raw.member_count,
     sections: raw.sections.map(toClientSection),
@@ -141,10 +142,10 @@ export async function login(email: string, password: string): Promise<{ user: Cu
   return res;
 }
 
-export async function register(name: string, email: string, password: string): Promise<{ user: CurrentUser; token: string }> {
+export async function register(name: string, username: string, email: string, password: string): Promise<{ user: CurrentUser; token: string }> {
   const res = await apiFetch<{ user: CurrentUser; token: string }>("/register", {
     method: "POST",
-    body: JSON.stringify({ name, email, password }),
+    body: JSON.stringify({ name, username, email, password }),
   });
   setToken(res.token);
   return res;
@@ -178,20 +179,10 @@ export function deleteFridge(id: string): Promise<void> {
   return apiFetch<void>(`/fridges/${id}`, { method: "DELETE" });
 }
 
-export async function joinFridge(code: string): Promise<Fridge> {
-  const raw = await apiFetch<RawFridge>("/fridges/join", { method: "POST", body: JSON.stringify({ code }) });
-  return toClientFridge(raw);
-}
-
 // FridgeMemberResource already returns this exact camelCase shape - no Raw/toClient mapping
 // layer needed, unlike Fridge/Item/Section above.
 export function fetchFridgeMembers(fridgeId: string): Promise<FridgeMember[]> {
   return apiFetch<FridgeMember[]>(`/fridges/${fridgeId}/members`);
-}
-
-export async function regenerateInviteCode(fridgeId: string): Promise<string> {
-  const res = await apiFetch<{ invite_code: string }>(`/fridges/${fridgeId}/invite-code/regenerate`, { method: "POST" });
-  return res.invite_code;
 }
 
 export function removeFridgeMember(fridgeId: string, userId: string): Promise<void> {
@@ -200,6 +191,30 @@ export function removeFridgeMember(fridgeId: string, userId: string): Promise<vo
 
 export function leaveFridge(fridgeId: string): Promise<void> {
   return apiFetch<void>(`/fridges/${fridgeId}/leave`, { method: "POST" });
+}
+
+export function searchUsers(q: string): Promise<UserSearchResult[]> {
+  return apiFetch<UserSearchResult[]>(`/users/search?q=${encodeURIComponent(q)}`);
+}
+
+export function fetchFriendProfile(username: string): Promise<FriendProfile> {
+  return apiFetch<FriendProfile>(`/users/${encodeURIComponent(username)}/profile`);
+}
+
+export function requestJoinFridge(fridgeId: string): Promise<FridgeJoinRequest> {
+  return apiFetch<FridgeJoinRequest>(`/fridges/${fridgeId}/join-requests`, { method: "POST" });
+}
+
+export function fetchJoinRequests(fridgeId: string): Promise<FridgeJoinRequest[]> {
+  return apiFetch<FridgeJoinRequest[]>(`/fridges/${fridgeId}/join-requests`);
+}
+
+export function approveJoinRequest(id: string): Promise<void> {
+  return apiFetch<void>(`/join-requests/${id}/approve`, { method: "POST" });
+}
+
+export function declineJoinRequest(id: string): Promise<void> {
+  return apiFetch<void>(`/join-requests/${id}/decline`, { method: "POST" });
 }
 
 export async function createSection(fridgeId: string, name: string): Promise<Section> {

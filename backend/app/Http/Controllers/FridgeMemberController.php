@@ -6,8 +6,6 @@ use App\Http\Resources\FridgeMemberResource;
 use App\Models\Fridge;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class FridgeMemberController extends Controller
 {
@@ -26,24 +24,6 @@ class FridgeMemberController extends Controller
             ->get();
 
         return FridgeMemberResource::collection($members);
-    }
-
-    /**
-     * Replace a fridge's invite code with a fresh one. The old code stops working
-     * immediately (single active code per fridge - see the shared-fridge plan for why this
-     * is a plain column rather than a table of historical codes).
-     */
-    public function regenerate(Request $request, Fridge $fridge)
-    {
-        $this->authorize('manageMembers', $fridge);
-
-        do {
-            $code = Str::upper(Str::random(8));
-        } while (DB::table('fridges')->where('invite_code', $code)->exists());
-
-        $fridge->update(['invite_code' => $code]);
-
-        return response()->json(['invite_code' => $fridge->invite_code], 200);
     }
 
     /**

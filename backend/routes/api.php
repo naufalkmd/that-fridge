@@ -6,6 +6,7 @@ use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\ExpiryScanController;
 use App\Http\Controllers\FridgeController;
+use App\Http\Controllers\FridgeJoinRequestController;
 use App\Http\Controllers\FridgeMemberController;
 use App\Http\Controllers\IngestionController;
 use App\Http\Controllers\ItemController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\ScoreSnapshotController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\ShoppingItemController;
 use App\Http\Controllers\UsageHistoryController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserGoalController;
 use Illuminate\Support\Facades\Route;
 
@@ -56,15 +58,24 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/fridges', [FridgeController::class, 'index']);
     Route::post('/fridges', [FridgeController::class, 'store']);
-    Route::post('/fridges/join', [FridgeController::class, 'join']);
     Route::get('/fridges/{fridge}', [FridgeController::class, 'show']);
     Route::patch('/fridges/{fridge}', [FridgeController::class, 'update']);
     Route::delete('/fridges/{fridge}', [FridgeController::class, 'destroy']);
 
     Route::get('/fridges/{fridge}/members', [FridgeMemberController::class, 'index']);
-    Route::post('/fridges/{fridge}/invite-code/regenerate', [FridgeMemberController::class, 'regenerate']);
     Route::delete('/fridges/{fridge}/members/{user}', [FridgeMemberController::class, 'destroy']);
     Route::post('/fridges/{fridge}/leave', [FridgeMemberController::class, 'leave']);
+
+    Route::get('/fridges/{fridge}/join-requests', [FridgeJoinRequestController::class, 'index']);
+    Route::post('/fridges/{fridge}/join-requests', [FridgeJoinRequestController::class, 'store']);
+    Route::post('/join-requests/{joinRequest}/approve', [FridgeJoinRequestController::class, 'approve']);
+    Route::post('/join-requests/{joinRequest}/decline', [FridgeJoinRequestController::class, 'decline']);
+
+    // Find-a-friend: search is throttled (first rate-limited endpoint in this app) since it's
+    // the only user-enumeration surface - everything else requires already knowing/being a
+    // member of something.
+    Route::middleware('throttle:20,1')->get('/users/search', [UserController::class, 'search']);
+    Route::get('/users/{user:username}/profile', [UserController::class, 'profile']);
 
     Route::post('/fridges/{fridge}/sections', [SectionController::class, 'store']);
     Route::patch('/sections/{section}', [SectionController::class, 'update']);

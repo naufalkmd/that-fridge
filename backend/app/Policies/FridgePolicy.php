@@ -33,11 +33,22 @@ class FridgePolicy
     }
 
     /**
-     * Regenerating the invite code or removing a member - kept owner-only rather than
-     * opened up to every member, unlike view/update above.
+     * Removing a member, and listing/approving/declining join requests - kept owner-only
+     * rather than opened up to every member, unlike view/update above.
      */
     public function manageMembers(User $user, Fridge $fridge): bool
     {
         return $fridge->isOwner($user);
+    }
+
+    /**
+     * Requesting to join a fridge you're not already on. Unconditionally true, like
+     * create()/viewAny() above - there's no secret to gate on (that's the point of
+     * request-to-join over an invite code), so the real business rule ("already a member")
+     * lives in FridgeJoinRequestController::store() as a validation error, not here.
+     */
+    public function requestJoin(User $user, Fridge $fridge): bool
+    {
+        return true;
     }
 }

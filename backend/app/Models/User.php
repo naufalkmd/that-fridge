@@ -14,7 +14,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'username', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -40,14 +40,23 @@ class User extends Authenticatable
     }
 
     /**
-     * Fridges this user can access - owned or joined via an invite code. This is the
-     * relation every inventory/scoring query should scope by; fridges() above stays
+     * Fridges this user can access - owned or joined by having a join request approved. This
+     * is the relation every inventory/scoring query should scope by; fridges() above stays
      * "fridges I own" and is only used where ownership specifically matters (deleting a
      * fridge, managing its members).
      */
     public function memberFridges(): BelongsToMany
     {
         return $this->belongsToMany(Fridge::class, 'fridge_members')->withPivot('role')->withTimestamps();
+    }
+
+    /**
+     * Join requests this user has sent (any status) - "you're already a member" and
+     * "you've already requested" checks read from here (see FridgeJoinRequestController).
+     */
+    public function sentJoinRequests(): HasMany
+    {
+        return $this->hasMany(FridgeJoinRequest::class, 'requester_id');
     }
 
     public function shoppingItems(): HasMany

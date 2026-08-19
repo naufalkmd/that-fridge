@@ -88,71 +88,6 @@ function SwipeToClear({ marginBottom, onClear, children }: { marginBottom: numbe
   );
 }
 
-// The dashed "join with an invite code" card, shown right after "Add another fridge" in both
-// the mobile hero carousel and the desktop "Your fridges" row - same shell as that card, just
-// parameterized on size since the two contexts use different fixed dimensions.
-function JoinFridgeCard({ height, radius, padding }: { height: number; radius: number; padding: string }) {
-  const { state, actions } = useThatFridgeCtx();
-  return (
-    <div
-      style={{
-        width: "100%",
-        height,
-        borderRadius: radius,
-        background: `${theme.bg.surface}80`,
-        border: `2px dashed ${theme.border.strong}`,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 12,
-        padding,
-        boxSizing: "border-box",
-      }}
-    >
-      <div style={{ fontSize: 14, fontWeight: 700, color: theme.text.primary }}>Join a fridge</div>
-      <input
-        value={state.newFridgeCode}
-        onChange={(e) => actions.onNewFridgeCodeChange(e.target.value.toUpperCase())}
-        onKeyDown={(e) => actions.onNewFridgeCodeKeyDown(e.key)}
-        placeholder="Invite code"
-        style={{
-          width: "100%",
-          border: "none",
-          outline: "none",
-          background: theme.bg.surface2,
-          borderRadius: theme.radius.sm,
-          padding: "10px 14px",
-          fontSize: 13,
-          fontFamily: theme.fontMono,
-          letterSpacing: 1,
-          textTransform: "uppercase",
-          color: theme.text.primary,
-          boxSizing: "border-box",
-        }}
-      />
-      <div
-        onClick={actions.joinFridgeByCode}
-        style={{
-          background: "transparent",
-          border: `1.5px solid ${theme.amber}`,
-          color: theme.amber,
-          fontFamily: theme.fontMono,
-          textTransform: "uppercase",
-          letterSpacing: 0.5,
-          fontSize: 13,
-          fontWeight: 700,
-          padding: "9px 18px",
-          borderRadius: theme.radius.sm,
-          cursor: "pointer",
-        }}
-      >
-        Join fridge
-      </div>
-    </div>
-  );
-}
-
 export default function HomeScreen() {
   const { state, actions } = useThatFridgeCtx();
   const [showScopeMenu, setShowScopeMenu] = useState(false);
@@ -161,8 +96,7 @@ export default function HomeScreen() {
   const [dismissedChefFor, setDismissedChefFor] = useState<string | null>(null);
   const fridgesView = getFridgeHeroViews(state);
   const heroSlide = state.heroSlide;
-  // +1 for "Add another fridge", +1 for "Join a fridge" (see JoinFridgeCard).
-  const heroSlideCount = fridgesView.length + 2;
+  const heroSlideCount = fridgesView.length + 1;
   const heroSlideWidthPct = 100 / heroSlideCount;
   const heroTrackWidth = `${heroSlideCount * 100}%`;
   const heroTranslate = `translateX(-${heroSlide * heroSlideWidthPct}%)`;
@@ -518,9 +452,6 @@ export default function HomeScreen() {
                 Add fridge
               </div>
             </div>
-          </div>
-          <div style={{ width: `${heroSlideWidthPct}%`, flex: "none" }}>
-            <JoinFridgeCard height={236} radius={theme.radius.xl} padding="0 30px" />
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
@@ -886,9 +817,6 @@ export default function HomeScreen() {
               >
                 Add fridge
               </div>
-            </div>
-            <div style={{ scrollSnapAlign: "start", flex: "none", width: 300 }}>
-              <JoinFridgeCard height={190} radius={theme.radius.lg} padding="0 26px" />
             </div>
           </div>
           {fridgesCanScrollRight && (

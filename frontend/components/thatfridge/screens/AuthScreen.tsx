@@ -97,6 +97,17 @@ export default function AuthScreen() {
           />
         </div>
       )}
+      {!isLogin && (
+        <div>
+          <div style={labelStyle}>USERNAME</div>
+          <input
+            value={state.authUsername}
+            onChange={(e) => actions.onAuthUsernameChange(e.target.value)}
+            placeholder="jordan_diaz"
+            style={fieldStyle}
+          />
+        </div>
+      )}
       <div>
         <div style={labelStyle}>EMAIL</div>
         <input

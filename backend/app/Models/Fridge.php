@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'name', 'style', 'photo_url', 'invite_code'])]
+#[Fillable(['user_id', 'name', 'style', 'photo_url'])]
 class Fridge extends Model
 {
     public function user(): BelongsTo
@@ -39,6 +39,11 @@ class Fridge extends Model
     public function isOwner(User $user): bool
     {
         return $this->user_id === $user->id;
+    }
+
+    public function joinRequests(): HasMany
+    {
+        return $this->hasMany(FridgeJoinRequest::class);
     }
 
     /**

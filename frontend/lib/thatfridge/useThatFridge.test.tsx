@@ -142,57 +142,99 @@ describe("useThatFridge sendChat", () => {
   });
 });
 
-describe("useThatFridge joinFridgeByCode", () => {
-  it("appends the joined fridge to state.fridges and makes it active", async () => {
-    const joinFridgeMock = vi.mocked(api.joinFridge).mockResolvedValue({
-      id: "shared-1",
-      name: "Housemates",
-      role: "member",
-      memberCount: 2,
-      sections: [],
+describe("useThatFridge sendJoinRequest", () => {
+  async function openAFriendProfile() {
+    vi.mocked(api.fetchFriendProfile).mockResolvedValue({
+      id: "u2",
+      name: "Riley",
+      username: "riley",
+      fridges: [{ id: "f1", name: "Riley's Kitchen", memberCount: 1, role: null, requestStatus: null }],
     });
 
     const { result } = renderHook(() => useThatFridge());
+    act(() => {
+      result.current.actions.openFriendProfile("riley");
+    });
+    await waitFor(() => expect(result.current.state.friendProfile).not.toBeNull());
+    return result;
+  }
+
+  it("optimistically marks the fridge as requested and calls the API", async () => {
+    const requestMock = vi.mocked(api.requestJoinFridge).mockResolvedValue({
+      id: "r1",
+      fridgeId: "f1",
+      requesterId: "me",
+      requesterName: "Me",
+      requesterUsername: "me",
+      status: "pending",
+      createdAt: Date.now(),
+    });
+    const result = await openAFriendProfile();
 
     act(() => {
-      result.current.actions.onNewFridgeCodeChange("abc123");
-    });
-    await act(async () => {
-      await result.current.actions.joinFridgeByCode();
+      result.current.actions.sendJoinRequest("f1");
     });
 
-    expect(joinFridgeMock).toHaveBeenCalledWith("abc123");
-    expect(result.current.state.fridges).toHaveLength(1);
-    expect(result.current.state.fridges[0]).toMatchObject({ id: "shared-1", name: "Housemates", role: "member" });
-    expect(result.current.state.activeFridge).toBe(0);
-    expect(result.current.state.newFridgeCode).toBe("");
+    expect(requestMock).toHaveBeenCalledWith("f1");
+    expect(result.current.state.friendProfile?.fridges[0].requestStatus).toBe("pending");
   });
 
-  it("surfaces a sync error and leaves state.fridges untouched when the code is invalid", async () => {
-    vi.mocked(api.joinFridge).mockRejectedValue(new Error("invalid code"));
-
-    const { result } = renderHook(() => useThatFridge());
+  it("rolls back the optimistic update and surfaces a sync error on failure", async () => {
+    vi.mocked(api.requestJoinFridge).mockRejectedValue(new Error("already a member"));
+    const result = await openAFriendProfile();
 
     act(() => {
-      result.current.actions.onNewFridgeCodeChange("nope");
-    });
-    await act(async () => {
-      await result.current.actions.joinFridgeByCode();
+      result.current.actions.sendJoinRequest("f1");
     });
 
-    expect(result.current.state.fridges).toHaveLength(0);
-    expect(result.current.state.syncError).toBeTruthy();
+    await waitFor(() => expect(result.current.state.syncError).toBeTruthy());
+    expect(result.current.state.friendProfile?.fridges[0].requestStatus).toBeNull();
+  });
+});
+
+describe("useThatFridge join request approve/decline", () => {
+  async function setUpAnOwnedFridgeWithAPendingRequest() {
+    vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "Mine", role: "owner", memberCount: 1, sections: [] });
+    vi.mocked(api.fetchFridgeMembers).mockResolvedValue([]);
+    vi.mocked(api.fetchJoinRequests).mockResolvedValue([
+      { id: "r1", fridgeId: "f1", requesterId: "u2", requesterName: "Riley", requesterUsername: "riley", status: "pending", createdAt: Date.now() },
+    ]);
+
+    const { result } = renderHook(() => useThatFridge());
+    await act(async () => {
+      await result.current.actions.addFridge();
+    });
+    act(() => {
+      result.current.actions.openStylePicker(0);
+    });
+    await waitFor(() => expect(result.current.state.joinRequests).toHaveLength(1));
+    return result;
+  }
+
+  it("approving removes the request, bumps the member count, and calls the API", async () => {
+    const approveMock = vi.mocked(api.approveJoinRequest).mockResolvedValue(undefined);
+    const result = await setUpAnOwnedFridgeWithAPendingRequest();
+
+    act(() => {
+      result.current.actions.approveJoinRequestAction("r1");
+    });
+
+    expect(approveMock).toHaveBeenCalledWith("r1");
+    expect(result.current.state.joinRequests).toHaveLength(0);
+    expect(result.current.state.fridges[0].memberCount).toBe(2);
   });
 
-  it("does nothing when the code field is empty", async () => {
-    const joinFridgeMock = vi.mocked(api.joinFridge);
-    const { result } = renderHook(() => useThatFridge());
+  it("declining removes the request without creating a membership, and calls the API", async () => {
+    const declineMock = vi.mocked(api.declineJoinRequest).mockResolvedValue(undefined);
+    const result = await setUpAnOwnedFridgeWithAPendingRequest();
 
-    await act(async () => {
-      await result.current.actions.joinFridgeByCode();
+    act(() => {
+      result.current.actions.declineJoinRequestAction("r1");
     });
 
-    expect(joinFridgeMock).not.toHaveBeenCalled();
+    expect(declineMock).toHaveBeenCalledWith("r1");
+    expect(result.current.state.joinRequests).toHaveLength(0);
+    expect(result.current.state.fridges[0].memberCount).toBe(1);
   });
 });
 
@@ -710,7 +752,7 @@ describe("useThatFridge Mark as made", () => {
 // own fridge pointer, synced from activeFridge by openAdd(), unrelated to what's displayed
 // elsewhere).
 function mockInitFetch() {
-  vi.mocked(api.login).mockResolvedValue({ user: { id: "u-joey", name: "Joey", email: "joey@thatfridge.test" }, token: "t1" });
+  vi.mocked(api.login).mockResolvedValue({ user: { id: "u-joey", name: "Joey", username: "joey", email: "joey@thatfridge.test" }, token: "t1" });
   vi.mocked(api.fetchFridges).mockResolvedValue([
     { id: "f1", name: "New Fridge", sections: [] },
     { id: "f2", name: "New Fridge", sections: [] },
