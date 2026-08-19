@@ -96,7 +96,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/items/{item}', [ItemController::class, 'destroy']);
 
     Route::get('/shopping-items', [ShoppingItemController::class, 'index']);
-    Route::post('/shopping-items', [ShoppingItemController::class, 'store']);
+    Route::post('/fridges/{fridge}/shopping-items', [ShoppingItemController::class, 'store']);
     Route::patch('/shopping-items/{shoppingItem}', [ShoppingItemController::class, 'update']);
     Route::delete('/shopping-items/{shoppingItem}', [ShoppingItemController::class, 'destroy']);
 

@@ -181,7 +181,7 @@ describe("getBuyAgainSuggestions", () => {
   it("excludes items already in stock or already on the shopping list", () => {
     const state = makeState({
       fridges: [makeFridge({ sections: [makeSection({ items: [makeItem({ name: "Milk" })] })] })],
-      shoppingList: [{ id: "s1", name: "Bread", icon: "bread", section: "other", checked: false, shopUrl: null }],
+      shoppingList: [{ id: "s1", fridgeId: "f1", fridgeName: "Fridge", name: "Bread", icon: "bread", section: "other", checked: false, shopUrl: null }],
       usageHistory: [
         { id: "u1", key: "milk", name: "Milk", icon: "milk", category: null, count: 5, freshUseCount: 0, freshnessSum: 0, freshnessSampleCount: 0, lastAt: 3 },
         { id: "u2", key: "bread", name: "Bread", icon: "bread", category: null, count: 4, freshUseCount: 0, freshnessSum: 0, freshnessSampleCount: 0, lastAt: 2 },

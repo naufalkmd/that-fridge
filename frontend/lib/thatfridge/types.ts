@@ -117,6 +117,8 @@ export interface Agent {
 
 export interface ShoppingItem {
   id: string;
+  fridgeId: string;
+  fridgeName: string;
   name: string;
   icon: string | null;
   section: string;

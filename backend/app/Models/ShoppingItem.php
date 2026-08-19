@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'name', 'icon', 'section', 'checked', 'shop_url'])]
+#[Fillable(['fridge_id', 'name', 'icon', 'section', 'checked', 'shop_url'])]
 class ShoppingItem extends Model
 {
     protected function casts(): array
@@ -16,8 +16,8 @@ class ShoppingItem extends Model
         ];
     }
 
-    public function user(): BelongsTo
+    public function fridge(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Fridge::class);
     }
 }

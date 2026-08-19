@@ -3,20 +3,35 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\ShoppingItemResource;
+use App\Models\Fridge;
 use App\Models\ShoppingItem;
 use Illuminate\Http\Request;
 
 class ShoppingItemController extends Controller
 {
+    /**
+     * Every shopping item across every fridge the current user belongs to (owned or joined) -
+     * one aggregated endpoint, same pattern as FridgeNoteController::index()/myInvites()/
+     * myRequests() - the frontend filters this down to the current kitchen scope itself.
+     */
     public function index(Request $request)
     {
+        $fridgeIds = $request->user()->memberFridges()->pluck('fridges.id');
+
         return ShoppingItemResource::collection(
-            $request->user()->shoppingItems()->paginate(50)
+            ShoppingItem::whereIn('fridge_id', $fridgeIds)->with('fridge')->paginate(50)
         );
     }
 
-    public function store(Request $request)
+    /**
+     * Authorizes against the parent Fridge's own `update` ability (member-level) rather than a
+     * dedicated create() ability on ShoppingItem itself - same pattern FridgeNoteController::
+     * store() and ItemController::store() use against their own parents.
+     */
+    public function store(Request $request, Fridge $fridge)
     {
+        $this->authorize('update', $fridge);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'icon' => ['nullable', 'string', 'max:255'],
@@ -30,9 +45,9 @@ class ShoppingItemController extends Controller
         $data['checked'] ??= false;
         $this->renameShopUrlKey($data);
 
-        $shoppingItem = $request->user()->shoppingItems()->create($data);
+        $shoppingItem = $fridge->shoppingItems()->create($data);
 
-        return new ShoppingItemResource($shoppingItem);
+        return new ShoppingItemResource($shoppingItem->load('fridge'));
     }
 
     public function update(Request $request, ShoppingItem $shoppingItem)
@@ -51,7 +66,7 @@ class ShoppingItemController extends Controller
 
         $shoppingItem->update($data);
 
-        return new ShoppingItemResource($shoppingItem);
+        return new ShoppingItemResource($shoppingItem->load('fridge'));
     }
 
     public function destroy(Request $request, ShoppingItem $shoppingItem)

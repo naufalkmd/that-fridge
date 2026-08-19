@@ -81,10 +81,11 @@ export default function RecipeDetailSheet() {
           <div style={{ background: theme.bg.surface2, borderRadius: theme.radius.md, overflow: "hidden", marginBottom: 20 }}>
             {selectedRecipe.ingredientsView.map((ing, i) => {
               const onShoppingList = state.shoppingList.some((si) => !si.checked && si.name.toLowerCase() === ing.name.toLowerCase());
+              const activeFridge = state.fridges[state.activeFridge];
               return (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: `1px solid ${theme.border.hairline}` }}>
                   <div
-                    onClick={ing.have || onShoppingList ? undefined : () => actions.addPredictedToShopping(ing.name, ing.icon)}
+                    onClick={ing.have || onShoppingList || !activeFridge ? undefined : () => actions.addPredictedToShopping(ing.name, ing.icon, activeFridge.id)}
                     style={{
                       width: 20,
                       height: 20,

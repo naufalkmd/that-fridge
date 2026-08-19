@@ -336,7 +336,7 @@ export default function ItemDetailSheet() {
 
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
           <div
-            onClick={() => !onShoppingList && actions.addPredictedToShopping(item.name, item.icon, item.shopUrl)}
+            onClick={() => !onShoppingList && itemFridge && actions.addPredictedToShopping(item.name, item.icon, itemFridge.id, item.shopUrl)}
             title={onShoppingList ? "Already on your shopping list" : "Queue this up so it's easy to buy again"}
             style={{
               flex: 1,

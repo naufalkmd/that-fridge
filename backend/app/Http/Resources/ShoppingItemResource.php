@@ -16,6 +16,8 @@ class ShoppingItemResource extends JsonResource
     {
         return [
             'id' => (string) $this->id,
+            'fridgeId' => (string) $this->fridge_id,
+            'fridgeName' => $this->fridge->name,
             'name' => $this->name,
             'icon' => $this->icon,
             'section' => $this->section,

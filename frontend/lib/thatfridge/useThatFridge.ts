@@ -1349,11 +1349,12 @@ export function useThatFridge() {
   const ensureShoppingSeed = () => {
     patch((s) => {
       if (s.shoppingSeeded) return {};
-      const lowStock = (s.fridges[s.activeFridge]?.sections || [])
-        .flatMap((sec) => sec.items)
-        .filter((i) => i.qty <= 2);
+      const fridge = s.fridges[s.activeFridge];
+      const lowStock = (fridge?.sections || []).flatMap((sec) => sec.items).filter((i) => i.qty <= 2);
       const seeded: ShoppingItem[] = lowStock.map((i) => ({
         id: "ls-" + i.id,
+        fridgeId: fridge?.id ?? "",
+        fridgeName: fridge?.name ?? "",
         name: i.name,
         icon: i.icon,
         section: ICON_SECTION[i.icon] || "other",
@@ -1722,9 +1723,11 @@ export function useThatFridge() {
   const addShoppingItem = async () => {
     const name = state.newShoppingText.trim();
     if (!name) return;
+    const fridge = state.fridges[state.activeFridge];
+    if (!fridge) return;
     patch({ newShoppingText: "" });
     try {
-      const entry = await createShoppingItem({ name, icon: null, section: "other" });
+      const entry = await createShoppingItem(fridge.id, { name, icon: null, section: "other" });
       patch((s) => ({ shoppingList: [...s.shoppingList, entry] }));
     } catch (err) {
       patch({ syncError: describeError(err, "Couldn't add the shopping item.") });
@@ -1755,10 +1758,10 @@ export function useThatFridge() {
     if (failedCount) patch({ syncError: `Couldn't clear ${failedCount} item${failedCount > 1 ? "s" : ""}.` });
   };
 
-  const addPredictedToShopping = async (name: string, icon: string, shopUrl?: string | null) => {
+  const addPredictedToShopping = async (name: string, icon: string, fridgeId: string, shopUrl?: string | null) => {
     if (state.shoppingList.some((i) => !i.checked && i.name.toLowerCase() === name.toLowerCase())) return;
     try {
-      const entry = await createShoppingItem({ name, icon, section: ICON_SECTION[icon] || "other", shopUrl: shopUrl ?? null });
+      const entry = await createShoppingItem(fridgeId, { name, icon, section: ICON_SECTION[icon] || "other", shopUrl: shopUrl ?? null });
       patch((s) => ({ shoppingList: [...s.shoppingList, entry] }));
     } catch (err) {
       patch({ syncError: describeError(err, "Couldn't add the suggestion.") });

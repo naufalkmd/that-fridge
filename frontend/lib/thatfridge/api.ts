@@ -400,8 +400,8 @@ export function fetchShoppingItems(): Promise<ShoppingItem[]> {
   return apiFetch<ShoppingItem[]>("/shopping-items");
 }
 
-export function createShoppingItem(data: { name: string; icon: string | null; section: string; shopUrl?: string | null }): Promise<ShoppingItem> {
-  return apiFetch<ShoppingItem>("/shopping-items", { method: "POST", body: JSON.stringify(data) });
+export function createShoppingItem(fridgeId: string, data: { name: string; icon: string | null; section: string; shopUrl?: string | null }): Promise<ShoppingItem> {
+  return apiFetch<ShoppingItem>(`/fridges/${fridgeId}/shopping-items`, { method: "POST", body: JSON.stringify(data) });
 }
 
 export function updateShoppingItem(id: string, data: Partial<{ name: string; icon: string | null; section: string; checked: boolean; shopUrl: string | null }>): Promise<ShoppingItem> {

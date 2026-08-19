@@ -510,7 +510,10 @@ export default function FoodHubScreen() {
                           <div style={{ fontSize: 11, color: theme.text.faint }}>{rec.reason}</div>
                         </div>
                         <div
-                          onClick={() => actions.addPredictedToShopping(rec.name, rec.icon)}
+                          onClick={() => {
+                            const fridge = state.fridges[state.activeFridge];
+                            if (fridge) actions.addPredictedToShopping(rec.name, rec.icon, fridge.id);
+                          }}
                           style={{ width: 30, height: 30, borderRadius: theme.radius.sm, background: theme.amber, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
                         >
                           <Plus size={16} color="#0a0a0c" strokeWidth={2.3} />

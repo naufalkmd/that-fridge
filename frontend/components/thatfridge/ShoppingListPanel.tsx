@@ -1,20 +1,23 @@
 "use client";
 
 import { Check, ExternalLink, Plus, X } from "lucide-react";
+import { getScopedShoppingItems } from "@/lib/thatfridge/selectors";
 import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
 
 export default function ShoppingListPanel() {
   const { state, actions } = useThatFridgeCtx();
 
-  const shoppingList = state.shoppingList;
+  const shoppingList = getScopedShoppingItems(state);
+  const showFridgeTags = state.kitchenScope === "all";
+  const targetFridge = state.fridges[state.activeFridge];
   const activeShopping = shoppingList.filter((i) => !i.checked);
   const boughtItemsView = shoppingList.filter((i) => i.checked);
   const hasNoShopping = activeShopping.length === 0 && boughtItemsView.length === 0;
 
   return (
     <>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: showFridgeTags ? 6 : 16 }}>
         <input
           value={state.newShoppingText}
           onChange={(e) => actions.onNewShoppingChange(e.target.value)}
@@ -26,6 +29,9 @@ export default function ShoppingListPanel() {
           <Plus size={18} color="#0a0a0c" strokeWidth={2.3} />
         </div>
       </div>
+      {showFridgeTags && targetFridge && (
+        <div style={{ fontSize: 11, color: theme.text.faint, marginBottom: 16 }}>Posting to {targetFridge.name}</div>
+      )}
 
       {hasNoShopping && (
         <div style={{ textAlign: "center", color: theme.text.faint, fontSize: 13, marginTop: 20 }}>
@@ -38,7 +44,10 @@ export default function ShoppingListPanel() {
           {activeShopping.map((item) => (
             <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderBottom: `1px solid ${theme.border.hairline}` }}>
               <div onClick={() => actions.toggleShoppingItem(item.id)} style={{ width: 22, height: 22, borderRadius: theme.radius.sm, border: `1.5px solid ${theme.border.strong}`, flex: "none", cursor: "pointer" }} />
-              <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: theme.text.primary }}>{item.name}</div>
+              <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: theme.text.primary }}>
+                {item.name}
+                {showFridgeTags && <span style={{ fontWeight: 500, color: theme.text.faint }}> · {item.fridgeName}</span>}
+              </div>
               {item.shopUrl && (
                 <div
                   onClick={() => window.open(item.shopUrl!, "_blank", "noopener,noreferrer")}
@@ -73,7 +82,10 @@ export default function ShoppingListPanel() {
                 >
                   <Check size={13} color={theme.text.primary} strokeWidth={2.5} />
                 </div>
-                <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, textDecoration: "line-through", color: theme.text.primary }}>{item.name}</div>
+                <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, textDecoration: "line-through", color: theme.text.primary }}>
+                  {item.name}
+                  {showFridgeTags && <span style={{ fontWeight: 500 }}> · {item.fridgeName}</span>}
+                </div>
               </div>
             ))}
           </div>

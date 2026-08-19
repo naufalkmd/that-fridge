@@ -73,6 +73,8 @@ describe("useThatFridge addPredictedToShopping", () => {
   it("carries a source item's shop link through to the created shopping entry", async () => {
     const createMock = vi.mocked(api.createShoppingItem).mockResolvedValue({
       id: "s1",
+      fridgeId: "f1",
+      fridgeName: "Fridge",
       name: "Milk",
       icon: "milk",
       section: "dairy",
@@ -82,16 +84,18 @@ describe("useThatFridge addPredictedToShopping", () => {
     const { result } = renderHook(() => useThatFridge());
 
     await act(async () => {
-      await result.current.actions.addPredictedToShopping("Milk", "milk", "https://example.com/milk");
+      await result.current.actions.addPredictedToShopping("Milk", "milk", "f1", "https://example.com/milk");
     });
 
-    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ name: "Milk", icon: "milk", shopUrl: "https://example.com/milk" }));
+    expect(createMock).toHaveBeenCalledWith("f1", expect.objectContaining({ name: "Milk", icon: "milk", shopUrl: "https://example.com/milk" }));
     expect(result.current.state.shoppingList[0]?.shopUrl).toBe("https://example.com/milk");
   });
 
   it("defaults to null when no shop link is passed", async () => {
     const createMock = vi.mocked(api.createShoppingItem).mockResolvedValue({
       id: "s1",
+      fridgeId: "f1",
+      fridgeName: "Fridge",
       name: "Bread",
       icon: "bread",
       section: "bakery",
@@ -101,10 +105,10 @@ describe("useThatFridge addPredictedToShopping", () => {
     const { result } = renderHook(() => useThatFridge());
 
     await act(async () => {
-      await result.current.actions.addPredictedToShopping("Bread", "bread");
+      await result.current.actions.addPredictedToShopping("Bread", "bread", "f1");
     });
 
-    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ name: "Bread", icon: "bread", shopUrl: null }));
+    expect(createMock).toHaveBeenCalledWith("f1", expect.objectContaining({ name: "Bread", icon: "bread", shopUrl: null }));
   });
 });
 
