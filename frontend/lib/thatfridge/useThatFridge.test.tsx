@@ -142,6 +142,60 @@ describe("useThatFridge sendChat", () => {
   });
 });
 
+describe("useThatFridge joinFridgeByCode", () => {
+  it("appends the joined fridge to state.fridges and makes it active", async () => {
+    const joinFridgeMock = vi.mocked(api.joinFridge).mockResolvedValue({
+      id: "shared-1",
+      name: "Housemates",
+      role: "member",
+      memberCount: 2,
+      sections: [],
+    });
+
+    const { result } = renderHook(() => useThatFridge());
+
+    act(() => {
+      result.current.actions.onNewFridgeCodeChange("abc123");
+    });
+    await act(async () => {
+      await result.current.actions.joinFridgeByCode();
+    });
+
+    expect(joinFridgeMock).toHaveBeenCalledWith("abc123");
+    expect(result.current.state.fridges).toHaveLength(1);
+    expect(result.current.state.fridges[0]).toMatchObject({ id: "shared-1", name: "Housemates", role: "member" });
+    expect(result.current.state.activeFridge).toBe(0);
+    expect(result.current.state.newFridgeCode).toBe("");
+  });
+
+  it("surfaces a sync error and leaves state.fridges untouched when the code is invalid", async () => {
+    vi.mocked(api.joinFridge).mockRejectedValue(new Error("invalid code"));
+
+    const { result } = renderHook(() => useThatFridge());
+
+    act(() => {
+      result.current.actions.onNewFridgeCodeChange("nope");
+    });
+    await act(async () => {
+      await result.current.actions.joinFridgeByCode();
+    });
+
+    expect(result.current.state.fridges).toHaveLength(0);
+    expect(result.current.state.syncError).toBeTruthy();
+  });
+
+  it("does nothing when the code field is empty", async () => {
+    const joinFridgeMock = vi.mocked(api.joinFridge);
+    const { result } = renderHook(() => useThatFridge());
+
+    await act(async () => {
+      await result.current.actions.joinFridgeByCode();
+    });
+
+    expect(joinFridgeMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("useThatFridge shopping list seeding", () => {
   // Regression coverage for ensureShoppingSeed: it used to require /left|remaining/i to
   // match an item's note (in addition to quantity), which incorrectly matched notes like
@@ -656,7 +710,7 @@ describe("useThatFridge Mark as made", () => {
 // own fridge pointer, synced from activeFridge by openAdd(), unrelated to what's displayed
 // elsewhere).
 function mockInitFetch() {
-  vi.mocked(api.login).mockResolvedValue({ user: { name: "Joey", email: "joey@thatfridge.test" }, token: "t1" });
+  vi.mocked(api.login).mockResolvedValue({ user: { id: "u-joey", name: "Joey", email: "joey@thatfridge.test" }, token: "t1" });
   vi.mocked(api.fetchFridges).mockResolvedValue([
     { id: "f1", name: "New Fridge", sections: [] },
     { id: "f2", name: "New Fridge", sections: [] },

@@ -235,7 +235,7 @@ class RecipeController extends Controller
     private function expiringItemIcons($user): array
     {
         $items = Item::query()
-            ->whereHas('section.fridge', fn ($q) => $q->where('user_id', $user->id))
+            ->whereHas('section.fridge.members', fn ($q) => $q->where('users.id', $user->id))
             ->whereNotNull('expiry_date')
             ->get();
 

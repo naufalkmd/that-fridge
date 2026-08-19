@@ -2,7 +2,7 @@
 
 import { useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
-import { ChevronRight, ImagePlus } from "lucide-react";
+import { Check, ChevronRight, Copy, ImagePlus, RefreshCw, X } from "lucide-react";
 import { FRIDGE_STYLES } from "@/lib/thatfridge/data";
 import { compressAndScaleImage } from "@/lib/thatfridge/image";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
@@ -11,11 +11,22 @@ import { theme } from "@/lib/thatfridge/theme";
 export default function FridgeStyleSheet() {
   const { state, actions } = useThatFridgeCtx();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const stylingFridge = state.fridges[state.stylingFridgeIndex];
   const currentStyle = stylingFridge?.style || "photo";
   const itemCount = stylingFridge?.sections.reduce((n, sec) => n + sec.items.length, 0) || 0;
   const canDelete = state.fridges.length > 1;
+  const isOwner = stylingFridge?.role === "owner";
+
+  const copyInviteCode = () => {
+    if (!stylingFridge?.inviteCode) return;
+    navigator.clipboard.writeText(stylingFridge.inviteCode).then(() => {
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 1500);
+    });
+  };
 
   const options: { key: string; label: string; photo: string }[] = [
     { key: "photo", label: "Original photo", photo: "/images/thatfridge/fridge-hero.png" },
@@ -94,10 +105,109 @@ export default function FridgeStyleSheet() {
             </div>
           )}
 
-          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.bad, margin: "24px 0 8px" }}>DANGER ZONE</div>
-          {!confirmingDelete ? (
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, margin: "24px 0 8px" }}>MEMBERS</div>
+          <div
+            onClick={copyInviteCode}
+            style={{ cursor: "pointer", borderRadius: theme.radius.md, padding: 14, background: theme.bg.surface2, display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 3 }}>INVITE CODE — TAP TO COPY</div>
+              <div style={{ fontSize: 15, fontWeight: 700, fontFamily: theme.fontMono, letterSpacing: 2, color: theme.text.primary }}>
+                {stylingFridge?.inviteCode || "—"}
+              </div>
+            </div>
+            {codeCopied ? <Check size={17} color={theme.good} strokeWidth={2.4} /> : <Copy size={16} color={theme.text.faint} />}
+          </div>
+          {isOwner && (
             <div
-              onClick={() => canDelete && setConfirmingDelete(true)}
+              onClick={actions.regenerateFridgeInviteCode}
+              style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", padding: "2px 2px 12px", width: "fit-content" }}
+            >
+              <RefreshCw size={12} color={theme.blue} strokeWidth={2.2} />
+              <div style={{ fontSize: 12, fontWeight: 700, color: theme.blue }}>Regenerate code</div>
+            </div>
+          )}
+
+          {state.fridgeMembersLoading ? (
+            <div style={{ fontSize: 12, color: theme.text.faint, padding: "4px 2px 12px" }}>Loading members…</div>
+          ) : (
+            <div style={{ borderRadius: theme.radius.md, overflow: "hidden", background: theme.bg.surface2, marginBottom: 8 }}>
+              {state.fridgeMembers.map((member, i) => (
+                <div
+                  key={member.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "11px 14px",
+                    borderBottom: i < state.fridgeMembers.length - 1 ? `1px solid ${theme.border.hairline}` : undefined,
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: theme.text.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {member.name}
+                      {member.id === state.currentUser?.id && <span style={{ color: theme.text.faint, fontWeight: 600 }}> (you)</span>}
+                    </div>
+                    <div style={{ fontSize: 11, color: theme.text.faint, textTransform: "uppercase", letterSpacing: 0.3 }}>{member.role}</div>
+                  </div>
+                  {isOwner && member.role !== "owner" && (
+                    <div onClick={() => actions.removeFridgeMemberAction(member.id)} style={{ cursor: "pointer", padding: 4 }}>
+                      <X size={15} color={theme.text.faint} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.bad, margin: "24px 0 8px" }}>DANGER ZONE</div>
+          {isOwner ? (
+            !confirmingDelete ? (
+              <div
+                onClick={() => canDelete && setConfirmingDelete(true)}
+                style={{
+                  cursor: canDelete ? "pointer" : "not-allowed",
+                  borderRadius: theme.radius.md,
+                  padding: 14,
+                  background: theme.bg.surface2,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  opacity: canDelete ? 1 : 0.5,
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2, color: theme.bad }}>Delete this fridge</div>
+                  <div style={{ fontSize: 11.5, color: theme.text.faint }}>
+                    {canDelete ? "Removes it and everything inside it" : "You need at least one fridge"}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ borderRadius: theme.radius.md, padding: 16, background: theme.bg.surface2, border: `1px solid ${theme.bad}40` }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: theme.bad, marginBottom: 6 }}>Delete &quot;{stylingFridge?.name}&quot;?</div>
+                <div style={{ fontSize: 12, lineHeight: 1.5, color: theme.text.muted, marginBottom: 14 }}>
+                  {`This permanently deletes this fridge and all ${itemCount} item${itemCount === 1 ? "" : "s"} inside it. This can't be undone.`}
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <div
+                    onClick={() => setConfirmingDelete(false)}
+                    style={{ flex: 1, textAlign: "center", padding: 11, borderRadius: theme.radius.sm, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, color: theme.text.primary, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Cancel
+                  </div>
+                  <div
+                    onClick={() => actions.deleteFridge(state.stylingFridgeIndex)}
+                    style={{ flex: 1, textAlign: "center", padding: 11, borderRadius: theme.radius.sm, background: theme.bad, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Yes, delete
+                  </div>
+                </div>
+              </div>
+            )
+          ) : !confirmingLeave ? (
+            <div
+              onClick={() => canDelete && setConfirmingLeave(true)}
               style={{
                 cursor: canDelete ? "pointer" : "not-allowed",
                 borderRadius: theme.radius.md,
@@ -110,30 +220,30 @@ export default function FridgeStyleSheet() {
               }}
             >
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2, color: theme.bad }}>Delete this fridge</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2, color: theme.bad }}>Leave this fridge</div>
                 <div style={{ fontSize: 11.5, color: theme.text.faint }}>
-                  {canDelete ? "Removes it and everything inside it" : "You need at least one fridge"}
+                  {canDelete ? "You'll need a new invite code to rejoin" : "You need at least one fridge"}
                 </div>
               </div>
             </div>
           ) : (
             <div style={{ borderRadius: theme.radius.md, padding: 16, background: theme.bg.surface2, border: `1px solid ${theme.bad}40` }}>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: theme.bad, marginBottom: 6 }}>Delete &quot;{stylingFridge?.name}&quot;?</div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: theme.bad, marginBottom: 6 }}>Leave &quot;{stylingFridge?.name}&quot;?</div>
               <div style={{ fontSize: 12, lineHeight: 1.5, color: theme.text.muted, marginBottom: 14 }}>
-                {`This permanently deletes this fridge and all ${itemCount} item${itemCount === 1 ? "" : "s"} inside it. This can't be undone.`}
+                You&apos;ll lose access to everything inside it unless someone invites you back.
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 <div
-                  onClick={() => setConfirmingDelete(false)}
+                  onClick={() => setConfirmingLeave(false)}
                   style={{ flex: 1, textAlign: "center", padding: 11, borderRadius: theme.radius.sm, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, color: theme.text.primary, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
                 >
                   Cancel
                 </div>
                 <div
-                  onClick={() => actions.deleteFridge(state.stylingFridgeIndex)}
+                  onClick={() => actions.leaveFridgeAction(state.stylingFridgeIndex)}
                   style={{ flex: 1, textAlign: "center", padding: 11, borderRadius: theme.radius.sm, background: theme.bad, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
                 >
-                  Yes, delete
+                  Yes, leave
                 </div>
               </div>
             </div>

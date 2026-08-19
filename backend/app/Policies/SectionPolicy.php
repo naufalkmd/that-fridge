@@ -9,16 +9,16 @@ class SectionPolicy
 {
     public function view(User $user, Section $section): bool
     {
-        return $section->fridge->user_id === $user->id;
+        return $section->fridge->isMember($user);
     }
 
     public function update(User $user, Section $section): bool
     {
-        return $section->fridge->user_id === $user->id;
+        return $section->fridge->isMember($user);
     }
 
     public function delete(User $user, Section $section): bool
     {
-        return $section->fridge->user_id === $user->id;
+        return $section->fridge->isMember($user);
     }
 }

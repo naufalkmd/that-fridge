@@ -11,7 +11,7 @@ class NotificationEventController extends Controller
     public function index(Request $request)
     {
         $events = NotificationEvent::query()
-            ->whereIn('fridge_id', $request->user()->fridges()->pluck('id'))
+            ->whereIn('fridge_id', $request->user()->memberFridges()->pluck('fridges.id'))
             ->with('fridge')
             ->orderByDesc('created_at')
             ->get();

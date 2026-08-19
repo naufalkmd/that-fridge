@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ChevronLeft, Refrigerator, X } from "lucide-react";
+import { ChevronLeft, X } from "lucide-react";
 import { AGENTS } from "@/lib/thatfridge/data";
 import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
@@ -40,20 +40,8 @@ export default function AboutScreen() {
 
       <div className="thatfridge-wide-content" style={{ flex: 1, overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "20px 12px 26px" }}>
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: theme.radius.lg,
-              background: theme.bg.surface2,
-              border: `1px solid ${theme.border.hairline}`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: 14,
-            }}
-          >
-            <Refrigerator size={30} color={theme.amber} strokeWidth={1.8} />
+          <div style={{ width: 64, height: 64, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+            <Image src="/images/thatfridge/logo.svg" alt="ThatFridge" width={52} height={53} unoptimized style={{ objectFit: "contain" }} />
           </div>
           <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 19, letterSpacing: 0.5, marginBottom: 5 }}>ThatFridge</div>
           <div style={{ fontSize: 12, color: theme.text.faint, fontWeight: 600, marginBottom: 10 }}>Version {APP_VERSION}</div>

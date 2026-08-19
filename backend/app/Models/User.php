@@ -39,6 +39,17 @@ class User extends Authenticatable
         return $this->hasMany(Fridge::class);
     }
 
+    /**
+     * Fridges this user can access - owned or joined via an invite code. This is the
+     * relation every inventory/scoring query should scope by; fridges() above stays
+     * "fridges I own" and is only used where ownership specifically matters (deleting a
+     * fridge, managing its members).
+     */
+    public function memberFridges(): BelongsToMany
+    {
+        return $this->belongsToMany(Fridge::class, 'fridge_members')->withPivot('role')->withTimestamps();
+    }
+
     public function shoppingItems(): HasMany
     {
         return $this->hasMany(ShoppingItem::class);

@@ -30,7 +30,7 @@ class AuthController extends Controller
         $token = $user->createToken('thatfridge')->plainTextToken;
 
         return response()->json([
-            'user' => $user->only(['name', 'email']),
+            'user' => $this->userPayload($user),
             'token' => $token,
         ], 201);
     }
@@ -53,7 +53,7 @@ class AuthController extends Controller
         $token = $user->createToken('thatfridge')->plainTextToken;
 
         return response()->json([
-            'user' => $user->only(['name', 'email']),
+            'user' => $this->userPayload($user),
             'token' => $token,
         ]);
     }
@@ -68,7 +68,21 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         return response()->json([
-            'user' => $request->user()->only(['name', 'email']),
+            'user' => $this->userPayload($request->user()),
         ]);
+    }
+
+    /**
+     * Shared shape for the "current user" payload returned by register/login/me. Needs its
+     * own id now (not just name/email) - the shared-fridge member list renders "(you)" and
+     * disables self-removal by comparing against it.
+     */
+    private function userPayload(User $user): array
+    {
+        return [
+            'id' => (string) $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+        ];
     }
 }

@@ -9,11 +9,11 @@ class NotificationEventPolicy
 {
     public function view(User $user, NotificationEvent $notificationEvent): bool
     {
-        return $notificationEvent->fridge->user_id === $user->id;
+        return $notificationEvent->fridge->isMember($user);
     }
 
     public function update(User $user, NotificationEvent $notificationEvent): bool
     {
-        return $notificationEvent->fridge->user_id === $user->id;
+        return $notificationEvent->fridge->isMember($user);
     }
 }

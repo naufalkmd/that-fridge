@@ -59,7 +59,7 @@ class KitchenScoreService
     public function scoreFor(User $user): array
     {
         $items = Item::query()
-            ->whereHas('section.fridge', fn ($q) => $q->where('user_id', $user->id))
+            ->whereHas('section.fridge.members', fn ($q) => $q->where('users.id', $user->id))
             ->get();
 
         $usageHistory = $user->usageHistory()->get();
@@ -110,7 +110,7 @@ class KitchenScoreService
 
         $expiringEvents = NotificationEvent::query()
             ->where('kind', 'expiring')
-            ->whereHas('fridge', fn ($q) => $q->where('user_id', $user->id))
+            ->whereHas('fridge.members', fn ($q) => $q->where('users.id', $user->id))
             ->get();
 
         $responsivenessAdj = 0;

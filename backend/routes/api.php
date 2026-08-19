@@ -6,6 +6,7 @@ use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\ExpiryScanController;
 use App\Http\Controllers\FridgeController;
+use App\Http\Controllers\FridgeMemberController;
 use App\Http\Controllers\IngestionController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\MemoryController;
@@ -55,9 +56,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/fridges', [FridgeController::class, 'index']);
     Route::post('/fridges', [FridgeController::class, 'store']);
+    Route::post('/fridges/join', [FridgeController::class, 'join']);
     Route::get('/fridges/{fridge}', [FridgeController::class, 'show']);
     Route::patch('/fridges/{fridge}', [FridgeController::class, 'update']);
     Route::delete('/fridges/{fridge}', [FridgeController::class, 'destroy']);
+
+    Route::get('/fridges/{fridge}/members', [FridgeMemberController::class, 'index']);
+    Route::post('/fridges/{fridge}/invite-code/regenerate', [FridgeMemberController::class, 'regenerate']);
+    Route::delete('/fridges/{fridge}/members/{user}', [FridgeMemberController::class, 'destroy']);
+    Route::post('/fridges/{fridge}/leave', [FridgeMemberController::class, 'leave']);
 
     Route::post('/fridges/{fridge}/sections', [SectionController::class, 'store']);
     Route::patch('/sections/{section}', [SectionController::class, 'update']);

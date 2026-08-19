@@ -32,12 +32,30 @@ export interface Section {
 
 export type FridgeStyleKey = "photo" | "custom" | "classic" | "french" | "retro" | "mini";
 
+export type FridgeRole = "owner" | "member";
+
 export interface Fridge {
   id: string;
   name: string;
   style?: FridgeStyleKey;
   photoUrl?: string | null;
   sections: Section[];
+  inviteCode?: string;
+  // The current user's role on this fridge - not the current user's fridge count etc, just
+  // theirs on this one.
+  role?: FridgeRole;
+  memberCount?: number;
+}
+
+// Fetched lazily via fetchFridgeMembers() when "Manage fridge" opens, not embedded in every
+// Fridge - the full member list (name/email/role/joinedAt per person) is unneeded weight on
+// every reload of the core /fridges payload.
+export interface FridgeMember {
+  id: string;
+  name: string;
+  email: string;
+  role: FridgeRole;
+  joinedAt: number;
 }
 
 export interface RecipeIngredient {
@@ -250,6 +268,7 @@ export interface BadgeProgress {
 export type AuthMode = "login" | "signup";
 
 export interface CurrentUser {
+  id: string;
   name: string;
   email: string;
 }

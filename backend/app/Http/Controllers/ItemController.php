@@ -43,7 +43,7 @@ class ItemController extends Controller
         $data = $request->validate([
             'product_id' => ['sometimes', 'nullable', 'exists:products,id'],
             'section_id' => ['sometimes', Rule::exists('sections', 'id')->where(
-                fn ($q) => $q->whereIn('fridge_id', $request->user()->fridges()->pluck('id'))
+                fn ($q) => $q->whereIn('fridge_id', $request->user()->memberFridges()->pluck('fridges.id'))
             )],
             'name' => ['sometimes', 'string', 'max:255'],
             'icon' => ['sometimes', 'string', 'max:255'],

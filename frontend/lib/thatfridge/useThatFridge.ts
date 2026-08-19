@@ -37,6 +37,7 @@ import {
   fetchFridges,
   fetchMe,
   fetchMemoryFacts,
+  fetchFridgeMembers,
   fetchNotificationEvents,
   fetchNotificationPrefs,
   fetchOrganizerTally,
@@ -47,12 +48,16 @@ import {
   fetchUserGoal,
   importRecipeFromLink,
   incrementOrganizerTally,
+  joinFridge,
+  leaveFridge as apiLeaveFridge,
   login,
   logout,
   markRecipeMade,
   postBadgeProgress,
   recordItemUsage,
   register,
+  regenerateInviteCode,
+  removeFridgeMember as apiRemoveFridgeMember,
   scanBarcode,
   scanExpiryPhoto,
   scanFridgePhoto,
@@ -87,6 +92,7 @@ import type {
   FoodFocus,
   FoodSubtab,
   Fridge,
+  FridgeMember,
   FridgeStyleKey,
   Item,
   MealType,
@@ -247,6 +253,7 @@ export interface ThatFridgeState {
   activeFridge: number;
   heroSlide: number;
   newFridgeName: string;
+  newFridgeCode: string;
   showProfilePanel: boolean;
   selectedItemId: string | null;
   isEditingItem: boolean;
@@ -350,6 +357,10 @@ export interface ThatFridgeState {
   chatThreads: ChatThread[];
   currentSessionId: string | null;
   stylingFridgeIndex: number;
+  // Lazily fetched when FridgeStyleSheet opens, not part of Fridge itself - see FridgeMember's
+  // doc comment in types.ts for why this stays out of the core fridges list.
+  fridgeMembers: FridgeMember[];
+  fridgeMembersLoading: boolean;
   undoMessage: string | null;
   syncError: string | null;
   notificationPrefs: NotificationPrefs;
@@ -400,6 +411,7 @@ export function initialState(): ThatFridgeState {
     activeFridge: 0,
     heroSlide: 0,
     newFridgeName: "",
+    newFridgeCode: "",
     showProfilePanel: false,
     selectedItemId: null,
     isEditingItem: false,
@@ -476,6 +488,8 @@ export function initialState(): ThatFridgeState {
     chatThreads: [],
     currentSessionId: null,
     stylingFridgeIndex: 0,
+    fridgeMembers: [],
+    fridgeMembersLoading: false,
     undoMessage: null,
     syncError: null,
     notificationPrefs: { expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false, crewActionsEnabled: false },
@@ -776,6 +790,25 @@ export function useThatFridge() {
     if (key === "Enter") addFridge();
   };
 
+  const onNewFridgeCodeChange = (value: string) => patch({ newFridgeCode: value });
+  const joinFridgeByCode = async () => {
+    const code = state.newFridgeCode.trim();
+    if (!code) return;
+    patch({ newFridgeCode: "" });
+    try {
+      const fridge = await joinFridge(code);
+      patch((s) => {
+        const fridges = [...s.fridges, fridge];
+        return { fridges, heroSlide: fridges.length - 1, activeFridge: fridges.length - 1 };
+      });
+    } catch (err) {
+      patch({ syncError: describeError(err, "Couldn't join that fridge - check the code and try again.") });
+    }
+  };
+  const onNewFridgeCodeKeyDown = (key: string) => {
+    if (key === "Enter") joinFridgeByCode();
+  };
+
   const openProfile = () => patch({ showProfilePanel: true });
   const closeProfile = () => patch({ showProfilePanel: false });
   const selectFridgeFromProfile = (i: number) =>
@@ -881,8 +914,58 @@ export function useThatFridge() {
     clearMemoryFactsApi().catch((err) => patch({ syncError: describeError(err, "Couldn't clear memory.") }));
   };
 
-  const openStylePicker = (i: number) => patch({ stylingFridgeIndex: i, screen: "fridgeStyle" });
+  const openStylePicker = (i: number) => {
+    patch({ stylingFridgeIndex: i, screen: "fridgeStyle", fridgeMembers: [], fridgeMembersLoading: true });
+    const fridge = state.fridges[i];
+    if (!fridge) {
+      patch({ fridgeMembersLoading: false });
+      return;
+    }
+    fetchFridgeMembers(fridge.id)
+      .then((members) => patch({ fridgeMembers: members, fridgeMembersLoading: false }))
+      .catch((err) => {
+        patch({ fridgeMembersLoading: false, syncError: describeError(err, "Couldn't load the fridge's members.") });
+      });
+  };
   const closeStylePicker = () => patch({ screen: "home" });
+
+  const regenerateFridgeInviteCode = () => {
+    const fridge = state.fridges[state.stylingFridgeIndex];
+    if (!fridge) return;
+    regenerateInviteCode(fridge.id)
+      .then((code) => {
+        patch((s) => ({ fridges: s.fridges.map((f) => (f.id === fridge.id ? { ...f, inviteCode: code } : f)) }));
+      })
+      .catch((err) => patch({ syncError: describeError(err, "Couldn't regenerate the invite code.") }));
+  };
+
+  const removeFridgeMemberAction = (userId: string) => {
+    const fridge = state.fridges[state.stylingFridgeIndex];
+    if (!fridge) return;
+    const prevMembers = state.fridgeMembers;
+    patch((s) => ({ fridgeMembers: s.fridgeMembers.filter((m) => m.id !== userId), fridges: s.fridges.map((f) => (f.id === fridge.id ? { ...f, memberCount: Math.max(0, (f.memberCount ?? prevMembers.length) - 1) } : f)) }));
+    apiRemoveFridgeMember(fridge.id, userId).catch((err) => {
+      patch((s) => ({ fridgeMembers: prevMembers, fridges: s.fridges.map((f) => (f.id === fridge.id ? { ...f, memberCount: prevMembers.length } : f)) }));
+      patch({ syncError: describeError(err, "Couldn't remove that member.") });
+    });
+  };
+
+  const leaveFridgeAction = (index: number) => {
+    const fridge = state.fridges[index];
+    if (!fridge || state.fridges.length <= 1) return;
+    patch((s) => {
+      const fridges = s.fridges.filter((_, i) => i !== index);
+      let activeFridge = s.activeFridge;
+      if (index < s.activeFridge) activeFridge -= 1;
+      else if (index === s.activeFridge) activeFridge = Math.max(0, index - 1);
+      activeFridge = Math.min(activeFridge, fridges.length - 1);
+      return { fridges, activeFridge, heroSlide: activeFridge, screen: "home" };
+    });
+    apiLeaveFridge(fridge.id).catch((err) => {
+      patch((s) => ({ fridges: [...s.fridges.slice(0, index), fridge, ...s.fridges.slice(index)] }));
+      patch({ syncError: describeError(err, "Couldn't leave the fridge.") });
+    });
+  };
   const selectFridgeStyle = (key: FridgeStyleKey) => {
     const index = state.stylingFridgeIndex;
     const fridge = state.fridges[index];
@@ -2328,6 +2411,9 @@ export function useThatFridge() {
     onNewFridgeNameChange,
     onNewFridgeNameKeyDown,
     addFridge,
+    onNewFridgeCodeChange,
+    onNewFridgeCodeKeyDown,
+    joinFridgeByCode,
     openProfile,
     closeProfile,
     selectFridgeFromProfile,
@@ -2354,6 +2440,9 @@ export function useThatFridge() {
     renameFridge,
     renameFridgeBlur,
     deleteFridge,
+    regenerateFridgeInviteCode,
+    removeFridgeMemberAction,
+    leaveFridgeAction,
     openSearch,
     openRecipesHub,
     openShoppingHub,

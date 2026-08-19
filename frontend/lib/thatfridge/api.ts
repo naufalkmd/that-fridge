@@ -4,6 +4,7 @@ import type {
   CurrentUser,
   FoodFocus,
   Fridge,
+  FridgeMember,
   GoalMetricType,
   GoalPeriod,
   MealType,
@@ -108,6 +109,9 @@ interface RawFridge {
   name: string;
   style: string | null;
   photo_url: string | null;
+  invite_code?: string | null;
+  role?: string | null;
+  member_count?: number;
   sections: RawSection[];
 }
 
@@ -121,6 +125,9 @@ function toClientFridge(raw: RawFridge): Fridge {
     name: raw.name,
     style: (raw.style as Fridge["style"]) ?? undefined,
     photoUrl: raw.photo_url ?? undefined,
+    inviteCode: raw.invite_code ?? undefined,
+    role: (raw.role as Fridge["role"]) ?? undefined,
+    memberCount: raw.member_count,
     sections: raw.sections.map(toClientSection),
   };
 }
@@ -169,6 +176,30 @@ export async function updateFridge(id: string, data: { name?: string; style?: st
 
 export function deleteFridge(id: string): Promise<void> {
   return apiFetch<void>(`/fridges/${id}`, { method: "DELETE" });
+}
+
+export async function joinFridge(code: string): Promise<Fridge> {
+  const raw = await apiFetch<RawFridge>("/fridges/join", { method: "POST", body: JSON.stringify({ code }) });
+  return toClientFridge(raw);
+}
+
+// FridgeMemberResource already returns this exact camelCase shape - no Raw/toClient mapping
+// layer needed, unlike Fridge/Item/Section above.
+export function fetchFridgeMembers(fridgeId: string): Promise<FridgeMember[]> {
+  return apiFetch<FridgeMember[]>(`/fridges/${fridgeId}/members`);
+}
+
+export async function regenerateInviteCode(fridgeId: string): Promise<string> {
+  const res = await apiFetch<{ invite_code: string }>(`/fridges/${fridgeId}/invite-code/regenerate`, { method: "POST" });
+  return res.invite_code;
+}
+
+export function removeFridgeMember(fridgeId: string, userId: string): Promise<void> {
+  return apiFetch<void>(`/fridges/${fridgeId}/members/${userId}`, { method: "DELETE" });
+}
+
+export function leaveFridge(fridgeId: string): Promise<void> {
+  return apiFetch<void>(`/fridges/${fridgeId}/leave`, { method: "POST" });
 }
 
 export async function createSection(fridgeId: string, name: string): Promise<Section> {

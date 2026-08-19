@@ -14,7 +14,7 @@ class FridgePolicy
 
     public function view(User $user, Fridge $fridge): bool
     {
-        return $fridge->user_id === $user->id;
+        return $fridge->isMember($user);
     }
 
     public function create(User $user): bool
@@ -24,11 +24,20 @@ class FridgePolicy
 
     public function update(User $user, Fridge $fridge): bool
     {
-        return $fridge->user_id === $user->id;
+        return $fridge->isMember($user);
     }
 
     public function delete(User $user, Fridge $fridge): bool
     {
-        return $fridge->user_id === $user->id;
+        return $fridge->isOwner($user);
+    }
+
+    /**
+     * Regenerating the invite code or removing a member - kept owner-only rather than
+     * opened up to every member, unlike view/update above.
+     */
+    public function manageMembers(User $user, Fridge $fridge): bool
+    {
+        return $fridge->isOwner($user);
     }
 }

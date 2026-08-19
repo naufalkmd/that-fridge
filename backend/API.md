@@ -26,7 +26,7 @@ Create an account and get a token back immediately (no separate login needed).
 
 **201**
 ```json
-{ "user": { "name": "Jordan Diaz", "email": "jordan@example.com" }, "token": "1|abc123..." }
+{ "user": { "id": "5", "name": "Jordan Diaz", "email": "jordan@example.com" }, "token": "1|abc123..." }
 ```
 
 **422** — validation failure (`email` already taken, `password` too short, etc.)
@@ -56,7 +56,7 @@ Revokes the token used to make this request. No body.
 
 ### `GET /me` 🔒
 
-**200** `{ "user": { "name": "Jordan Diaz", "email": "jordan@example.com" } }`
+**200** `{ "user": { "id": "5", "name": "Jordan Diaz", "email": "jordan@example.com" } }`
 
 **401** — missing/invalid/revoked token.
 
@@ -64,11 +64,18 @@ Revokes the token used to make this request. No body.
 
 ## Fridges
 
-A fridge belongs to one user. Every endpoint below is scoped — a user can only see/touch their own fridges. Cross-user access returns **403**.
+A fridge has one **owner** (`fridges.user_id`) plus zero or more **members**, tracked in
+`fridge_members` (`role`: `owner` | `member` — the owner is always also a member row, kept in
+sync automatically whenever a fridge is created). Every endpoint below is scoped to fridges
+the current user is a **member** of (owned or joined) — a true non-member gets **403**.
+Day-to-day management (view, rename/restyle, sections, items) is open to any member;
+destructive/membership actions (delete the fridge, regenerate the invite code, remove a
+member) are **owner-only**.
 
 ### `GET /fridges` 🔒
 
-Returns all of the current user's fridges, fully nested (sections → items).
+Returns every fridge the current user is a member of (owned or joined), fully nested
+(sections → items).
 
 **200**
 ```json
@@ -79,6 +86,9 @@ Returns all of the current user's fridges, fully nested (sections → items).
       "name": "Kitchen",
       "style": "photo",
       "photo_url": null,
+      "invite_code": "7F3KQXRT",
+      "role": "owner",
+      "member_count": 2,
       "sections": [
         {
           "id": "1",
@@ -104,25 +114,76 @@ Returns all of the current user's fridges, fully nested (sections → items).
 
 `freshness` (0–100, nullable) and `days` (nullable) are **computed on read** from `expiry_date` + `shelf_life_days` — they are not stored columns. `freshness` is null if the item has no `expiry_date` or no shelf-life value (own or from its linked product).
 
+`role` is the *current user's* role on this fridge. `invite_code` is always included for any
+member (any member can share it to bring in more people, not just the owner) — only
+regenerating it is owner-restricted.
+
 ### `POST /fridges` 🔒
 
 **Body** `{ "name": "Garage", "style": "classic", "photo_url": "data:image/jpeg;base64,..." }` — `style` and `photo_url` optional.
 
-**201** — single fridge object (same shape as above, `sections: []`).
+**200** — single fridge object (same shape as above, `sections: []`, `role: "owner"`). A
+unique `invite_code` is generated automatically.
+
+### `POST /fridges/join` 🔒
+
+Join an existing fridge via its invite code — the code itself is the access control, same
+trust model as sharing a link. Case-insensitive.
+
+**Body** `{ "code": "7f3kqxrt" }`
+
+**200** — the joined fridge (`role: "member"`), same shape as above. **422** if the code
+doesn't match any fridge, or the user is already a member of it.
 
 ### `GET /fridges/{fridge}` 🔒
 
-**200** — single fridge, nested. **403** if not yours.
+**200** — single fridge, nested. **403** if not a member.
 
 ### `PATCH /fridges/{fridge}` 🔒
 
-**Body** — any of `name`, `style`, `photo_url`.
+**Body** — any of `name`, `style`, `photo_url`. Any member, not just the owner.
 
 **200** — updated fridge.
 
 ### `DELETE /fridges/{fridge}` 🔒
 
-**204** — cascades: deletes all its sections and their items too.
+Owner only — **403** for a non-owner member.
+
+**204** — cascades: deletes all its sections/items and its `fridge_members` rows too.
+
+### `GET /fridges/{fridge}/members` 🔒
+
+List everyone with access, owner first. Any member can view this, not just the owner.
+
+**200**
+```json
+{
+  "data": [
+    { "id": "5", "name": "Jordan", "email": "jordan@example.com", "role": "owner", "joinedAt": 1734000000000 },
+    { "id": "9", "name": "Riley", "email": "riley@example.com", "role": "member", "joinedAt": 1734100000000 }
+  ]
+}
+```
+
+### `POST /fridges/{fridge}/invite-code/regenerate` 🔒
+
+Owner only. Replaces the fridge's invite code — the old code stops working immediately (one
+active code per fridge, no history of past codes).
+
+**200** `{ "invite_code": "9KQZ2LMP" }`. **403** for a non-owner member.
+
+### `DELETE /fridges/{fridge}/members/{user}` 🔒
+
+Owner only, removes another member. **422** if `{user}` is the owner (delete the fridge
+instead — no ownership transfer in v1). **403** for a non-owner member.
+
+**204**
+
+### `POST /fridges/{fridge}/leave` 🔒
+
+Leave a fridge you're a member of but don't own. **422** if the current user is the owner.
+
+**204**
 
 ---
 
