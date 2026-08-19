@@ -40,6 +40,21 @@ export function getScopeLabel(state: ThatFridgeState): string {
   return state.kitchenScope === "all" ? "All Fridges" : state.fridges[state.activeFridge]?.name || "This Fridge";
 }
 
+// Same "all fridges vs. just the active one" scoping getScopedItems above already uses,
+// applied to fridge notes instead of items.
+export function getScopedFridgeNotes(state: ThatFridgeState) {
+  if (state.kitchenScope === "all") return state.fridgeNotes;
+  const activeFridgeId = state.fridges[state.activeFridge]?.id;
+  return state.fridgeNotes.filter((n) => n.fridgeId === activeFridgeId);
+}
+
+// Same scoping again, applied to the shared shopping list.
+export function getScopedShoppingItems(state: ThatFridgeState) {
+  if (state.kitchenScope === "all") return state.shoppingList;
+  const activeFridgeId = state.fridges[state.activeFridge]?.id;
+  return state.shoppingList.filter((i) => i.fridgeId === activeFridgeId);
+}
+
 export function findItem(state: ThatFridgeState, id: string): { item: Item; section: Section; fridgeIndex: number } | null {
   for (let fi = 0; fi < state.fridges.length; fi++) {
     for (const sec of state.fridges[fi].sections) {

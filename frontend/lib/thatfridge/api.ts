@@ -11,6 +11,8 @@ import type {
   GoalPeriod,
   MealType,
   MyInvite,
+  FridgeNote,
+  FridgeNoteColor,
   MyJoinRequest,
   NotificationEvent,
   NotificationPrefs,
@@ -225,6 +227,22 @@ export function fetchMyInvites(): Promise<MyInvite[]> {
 
 export function fetchMyJoinRequests(): Promise<MyJoinRequest[]> {
   return apiFetch<MyJoinRequest[]>("/join-requests");
+}
+
+export function fetchFridgeNotes(): Promise<FridgeNote[]> {
+  return apiFetch<FridgeNote[]>("/notes");
+}
+
+export function createFridgeNote(fridgeId: string, data: { text: string; color: FridgeNoteColor }): Promise<FridgeNote> {
+  return apiFetch<FridgeNote>(`/fridges/${fridgeId}/notes`, { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateFridgeNote(id: string, data: Partial<{ text: string; color: FridgeNoteColor }>): Promise<FridgeNote> {
+  return apiFetch<FridgeNote>(`/notes/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export function deleteFridgeNote(id: string): Promise<void> {
+  return apiFetch<void>(`/notes/${id}`, { method: "DELETE" });
 }
 
 export function approveJoinRequest(id: string): Promise<void> {

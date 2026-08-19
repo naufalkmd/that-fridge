@@ -8,6 +8,7 @@ use App\Http\Controllers\ExpiryScanController;
 use App\Http\Controllers\FridgeController;
 use App\Http\Controllers\FridgeJoinRequestController;
 use App\Http\Controllers\FridgeMemberController;
+use App\Http\Controllers\FridgeNoteController;
 use App\Http\Controllers\IngestionController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\MemoryController;
@@ -74,6 +75,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/join-requests', [FridgeJoinRequestController::class, 'myRequests']);
     Route::post('/join-requests/{joinRequest}/approve', [FridgeJoinRequestController::class, 'approve']);
     Route::post('/join-requests/{joinRequest}/decline', [FridgeJoinRequestController::class, 'decline']);
+
+    Route::get('/notes', [FridgeNoteController::class, 'index']);
+    Route::post('/fridges/{fridge}/notes', [FridgeNoteController::class, 'store']);
+    Route::patch('/notes/{note}', [FridgeNoteController::class, 'update']);
+    Route::delete('/notes/{note}', [FridgeNoteController::class, 'destroy']);
 
     // Find-a-friend: search is throttled (first rate-limited endpoint in this app) since it's
     // the only user-enumeration surface - everything else requires already knowing/being a

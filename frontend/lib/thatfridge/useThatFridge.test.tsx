@@ -610,6 +610,114 @@ describe("useThatFridge approveMyJoinRequestAction/declineMyJoinRequestAction", 
   });
 });
 
+describe("useThatFridge fridge notes", () => {
+  async function loginWithAFridgeAndANote() {
+    mockInitFetch();
+    vi.mocked(api.fetchFridges).mockResolvedValue([{ id: "f9", name: "Mine", role: "owner", memberCount: 1, sections: [] }]);
+    vi.mocked(api.fetchFridgeNotes).mockResolvedValue([
+      { id: "note1", fridgeId: "f9", fridgeName: "Mine", text: "Original note", color: "amber", authorName: "Riley", authorUsername: "riley", createdAt: Date.now(), updatedAt: Date.now() },
+    ]);
+
+    const { result } = renderHook(() => useThatFridge());
+    act(() => result.current.actions.onAuthEmailChange("joey@thatfridge.test"));
+    act(() => result.current.actions.onAuthPasswordChange("password123"));
+    await act(async () => {
+      await result.current.actions.submitAuth();
+    });
+    await waitFor(() => expect(result.current.state.fridgeNotes).toHaveLength(1));
+    return result;
+  }
+
+  it("posts a new note and calls the API", async () => {
+    const createMock = vi.mocked(api.createFridgeNote).mockResolvedValue({
+      id: "note2",
+      fridgeId: "f9",
+      fridgeName: "Mine",
+      text: "Don't forget to defrost the chicken",
+      color: "amber",
+      authorName: "Joey",
+      authorUsername: "joey",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    const result = await loginWithAFridgeAndANote();
+
+    act(() => result.current.actions.onNoteDraftTextChange("Don't forget to defrost the chicken"));
+    await act(async () => {
+      result.current.actions.submitNote("f9");
+    });
+
+    expect(createMock).toHaveBeenCalledWith("f9", { text: "Don't forget to defrost the chicken", color: "amber" });
+    await waitFor(() => expect(result.current.state.fridgeNotes).toHaveLength(2));
+    expect(result.current.state.noteDraftText).toBe("");
+  });
+
+  it("edits an existing note in place and calls the API", async () => {
+    const updateMock = vi.mocked(api.updateFridgeNote).mockResolvedValue({
+      id: "note1",
+      fridgeId: "f9",
+      fridgeName: "Mine",
+      text: "Edited note",
+      color: "blue",
+      authorName: "Riley",
+      authorUsername: "riley",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    const result = await loginWithAFridgeAndANote();
+
+    act(() => result.current.actions.startEditingNote("note1"));
+    expect(result.current.state.noteDraftText).toBe("Original note");
+    act(() => result.current.actions.onNoteDraftTextChange("Edited note"));
+    act(() => result.current.actions.onNoteDraftColorChange("blue"));
+    act(() => {
+      result.current.actions.submitNote("f9");
+    });
+
+    expect(updateMock).toHaveBeenCalledWith("note1", { text: "Edited note", color: "blue" });
+    expect(result.current.state.fridgeNotes[0].text).toBe("Edited note");
+    expect(result.current.state.editingNoteId).toBeNull();
+  });
+
+  it("rolls back an edit and surfaces a sync error on failure", async () => {
+    vi.mocked(api.updateFridgeNote).mockRejectedValue(new Error("network error"));
+    const result = await loginWithAFridgeAndANote();
+
+    act(() => result.current.actions.startEditingNote("note1"));
+    act(() => result.current.actions.onNoteDraftTextChange("Edited note"));
+    act(() => {
+      result.current.actions.submitNote("f9");
+    });
+
+    await waitFor(() => expect(result.current.state.syncError).toBeTruthy());
+    expect(result.current.state.fridgeNotes[0].text).toBe("Original note");
+  });
+
+  it("deletes a note and calls the API", async () => {
+    const deleteMock = vi.mocked(api.deleteFridgeNote).mockResolvedValue(undefined);
+    const result = await loginWithAFridgeAndANote();
+
+    act(() => {
+      result.current.actions.deleteFridgeNoteAction("note1");
+    });
+
+    expect(deleteMock).toHaveBeenCalledWith("note1");
+    expect(result.current.state.fridgeNotes).toHaveLength(0);
+  });
+
+  it("rolls back a delete and surfaces a sync error on failure", async () => {
+    vi.mocked(api.deleteFridgeNote).mockRejectedValue(new Error("network error"));
+    const result = await loginWithAFridgeAndANote();
+
+    act(() => {
+      result.current.actions.deleteFridgeNoteAction("note1");
+    });
+
+    await waitFor(() => expect(result.current.state.syncError).toBeTruthy());
+    expect(result.current.state.fridgeNotes).toHaveLength(1);
+  });
+});
+
 describe("useThatFridge shopping list seeding", () => {
   // Regression coverage for ensureShoppingSeed: it used to require /left|remaining/i to
   // match an item's note (in addition to quantity), which incorrectly matched notes like
@@ -1154,6 +1262,7 @@ function mockInitFetch() {
   vi.mocked(api.fetchBadges).mockResolvedValue([]);
   vi.mocked(api.fetchMyInvites).mockResolvedValue([]);
   vi.mocked(api.fetchMyJoinRequests).mockResolvedValue([]);
+  vi.mocked(api.fetchFridgeNotes).mockResolvedValue([]);
 }
 
 async function loginAsJoeyWithMockedFridges(result: { current: ReturnType<typeof useThatFridge> }) {

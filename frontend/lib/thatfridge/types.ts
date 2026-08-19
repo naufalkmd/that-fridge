@@ -339,3 +339,22 @@ export interface MyJoinRequest {
   requesterUsername: string;
   createdAt: number;
 }
+
+// A small fixed palette reusing existing theme tokens (theme.amber/blue/good/warn/bad) -
+// no new colors invented for this.
+export type FridgeNoteColor = "amber" | "blue" | "good" | "warn" | "bad";
+
+// A shared, communal sticky note on a fridge - any member can edit or delete any note, not
+// just its author (see FridgeNotePolicy on the backend). Fetched in aggregate across every
+// fridge the user belongs to, same shape as MyInvite/MyJoinRequest above.
+export interface FridgeNote {
+  id: string;
+  fridgeId: string;
+  fridgeName: string;
+  text: string;
+  color: FridgeNoteColor;
+  authorName: string | null;
+  authorUsername: string | null;
+  createdAt: number;
+  updatedAt: number;
+}

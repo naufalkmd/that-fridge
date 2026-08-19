@@ -29,6 +29,7 @@ import { useThatFridgeCtx } from "../ThatFridgeContext";
 import { bandColor } from "../AgentScoreCard";
 import { ScoreMeter } from "../CrewScene";
 import FoodIcon from "../FoodIcon";
+import FridgeNotesSection from "../FridgeNotesSection";
 import LocationIcon from "../LocationIcon";
 import MarkdownText from "../MarkdownText";
 import ShoppingListPanel from "../ShoppingListPanel";
@@ -570,6 +571,7 @@ export default function FoodHubScreen() {
 
           {/* organizer pane */}
           <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", padding: "20px 20px 100px", boxSizing: "border-box" }}>
+            <FridgeNotesSection />
             {allItems.length === 0 && (
               <div style={{ textAlign: "center", color: theme.text.faint, fontSize: 13, marginTop: 40 }}>
                 Nothing to organize yet — add items to sort them into place.

@@ -46,6 +46,16 @@ class Fridge extends Model
         return $this->hasMany(FridgeJoinRequest::class);
     }
 
+    public function notes(): HasMany
+    {
+        return $this->hasMany(FridgeNote::class);
+    }
+
+    public function shoppingItems(): HasMany
+    {
+        return $this->hasMany(ShoppingItem::class);
+    }
+
     /**
      * Every fridge, however it's created (controller, tests, tinker), always gets its owner
      * as a 'owner'-role member row too - membership-based authorization otherwise locks the

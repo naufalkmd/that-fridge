@@ -17,12 +17,14 @@ import {
   clearMemoryFactsApi,
   clearUsageHistoryApi,
   createFridge,
+  createFridgeNote,
   createItem,
   createRecipe,
   createSection,
   createShoppingItem,
   deleteChatSession,
   deleteFridge as apiDeleteFridge,
+  deleteFridgeNote,
   deleteItem,
   deleteMemoryFactApi,
   deleteRecipe as apiDeleteRecipe,
@@ -37,6 +39,7 @@ import {
   fetchChatSessionMessages,
   fetchChatSessions,
   fetchFridgeMembers,
+  fetchFridgeNotes,
   fetchFridges,
   fetchFriendProfile,
   fetchJoinRequests,
@@ -77,6 +80,7 @@ import {
   type UserGoalInput,
   unfavoriteRecipe,
   updateFridge,
+  updateFridgeNote,
   updateItem,
   updateNotificationEvent,
   updateNotificationPrefs,
@@ -103,6 +107,8 @@ import type {
   Fridge,
   FridgeJoinRequest,
   FridgeMember,
+  FridgeNote,
+  FridgeNoteColor,
   FridgeStyleKey,
   Item,
   MealType,
@@ -404,6 +410,15 @@ export interface ThatFridgeState {
   // Pending requests to join a fridge the current user owns, across all their fridges - the
   // Notifications page's counterpart to myInvites above, same bootstrap-fetch treatment.
   myJoinRequests: MyJoinRequest[];
+  // Every fridge note across every fridge the user belongs to - same bootstrap-fetch, aggregate
+  // treatment as myInvites/myJoinRequests above. The Organizer tab filters this client-side to
+  // whatever's in the current kitchen scope.
+  fridgeNotes: FridgeNote[];
+  // The single inline compose/edit row FridgeNotesSection uses for both creating a new note and
+  // editing an existing one - editingNoteId null means "composing new."
+  noteDraftText: string;
+  noteDraftColor: FridgeNoteColor;
+  editingNoteId: string | null;
   // Find-a-friend search + the profile screen it opens into.
   friendSearchQuery: string;
   friendSearchResults: UserSearchResult[];
@@ -550,6 +565,10 @@ export function initialState(): ThatFridgeState {
     inviteSearchLoading: false,
     myInvites: [],
     myJoinRequests: [],
+    fridgeNotes: [],
+    noteDraftText: "",
+    noteDraftColor: "amber",
+    editingNoteId: null,
     friendSearchQuery: "",
     friendSearchResults: [],
     friendSearchLoading: false,
@@ -712,6 +731,7 @@ export function useThatFridge() {
       fetchBadges(),
       fetchMyInvites(),
       fetchMyJoinRequests(),
+      fetchFridgeNotes(),
     ]).then(
       ([
         fridges,
@@ -728,6 +748,7 @@ export function useThatFridge() {
         badges,
         myInvites,
         myJoinRequests,
+        fridgeNotes,
       ]) => {
         if (cancelled) return;
         const restoredChatMessages: ChatMessage[] = chatHistory.messages.flatMap((row) => [
@@ -756,6 +777,7 @@ export function useThatFridge() {
           badges,
           myInvites,
           myJoinRequests,
+          fridgeNotes,
           ...(restoredChatMessages.length ? { chatMessages: restoredChatMessages } : {}),
         });
       }
@@ -1191,6 +1213,49 @@ export function useThatFridge() {
     patch((s) => ({ myJoinRequests: s.myJoinRequests.filter((r) => r.id !== id) }));
     declineJoinRequest(id).catch((err) => {
       patch({ myJoinRequests: prevRequests, syncError: describeError(err, "Couldn't decline that request.") });
+    });
+  };
+
+  const onNoteDraftTextChange = (value: string) => patch({ noteDraftText: value });
+  const onNoteDraftColorChange = (value: FridgeNoteColor) => patch({ noteDraftColor: value });
+  const startEditingNote = (id: string) => {
+    const note = state.fridgeNotes.find((n) => n.id === id);
+    if (!note) return;
+    patch({ editingNoteId: id, noteDraftText: note.text, noteDraftColor: note.color });
+  };
+  const cancelEditingNote = () => patch({ editingNoteId: null, noteDraftText: "", noteDraftColor: "amber" });
+  const submitNote = (fridgeId: string) => {
+    const text = state.noteDraftText.trim();
+    if (!text) return;
+    const color = state.noteDraftColor;
+    const editingId = state.editingNoteId;
+
+    if (editingId) {
+      const prevNotes = state.fridgeNotes;
+      patch((s) => ({
+        fridgeNotes: s.fridgeNotes.map((n) => (n.id === editingId ? { ...n, text, color } : n)),
+        editingNoteId: null,
+        noteDraftText: "",
+        noteDraftColor: "amber",
+      }));
+      updateFridgeNote(editingId, { text, color }).catch((err) => {
+        patch({ fridgeNotes: prevNotes, syncError: describeError(err, "Couldn't save that note.") });
+      });
+      return;
+    }
+
+    patch({ noteDraftText: "", noteDraftColor: "amber" });
+    createFridgeNote(fridgeId, { text, color })
+      .then((note) => patch((s) => ({ fridgeNotes: [note, ...s.fridgeNotes] })))
+      .catch((err) => {
+        patch({ syncError: describeError(err, "Couldn't post that note.") });
+      });
+  };
+  const deleteFridgeNoteAction = (id: string) => {
+    const prevNotes = state.fridgeNotes;
+    patch((s) => ({ fridgeNotes: s.fridgeNotes.filter((n) => n.id !== id) }));
+    deleteFridgeNote(id).catch((err) => {
+      patch({ fridgeNotes: prevNotes, syncError: describeError(err, "Couldn't delete that note.") });
     });
   };
 
@@ -2721,6 +2786,12 @@ export function useThatFridge() {
     declineMyInvite,
     approveMyJoinRequestAction,
     declineMyJoinRequestAction,
+    onNoteDraftTextChange,
+    onNoteDraftColorChange,
+    startEditingNote,
+    cancelEditingNote,
+    submitNote,
+    deleteFridgeNoteAction,
     removeFridgeMemberAction,
     leaveFridgeAction,
     openSearch,
