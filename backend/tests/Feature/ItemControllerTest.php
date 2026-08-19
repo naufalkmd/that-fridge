@@ -65,6 +65,52 @@ class ItemControllerTest extends TestCase
         $response->assertJson(['data' => ['nutrition_category' => null]]);
     }
 
+    public function test_store_accepts_and_returns_a_shop_url(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+
+        $response = $this->actingAs($user)->postJson("/api/sections/{$section->id}/items", [
+            'name' => 'Milk',
+            'icon' => 'milk',
+            'shop_url' => 'https://example.com/milk',
+        ]);
+
+        $response->assertStatus(201);
+        $response->assertJson(['data' => ['shop_url' => 'https://example.com/milk']]);
+        $this->assertDatabaseHas('items', ['name' => 'Milk', 'shop_url' => 'https://example.com/milk']);
+    }
+
+    public function test_store_rejects_an_invalid_shop_url(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+
+        $response = $this->actingAs($user)->postJson("/api/sections/{$section->id}/items", [
+            'name' => 'Milk',
+            'icon' => 'milk',
+            'shop_url' => 'not a url',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('shop_url');
+    }
+
+    public function test_update_can_set_and_clear_the_shop_url(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        $item = $section->items()->create(['name' => 'Milk', 'icon' => 'milk']);
+
+        $setResponse = $this->actingAs($user)->patchJson("/api/items/{$item->id}", ['shop_url' => 'https://example.com/milk']);
+        $setResponse->assertStatus(200);
+        $setResponse->assertJson(['data' => ['shop_url' => 'https://example.com/milk']]);
+
+        $clearResponse = $this->actingAs($user)->patchJson("/api/items/{$item->id}", ['shop_url' => null]);
+        $clearResponse->assertStatus(200);
+        $clearResponse->assertJson(['data' => ['shop_url' => null]]);
+    }
+
     public function test_update_can_change_nutrition_category(): void
     {
         $user = User::factory()->create();

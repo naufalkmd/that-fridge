@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, PackageOpen, Pencil, ShoppingCart } from "lucide-react";
+import { Check, ChevronDown, ExternalLink, PackageOpen, Pencil, ShoppingCart } from "lucide-react";
 import { FOOD_ICON_KEYS, ICON_LABELS, NUTRITION_CATEGORIES } from "@/lib/thatfridge/data";
 import { findItem } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
@@ -186,12 +186,23 @@ export default function ItemDetailSheet() {
             />
           </div>
 
-          <div style={{ marginBottom: 22 }}>
+          <div style={{ marginBottom: 14 }}>
             <div style={labelStyle}>NOTE (OPTIONAL)</div>
             <input
               value={state.editNote}
               onChange={(e) => actions.onEditNoteChange(e.target.value)}
               placeholder="e.g. 2 loaves"
+              style={fieldStyle}
+            />
+          </div>
+
+          <div style={{ marginBottom: 22 }}>
+            <div style={labelStyle}>SHOP LINK (OPTIONAL)</div>
+            <input
+              type="url"
+              value={state.editShopUrl}
+              onChange={(e) => actions.onEditShopUrlChange(e.target.value)}
+              placeholder="https://…"
               style={fieldStyle}
             />
           </div>
@@ -323,27 +334,49 @@ export default function ItemDetailSheet() {
           <div style={{ fontSize: 12.5, lineHeight: 1.45, color: theme.text.primary }}>{tip}</div>
         </div>
 
-        <div
-          onClick={() => !onShoppingList && actions.addPredictedToShopping(item.name, item.icon)}
-          title={onShoppingList ? "Already on your shopping list" : "Queue this up so it's easy to buy again"}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            padding: 11,
-            borderRadius: theme.radius.sm,
-            background: theme.bg.surface2,
-            border: `1px solid ${theme.border.hairline}`,
-            color: onShoppingList ? theme.good : theme.blue,
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: onShoppingList ? "default" : "pointer",
-            marginBottom: 20,
-          }}
-        >
-          {onShoppingList ? <Check size={14} strokeWidth={2.6} /> : <ShoppingCart size={14} strokeWidth={2.2} />}
-          {onShoppingList ? "On your shopping list" : "Add to shopping list"}
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          <div
+            onClick={() => !onShoppingList && actions.addPredictedToShopping(item.name, item.icon, item.shopUrl)}
+            title={onShoppingList ? "Already on your shopping list" : "Queue this up so it's easy to buy again"}
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              padding: 11,
+              borderRadius: theme.radius.sm,
+              background: theme.bg.surface2,
+              border: `1px solid ${theme.border.hairline}`,
+              color: onShoppingList ? theme.good : theme.blue,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: onShoppingList ? "default" : "pointer",
+            }}
+          >
+            {onShoppingList ? <Check size={14} strokeWidth={2.6} /> : <ShoppingCart size={14} strokeWidth={2.2} />}
+            {onShoppingList ? "On your shopping list" : "Add to shopping list"}
+          </div>
+          {item.shopUrl && (
+            <div
+              onClick={() => window.open(item.shopUrl!, "_blank", "noopener,noreferrer")}
+              title="Open the shop link"
+              style={{
+                width: 44,
+                flex: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: theme.radius.sm,
+                background: theme.bg.surface2,
+                border: `1px solid ${theme.border.hairline}`,
+                color: theme.blue,
+                cursor: "pointer",
+              }}
+            >
+              <ExternalLink size={15} strokeWidth={2.2} />
+            </div>
+          )}
         </div>
 
         </div>

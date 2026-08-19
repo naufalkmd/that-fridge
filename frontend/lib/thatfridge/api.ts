@@ -240,6 +240,7 @@ export interface CreateItemInput {
   expiry_date?: string;
   shelf_life_days?: number;
   note?: string;
+  shop_url?: string | null;
 }
 
 export async function createItem(sectionId: string, data: CreateItemInput) {
@@ -257,6 +258,7 @@ export interface UpdateItemInput {
   expiry_date?: string;
   shelf_life_days?: number;
   note?: string;
+  shop_url?: string | null;
 }
 
 export async function updateItem(id: string, data: UpdateItemInput) {
@@ -371,11 +373,11 @@ export function fetchShoppingItems(): Promise<ShoppingItem[]> {
   return apiFetch<ShoppingItem[]>("/shopping-items");
 }
 
-export function createShoppingItem(data: { name: string; icon: string | null; section: string }): Promise<ShoppingItem> {
+export function createShoppingItem(data: { name: string; icon: string | null; section: string; shopUrl?: string | null }): Promise<ShoppingItem> {
   return apiFetch<ShoppingItem>("/shopping-items", { method: "POST", body: JSON.stringify(data) });
 }
 
-export function updateShoppingItem(id: string, data: Partial<{ name: string; icon: string | null; section: string; checked: boolean }>): Promise<ShoppingItem> {
+export function updateShoppingItem(id: string, data: Partial<{ name: string; icon: string | null; section: string; checked: boolean; shopUrl: string | null }>): Promise<ShoppingItem> {
   return apiFetch<ShoppingItem>(`/shopping-items/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 }
 

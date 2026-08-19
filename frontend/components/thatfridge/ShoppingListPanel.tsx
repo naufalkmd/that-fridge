@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Plus, X } from "lucide-react";
+import { Check, ExternalLink, Plus, X } from "lucide-react";
 import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
 
@@ -39,6 +39,15 @@ export default function ShoppingListPanel() {
             <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderBottom: `1px solid ${theme.border.hairline}` }}>
               <div onClick={() => actions.toggleShoppingItem(item.id)} style={{ width: 22, height: 22, borderRadius: theme.radius.sm, border: `1.5px solid ${theme.border.strong}`, flex: "none", cursor: "pointer" }} />
               <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: theme.text.primary }}>{item.name}</div>
+              {item.shopUrl && (
+                <div
+                  onClick={() => window.open(item.shopUrl!, "_blank", "noopener,noreferrer")}
+                  title="Open the shop link"
+                  style={{ display: "flex", cursor: "pointer", padding: 4 }}
+                >
+                  <ExternalLink size={14} color={theme.blue} strokeWidth={2} />
+                </div>
+              )}
               <div onClick={() => actions.removeShoppingItem(item.id)} style={{ display: "flex", cursor: "pointer", padding: 4 }}>
                 <X size={14} color={theme.text.faint} strokeWidth={2} />
               </div>

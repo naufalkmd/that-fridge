@@ -967,6 +967,16 @@ export default function AddScreen() {
                 style={fieldStyle}
               />
             </div>
+            <div>
+              <div style={labelStyle}>SHOP LINK (OPTIONAL)</div>
+              <input
+                type="url"
+                value={state.manualShopUrl}
+                onChange={(e) => actions.onManualShopUrlChange(e.target.value)}
+                placeholder="https://…"
+                style={fieldStyle}
+              />
+            </div>
           </div>
           <div
             onClick={actions.confirmManualAdd}

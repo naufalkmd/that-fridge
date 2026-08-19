@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'shelf_life_days',
     'note',
     'source',
+    'shop_url',
 ])]
 class Item extends Model
 {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { routeChatAgent, useThatFridge } from "./useThatFridge";
+import { normalizeShopUrl, routeChatAgent, useThatFridge } from "./useThatFridge";
 import { getRecipesView, getScopedItems } from "./selectors";
 import * as api from "./api";
 
@@ -50,6 +50,61 @@ describe("routeChatAgent", () => {
 
   it("defaults to Chef for anything ambiguous", () => {
     expect(routeChatAgent("hello there")).toBe("Chef");
+  });
+});
+
+describe("normalizeShopUrl", () => {
+  it("trims whitespace and leaves an already-schemed URL alone", () => {
+    expect(normalizeShopUrl("  https://example.com/milk  ")).toBe("https://example.com/milk");
+    expect(normalizeShopUrl("http://example.com/milk")).toBe("http://example.com/milk");
+  });
+
+  it("prepends https:// when the value has no scheme", () => {
+    expect(normalizeShopUrl("amazon.com/dp/xyz")).toBe("https://amazon.com/dp/xyz");
+  });
+
+  it("returns null for an empty or whitespace-only value", () => {
+    expect(normalizeShopUrl("")).toBeNull();
+    expect(normalizeShopUrl("   ")).toBeNull();
+  });
+});
+
+describe("useThatFridge addPredictedToShopping", () => {
+  it("carries a source item's shop link through to the created shopping entry", async () => {
+    const createMock = vi.mocked(api.createShoppingItem).mockResolvedValue({
+      id: "s1",
+      name: "Milk",
+      icon: "milk",
+      section: "dairy",
+      checked: false,
+      shopUrl: "https://example.com/milk",
+    });
+    const { result } = renderHook(() => useThatFridge());
+
+    await act(async () => {
+      await result.current.actions.addPredictedToShopping("Milk", "milk", "https://example.com/milk");
+    });
+
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ name: "Milk", icon: "milk", shopUrl: "https://example.com/milk" }));
+    expect(result.current.state.shoppingList[0]?.shopUrl).toBe("https://example.com/milk");
+  });
+
+  it("defaults to null when no shop link is passed", async () => {
+    const createMock = vi.mocked(api.createShoppingItem).mockResolvedValue({
+      id: "s1",
+      name: "Bread",
+      icon: "bread",
+      section: "bakery",
+      checked: false,
+      shopUrl: null,
+    });
+    const { result } = renderHook(() => useThatFridge());
+
+    await act(async () => {
+      await result.current.actions.addPredictedToShopping("Bread", "bread");
+    });
+
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ name: "Bread", icon: "bread", shopUrl: null }));
   });
 });
 
@@ -436,6 +491,7 @@ describe("useThatFridge shopping list seeding", () => {
         days: 30,
         note: "Leftovers from Tuesday",
         qty: 5, // well-stocked
+        shopUrl: null,
       })
       .mockResolvedValueOnce({
         id: "i2",
@@ -445,6 +501,7 @@ describe("useThatFridge shopping list seeding", () => {
         days: 7,
         note: "fresh carton",
         qty: 1, // genuinely low stock
+        shopUrl: null,
       });
 
     const { result } = renderHook(() => useThatFridge());
@@ -478,8 +535,8 @@ describe("useThatFridge Organizer suggested moves", () => {
     // same section id and the items below would appear to live in all of them at once.
     vi.mocked(api.createSection).mockImplementation((fridgeId, name) => Promise.resolve({ id: `sec-${name}`, name, items: [] }));
     vi.mocked(api.createItem)
-      .mockResolvedValueOnce({ id: "i1", name: "Frozen Peas", icon: "leftovers", freshness: 90, days: 90, note: "", qty: 1, location: "fridge" })
-      .mockResolvedValueOnce({ id: "i2", name: "Milk", icon: "milk", freshness: 90, days: 7, note: "", qty: 1, location: "fridge" });
+      .mockResolvedValueOnce({ id: "i1", name: "Frozen Peas", icon: "leftovers", freshness: 90, days: 90, note: "", qty: 1, location: "fridge", shopUrl: null })
+      .mockResolvedValueOnce({ id: "i2", name: "Milk", icon: "milk", freshness: 90, days: 7, note: "", qty: 1, location: "fridge", shopUrl: null });
     vi.mocked(api.sendChatMessage).mockResolvedValue({
       agent: "Organizer",
       user_message: "How should I organize my fridge right now?",
@@ -556,6 +613,7 @@ describe("useThatFridge Organizer suggested moves", () => {
       note: "",
       qty: 1,
       location: "freezer",
+      shopUrl: null,
     });
 
     const { result } = renderHook(() => useThatFridge());
@@ -830,7 +888,7 @@ describe("useThatFridge Mark as made", () => {
   it("marking an ingredient 'remaining' keeps the item in the fridge, opened, and still countable for other recipes", async () => {
     vi.mocked(api.createFridge).mockResolvedValue({ id: "f1", name: "My Fridge", sections: [] });
     vi.mocked(api.createSection).mockImplementation((fridgeId, name) => Promise.resolve({ id: `sec-${name}`, name, items: [] }));
-    vi.mocked(api.createItem).mockResolvedValue({ id: "i1", name: "Milk", icon: "milk", freshness: 90, days: 7, note: "", qty: 1 });
+    vi.mocked(api.createItem).mockResolvedValue({ id: "i1", name: "Milk", icon: "milk", freshness: 90, days: 7, note: "", qty: 1, shopUrl: null });
     vi.mocked(api.markRecipeMade).mockResolvedValue({
       id: "r1",
       name: "Pancakes",
@@ -943,7 +1001,7 @@ function mockInitFetch() {
   vi.mocked(api.fetchFridges).mockResolvedValue([
     { id: "f1", name: "New Fridge", sections: [] },
     { id: "f2", name: "New Fridge", sections: [] },
-    { id: "f3", name: "Garage", sections: [{ id: "s1", name: "Protein", items: [{ id: "i1", name: "Eggs", icon: "eggs", freshness: 90, days: 11, note: "", qty: 1 }] }] },
+    { id: "f3", name: "Garage", sections: [{ id: "s1", name: "Protein", items: [{ id: "i1", name: "Eggs", icon: "eggs", freshness: 90, days: 11, note: "", qty: 1, shopUrl: null }] }] },
   ]);
   vi.mocked(api.fetchRecipes).mockResolvedValue([]);
   vi.mocked(api.fetchShoppingItems).mockResolvedValue([]);

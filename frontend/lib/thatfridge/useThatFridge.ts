@@ -246,6 +246,14 @@ function describeError(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.message : fallback;
 }
 
+// A pasted "amazon.com/dp/..." with no scheme would otherwise trip the backend's `url`
+// validator - prepend https:// rather than rejecting it, since that's obviously what was meant.
+export function normalizeShopUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
 export interface ThatFridgeState {
   screen: Screen;
   lastMainScreen: "home" | "inventory";
@@ -274,6 +282,7 @@ export interface ThatFridgeState {
   editFridgeIndex: number;
   editExpiryDate: string;
   editNote: string;
+  editShopUrl: string;
   addStep: number;
   addFridgeIndex: number;
   scanMethod: ScanMethod | null;
@@ -304,6 +313,7 @@ export interface ThatFridgeState {
   manualLocation: StorageLocation;
   manualExpiryDate: string;
   manualNote: string;
+  manualShopUrl: string;
   usageHistory: UsageHistoryEntry[];
   // Durable facts (preferences, restrictions, habits) MemoryService has extracted from
   // past real chat messages - distinct from usageHistory's item-frequency tally. Shown on
@@ -451,6 +461,7 @@ export function initialState(): ThatFridgeState {
     editFridgeIndex: 0,
     editExpiryDate: "",
     editNote: "",
+    editShopUrl: "",
     addStep: 0,
     addFridgeIndex: 0,
     scanMethod: null,
@@ -478,6 +489,7 @@ export function initialState(): ThatFridgeState {
     manualLocation: "fridge",
     manualExpiryDate: defaultExpiryDate(),
     manualNote: "",
+    manualShopUrl: "",
     usageHistory: [],
     memoryFacts: [],
     searchQuery: "",
@@ -1204,6 +1216,7 @@ export function useThatFridge() {
         icon: i.icon,
         section: ICON_SECTION[i.icon] || "other",
         checked: false,
+        shopUrl: i.shopUrl,
       }));
       return { shoppingList: seeded, shoppingSeeded: true };
     });
@@ -1600,10 +1613,10 @@ export function useThatFridge() {
     if (failedCount) patch({ syncError: `Couldn't clear ${failedCount} item${failedCount > 1 ? "s" : ""}.` });
   };
 
-  const addPredictedToShopping = async (name: string, icon: string) => {
+  const addPredictedToShopping = async (name: string, icon: string, shopUrl?: string | null) => {
     if (state.shoppingList.some((i) => !i.checked && i.name.toLowerCase() === name.toLowerCase())) return;
     try {
-      const entry = await createShoppingItem({ name, icon, section: ICON_SECTION[icon] || "other" });
+      const entry = await createShoppingItem({ name, icon, section: ICON_SECTION[icon] || "other", shopUrl: shopUrl ?? null });
       patch((s) => ({ shoppingList: [...s.shoppingList, entry] }));
     } catch (err) {
       patch({ syncError: describeError(err, "Couldn't add the suggestion.") });
@@ -1819,6 +1832,7 @@ export function useThatFridge() {
       manualSectionId: "",
       manualExpiryDate: defaultExpiryDate(),
       manualNote: "",
+      manualShopUrl: "",
     }));
   const goTab = (screen: Screen) =>
     patch((s) => ({
@@ -1842,6 +1856,7 @@ export function useThatFridge() {
       manualLocation: "fridge",
       manualExpiryDate: defaultExpiryDate(),
       manualNote: "",
+      manualShopUrl: "",
     }));
   const selectAddFridge = (index: number) =>
     patch((s) => ({
@@ -1869,6 +1884,7 @@ export function useThatFridge() {
       editFridgeIndex: found.fridgeIndex,
       editExpiryDate: toISODate(target),
       editNote: found.item.note,
+      editShopUrl: found.item.shopUrl || "",
     });
   };
   const cancelEditItem = () => patch({ isEditingItem: false });
@@ -1878,6 +1894,7 @@ export function useThatFridge() {
   const onEditCategoryChange = (value: string) => patch({ editCategory: value });
   const onEditExpiryDateChange = (value: string) => patch({ editExpiryDate: value });
   const onEditNoteChange = (value: string) => patch({ editNote: value });
+  const onEditShopUrlChange = (value: string) => patch({ editShopUrl: value });
   const confirmEditItem = () => {
     const id = state.selectedItemId;
     if (!id) return;
@@ -1890,6 +1907,7 @@ export function useThatFridge() {
     const icon = state.editIcon || prevItem.icon;
     const category = (state.editCategory || prevItem.nutritionCategory || null) as NutritionCategory | null;
     const note = state.editNote.trim();
+    const shopUrl = normalizeShopUrl(state.editShopUrl);
     const moved = toSectionId !== fromSection.id;
 
     const expiryDate = state.editExpiryDate;
@@ -1902,7 +1920,7 @@ export function useThatFridge() {
       if (!found2) return {};
       const { item, section: fromSec, fridgeIndex } = found2;
       const fridge = s.fridges[fridgeIndex];
-      const updatedItem = { ...item, name, icon, nutritionCategory: category, note, days: newDays, freshness: newFreshness };
+      const updatedItem = { ...item, name, icon, nutritionCategory: category, note, shopUrl, days: newDays, freshness: newFreshness };
 
       const sections =
         toSectionId === fromSec.id
@@ -1926,6 +1944,7 @@ export function useThatFridge() {
       icon,
       nutrition_category: category,
       note,
+      shop_url: shopUrl,
       expiry_date: expiryDate,
       shelf_life_days: shelfLifeDays,
       ...(moved ? { section_id: toSectionId } : {}),
@@ -2103,6 +2122,7 @@ export function useThatFridge() {
         manualLocation: "fridge",
         manualExpiryDate: defaultExpiryDate(),
         manualNote: "",
+        manualShopUrl: "",
       }));
       return;
     }
@@ -2458,15 +2478,17 @@ export function useThatFridge() {
   };
   const chooseManualCondition = (condition: ProduceCondition) => runManualAutoFill(condition);
   const onManualNoteChange = (value: string) => patch({ manualNote: value });
+  const onManualShopUrlChange = (value: string) => patch({ manualShopUrl: value });
   const confirmManualAdd = async () => {
     const name = state.manualName.trim();
     if (!name) return;
     const note = state.manualNote.trim() || "Added manually";
+    const shopUrl = normalizeShopUrl(state.manualShopUrl);
     const location = state.manualLocation;
     const expiryDate = state.manualExpiryDate;
     const shelfLifeDays = Math.max(1, daysUntil(expiryDate));
 
-    patch({ screen: state.lastMainScreen, addStep: 0, scanMethod: null, manualName: "", manualNote: "" });
+    patch({ screen: state.lastMainScreen, addStep: 0, scanMethod: null, manualName: "", manualNote: "", manualShopUrl: "" });
 
     try {
       let fridgeIndex = state.addFridgeIndex;
@@ -2496,6 +2518,7 @@ export function useThatFridge() {
         expiry_date: expiryDate,
         shelf_life_days: shelfLifeDays,
         note,
+        shop_url: shopUrl,
       });
       patch((s) => ({
         fridges: s.fridges.map((f, i) =>
@@ -2704,6 +2727,7 @@ export function useThatFridge() {
     onEditCategoryChange,
     onEditExpiryDateChange,
     onEditNoteChange,
+    onEditShopUrlChange,
     confirmEditItem,
     undoLastRemoval,
     dismissSyncError,
@@ -2728,6 +2752,7 @@ export function useThatFridge() {
     suggestManualDetails,
     chooseManualCondition,
     onManualNoteChange,
+    onManualShopUrlChange,
     confirmManualAdd,
     confirmAdd,
     setItemLocation,

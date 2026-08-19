@@ -29,6 +29,7 @@ class ItemController extends Controller
             'shelf_life_days' => ['nullable', 'integer', 'min:1'],
             'note' => ['nullable', 'string', 'max:255'],
             'source' => ['nullable', 'string', 'in:manual,barcode,receipt,photo,voice'],
+            'shop_url' => ['nullable', 'string', 'max:2048', 'url'],
         ]);
 
         $item = $section->items()->create($data);
@@ -54,6 +55,7 @@ class ItemController extends Controller
             'shelf_life_days' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'note' => ['sometimes', 'nullable', 'string', 'max:255'],
             'source' => ['sometimes', 'nullable', 'string', 'in:manual,barcode,receipt,photo,voice'],
+            'shop_url' => ['sometimes', 'nullable', 'string', 'max:2048', 'url'],
         ]);
 
         $item->update($data);

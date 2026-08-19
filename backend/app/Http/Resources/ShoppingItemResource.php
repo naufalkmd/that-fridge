@@ -20,6 +20,7 @@ class ShoppingItemResource extends JsonResource
             'icon' => $this->icon,
             'section' => $this->section,
             'checked' => $this->checked,
+            'shopUrl' => $this->shop_url,
         ];
     }
 }

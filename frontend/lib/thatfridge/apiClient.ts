@@ -65,6 +65,7 @@ export interface RawItem {
   note: string | null;
   location: StorageLocation | null;
   quantity: number | null;
+  shop_url: string | null;
 }
 
 export function toClientItem(raw: RawItem): Item {
@@ -79,5 +80,6 @@ export function toClientItem(raw: RawItem): Item {
     qty: raw.quantity ?? 1,
     opened: false,
     location: raw.location ?? undefined,
+    shopUrl: raw.shop_url ?? null,
   };
 }

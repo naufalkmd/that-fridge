@@ -22,6 +22,7 @@ export interface Item {
   qty: number;
   opened?: boolean;
   location?: StorageLocation;
+  shopUrl: string | null;
 }
 
 export interface Section {
@@ -120,6 +121,7 @@ export interface ShoppingItem {
   icon: string | null;
   section: string;
   checked: boolean;
+  shopUrl: string | null;
 }
 
 export interface RecipeSuggestion {
