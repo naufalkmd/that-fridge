@@ -173,7 +173,10 @@ export default function HomeScreen() {
   // edge, including the "Add another fridge" form when that's the last, fully-visible card.
   const [attnCanScrollRight, setAttnCanScrollRight] = useState(false);
   const [fridgesCanScrollRight, setFridgesCanScrollRight] = useState(false);
-  const canScrollRight = (el: HTMLDivElement | null) => !!el && el.scrollWidth - el.clientWidth - el.scrollLeft > 4;
+  // Threshold matches the fade overlay's own width below - once less than a fade-width of
+  // content remains offscreen, the fade would just be washing out content that's already
+  // fully visible (eg. the trailing "Add another fridge" card) instead of hinting at more.
+  const canScrollRight = (el: HTMLDivElement | null) => !!el && el.scrollWidth - el.clientWidth - el.scrollLeft > 44;
   useEffect(() => {
     const check = () => {
       setAttnCanScrollRight(canScrollRight(attnRowRef.current));
@@ -300,7 +303,7 @@ export default function HomeScreen() {
 
       {/* overview */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 13, marginBottom: 11 }}>Overview</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 13, marginBottom: 11 }}>Overview</div>
         <div style={{ display: "flex", gap: 10 }}>
           {[
             { label: "Items", value: totalItemCount, color: theme.blue, bg: `${theme.blue}1a`, Icon: Package, onClick: () => actions.goTab("inventory") },
@@ -354,7 +357,6 @@ export default function HomeScreen() {
                   borderRadius: theme.radius.xl,
                   overflow: "hidden",
                   background: fr.bg,
-                  animation: "glow 5s ease-in-out infinite",
                 }}
               >
                 {!fr.isCustom && (
@@ -466,7 +468,7 @@ export default function HomeScreen() {
 
       {/* meet your crew */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 13, marginBottom: 11 }}>Your crew</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 13, marginBottom: 11 }}>Your crew</div>
         <CrewScene />
       </div>
 
@@ -536,7 +538,7 @@ export default function HomeScreen() {
       {/* header: title/greeting/fridge-scope toggle on the left, overview stats + bell on the right */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20, marginBottom: 28 }}>
         <div>
-          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 20, letterSpacing: 0.5, marginBottom: 6 }}>Home</div>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 20, letterSpacing: 0.5, marginBottom: 6 }}>Home</div>
           <div style={{ fontSize: 12.5, color: theme.text.muted, marginBottom: 10 }}>
             Welcome back{firstName ? `, ${firstName}` : ""} — here&apos;s what&apos;s going on in your kitchen.
           </div>
@@ -624,7 +626,7 @@ export default function HomeScreen() {
       <div style={{ marginBottom: 28 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
-            <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 13 }}>Needs attention</div>
+            <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 13 }}>Needs attention</div>
             <div style={{ fontSize: 11.5, color: theme.text.muted }}>
               {expiringItems.length === 0 ? "All caught up" : `${expiringItems.length} item${expiringItems.length === 1 ? "" : "s"} expiring soon`}
             </div>
@@ -682,7 +684,7 @@ export default function HomeScreen() {
       <div style={{ marginBottom: 28 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
-            <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 13 }}>Your fridges</div>
+            <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 13 }}>Your fridges</div>
             <div style={{ fontSize: 11.5, color: theme.text.muted }}>
               {fridgeCount} space{fridgeCount === 1 ? "" : "s"}
             </div>
@@ -827,7 +829,7 @@ export default function HomeScreen() {
       <div style={{ background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.lg, padding: 20, display: "grid", gridTemplateColumns: "minmax(0, 0.82fr) minmax(0, 1fr)", gap: 22 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 13 }}>Your crew</div>
+            <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 13 }}>Your crew</div>
             <div onClick={actions.openRecipesHub} style={{ fontSize: 11.5, fontWeight: 700, color: theme.blue, cursor: "pointer" }}>
               Open →
             </div>

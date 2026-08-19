@@ -46,10 +46,10 @@ export default function Sidebar() {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 6px" }}>
-        <div style={{ width: 32, height: 32, borderRadius: theme.radius.sm, background: theme.bg.surface2, border: `1px solid ${theme.border.hairline}`, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-          <Image src="/images/thatfridge/logo.svg" alt="ThatFridge" width={20} height={21} unoptimized style={{ objectFit: "contain" }} />
+        <div style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+          <Image src="/images/thatfridge/logo.svg" alt="ThatFridge" width={26} height={27} unoptimized style={{ objectFit: "contain" }} />
         </div>
-        <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.2 }}>ThatFridge</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 17, letterSpacing: 0.5 }}>ThatFridge</div>
       </div>
 
       <nav style={{ display: "flex", flexDirection: "column", gap: 2 }}>

@@ -164,7 +164,7 @@ export default function RecipeFormSheet() {
           onClick={actions.closeRecipeForm}
           style={{ width: 36, height: 5, borderRadius: 3, background: theme.border.strong, margin: "0 auto 16px", cursor: "pointer", flex: "none" }}
         />
-        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 14, marginBottom: 18, flex: "none" }}>{isEditing ? "Edit recipe" : "New recipe"}</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 14, marginBottom: 18, flex: "none" }}>{isEditing ? "Edit recipe" : "New recipe"}</div>
 
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           <div style={{ marginBottom: 16 }}>

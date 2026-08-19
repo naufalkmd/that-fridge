@@ -100,7 +100,7 @@ export default function InventoryScreen() {
     <div className="thatfridge-inventory-mobile" style={{ position: "absolute", inset: 0, overflowY: "auto", padding: "28px 20px 180px" }}>
       {/* header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 16, letterSpacing: 0.5 }}>Inventory</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 16, letterSpacing: 0.5 }}>Inventory</div>
         <div
           onClick={actions.openSearch}
           style={{
@@ -285,7 +285,7 @@ export default function InventoryScreen() {
     <div className="thatfridge-inventory-wide">
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24, marginBottom: 22 }}>
         <div>
-          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 21, letterSpacing: 0.5, marginBottom: 8 }}>Inventory</div>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 21, letterSpacing: 0.5, marginBottom: 8 }}>Inventory</div>
           <div style={{ fontSize: 13.5, color: theme.text.muted }}>
             {allItems.length} item{allItems.length === 1 ? "" : "s"} · {getScopeLabel(state)}
           </div>

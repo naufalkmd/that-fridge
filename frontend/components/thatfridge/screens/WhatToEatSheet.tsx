@@ -140,7 +140,7 @@ export default function WhatToEatSheet() {
         />
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flex: "none" }}>
           <ChefHat size={18} color={theme.text.primary} strokeWidth={2.2} />
-          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 14, color: theme.text.primary }}>What should I eat?</div>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 14, color: theme.text.primary }}>What should I eat?</div>
         </div>
 
         <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginBottom: 18, flex: "none" }}>

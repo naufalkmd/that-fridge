@@ -63,7 +63,7 @@ export default function GoalsScreen() {
           <ChevronLeft className="thatfridge-show-desktop" size={17} color={theme.text.muted} strokeWidth={2.2} />
         </div>
         <div>
-          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 15 }}>Goal</div>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 15 }}>Goal</div>
           <div style={{ fontSize: 11.5, color: theme.text.faint }}>Give your kitchen score something concrete to aim for</div>
         </div>
       </div>

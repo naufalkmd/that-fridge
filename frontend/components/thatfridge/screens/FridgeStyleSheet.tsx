@@ -39,7 +39,7 @@ export default function FridgeStyleSheet() {
     <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 10 }}>
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, top: 120, background: theme.bg.surface, borderRadius: `${theme.radius.xl}px ${theme.radius.xl}px 0 0`, padding: "14px 22px 26px", animation: "pop .22s ease-out", display: "flex", flexDirection: "column" }}>
         <div onClick={actions.closeStylePicker} style={{ width: 36, height: 5, borderRadius: 3, background: theme.border.strong, margin: "0 auto 16px", cursor: "pointer", flex: "none" }} />
-        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 13, marginBottom: 14 }}>Manage fridge</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 13, marginBottom: 14 }}>Manage fridge</div>
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: theme.text.faint, marginBottom: 8 }}>FRIDGE NAME</div>
           <input

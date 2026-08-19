@@ -32,7 +32,7 @@ export default function MarkRecipeMadeSheet() {
           onClick={actions.closeMarkRecipeMade}
           style={{ width: 36, height: 5, borderRadius: 3, background: theme.border.strong, margin: "0 auto 16px", cursor: "pointer", flex: "none" }}
         />
-        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 14, marginBottom: 8, flex: "none", color: theme.text.primary }}>Mark as made</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 14, marginBottom: 8, flex: "none", color: theme.text.primary }}>Mark as made</div>
         <div style={{ fontSize: 12.5, color: theme.text.faint, marginBottom: 16, flex: "none" }}>
           {state.markMadeCandidates.length > 0
             ? "These fridge items look like a match — mark each one finished or still remaining, or remove anything you didn't actually use."

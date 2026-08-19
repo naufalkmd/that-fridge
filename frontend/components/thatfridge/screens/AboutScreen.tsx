@@ -35,7 +35,7 @@ export default function AboutScreen() {
           <X className="thatfridge-hide-desktop" size={15} color={theme.text.muted} strokeWidth={2} />
           <ChevronLeft className="thatfridge-show-desktop" size={17} color={theme.text.muted} strokeWidth={2.2} />
         </div>
-        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 14 }}>About ThatFridge</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 14 }}>About ThatFridge</div>
       </div>
 
       <div className="thatfridge-wide-content" style={{ flex: 1, overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>

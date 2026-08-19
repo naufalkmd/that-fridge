@@ -186,7 +186,7 @@ export default function FoodHubScreen() {
       <div style={{ background: theme.bg.surface2 }}>
       <div className="thatfridge-wide-content" style={{ padding: "24px 20px 24px", boxSizing: "border-box" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 16, color: theme.text.primary }}>Crew</div>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 16, color: theme.text.primary }}>Crew</div>
           <div
             onClick={() => actions.goTab("home")}
             style={{

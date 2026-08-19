@@ -65,7 +65,7 @@ export default function NotificationsScreen() {
           <ChevronLeft className="thatfridge-show-desktop" size={17} color={theme.text.muted} strokeWidth={2.2} />
         </div>
         <div>
-          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 14 }}>Notifications</div>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 14 }}>Notifications</div>
           <div style={{ fontSize: 11.5, color: theme.text.faint }}>Choose what your crew should ping you about</div>
         </div>
       </div>

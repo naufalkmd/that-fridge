@@ -181,16 +181,13 @@ export default function AuthScreen() {
             style={{
               width: 56,
               height: 56,
-              borderRadius: theme.radius.lg,
-              background: theme.bg.surface2,
-              border: `1px solid ${theme.border.hairline}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               margin: "0 auto 14px",
             }}
           >
-            <Image src="/images/thatfridge/logo.svg" alt="ThatFridge" width={32} height={33} unoptimized style={{ objectFit: "contain" }} />
+            <Image src="/images/thatfridge/logo.svg" alt="ThatFridge" width={44} height={45} unoptimized style={{ objectFit: "contain" }} />
           </div>
           <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 22, letterSpacing: 0.5, marginBottom: 6 }}>ThatFridge</div>
           <div style={{ fontSize: 13, color: theme.text.muted }}>Know what&apos;s inside before you open the door.</div>
@@ -223,16 +220,13 @@ export default function AuthScreen() {
               style={{
                 width: 40,
                 height: 40,
-                borderRadius: theme.radius.sm,
-                background: theme.bg.surface2,
-                border: `1px solid ${theme.border.hairline}`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flex: "none",
               }}
             >
-              <Image src="/images/thatfridge/logo.svg" alt="ThatFridge" width={24} height={25} unoptimized style={{ objectFit: "contain" }} />
+              <Image src="/images/thatfridge/logo.svg" alt="ThatFridge" width={32} height={33} unoptimized style={{ objectFit: "contain" }} />
             </div>
             <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 16, letterSpacing: 0.5 }}>ThatFridge</div>
           </div>

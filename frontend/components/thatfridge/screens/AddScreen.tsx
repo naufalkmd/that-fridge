@@ -358,7 +358,7 @@ export default function AddScreen() {
     >
     <div className="thatfridge-wide-content" style={{ flex: 1, display: "flex", flexDirection: "column", padding: "28px 20px 30px", boxSizing: "border-box" }}>
       <div className="thatfridge-add-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
-        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 15 }}>{state.addStep === -1 ? "Add to fridge" : `Add to ${targetFridge?.name || "fridge"}`}</div>
+        <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 15 }}>{state.addStep === -1 ? "Add to fridge" : `Add to ${targetFridge?.name || "fridge"}`}</div>
         <div
           className="thatfridge-add-header-btn"
           onClick={state.addStep === 6 ? actions.skipExpiryPhoto : actions.goHome}

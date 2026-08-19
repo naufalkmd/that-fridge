@@ -63,7 +63,7 @@ export default function ItemDetailSheet() {
             }}
             style={{ width: 36, height: 5, borderRadius: 3, background: theme.border.strong, margin: "0 auto 20px", cursor: "pointer", flex: "none" }}
           />
-          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 14, marginBottom: 18, flex: "none" }}>Edit item</div>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 14, marginBottom: 18, flex: "none" }}>Edit item</div>
 
           <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           <div style={{ marginBottom: 14 }}>

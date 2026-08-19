@@ -29,7 +29,7 @@ export default function BadgesScreen() {
           <ChevronLeft className="thatfridge-show-desktop" size={17} color={theme.text.muted} strokeWidth={2.2} />
         </div>
         <div>
-          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 700, fontSize: 15 }}>Badges</div>
+          <div style={{ fontFamily: "var(--font-pixel)", fontWeight: 400, fontSize: 15 }}>Badges</div>
           <div style={{ fontSize: 11.5, color: theme.text.faint }}>One-time unlocks for real anti-waste habits, not just a score</div>
         </div>
       </div>
