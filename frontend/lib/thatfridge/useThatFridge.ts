@@ -1300,7 +1300,7 @@ export function useThatFridge() {
   };
   const openFoodHubTab = (tab: FoodSubtab) => {
     ensureShoppingSeed();
-    patch({ screen: "foodHub", foodSubtab: tab });
+    patch({ screen: "foodHub", foodSubtab: tab, showProfilePanel: false });
   };
   const openRecipesHub = () => openFoodHubTab("recipes");
   const openShoppingHub = () => openFoodHubTab("shopping");
@@ -1915,10 +1915,12 @@ export function useThatFridge() {
     patch((s) => ({
       screen,
       lastMainScreen: screen === "home" || screen === "inventory" ? screen : s.lastMainScreen,
+      showProfilePanel: false,
     }));
   const openAdd = () =>
     patch((s) => ({
       screen: "add",
+      showProfilePanel: false,
       addStep: s.fridges.length > 1 ? -1 : 0,
       addFridgeIndex: s.activeFridge,
       scanMethod: null,
