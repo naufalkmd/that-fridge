@@ -717,7 +717,7 @@ export default function HomeScreen() {
                   style={{ scrollSnapAlign: "start", flex: "none", width: 200, display: "flex", alignItems: "center", gap: 10, background: theme.bg.surface, border: `1px solid ${theme.border.hairline}`, borderRadius: theme.radius.md, padding: "10px 12px", cursor: "pointer" }}
                 >
                   <div style={{ position: "relative", width: 36, height: 36, borderRadius: theme.radius.sm, background: theme.bg.surface2, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", padding: 6, boxSizing: "border-box" }}>
-                    <FoodIcon icon={item.icon} />
+                    <FoodIcon icon={item.icon} iconUrl={item.iconUrl} />
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>

@@ -220,7 +220,7 @@ export default function InventoryScreen() {
                   style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: `1px solid ${theme.border.hairline}`, cursor: "pointer" }}
                 >
                   <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: theme.radius.sm, background: theme.bg.surface2, padding: 6, boxSizing: "border-box" }}>
-                    <FoodIcon icon={item.icon} />
+                    <FoodIcon icon={item.icon} iconUrl={item.iconUrl} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
@@ -253,7 +253,7 @@ export default function InventoryScreen() {
               style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: `1px solid ${theme.border.hairline}`, cursor: "pointer" }}
             >
               <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: theme.radius.sm, background: theme.bg.surface2, padding: 6, boxSizing: "border-box" }}>
-                <FoodIcon icon={item.icon} />
+                <FoodIcon icon={item.icon} iconUrl={item.iconUrl} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
@@ -380,7 +380,7 @@ export default function InventoryScreen() {
               >
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
                   <div style={{ position: "relative", width: 40, height: 40, borderRadius: theme.radius.sm, background: theme.bg.surface2, padding: 7, boxSizing: "border-box" }}>
-                    <FoodIcon icon={item.icon} />
+                    <FoodIcon icon={item.icon} iconUrl={item.iconUrl} />
                   </div>
                   <LocationTag location={item.location || "fridge"} />
                 </div>

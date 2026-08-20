@@ -9,6 +9,7 @@ use App\Http\Controllers\FridgeController;
 use App\Http\Controllers\FridgeJoinRequestController;
 use App\Http\Controllers\FridgeMemberController;
 use App\Http\Controllers\FridgeNoteController;
+use App\Http\Controllers\IconController;
 use App\Http\Controllers\IngestionController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\MemoryController;
@@ -56,6 +57,12 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('/items/suggest-details', [AgentController::class, 'suggestItemDetails']);
+
+    Route::get('/icons/generated', [IconController::class, 'index']);
+    Route::delete('/icons/generated/{generatedIcon}', [IconController::class, 'destroy']);
+    // Icon generation calls fal.ai per request, so it's throttled tighter than the other
+    // (free/local) rate-limited endpoint - each hit is a real, billable API call.
+    Route::middleware('throttle:10,1')->post('/icons/generate', [IconController::class, 'generate']);
 
     Route::get('/fridges', [FridgeController::class, 'index']);
     Route::post('/fridges', [FridgeController::class, 'store']);

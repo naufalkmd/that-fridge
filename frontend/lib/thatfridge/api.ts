@@ -261,6 +261,7 @@ export async function createSection(fridgeId: string, name: string): Promise<Sec
 export interface CreateItemInput {
   name: string;
   icon: string;
+  icon_url?: string | null;
   nutrition_category?: NutritionCategory | null;
   location?: StorageLocation;
   quantity?: number;
@@ -278,6 +279,7 @@ export async function createItem(sectionId: string, data: CreateItemInput) {
 export interface UpdateItemInput {
   name?: string;
   icon?: string;
+  icon_url?: string | null;
   nutrition_category?: NutritionCategory | null;
   section_id?: string;
   location?: StorageLocation;
@@ -295,6 +297,26 @@ export async function updateItem(id: string, data: UpdateItemInput) {
 
 export function deleteItem(id: string): Promise<void> {
   return apiFetch<void>(`/items/${id}`, { method: "DELETE" });
+}
+
+export function generateIcon(prompt: string): Promise<{ icon_url: string; generated_icon_id: string }> {
+  return apiFetch(`/icons/generate`, { method: "POST", body: JSON.stringify({ prompt }) });
+}
+
+export interface GeneratedIconSummary {
+  id: string;
+  prompt: string;
+  image_url: string;
+}
+
+// Every icon a user generates is auto-saved (see IconController::generate) - this is their
+// full history, i.e. their personal icon library, most recent first.
+export function fetchGeneratedIcons(): Promise<GeneratedIconSummary[]> {
+  return apiFetch(`/icons/generated`);
+}
+
+export function deleteGeneratedIcon(id: string): Promise<void> {
+  return apiFetch<void>(`/icons/generated/${id}`, { method: "DELETE" });
 }
 
 export interface BarcodeSuggestion {

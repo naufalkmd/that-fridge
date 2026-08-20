@@ -25,6 +25,7 @@ import {
   deleteChatSession,
   deleteFridge as apiDeleteFridge,
   deleteFridgeNote,
+  deleteGeneratedIcon,
   deleteItem,
   deleteMemoryFactApi,
   deleteRecipe as apiDeleteRecipe,
@@ -42,6 +43,7 @@ import {
   fetchFridgeNotes,
   fetchFridges,
   fetchFriendProfile,
+  fetchGeneratedIcons,
   fetchJoinRequests,
   fetchSentInvites,
   fetchMe,
@@ -56,6 +58,7 @@ import {
   fetchShoppingItems,
   fetchUsageHistory,
   fetchUserGoal,
+  generateIcon,
   importRecipeFromLink,
   incrementOrganizerTally,
   inviteToFridge,
@@ -77,6 +80,7 @@ import {
   suggestItemDetails,
   suggestRecipes,
   type ChatAgentName,
+  type GeneratedIconSummary,
   type UserGoalInput,
   unfavoriteRecipe,
   updateFridge,
@@ -255,6 +259,10 @@ function describeError(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.message : fallback;
 }
 
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 // A pasted "amazon.com/dp/..." with no scheme would otherwise trip the backend's `url`
 // validator - prepend https:// rather than rejecting it, since that's obviously what was meant.
 export function normalizeShopUrl(value: string): string | null {
@@ -287,6 +295,7 @@ export interface ThatFridgeState {
   editName: string;
   editSectionId: string;
   editIcon: string;
+  editIconUrl: string | null;
   editCategory: string;
   editFridgeIndex: number;
   editExpiryDate: string;
@@ -316,7 +325,12 @@ export interface ThatFridgeState {
   manualSectionId: string;
   manualSectionAuto: boolean;
   manualIcon: string;
+  manualIconUrl: string | null;
   manualIconAuto: boolean;
+  generateIconLoading: boolean;
+  // Every icon the user has ever generated, most recent first - their personal icon library,
+  // shown as a browsable grid in each icon picker alongside the curated set.
+  generatedIcons: GeneratedIconSummary[];
   manualCategory: string;
   manualCategoryAuto: boolean;
   manualLocation: StorageLocation;
@@ -482,6 +496,7 @@ export function initialState(): ThatFridgeState {
     editName: "",
     editSectionId: "",
     editIcon: "",
+    editIconUrl: null,
     editCategory: "",
     editFridgeIndex: 0,
     editExpiryDate: "",
@@ -508,7 +523,10 @@ export function initialState(): ThatFridgeState {
     manualSectionId: "",
     manualSectionAuto: true,
     manualIcon: "leftovers",
+    manualIconUrl: null,
     manualIconAuto: true,
+    generateIconLoading: false,
+    generatedIcons: [],
     manualCategory: "other_extras",
     manualCategoryAuto: true,
     manualLocation: "fridge",
@@ -732,6 +750,7 @@ export function useThatFridge() {
       fetchMyInvites(),
       fetchMyJoinRequests(),
       fetchFridgeNotes(),
+      fetchGeneratedIcons(),
     ]).then(
       ([
         fridges,
@@ -749,6 +768,7 @@ export function useThatFridge() {
         myInvites,
         myJoinRequests,
         fridgeNotes,
+        generatedIcons,
       ]) => {
         if (cancelled) return;
         const restoredChatMessages: ChatMessage[] = chatHistory.messages.flatMap((row) => [
@@ -778,6 +798,7 @@ export function useThatFridge() {
           myInvites,
           myJoinRequests,
           fridgeNotes,
+          generatedIcons,
           ...(restoredChatMessages.length ? { chatMessages: restoredChatMessages } : {}),
         });
       }
@@ -1997,6 +2018,7 @@ export function useThatFridge() {
       manualSectionId: s.fridges[s.activeFridge]?.sections[0]?.id || "",
       manualSectionAuto: true,
       manualIcon: "leftovers",
+      manualIconUrl: null,
       manualIconAuto: true,
       manualCategory: "other_extras",
       manualCategoryAuto: true,
@@ -2027,6 +2049,7 @@ export function useThatFridge() {
       editName: found.item.name,
       editSectionId: found.section.id,
       editIcon: found.item.icon,
+      editIconUrl: found.item.iconUrl ?? null,
       editCategory: found.item.nutritionCategory || "",
       editFridgeIndex: found.fridgeIndex,
       editExpiryDate: toISODate(target),
@@ -2037,7 +2060,22 @@ export function useThatFridge() {
   const cancelEditItem = () => patch({ isEditingItem: false });
   const onEditNameChange = (value: string) => patch({ editName: value });
   const onEditSectionChange = (value: string) => patch({ editSectionId: value });
-  const onEditIconChange = (value: string) => patch({ editIcon: value });
+  const onEditIconChange = (value: string) => patch({ editIcon: value, editIconUrl: null });
+  const onEditIconUrlChange = (value: string, name?: string) => patch({ editIconUrl: value, ...(name ? { editName: name } : {}) });
+  const generateIconForEdit = (prompt: string) => {
+    if (!prompt.trim() || state.generateIconLoading) return;
+    patch({ generateIconLoading: true });
+    generateIcon(prompt.trim())
+      .then(({ icon_url, generated_icon_id }) =>
+        patch((s) => ({
+          editIconUrl: icon_url,
+          editName: capitalize(prompt.trim()),
+          generateIconLoading: false,
+          generatedIcons: [{ id: generated_icon_id, prompt: prompt.trim(), image_url: icon_url }, ...s.generatedIcons],
+        }))
+      )
+      .catch((err) => patch({ generateIconLoading: false, syncError: describeError(err, "Couldn't generate that icon.") }));
+  };
   const onEditCategoryChange = (value: string) => patch({ editCategory: value });
   const onEditExpiryDateChange = (value: string) => patch({ editExpiryDate: value });
   const onEditNoteChange = (value: string) => patch({ editNote: value });
@@ -2052,6 +2090,7 @@ export function useThatFridge() {
     const { item: prevItem, section: fromSection } = found;
     const toSectionId = state.editSectionId || fromSection.id;
     const icon = state.editIcon || prevItem.icon;
+    const iconUrl = state.editIconUrl;
     const category = (state.editCategory || prevItem.nutritionCategory || null) as NutritionCategory | null;
     const note = state.editNote.trim();
     const shopUrl = normalizeShopUrl(state.editShopUrl);
@@ -2067,7 +2106,7 @@ export function useThatFridge() {
       if (!found2) return {};
       const { item, section: fromSec, fridgeIndex } = found2;
       const fridge = s.fridges[fridgeIndex];
-      const updatedItem = { ...item, name, icon, nutritionCategory: category, note, shopUrl, days: newDays, freshness: newFreshness };
+      const updatedItem = { ...item, name, icon, iconUrl, nutritionCategory: category, note, shopUrl, days: newDays, freshness: newFreshness };
 
       const sections =
         toSectionId === fromSec.id
@@ -2089,6 +2128,7 @@ export function useThatFridge() {
     updateItem(id, {
       name,
       icon,
+      icon_url: iconUrl,
       nutrition_category: category,
       note,
       shop_url: shopUrl,
@@ -2263,6 +2303,7 @@ export function useThatFridge() {
         manualSectionId: s.fridges[s.addFridgeIndex]?.sections[0]?.id || "",
         manualSectionAuto: true,
         manualIcon: "leftovers",
+        manualIconUrl: null,
         manualIconAuto: true,
         manualCategory: "other_extras",
         manualCategoryAuto: true,
@@ -2481,7 +2522,23 @@ export function useThatFridge() {
   const onDetectedNameChange = (id: string, name: string) =>
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, name } : d)) }));
   const onDetectedIconChange = (id: string, icon: string) =>
-    patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, icon } : d)) }));
+    patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, icon, iconUrl: null } : d)) }));
+  const onDetectedIconUrlChange = (id: string, iconUrl: string, name?: string) =>
+    patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, iconUrl, ...(name ? { name } : {}) } : d)) }));
+  const generateIconForDetected = (id: string, prompt: string) => {
+    if (!prompt.trim() || state.generateIconLoading) return;
+    patch({ generateIconLoading: true });
+    generateIcon(prompt.trim())
+      .then(({ icon_url, generated_icon_id }) => {
+        onDetectedIconUrlChange(id, icon_url);
+        patch((s) => ({
+          generateIconLoading: false,
+          detected: s.detected.map((d) => (d.id === id ? { ...d, name: capitalize(prompt.trim()) } : d)),
+          generatedIcons: [{ id: generated_icon_id, prompt: prompt.trim(), image_url: icon_url }, ...s.generatedIcons],
+        }));
+      })
+      .catch((err) => patch({ generateIconLoading: false, syncError: describeError(err, "Couldn't generate that icon.") }));
+  };
   const onDetectedSectionChange = (id: string, sectionId: string) =>
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, section: sectionId } : d)) }));
   const adjustDetectedQty = (id: string, delta: number) =>
@@ -2584,12 +2641,38 @@ export function useThatFridge() {
       const guessedSectionId = groupLabel && fridge ? findSectionIdForGroup(fridge.sections, groupLabel.toLowerCase()) : null;
       return {
         manualIcon: value,
+        manualIconUrl: null,
         manualIconAuto: false,
         ...(s.manualCategoryAuto && category ? { manualCategory: category } : {}),
         ...(s.manualSectionAuto && guessedSectionId ? { manualSectionId: guessedSectionId } : {}),
       };
     });
+  const onManualIconUrlChange = (value: string, name?: string) =>
+    patch({ manualIconUrl: value, manualIconAuto: false, ...(name ? { manualName: name } : {}) });
   const onManualCategoryChange = (value: string) => patch({ manualCategory: value, manualCategoryAuto: false });
+  const generateIconForManual = (prompt: string) => {
+    if (!prompt.trim() || state.generateIconLoading) return;
+    patch({ generateIconLoading: true });
+    generateIcon(prompt.trim())
+      .then(({ icon_url, generated_icon_id }) =>
+        patch((s) => ({
+          manualIconUrl: icon_url,
+          manualIconAuto: false,
+          manualName: capitalize(prompt.trim()),
+          generateIconLoading: false,
+          generatedIcons: [{ id: generated_icon_id, prompt: prompt.trim(), image_url: icon_url }, ...s.generatedIcons],
+        }))
+      )
+      .catch((err) => patch({ generateIconLoading: false, syncError: describeError(err, "Couldn't generate that icon.") }));
+  };
+  const removeGeneratedIcon = (id: string) => {
+    patch((s) => ({ generatedIcons: s.generatedIcons.filter((gi) => gi.id !== id) }));
+    deleteGeneratedIcon(id).catch((err) => {
+      patch({ syncError: describeError(err, "Couldn't delete that icon.") });
+      // Refetch to restore it in state if the delete didn't actually happen server-side.
+      fetchGeneratedIcons().then((generatedIcons) => patch({ generatedIcons }));
+    });
+  };
   const onManualExpiryDateChange = (value: string) => patch({ manualExpiryDate: value });
   const onManualLocationChange = (location: StorageLocation) => patch({ manualLocation: location });
   // Receipt/barcode-detected items get suggestDetectedDetails below with no condition question -
@@ -2659,6 +2742,7 @@ export function useThatFridge() {
       const item = await createItem(sectionId!, {
         name,
         icon,
+        icon_url: state.manualIconUrl,
         nutrition_category: category as NutritionCategory | null,
         location,
         quantity: 1,
@@ -2698,6 +2782,7 @@ export function useThatFridge() {
         const item = await createItem(d.section, {
           name: d.name,
           icon: d.icon,
+          icon_url: d.iconUrl,
           location: d.location,
           quantity: d.qty,
           expiry_date: expiryDate,
@@ -2880,6 +2965,8 @@ export function useThatFridge() {
     onEditNameChange,
     onEditSectionChange,
     onEditIconChange,
+    onEditIconUrlChange,
+    generateIconForEdit,
     onEditCategoryChange,
     onEditExpiryDateChange,
     onEditNoteChange,
@@ -2891,6 +2978,8 @@ export function useThatFridge() {
     toggleDetected,
     onDetectedNameChange,
     onDetectedIconChange,
+    onDetectedIconUrlChange,
+    generateIconForDetected,
     onDetectedSectionChange,
     adjustDetectedQty,
     onDetectedExpiryChange,
@@ -2902,6 +2991,9 @@ export function useThatFridge() {
     onManualNameChange,
     onManualSectionChange,
     onManualIconChange,
+    onManualIconUrlChange,
+    generateIconForManual,
+    removeGeneratedIcon,
     onManualCategoryChange,
     onManualExpiryDateChange,
     onManualLocationChange,

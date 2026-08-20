@@ -15,6 +15,7 @@ export interface Item {
   id: string;
   name: string;
   icon: string;
+  iconUrl?: string | null;
   nutritionCategory?: NutritionCategory | null;
   freshness: number;
   days: number;
@@ -167,6 +168,7 @@ export interface DetectedItem {
   id: string;
   name: string;
   icon: string;
+  iconUrl?: string | null;
   section: string;
   checked: boolean;
   qty: number;

@@ -39,4 +39,8 @@ return [
         'key' => env('OPENROUTER_API_KEY'),
     ],
 
+    'fal' => [
+        'key' => env('FAL_KEY'),
+    ],
+
 ];

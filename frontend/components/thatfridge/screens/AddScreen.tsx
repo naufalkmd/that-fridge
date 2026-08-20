@@ -7,6 +7,8 @@ import { Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Keyboard, Minus,
 import { FOOD_ICON_KEYS, ICON_LABELS, NUTRITION_CATEGORIES, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
+import GenerateIconRow from "../GenerateIconRow";
+import GeneratedIconLibrary from "../GeneratedIconLibrary";
 import LocationIcon from "../LocationIcon";
 import type { ProduceCondition, ScanMethod, StorageLocation } from "@/lib/thatfridge/types";
 import { theme } from "@/lib/thatfridge/theme";
@@ -659,7 +661,7 @@ export default function AddScreen() {
                     title="Change picture"
                     style={{ position: "relative", width: 28, height: 28, flex: "none", cursor: "pointer" }}
                   >
-                    <FoodIcon icon={d.icon} />
+                    <FoodIcon icon={d.icon} iconUrl={d.iconUrl} />
                   </div>
                   <input
                     value={d.name}
@@ -695,7 +697,14 @@ export default function AddScreen() {
                 </div>
 
                 {iconPickerForId === d.id && (
-                  <div style={{ maxHeight: 180, overflowY: "auto", background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: 10 }}>
+                  <div style={{ maxHeight: 220, overflowY: "auto", background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: 10 }}>
+                    <GenerateIconRow loading={state.generateIconLoading} onGenerate={(prompt) => actions.generateIconForDetected(d.id, prompt)} />
+                    <GeneratedIconLibrary
+                      icons={state.generatedIcons}
+                      selectedUrl={d.iconUrl}
+                      onSelect={(gi) => actions.onDetectedIconUrlChange(d.id, gi.image_url, gi.prompt.charAt(0).toUpperCase() + gi.prompt.slice(1))}
+                      onDelete={actions.removeGeneratedIcon}
+                    />
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                       {FOOD_ICON_KEYS.map((key) => (
                         <div
@@ -837,7 +846,7 @@ export default function AddScreen() {
               >
                 <div style={{ width: 32, height: 32, borderRadius: theme.radius.sm, background: theme.bg.surface2, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
                   <div style={{ position: "relative", width: 20, height: 20 }}>
-                    <FoodIcon icon={state.manualIcon} />
+                    <FoodIcon icon={state.manualIcon} iconUrl={state.manualIconUrl} />
                   </div>
                 </div>
                 <div style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: theme.text.primary }}>
@@ -851,7 +860,14 @@ export default function AddScreen() {
                 />
               </div>
               {showIconPicker && (
-                <div style={{ marginTop: 8, maxHeight: 220, overflowY: "auto", background: theme.bg.surface, borderRadius: theme.radius.sm, padding: 10, border: `1px solid ${theme.border.hairline}` }}>
+                <div style={{ marginTop: 8, maxHeight: 260, overflowY: "auto", background: theme.bg.surface, borderRadius: theme.radius.sm, padding: 10, border: `1px solid ${theme.border.hairline}` }}>
+                  <GenerateIconRow loading={state.generateIconLoading} onGenerate={actions.generateIconForManual} />
+                  <GeneratedIconLibrary
+                    icons={state.generatedIcons}
+                    selectedUrl={state.manualIconUrl}
+                    onSelect={(gi) => actions.onManualIconUrlChange(gi.image_url, gi.prompt.charAt(0).toUpperCase() + gi.prompt.slice(1))}
+                    onDelete={actions.removeGeneratedIcon}
+                  />
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                     {FOOD_ICON_KEYS.map((key) => (
                       <div

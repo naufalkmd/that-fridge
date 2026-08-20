@@ -8,6 +8,8 @@ import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import CategoryTag from "../CategoryTag";
 import FoodIcon from "../FoodIcon";
+import GenerateIconRow from "../GenerateIconRow";
+import GeneratedIconLibrary from "../GeneratedIconLibrary";
 import { theme } from "@/lib/thatfridge/theme";
 
 const labelStyle: React.CSSProperties = {
@@ -104,7 +106,7 @@ export default function ItemDetailSheet() {
             >
               <div style={{ width: 36, height: 36, borderRadius: theme.radius.sm, background: theme.bg.surface, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
                 <div style={{ position: "relative", width: 22, height: 22 }}>
-                  <FoodIcon icon={state.editIcon} />
+                  <FoodIcon icon={state.editIcon} iconUrl={state.editIconUrl} />
                 </div>
               </div>
               <div style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: theme.text.primary }}>
@@ -118,7 +120,14 @@ export default function ItemDetailSheet() {
               />
             </div>
             {showIconPicker && (
-              <div style={{ marginTop: 8, maxHeight: 220, overflowY: "auto", background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: 10 }}>
+              <div style={{ marginTop: 8, maxHeight: 260, overflowY: "auto", background: theme.bg.surface2, borderRadius: theme.radius.sm, padding: 10 }}>
+                <GenerateIconRow loading={state.generateIconLoading} onGenerate={actions.generateIconForEdit} />
+                <GeneratedIconLibrary
+                  icons={state.generatedIcons}
+                  selectedUrl={state.editIconUrl}
+                  onSelect={(gi) => actions.onEditIconUrlChange(gi.image_url, gi.prompt.charAt(0).toUpperCase() + gi.prompt.slice(1))}
+                  onDelete={actions.removeGeneratedIcon}
+                />
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                   {FOOD_ICON_KEYS.map((key) => (
                     <div
@@ -278,7 +287,7 @@ export default function ItemDetailSheet() {
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 14, position: "relative" }}>
           <div style={{ width: 88, height: 88, background: theme.bg.surface2, borderRadius: theme.radius.lg, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div style={{ position: "relative", width: 52, height: 52 }}>
-              <FoodIcon icon={item.icon} />
+              <FoodIcon icon={item.icon} iconUrl={item.iconUrl} />
             </div>
           </div>
           <div

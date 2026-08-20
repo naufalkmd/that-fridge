@@ -59,6 +59,7 @@ export interface RawItem {
   id: string;
   name: string;
   icon: string;
+  icon_url: string | null;
   nutrition_category: NutritionCategory | null;
   freshness: number | null;
   days: number | null;
@@ -73,6 +74,7 @@ export function toClientItem(raw: RawItem): Item {
     id: raw.id,
     name: raw.name,
     icon: raw.icon,
+    iconUrl: raw.icon_url ?? null,
     nutritionCategory: raw.nutrition_category ?? null,
     freshness: raw.freshness ?? 0,
     days: raw.days ?? 0,

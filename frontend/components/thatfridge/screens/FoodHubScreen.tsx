@@ -473,7 +473,7 @@ export default function FoodHubScreen() {
                       style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", borderBottom: i < expiringOwned.length - 1 ? `1px solid ${theme.border.hairline}` : undefined }}
                     >
                       <div style={{ position: "relative", width: 22, height: 22, flex: "none" }}>
-                        <FoodIcon icon={item.icon} />
+                        <FoodIcon icon={item.icon} iconUrl={item.iconUrl} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600 }}>
                         {item.name}
@@ -550,7 +550,7 @@ export default function FoodHubScreen() {
                     >
                       <RingTimer freshness={item.freshness} />
                       <div style={{ position: "relative", width: 28, height: 28, flex: "none" }}>
-                        <FoodIcon icon={item.icon} />
+                        <FoodIcon icon={item.icon} iconUrl={item.iconUrl} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{item.name}</div>
@@ -599,7 +599,7 @@ export default function FoodHubScreen() {
                       return (
                         <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderBottom: `1px solid ${theme.border.hairline}` }}>
                           <div style={{ position: "relative", width: 26, height: 26, flex: "none" }}>
-                            <FoodIcon icon={item.icon} />
+                            <FoodIcon icon={item.icon} iconUrl={item.iconUrl} />
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 13.5, fontWeight: 600 }}>{item.name}</div>
