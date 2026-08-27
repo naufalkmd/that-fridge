@@ -305,8 +305,9 @@ A trivial OUT screen may be ported if there's slack, but it never delays an IN i
 
 ## 9. Post-launch backlog
 
-1. EAS Update: sticky notes, organizer, goals, badges, AI-data, recipe form, fridge style,
-   chat-history session list, generated-icon library, receipt/photo AI bulk-add, find-friend.
+1. EAS Update: work through the **web-app parity gaps in §10** (recipe hub, recipe form, fridge
+   style, goals, badges, AI-data, chat history, sticky notes, generated icons, receipt/photo
+   AI add, find-friend / shared fridges) — all JS-only, no re-review.
 2. Server-driven push: APNs auth key + FCM + device-token endpoint + backend sends.
 3. **Android:** `eas build -p android`; Play Console (register as an **organization** to skip the
    12-tester / 14-day closed-testing gate); Data Safety form; Android screenshots; submit.
@@ -317,3 +318,114 @@ A trivial OUT screen may be ported if there's slack, but it never delays an IN i
    (the Next.js SPA) and point the domain at the new build.
 5. iPad layout pass (shares the web wide-viewport work).
 6. Shipaton: sustained #BuildInPublic cadence + growth experiments through Sep 30.
+
+---
+
+## 10. Web-app parity gaps
+
+Full inventory of what `apps/web` has that `apps/mobile` does **not** yet, as of 2026-08-28.
+The core screens are at visual parity (§3); this is the long tail. Nothing here blocks the
+v1.0 submission — it's the post-launch roadmap, ordered roughly by value. LOC is the web
+component's size, as a rough effort signal. Every backend route named below already exists.
+
+### A. Screens with no mobile equivalent
+
+| Web screen | LOC | What it does | Backend |
+| --- | --- | --- | --- |
+| `FoodHubScreen` | 649 | The recipe hub: browse/search the recipe library, category tabs, favourites, "tonight's pick", per-agent "activate" cards, shopping recommendations, embedded shopping panel, fridge notes | `/recipes`, `/recipes/suggest` |
+| `RecipeFormSheet` | 486 | Create / edit a custom recipe — name, category, ingredients, steps, **photo + video attachments** (record or pick), **import from a link** | `/recipes` POST/PATCH, `/recipes/attachments`, `/recipes/import-link` |
+| `FridgeStyleSheet` | 357 | Per-fridge look — pick a style photo or **upload a custom fridge photo**; also **rename / delete** a fridge and **leave** a shared one | `/fridges/{}` PATCH/DELETE, `/fridges/{}/leave` |
+| `GoalsScreen` | 201 | Set a weekly/monthly goal (waste rate / items rescued / freshness at use) and track progress | `/user-goal` GET/PATCH |
+| `FindFriendScreen` (+ `friendProfile`) | 193 | Search users by username, view a profile, send / accept **fridge invites & join requests** | `/users/{username}/profile`, `/invites`, `/join-requests`, `/fridges/{}/invites`, `/fridges/{}/join-requests` |
+| `RecipeDetailSheet` | 178 | Standalone recipe view. Mobile has an inline card in Eat with have/need rows + steps + "mark as made"; **missing:** favourite toggle, edit-own-recipe, attachments / reference media, category tag, `by @owner` | `/recipes/{}/favorite` |
+| `AIDataScreen` | 155 | See / manage what the crew remembers — chat-history entry, **usage-history list with per-row delete**, **memory facts** with delete + "extract from chats" | `/usage-history`, `/memory` (+ `/memory/extract`, `/memory/facts/{i}`) |
+| `MarkRecipeMadeSheet` | 144 | After "mark as made", reconcile which matched fridge items were **finished vs still remaining vs not used** — mobile currently calls `mark-made` with no reconciliation | `/recipes/{}/mark-made` |
+| `AboutScreen` | 132 | Standalone About + the 4 agent bios. Mobile folds a one-line blurb into Profile | — |
+| `BadgesScreen` | 81 | 4 achievement badges (`rescued_10`, `first_link_recipe`, `full_week_variety`, `zero_waste_week`) with progress | `/badges` (+ `/badges/{key}/progress`) |
+| `ChatHistoryScreen` | 73 | List past chat sessions, **restore or delete** one. Mobile restores only the latest; "new chat" just clears | `/chat/sessions`, `/chat/sessions/{id}` GET/DELETE |
+
+### B. Multi-fridge & social (whole subsystem — currently single-fridge only on mobile)
+
+- Shared fridges: **members list**, remove a member, roles (owner / member), leave a fridge.
+- **Join requests** — request to join someone's fridge; owner approves / declines.
+- **Invites** — invite a user to your fridge; invitee accepts / declines.
+- The **pending-action rows** in Notifications (`PendingRow` in `NotificationHistoryScreen`) —
+  mobile's list shows only `expiring` / `lowStock` / `recipe` events.
+- Home header's **find-friend icon** with its unread-invite dot (omitted on mobile).
+- Global **fridge scope** — on mobile it drives Home / Inventory / Search / Profile but not
+  shopping list or notes (web scopes those too).
+
+### C. Add — receipt / photo / AI (web `AddScreen` is 1020 LOC; mobile = method picker + manual)
+
+- **Receipt scan** → OCR → editable review list → confirm (`/items/receipt/scan` + `/confirm`).
+- **Fridge photo** → AI detects items + **produce condition** (vibrant / wilting / past best)
+  → review → confirm (`/items/photo/scan` + `/confirm`).
+- **Scan the printed expiry date** instead of guessing (`/items/expiry-scan`).
+- **AI auto-fill** — suggest expiry date + storage location from the item name
+  (`/items/suggest-details`).
+- In-app **barcode camera** inline (mobile has a separate `/scan` screen — acceptable).
+- **Item icon**: choose from the full library / **generate an AI icon**
+  (`GenerateIconRow`, `GeneratedIconLibrary`, `/icons/generated`).
+
+### D. Item detail
+
+- **"Opened it"** state + the `OPENED` badge — the mobile `/fridges` payload has no `opened`
+  field (`toItem` in `packages/core` hardcodes `false`); needs a backend Item + resource change.
+- **Icon picker / AI icon generation** in edit mode.
+- Reassign the item's **section** (web edit has a section `<select>`; mobile edits location only).
+
+### E. Chat
+
+- **Photo attachment** on a message (`sendChat` accepts a file).
+- **Voice input** (web uses the Web Speech API; mobile needs a native STT module).
+- **Chat history / session list** (see `ChatHistoryScreen`, §A).
+- **"Add to recipe book"** from a chat recipe suggestion (`RecipeSuggestionCard` →
+  `addSuggestedRecipeToLibrary`).
+- The "**demo reply — no AI key configured**" label on mocked responses.
+
+### F. Kitchen Score / crew
+
+- **Organizer sweeps** — "activate Organizer → AI checks each item's placement → apply / dismiss
+  moves", which increments `/organizer-tally`. Mobile never increments it, so **Tidiness stays
+  "building your score" forever**.
+- `AgentScoreCard` **extras** — Guardian overdue pill, Chef's 5-food-group coverage icons,
+  Organizer completion ring, Shopkeeper receipt-style bar (mobile's expand shows a plainer row).
+- **Score trend / sparkline** — `getScoreTrend` / `getScoreSeries` show a delta vs last week's
+  snapshot on the Waste Saver card.
+- Badge award on **full food-group variety** (`awardBadgeProgress("full_week_variety")`).
+
+### G. Fridge notes / sticky notes
+
+- `FridgeNotesSection` (116) — a shared sticky-note board on the fridge door: add / edit / delete
+  colour-coded notes, any household member can touch any note. Backend: `/notes`,
+  `/fridges/{}/notes`. Shown on Home (mobile) / FoodHub (web).
+
+### H. Notification settings
+
+- Web `NotificationsScreen` (120) — grouped toggle rows with **agent GIF icons + descriptions**
+  and a "MEALS & SUMMARIES" section. Mobile `notification-settings.tsx` (61) is a plain switch
+  list with a native header (functionally complete, visually plainer).
+
+### I. Profile / settings
+
+- Links to **Goals, Badges, AI Data & Memory, About** — mobile Profile has only Notification
+  settings + Shopping list + Your fridges.
+
+### J. Shopping list
+
+- **Recommendations** — `getShoppingRecommendations` (recipe / nutrition / habit-based picks)
+  shown above the list on web; mobile shopping is add / check / clear only.
+
+### K. Components & polish
+
+- `AttachmentLightbox` — fullscreen viewer for recipe / chat image & video attachments.
+- **Generated-icon library** UI + AI icon generation (`GenerateIconRow`, `GeneratedIconLibrary`).
+- `FoodIcon` coverage — mobile ships ~10 core pixel grids + an initials fallback; web has a
+  ~165-PNG asset pack plus AI-generated icons.
+- **Bottom-sheet grab-to-dismiss** gesture on every modal screen (needs
+  `react-native-gesture-handler` wiring — currently modals dismiss via the ✕ / swipe-down only).
+- **Skeleton loaders** (web shimmer placeholders; mobile shows spinners).
+- **Offline banners** / a sync-error toast surfaced consistently.
+- Sheet **enter animations** (`pop` / slide-up) to match the web's sheet feel.
+- Web **wide-viewport (≥900px) layout branches** on Home / Inventory / Chat — deferred with the
+  web-deployment work in §9.4, not needed for the iOS submission.
