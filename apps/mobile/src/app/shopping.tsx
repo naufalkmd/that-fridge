@@ -40,7 +40,7 @@ export default function Shopping() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
-        <ActivityIndicator color="#4de1c1" />
+        <ActivityIndicator color="#26c6da" />
       </View>
     );
   }
@@ -61,7 +61,7 @@ export default function Shopping() {
               await refresh();
               setRefreshing(false);
             }}
-            tintColor="#9fb0c0"
+            tintColor="#8a8a90"
           />
         }
       >
@@ -72,7 +72,7 @@ export default function Shopping() {
             onSubmitEditing={submit}
             returnKeyType="done"
             placeholder="Add an item…"
-            placeholderTextColor="#5f7285"
+            placeholderTextColor="rgba(234,234,236,0.34)"
             className="flex-1 rounded-lg border border-hairline bg-surface px-4 py-3 text-[14px] text-ink"
           />
           <Pressable

@@ -119,7 +119,7 @@ export default function Paywall() {
             </Text>
           </View>
         ) : !ready ? (
-          <ActivityIndicator color="#4de1c1" />
+          <ActivityIndicator color="#26c6da" />
         ) : packages.length === 0 ? (
           <View className="rounded-2xl border border-hairline bg-surface p-4">
             <Text className="text-[13px] text-muted">
@@ -144,7 +144,7 @@ export default function Paywall() {
                   </Text>
                 </View>
                 {busy ? (
-                  <ActivityIndicator color="#4de1c1" />
+                  <ActivityIndicator color="#26c6da" />
                 ) : (
                   <Text className="text-[13px] font-bold text-accent">Choose</Text>
                 )}

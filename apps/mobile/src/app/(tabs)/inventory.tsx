@@ -53,7 +53,7 @@ export default function Inventory() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
-        <ActivityIndicator color="#4de1c1" />
+        <ActivityIndicator color="#26c6da" />
       </View>
     );
   }
@@ -64,7 +64,7 @@ export default function Inventory() {
       className="flex-1 bg-canvas"
       contentContainerClassName="px-5 pb-28 pt-3"
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9fb0c0" />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8a8a90" />
       }
     >
       {error && (

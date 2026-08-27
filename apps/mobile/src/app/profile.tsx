@@ -113,7 +113,7 @@ export default function Profile() {
       </View>
 
       {working ? (
-        <ActivityIndicator color="#4de1c1" />
+        <ActivityIndicator color="#26c6da" />
       ) : (
         <View className="gap-3">
           <Pressable

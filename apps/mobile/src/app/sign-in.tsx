@@ -219,7 +219,7 @@ function Field({ label, ...input }: FieldProps) {
       <Text className="mb-1.5 text-[12px] font-bold tracking-wide text-faint">{label}</Text>
       <TextInput
         {...input}
-        placeholderTextColor="#5f7285"
+        placeholderTextColor="rgba(234,234,236,0.34)"
         className="rounded-lg bg-canvas px-4 py-3 text-[14px] text-ink"
       />
     </View>

@@ -127,7 +127,7 @@ export default function ItemDetail() {
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholderTextColor="#5f7285"
+              placeholderTextColor="rgba(234,234,236,0.34)"
               className="rounded-lg border border-hairline bg-surface px-4 py-3 text-[14px] text-ink"
             />
           </Labeled>
@@ -166,7 +166,7 @@ export default function ItemDetail() {
               value={note}
               onChangeText={setNote}
               placeholder="e.g. 2 loaves"
-              placeholderTextColor="#5f7285"
+              placeholderTextColor="rgba(234,234,236,0.34)"
               className="rounded-lg border border-hairline bg-surface px-4 py-3 text-[14px] text-ink"
             />
           </Labeled>

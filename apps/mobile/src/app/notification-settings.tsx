@@ -25,7 +25,7 @@ export default function NotificationSettings() {
   if (!prefs) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
-        <ActivityIndicator color="#4de1c1" />
+        <ActivityIndicator color="#26c6da" />
       </View>
     );
   }
@@ -47,8 +47,8 @@ export default function NotificationSettings() {
             <Switch
               value={prefs[row.key]}
               onValueChange={() => togglePref(row.key)}
-              trackColor={{ true: "#4de1c1", false: "#243040" }}
-              thumbColor="#e8eef4"
+              trackColor={{ true: "#26c6da", false: "rgba(255,255,255,0.09)" }}
+              thumbColor="#eaeaec"
             />
           </View>
         ))}

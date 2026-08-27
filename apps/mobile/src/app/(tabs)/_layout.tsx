@@ -12,7 +12,7 @@ export default function TabsLayout() {
   if (status === "loading") {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
-        <ActivityIndicator color="#4de1c1" />
+        <ActivityIndicator color="#26c6da" />
       </View>
     );
   }
@@ -21,16 +21,16 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: "#0b0f14" },
-        headerTintColor: "#e8eef4",
+        headerStyle: { backgroundColor: "#0a0a0c" },
+        headerTintColor: "#eaeaec",
         headerShadowVisible: false,
-        sceneStyle: { backgroundColor: "#0b0f14" },
+        sceneStyle: { backgroundColor: "#0a0a0c" },
         tabBarStyle: {
-          backgroundColor: "#0b0f14",
-          borderTopColor: "#243040",
+          backgroundColor: "#0a0a0c",
+          borderTopColor: "rgba(255,255,255,0.09)",
         },
-        tabBarActiveTintColor: "#4de1c1",
-        tabBarInactiveTintColor: "#5f7285",
+        tabBarActiveTintColor: "#26c6da",
+        tabBarInactiveTintColor: "rgba(234,234,236,0.34)",
         tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
       }}
     >

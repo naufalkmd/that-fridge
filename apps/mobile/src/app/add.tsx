@@ -112,7 +112,7 @@ export default function Add() {
             onChangeText={setName}
             autoFocus={!params.name}
             placeholder="Milk"
-            placeholderTextColor="#5f7285"
+            placeholderTextColor="rgba(234,234,236,0.34)"
             className="rounded-lg border border-hairline bg-surface px-4 py-3 text-[14px] text-ink"
           />
         </Labeled>

@@ -168,7 +168,7 @@ export default function Chat() {
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
       >
         {loading ? (
-          <ActivityIndicator color="#4de1c1" className="mt-8" />
+          <ActivityIndicator color="#26c6da" className="mt-8" />
         ) : messages.length === 0 ? (
           <Text className="mt-8 text-center text-[13px] text-faint">
             Ask {agent} about {AGENTS.find((a) => a.key === agent)?.blurb}.
@@ -184,7 +184,7 @@ export default function Chat() {
           value={text}
           onChangeText={setText}
           placeholder={`Message ${agent}…`}
-          placeholderTextColor="#5f7285"
+          placeholderTextColor="rgba(234,234,236,0.34)"
           multiline
           className="max-h-24 flex-1 rounded-2xl border border-hairline bg-surface px-4 py-2.5 text-[14px] text-ink"
         />

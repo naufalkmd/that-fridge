@@ -15,7 +15,7 @@ import { useNotifications } from "@/lib/notifications";
 const KIND: Record<NotificationKind, { label: string; color: string }> = {
   expiring: { label: "Expiring", color: "#c1452e" },
   lowStock: { label: "Low stock", color: "#d99a2b" },
-  recipe: { label: "Recipe", color: "#4de1c1" },
+  recipe: { label: "Recipe", color: "#26c6da" },
 };
 
 export default function Notifications() {
@@ -35,7 +35,7 @@ export default function Notifications() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
-        <ActivityIndicator color="#4de1c1" />
+        <ActivityIndicator color="#26c6da" />
       </View>
     );
   }
@@ -45,7 +45,7 @@ export default function Notifications() {
       className="flex-1 bg-canvas"
       contentContainerClassName="px-5 pb-24 pt-3"
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9fb0c0" />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8a8a90" />
       }
     >
       <Pressable
@@ -104,7 +104,7 @@ function Card({
     >
       <View
         className="h-2 w-2 rounded-full"
-        style={{ backgroundColor: event.done ? "#5f7285" : meta.color }}
+        style={{ backgroundColor: event.done ? "rgba(234,234,236,0.34)" : meta.color }}
       />
       <View className="flex-1">
         <Text
