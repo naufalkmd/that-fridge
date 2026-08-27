@@ -29,6 +29,7 @@ const INK = "#eaeaec";
 const MUTED = "rgba(234,234,236,0.58)";
 const FAINT = "rgba(234,234,236,0.34)";
 const GOOD = "#39e07f";
+const BLUE = "#5b8dee";
 
 const MEAL_TYPES: { key: MealType; label: string }[] = [
   { key: "breakfast", label: "Breakfast" },
@@ -91,9 +92,19 @@ export default function Eat() {
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
       <ScrollView contentContainerClassName="px-5 pt-4 pb-40" contentContainerStyle={{ gap: 18 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <MaterialCommunityIcons name="chef-hat" size={18} color={INK} />
-          <PixelText style={{ fontSize: 14, color: INK }}>What should I eat?</PixelText>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <MaterialCommunityIcons name="chef-hat" size={18} color={INK} />
+            <PixelText style={{ fontSize: 14, color: INK }}>What should I eat?</PixelText>
+          </View>
+          <Pressable
+            onPress={() => router.push("/recipes")}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+            hitSlop={8}
+          >
+            <MaterialCommunityIcons name="book-open-variant" size={14} color={BLUE} />
+            <Text style={{ fontSize: 12, fontWeight: "700", color: BLUE }}>Recipe book</Text>
+          </Pressable>
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>

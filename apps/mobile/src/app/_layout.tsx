@@ -14,6 +14,7 @@ import { ScopeProvider } from "@/lib/scope";
 import { NotificationsProvider } from "@/lib/notifications";
 import { ShoppingProvider } from "@/lib/shopping";
 import { KitchenScoreProvider } from "@/lib/kitchenScore";
+import { RecipesProvider } from "@/lib/recipes";
 import { ToastProvider } from "@/lib/toast";
 import { ExpiryReminderSync } from "@/lib/ExpiryReminderSync";
 
@@ -41,6 +42,7 @@ export default function RootLayout() {
           <NotificationsProvider>
            <ShoppingProvider>
             <KitchenScoreProvider>
+            <RecipesProvider>
             <ExpiryReminderSync />
             <StatusBar style="light" />
             <Stack
@@ -76,12 +78,23 @@ export default function RootLayout() {
                 options={{ headerShown: false, presentation: "modal" }}
               />
               <Stack.Screen name="notifications" options={{ headerShown: false }} />
+              <Stack.Screen name="recipes" options={{ headerShown: false }} />
+              <Stack.Screen name="recipe/[id]" options={{ headerShown: false, presentation: "modal" }} />
+              <Stack.Screen name="recipe-form" options={{ headerShown: false, presentation: "modal" }} />
+              <Stack.Screen name="goals" options={{ headerShown: false }} />
+              <Stack.Screen name="badges" options={{ headerShown: false }} />
+              <Stack.Screen name="ai-data" options={{ headerShown: false }} />
+              <Stack.Screen name="chat-history" options={{ headerShown: false }} />
+              <Stack.Screen name="about" options={{ headerShown: false }} />
+              <Stack.Screen name="find-friend" options={{ headerShown: false }} />
+              <Stack.Screen name="fridge/[id]" options={{ headerShown: false, presentation: "modal" }} />
               <Stack.Screen name="profile" options={{ title: "Profile" }} />
               <Stack.Screen
                 name="paywall"
                 options={{ headerShown: false, presentation: "modal" }}
               />
             </Stack>
+            </RecipesProvider>
             </KitchenScoreProvider>
            </ShoppingProvider>
           </NotificationsProvider>
