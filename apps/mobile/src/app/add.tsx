@@ -21,6 +21,7 @@ import {
   type StorageLocation,
 } from "@thatfridge/core";
 import { useInventory } from "@/lib/inventory";
+import { SheetHeader } from "@/components/sheet";
 
 const BEST_BEFORE_PRESETS = [
   { label: "2 days", days: 2 },
@@ -89,7 +90,8 @@ export default function Add() {
       className="flex-1 bg-canvas"
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView contentContainerClassName="p-6 gap-5" keyboardShouldPersistTaps="handled">
+      <SheetHeader title="Add item" />
+      <ScrollView contentContainerClassName="px-6 pb-8 pt-2 gap-5" keyboardShouldPersistTaps="handled">
         <Pressable
           onPress={() => {
             if (isExpoGo) {

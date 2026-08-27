@@ -30,6 +30,13 @@ const AGENTS: { key: ChatAgentName; blurb: string }[] = [
   { key: "Organizer", blurb: "planning" },
 ];
 
+const AGENT_COLOR: Record<ChatAgentName, string> = {
+  Chef: "#f5a623",
+  Guardian: "#ff5f56",
+  Shopkeeper: "#39e07f",
+  Organizer: "#3d6fe0",
+};
+
 type Msg = {
   role: "user" | "agent";
   text: string;
@@ -129,16 +136,20 @@ export default function Chat() {
       <View className="flex-row gap-2 px-4 py-3">
         {AGENTS.map((a) => {
           const active = agent === a.key;
+          const color = AGENT_COLOR[a.key];
           return (
             <Pressable
               key={a.key}
               onPress={() => setAgent(a.key)}
-              className={`flex-1 items-center rounded-lg border py-2 ${
-                active ? "border-accent bg-surface" : "border-hairline"
-              }`}
+              className="flex-1 items-center rounded-lg border py-2"
+              style={{
+                borderColor: active ? color : "rgba(255,255,255,0.09)",
+                backgroundColor: active ? `${color}1a` : "transparent",
+              }}
             >
               <Text
-                className={`text-[12px] font-bold ${active ? "text-accent" : "text-muted"}`}
+                className="text-[12px] font-bold"
+                style={{ color: active ? color : "rgba(234,234,236,0.58)" }}
               >
                 {a.key}
               </Text>

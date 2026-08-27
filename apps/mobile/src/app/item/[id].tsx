@@ -23,6 +23,7 @@ import {
 } from "@thatfridge/core";
 import { useInventory } from "@/lib/inventory";
 import { FoodIcon } from "@/components/food-icon";
+import { SheetHeader } from "@/components/sheet";
 
 const BEST_BEFORE_PRESETS = [
   { label: "2 days", days: 2 },
@@ -121,9 +122,8 @@ export default function ItemDetail() {
         className="flex-1 bg-canvas"
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView contentContainerClassName="p-6 gap-5" keyboardShouldPersistTaps="handled">
-          <Text className="text-xl font-extrabold text-ink">Edit item</Text>
-
+        <SheetHeader title="Edit item" onClose={() => setEditing(false)} />
+        <ScrollView contentContainerClassName="px-6 pb-8 pt-2 gap-5" keyboardShouldPersistTaps="handled">
           <Labeled label="NAME">
             <TextInput
               value={name}
@@ -197,7 +197,9 @@ export default function ItemDetail() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-canvas" contentContainerClassName="p-6 gap-5">
+    <>
+    <SheetHeader title="Item" />
+    <ScrollView className="flex-1 bg-canvas" contentContainerClassName="px-6 pb-8 pt-2 gap-5">
       <View className="flex-row items-start justify-between">
         <View className="flex-1 flex-row items-center gap-3">
           <FoodIcon icon={item.icon} iconUrl={item.iconUrl} name={item.name} size={52} />
@@ -261,6 +263,7 @@ export default function ItemDetail() {
         <Text className="font-semibold text-bad">Delete item</Text>
       </Pressable>
     </ScrollView>
+    </>
   );
 }
 

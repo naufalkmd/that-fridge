@@ -17,6 +17,8 @@ import {
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
+import { SectionHeader } from "@/components/ui";
+import { FoodIcon } from "@/components/food-icon";
 
 const MEALS: { key: MealType; label: string }[] = [
   { key: "breakfast", label: "Breakfast" },
@@ -129,10 +131,8 @@ export default function Eat() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <View className="gap-2">
-      <Text className="text-[12px] font-bold tracking-wide text-faint">
-        {title.toUpperCase()}
-      </Text>
+    <View className="gap-2.5">
+      <SectionHeader>{title}</SectionHeader>
       {children}
     </View>
   );
@@ -169,12 +169,13 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
 
       {open && (
         <View className="gap-3 border-t border-hairline p-4">
-          <View className="gap-1">
+          <View className="gap-1.5">
             <Text className="text-[12px] font-bold tracking-wide text-faint">INGREDIENTS</Text>
             {recipe.ingredients.map((ing, i) => (
-              <Text key={i} className="text-[13px] text-ink">
-                • {ing.name}
-              </Text>
+              <View key={i} className="flex-row items-center gap-2">
+                <FoodIcon icon={ing.icon} name={ing.name} size={24} />
+                <Text className="text-[13px] text-ink">{ing.name}</Text>
+              </View>
             ))}
           </View>
           <View className="gap-1">

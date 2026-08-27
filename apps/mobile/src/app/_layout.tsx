@@ -48,8 +48,14 @@ export default function RootLayout() {
               <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen name="sign-in" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="item/[id]" options={{ title: "", presentation: "modal" }} />
-              <Stack.Screen name="add" options={{ title: "Add item", presentation: "modal" }} />
+              <Stack.Screen
+                name="item/[id]"
+                options={{ headerShown: false, presentation: "modal" }}
+              />
+              <Stack.Screen
+                name="add"
+                options={{ headerShown: false, presentation: "modal" }}
+              />
               <Stack.Screen
                 name="scan"
                 options={{ headerShown: false, presentation: "fullScreenModal" }}
@@ -63,7 +69,7 @@ export default function RootLayout() {
               <Stack.Screen name="profile" options={{ title: "Profile" }} />
               <Stack.Screen
                 name="paywall"
-                options={{ title: "ThatFridge Pro", presentation: "modal" }}
+                options={{ headerShown: false, presentation: "modal" }}
               />
             </Stack>
            </ShoppingProvider>

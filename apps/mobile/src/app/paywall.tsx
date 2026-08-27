@@ -6,6 +6,7 @@ import RevenueCatUI from "react-native-purchases-ui";
 import type { PurchasesPackage } from "react-native-purchases";
 
 import { usePro } from "@/lib/pro";
+import { SheetHeader } from "@/components/sheet";
 
 const BENEFITS = [
   "Unlimited AI chat with the crew",
@@ -80,13 +81,9 @@ export default function Paywall() {
 
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
-      <ScrollView contentContainerClassName="p-6 gap-6">
-        <View className="gap-1">
-          <Text className="text-[13px] font-bold uppercase tracking-widest text-accent">
-            ThatFridge Pro
-          </Text>
-          <Text className="text-2xl font-extrabold text-ink">Get more out of your fridge</Text>
-        </View>
+      <SheetHeader title="ThatFridge Pro" />
+      <ScrollView contentContainerClassName="px-6 pb-8 pt-2 gap-6">
+        <Text className="text-2xl font-extrabold text-ink">Get more out of your fridge</Text>
 
         <View className="gap-2.5">
           {BENEFITS.map((b) => (
