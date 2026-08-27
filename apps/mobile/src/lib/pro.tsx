@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Constants from "expo-constants";
 import Purchases, {
   LOG_LEVEL,
@@ -28,14 +36,12 @@ interface ProContextValue {
   /** All packages in the current offering (e.g. monthly, yearly). */
   packages: PurchasesPackage[];
   /**
-   * Show the RevenueCat hosted paywall.
-   * - "entitled": user purchased or restored
-   * - "dismissed": user closed it
-   * - "unavailable": no paywall configured in the dashboard, or an error — caller
-   *   should fall back to a custom UI
+   * Show the RevenueCat paywall only if the user isn't already entitled. Use this to
+   * gate an action ("go Pro to continue"). Returns true once the user is entitled.
+   * The dedicated /paywall screen renders <RevenueCatUI.Paywall> directly instead.
    */
-  presentPaywall: () => Promise<"entitled" | "dismissed" | "unavailable">;
-  /** Buy a specific package (fallback path / custom paywall). */
+  presentPaywallIfNeeded: () => Promise<boolean>;
+  /** Buy a specific package (custom fallback paywall). */
   purchase: (pkg: PurchasesPackage) => Promise<void>;
   restore: () => Promise<void>;
   /** RevenueCat Customer Center — manage / cancel / request refund. */
@@ -53,6 +59,10 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(!AVAILABLE);
   const [isPro, setIsPro] = useState(false);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
+  const isProRef = useRef(false);
+  useEffect(() => {
+    isProRef.current = isPro;
+  }, [isPro]);
 
   const loadOffering = useCallback(async () => {
     try {
@@ -103,22 +113,21 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [user?.id]);
 
-  const presentPaywall = useCallback(async (): Promise<
-    "entitled" | "dismissed" | "unavailable"
-  > => {
-    if (!AVAILABLE) return "unavailable";
+  const presentPaywallIfNeeded = useCallback(async (): Promise<boolean> => {
+    if (!AVAILABLE) return false;
     try {
-      const result = await RevenueCatUI.presentPaywall({ displayCloseButton: true });
+      const result = await RevenueCatUI.presentPaywallIfNeeded({
+        requiredEntitlementIdentifier: ENTITLEMENT_ID,
+        displayCloseButton: true,
+      });
       if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
         await refresh();
-        return "entitled";
+        return true;
       }
-      if (result === PAYWALL_RESULT.CANCELLED) return "dismissed";
-      // NOT_PRESENTED (no dashboard paywall) or ERROR → caller falls back to custom UI
-      return "unavailable";
     } catch {
-      return "unavailable";
+      /* fall through */
     }
+    return isProRef.current;
   }, [refresh]);
 
   const purchase = useCallback(async (pkg: PurchasesPackage) => {
@@ -142,13 +151,13 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
       ready,
       isPro,
       packages,
-      presentPaywall,
+      presentPaywallIfNeeded,
       purchase,
       restore,
       openCustomerCenter,
       refresh,
     }),
-    [ready, isPro, packages, presentPaywall, purchase, restore, openCustomerCenter, refresh],
+    [ready, isPro, packages, presentPaywallIfNeeded, purchase, restore, openCustomerCenter, refresh],
   );
 
   return <ProContext.Provider value={value}>{children}</ProContext.Provider>;

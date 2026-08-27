@@ -25,51 +25,51 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
 
 ### Build — done
 
-| Area | Detail |
-|---|---|
-| ✅ Monorepo | pnpm workspaces + turborepo; `.npmrc` `node-linker=hoisted` for Metro; `frontend/` → `apps/web/` (frozen, untouched) |
-| ✅ `apps/mobile` scaffold | Expo SDK 57, Expo Router, NativeWind, TypeScript; `app.config.ts` (bundle id `test.thatfridge.app`, camera string, mic off, `ITSAppUsesNonExemptEncryption=false`); `eas.json` dev/preview/prod profiles |
-| ✅ `packages/core` | platform-agnostic `HttpClient` (injected baseUrl + token store, `{data}` unwrap); `createApi` covering auth, fridge/section/item CRUD, barcode lookup, notifications, shopping, recipes, chat, account deletion; `domain.ts` (freshColor, daysLabel, timeAgo, nutrition/location constants); `flattenItems` |
-| ✅ Auth | `AuthProvider` — login / signup (validation matches backend rules), token in `expo-secure-store`, session restore on launch, `index.tsx` redirect by status |
-| ✅ Inventory | `InventoryProvider` (fetch / refresh / optimistic qty / delete / add / edit); list with sort + category filter, freshness bars, pull-to-refresh, FAB; `item/[id]` detail + full edit (name / location / food group / best-before / note) |
-| ✅ Add + scan | `add` modal (manual entry, auto-creates fridge + section for new accounts); `scan` screen (`expo-camera`, Open Food Facts lookup prefills add) — **needs dev build to run** |
-| ✅ Home | greeting, item / expiring-soon stats, "use it up" list, quick-action grid, notification bell + unread badge, profile avatar, pull-to-refresh |
-| ✅ Notifications | in-app feed (`/notification-events`, mark done / undo) + settings (`/notification-prefs` toggles); local `expo-notifications` expiry reminders rescheduled on every inventory sync, gated on pref + OS permission (best-effort, needs dev build to fire on iOS) |
-| ✅ Shopping list | `ShoppingProvider` + screen — add / check / remove / clear-checked, optimistic |
-| ✅ What to eat | `eat` screen — meal + vibe filters, `/recipes/suggest`, exact vs "almost" groups, expandable recipe cards, "I made this" → `mark-made` + inventory refresh |
-| ✅ Chat | `chat` screen — agent picker (Chef / Guardian / Shopkeeper / Organizer), thread with history restore, inventory context, inline recipe-suggestion cards |
-| ✅ Profile + account deletion | `profile` screen — user info, settings links, about, sign out, **two-step delete**; **backend `DELETE /api/me`** hard-deletes user + tokens + owned fridges (FK cascade), 2 tests, `AuthControllerTest` green |
-| ✅ Dev data | `backend/scripts/seed-demo-fridge.sh` — local demo fridge with varied freshness |
-| ✅ Verification | iOS bundle builds clean via Metro after every change; every endpoint above exercised against the live local API |
+| Area                          | Detail                                                                                                                                                                                                                                                                                                               |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ✅ Monorepo                   | pnpm workspaces + turborepo;`.npmrc` `node-linker=hoisted` for Metro; `frontend/` → `apps/web/` (frozen, untouched)                                                                                                                                                                                         |
+| ✅`apps/mobile` scaffold    | Expo SDK 57, Expo Router, NativeWind, TypeScript;`app.config.ts` (bundle id `test.thatfridge.app`, camera string, mic off, `ITSAppUsesNonExemptEncryption=false`); `eas.json` dev/preview/prod profiles                                                                                                      |
+| ✅`packages/core`           | platform-agnostic`HttpClient` (injected baseUrl + token store, `{data}` unwrap); `createApi` covering auth, fridge/section/item CRUD, barcode lookup, notifications, shopping, recipes, chat, account deletion; `domain.ts` (freshColor, daysLabel, timeAgo, nutrition/location constants); `flattenItems` |
+| ✅ Auth                       | `AuthProvider` — login / signup (validation matches backend rules), token in `expo-secure-store`, session restore on launch, `index.tsx` redirect by status                                                                                                                                                   |
+| ✅ Inventory                  | `InventoryProvider` (fetch / refresh / optimistic qty / delete / add / edit); list with sort + category filter, freshness bars, pull-to-refresh, FAB; `item/[id]` detail + full edit (name / location / food group / best-before / note)                                                                         |
+| ✅ Add + scan                 | `add` modal (manual entry, auto-creates fridge + section for new accounts); `scan` screen (`expo-camera`, Open Food Facts lookup prefills add) — **needs dev build to run**                                                                                                                             |
+| ✅ Home                       | greeting, item / expiring-soon stats, "use it up" list, quick-action grid, notification bell + unread badge, profile avatar, pull-to-refresh                                                                                                                                                                         |
+| ✅ Notifications              | in-app feed (`/notification-events`, mark done / undo) + settings (`/notification-prefs` toggles); local `expo-notifications` expiry reminders rescheduled on every inventory sync, gated on pref + OS permission (best-effort, needs dev build to fire on iOS)                                                |
+| ✅ Shopping list              | `ShoppingProvider` + screen — add / check / remove / clear-checked, optimistic                                                                                                                                                                                                                                    |
+| ✅ What to eat                | `eat` screen — meal + vibe filters, `/recipes/suggest`, exact vs "almost" groups, expandable recipe cards, "I made this" → `mark-made` + inventory refresh                                                                                                                                                   |
+| ✅ Chat                       | `chat` screen — agent picker (Chef / Guardian / Shopkeeper / Organizer), thread with history restore, inventory context, inline recipe-suggestion cards                                                                                                                                                           |
+| ✅ Profile + account deletion | `profile` screen — user info, settings links, about, sign out, **two-step delete**; **backend `DELETE /api/me`** hard-deletes user + tokens + owned fridges (FK cascade), 2 tests, `AuthControllerTest` green                                                                                     |
+| ✅ Dev data                   | `backend/scripts/seed-demo-fridge.sh` — local demo fridge with varied freshness                                                                                                                                                                                                                                   |
+| ✅ Verification               | iOS bundle builds clean via Metro after every change; every endpoint above exercised against the live local API                                                                                                                                                                                                      |
 
 ### Build — remaining for v1.0
 
-| Item | Owner | Note |
-|---|---|---|
-| 🟡 **Paywall + RevenueCat** | B | code done — `react-native-purchases` + `react-native-purchases-ui`, `usePro()`, `paywall.tsx` (hosted + custom fallback), Customer Center, chat weekly-cap gate. **Needs:** RevenueCat dashboard (entitlement `thatfridge_pro`, offering with `monthly`/`yearly`, a paywall design), App Store Connect products, and a dev build to run |
-| 🔒 **`eas build --profile development`** | B | dev client so barcode scan, local notifications, and RevenueCat can actually be tested — needs the Apple account |
-| ⬜ Tab bar chrome | D | still a flat stack + quick-action grid; want Home / Inventory / Eat / Notifications tabs |
-| ⬜ Item icon picker | C | items show name initials; port `FoodIcon` + generated-icon library |
-| ⬜ ChatHistoryScreen | C | chat restores the latest session only; no session list / switch / delete |
-| ⬜ Native-feel pass | C/D | haptics, skeleton loaders, safe-area audit on every screen, offline banners |
-| ⬜ `lib/thatfridge` full extraction | B | ~half done incrementally; finish moving the pure modules + point `apps/web` at `packages/core` (see `packages/core/README.md`) |
-| ⬜ Merge `mobile-app` → `main` | — | additive; web app untouched |
+| Item                                            | Owner | Note                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🟡**Paywall + RevenueCat**                | B     | code done —`react-native-purchases` + `react-native-purchases-ui`, `usePro()`, `paywall.tsx` (hosted + custom fallback), Customer Center, chat weekly-cap gate. **Needs:** RevenueCat dashboard (entitlement `thatfridge_pro`, offering with `monthly`/`yearly`, a paywall design), App Store Connect products, and a dev build to run |
+| 🔒**`eas build --profile development`** | B     | dev client so barcode scan, local notifications, and RevenueCat can actually be tested — needs the Apple account                                                                                                                                                                                                                                           |
+| ⬜ Tab bar chrome                               | D     | still a flat stack + quick-action grid; want Home / Inventory / Eat / Notifications tabs                                                                                                                                                                                                                                                                    |
+| ⬜ Item icon picker                             | C     | items show name initials; port`FoodIcon` + generated-icon library                                                                                                                                                                                                                                                                                         |
+| ⬜ ChatHistoryScreen                            | C     | chat restores the latest session only; no session list / switch / delete                                                                                                                                                                                                                                                                                    |
+| ⬜ Native-feel pass                             | C/D   | haptics, skeleton loaders, safe-area audit on every screen, offline banners                                                                                                                                                                                                                                                                                 |
+| ⬜`lib/thatfridge` full extraction            | B     | ~half done incrementally; finish moving the pure modules + point`apps/web` at `packages/core` (see `packages/core/README.md`)                                                                                                                                                                                                                         |
+| ⬜ Merge`mobile-app` → `main`              | —    | additive; web app untouched                                                                                                                                                                                                                                                                                                                                 |
 
 ### External setup — not started (long lead time, start now)
 
-| Item | Owner |
-|---|---|
-| 🔒 Apple Developer Program enrollment (**Individual**) | A |
-| 🔒 App Store Connect: Paid Apps Agreement + banking + tax (blocks IAP testing) | A |
-| 🔒 RevenueCat account + project + `pro` entitlement + offering | A |
-| 🔒 `thatfridge_pro_monthly` subscription + 7-day trial in App Store Connect | A |
-| ⬜ Domain (API host + privacy-policy / terms pages) | A |
-| ⬜ Laravel API deployed to the VPS (HTTPS, Postgres, Redis, queue, scheduler) | A |
-| ⬜ Proper backend demo-data seeder (replace the shell script) | A |
-| ⬜ Sentry on the Laravel app | A |
-| ⬜ Privacy policy + Terms pages on `apps/web` | A/D |
-| ⬜ Devpost draft + start #BuildInPublic thread | D |
-| ⬜ Decide Google Play account type (personal vs organization) | D |
+| Item                                                                           | Owner |
+| ------------------------------------------------------------------------------ | ----- |
+| 🔒 Apple Developer Program enrollment (**Individual**)                   | A     |
+| 🔒 App Store Connect: Paid Apps Agreement + banking + tax (blocks IAP testing) | A     |
+| 🔒 RevenueCat account + project +`pro` entitlement + offering                | A     |
+| 🔒`thatfridge_pro_monthly` subscription + 7-day trial in App Store Connect   | A     |
+| ⬜ Domain (API host + privacy-policy / terms pages)                            | A     |
+| ⬜ Laravel API deployed to the VPS (HTTPS, Postgres, Redis, queue, scheduler)  | A     |
+| ⬜ Proper backend demo-data seeder (replace the shell script)                  | A     |
+| ⬜ Sentry on the Laravel app                                                   | A     |
+| ⬜ Privacy policy + Terms pages on`apps/web`                                 | A/D   |
+| ⬜ Devpost draft + start#BuildInPublic thread                                  | D     |
+| ⬜ Decide Google Play account type (personal vs organization)                  | D     |
 
 > **Where we stand:** the app's core loop is code-complete and runs end-to-end in Expo Go
 > against a local API. Everything left is either gated on the external accounts above or is
@@ -116,19 +116,19 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
 
 **IN** (status per §1):
 
-| Screen / feature | Status |
-|---|---|
-| Auth — register / login / logout / persistence | ✅ |
-| Inventory + item detail — list / add / edit / delete | ✅ |
-| Add + barcode scanning (`expo-camera`) | ✅ (scan needs dev build) |
-| Home dashboard | ✅ |
-| Notifications feed + settings + local expiry reminders | ✅ |
-| What to eat + recipe view + "I made this" | ✅ |
-| Chat (AI assistant) | ✅ |
-| Shopping list | ✅ |
-| Profile / Settings + **account deletion** + **restore purchases** | ✅ deletion · ⬜ restore (with paywall) |
-| **Paywall + "ThatFridge Pro"** (RevenueCat, `pro` entitlement gate) | 🔒 |
-| Shared chrome — tab bar, bottom sheets, toasts, offline/error states | 🟡 error/loading states done; tab bar + polish ⬜ |
+| Screen / feature                                                             | Status                                            |
+| ---------------------------------------------------------------------------- | ------------------------------------------------- |
+| Auth — register / login / logout / persistence                              | ✅                                                |
+| Inventory + item detail — list / add / edit / delete                        | ✅                                                |
+| Add + barcode scanning (`expo-camera`)                                     | ✅ (scan needs dev build)                         |
+| Home dashboard                                                               | ✅                                                |
+| Notifications feed + settings + local expiry reminders                       | ✅                                                |
+| What to eat + recipe view + "I made this"                                    | ✅                                                |
+| Chat (AI assistant)                                                          | ✅                                                |
+| Shopping list                                                                | ✅                                                |
+| Profile / Settings +**account deletion** + **restore purchases** | ✅ deletion · ⬜ restore (with paywall)          |
+| **Paywall + "ThatFridge Pro"** (RevenueCat, `pro` entitlement gate)  | 🔒                                                |
+| Shared chrome — tab bar, bottom sheets, toasts, offline/error states        | 🟡 error/loading states done; tab bar + polish ⬜ |
 
 **OUT** — fast-follow via EAS Update after launch (all JS-only, no new review):
 sticky-notes board · Organizer · Goals · Badges · AI-data screen · RecipeFormSheet ·
@@ -197,49 +197,49 @@ A trivial OUT screen may be ported if there's slack, but it never delays an IN i
 
 ### Week 1 — foundations + core skeleton
 
-| Day | A (Backend/Release) | B (Platform) | C (Core UI) | D (Chrome + Secondary) |
-|---|---|---|---|---|
-| 1 | Apple enrollment + Paid Apps Agreement submitted; VPS deploy started | Monorepo + `core` extraction | Expo scaffold; dev client on a real iPhone | Nav shell: tabs + stack + sheet |
-| 2 | API on HTTPS; CORS; prod migrate+seed; reviewer demo account | `core` building; one green `eas build` | AuthScreen against prod API | Tab bar + drawer + toast |
-| 3 | ✅ `DELETE /api/me` + tests | `expo-secure-store`; `app.config.ts` | InventoryScreen + ItemDetailSheet | Bottom-sheet system + skeletons |
-| 4 | Verify expiry fields; Sentry; draft privacy policy | `expo-camera` scan prototype on device | Inventory CRUD end-to-end | HomeScreen |
-| 5 | Privacy policy + terms deployed | TestFlight build #1 (or ad-hoc) | **Checkpoint:** register → scan → inventory → home on a real device | Safe-area pass |
+| Day | A (Backend/Release)                                                  | B (Platform)                               | C (Core UI)                                                                  | D (Chrome + Secondary)          |
+| --- | -------------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------- |
+| 1   | Apple enrollment + Paid Apps Agreement submitted; VPS deploy started | Monorepo +`core` extraction              | Expo scaffold; dev client on a real iPhone                                   | Nav shell: tabs + stack + sheet |
+| 2   | API on HTTPS; CORS; prod migrate+seed; reviewer demo account         | `core` building; one green `eas build` | AuthScreen against prod API                                                  | Tab bar + drawer + toast        |
+| 3   | ✅`DELETE /api/me` + tests                                         | `expo-secure-store`; `app.config.ts`   | InventoryScreen + ItemDetailSheet                                            | Bottom-sheet system + skeletons |
+| 4   | Verify expiry fields; Sentry; draft privacy policy                   | `expo-camera` scan prototype on device   | Inventory CRUD end-to-end                                                    | HomeScreen                      |
+| 5   | Privacy policy + terms deployed                                      | TestFlight build#1 (or ad-hoc)             | **Checkpoint:** register → scan → inventory → home on a real device | Safe-area pass                  |
 
 ### Week 2 — full MVP port + native polish
 
-| Day | A | B | C | D |
-|---|---|---|---|---|
-| 6 | Store listing copy; screenshot plan | Local notification scheduling | Barcode scan production-ready + priming | Notifications feed + settings |
-| 7 | App Privacy form; age rating | RevenueCat SDK + `usePro()` | What-to-eat + recipe view + mark-made | Shopping list + account-deletion UI |
-| 8 | Review notes; finalize screenshots | Paywall + restore; cold-start pass | Offline/error states everywhere | Chat + Profile + About |
-| 9 | — full team: bug bash on TestFlight build #2 — | | | |
-| 10 | All store assets final | TestFlight build #3 → team + ~5 friends | **MVP feature-freeze** | **MVP feature-freeze** |
+| Day | A                                               | B                                       | C                                       | D                                   |
+| --- | ----------------------------------------------- | --------------------------------------- | --------------------------------------- | ----------------------------------- |
+| 6   | Store listing copy; screenshot plan             | Local notification scheduling           | Barcode scan production-ready + priming | Notifications feed + settings       |
+| 7   | App Privacy form; age rating                    | RevenueCat SDK +`usePro()`            | What-to-eat + recipe view + mark-made   | Shopping list + account-deletion UI |
+| 8   | Review notes; finalize screenshots              | Paywall + restore; cold-start pass      | Offline/error states everywhere         | Chat + Profile + About              |
+| 9   | — full team: bug bash on TestFlight build#2 — |                                         |                                         |                                     |
+| 10  | All store assets final                          | TestFlight build#3 → team + ~5 friends | **MVP feature-freeze**            | **MVP feature-freeze**        |
 
 ### Week 3 — harden, submit, review
 
-| Day | Everyone |
-|---|---|
-| 11 | Bug triage; polish; performance (list scroll, images, memory) |
-| 12 | Release candidate; v1.0.0, manual release; **A submits to App Store review** |
-| 13 | Respond to metadata rejections same-day; 4.2 rebuttal ready (native camera, notifications, offline, haptics) |
-| 14 | Buffer for one review round-trip (~24–48h/cycle); fix + resubmit same day |
-| 15 | Approved → manual release; kick off post-launch backlog (§9) |
+| Day | Everyone                                                                                                     |
+| --- | ------------------------------------------------------------------------------------------------------------ |
+| 11  | Bug triage; polish; performance (list scroll, images, memory)                                                |
+| 12  | Release candidate; v1.0.0, manual release;**A submits to App Store review**                            |
+| 13  | Respond to metadata rejections same-day; 4.2 rebuttal ready (native camera, notifications, offline, haptics) |
+| 14  | Buffer for one review round-trip (~24–48h/cycle); fix + resubmit same day                                   |
+| 15  | Approved → manual release; kick off post-launch backlog (§9)                                               |
 
 ---
 
 ## 6. QA matrix  *(A owns the process; whole team runs it)*
 
-| Area | Checks |
-|---|---|
-| Devices | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device |
-| Auth | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session |
-| Core loop | add item, barcode scan (camera allow / deny / deny-then-enable), inventory edit/delete, mark recipe made decrements stock |
-| Notifications | local alert fires at the right time, taps route to the item, permission denied handled |
-| Paywall | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow |
-| Native chrome | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe |
-| Network | airplane mode on every screen, slow 3G, API 500s, retry paths |
-| Lifecycle | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly |
-| Compliance | account deletion from a clean install, privacy-policy link opens, demo account works fresh |
+| Area          | Checks                                                                                                                    |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Devices       | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device                                                                |
+| Auth          | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session                         |
+| Core loop     | add item, barcode scan (camera allow / deny / deny-then-enable), inventory edit/delete, mark recipe made decrements stock |
+| Notifications | local alert fires at the right time, taps route to the item, permission denied handled                                    |
+| Paywall       | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow                                            |
+| Native chrome | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe                                     |
+| Network       | airplane mode on every screen, slow 3G, API 500s, retry paths                                                             |
+| Lifecycle     | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly                                   |
+| Compliance    | account deletion from a clean install, privacy-policy link opens, demo account works fresh                                |
 
 ---
 

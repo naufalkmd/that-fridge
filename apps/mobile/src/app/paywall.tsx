@@ -1,15 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import RevenueCatUI from "react-native-purchases-ui";
 import type { PurchasesPackage } from "react-native-purchases";
 
 import { usePro } from "@/lib/pro";
@@ -26,44 +19,45 @@ const TERMS_URL = "https://thatfridge.app/terms";
 const PRIVACY_URL = "https://thatfridge.app/privacy";
 
 function packageLabel(pkg: PurchasesPackage): string {
-  switch (pkg.packageType) {
-    case "ANNUAL":
-      return "Yearly";
-    case "MONTHLY":
-      return "Monthly";
-    default:
-      return pkg.product.title || pkg.identifier;
-  }
+  if (pkg.packageType === "ANNUAL") return "Yearly";
+  if (pkg.packageType === "MONTHLY") return "Monthly";
+  return pkg.product.title || pkg.identifier;
 }
 
 export default function Paywall() {
   const router = useRouter();
-  const { available, ready, isPro, packages, presentPaywall, purchase, restore, openCustomerCenter } =
+  const { available, ready, isPro, packages, purchase, restore, refresh, openCustomerCenter } =
     usePro();
-  const [mode, setMode] = useState<"deciding" | "custom">("deciding");
   const [busy, setBusy] = useState(false);
-  const attempted = useRef(false);
 
-  // Prefer the RevenueCat hosted paywall. Fall back to the custom UI below only when
-  // no paywall is configured in the dashboard yet.
-  useEffect(() => {
-    if (attempted.current || !ready) return;
-    attempted.current = true;
-    if (isPro || !available) {
-      setMode("custom");
-      return;
-    }
-    presentPaywall().then((result) => {
-      if (result === "entitled" || result === "dismissed") router.back();
-      else setMode("custom");
-    });
-  }, [ready, isPro, available, presentPaywall, router]);
+  const close = () => router.back();
+
+  // Preferred path: once RevenueCat has an offering with packages, render its native
+  // Paywall component (docs-recommended embedded pattern for a dedicated screen — uses the
+  // paywall designed in the dashboard, or a default template). The custom UI below is the
+  // fallback for pre-dashboard-config and Expo Go.
+  if (available && ready && !isPro && packages.length > 0) {
+    return (
+      <RevenueCatUI.Paywall
+        options={{ displayCloseButton: true }}
+        onPurchaseCompleted={async () => {
+          await refresh();
+          close();
+        }}
+        onRestoreCompleted={async () => {
+          await refresh();
+          close();
+        }}
+        onDismiss={close}
+      />
+    );
+  }
 
   async function buy(pkg: PurchasesPackage) {
     setBusy(true);
     try {
       await purchase(pkg);
-      router.back();
+      close();
     } catch (e: unknown) {
       const err = e as { userCancelled?: boolean; message?: string };
       if (!err.userCancelled) Alert.alert("Purchase failed", err.message ?? "Please try again.");
@@ -82,14 +76,6 @@ export default function Paywall() {
     } finally {
       setBusy(false);
     }
-  }
-
-  if (mode === "deciding") {
-    return (
-      <View className="flex-1 items-center justify-center bg-canvas">
-        <ActivityIndicator color="#4de1c1" />
-      </View>
-    );
   }
 
   return (
@@ -132,6 +118,8 @@ export default function Paywall() {
               available in Expo Go.
             </Text>
           </View>
+        ) : !ready ? (
+          <ActivityIndicator color="#4de1c1" />
         ) : packages.length === 0 ? (
           <View className="rounded-2xl border border-hairline bg-surface p-4">
             <Text className="text-[13px] text-muted">
@@ -165,7 +153,7 @@ export default function Paywall() {
           </View>
         )}
 
-        {available && (
+        {available && !isPro && (
           <Pressable onPress={doRestore} disabled={busy} className="items-center py-1">
             <Text className="text-[13px] font-semibold text-accent">Restore purchases</Text>
           </Pressable>
@@ -180,7 +168,7 @@ export default function Paywall() {
           </Pressable>
         </View>
 
-        <Pressable onPress={() => router.back()} className="items-center py-1">
+        <Pressable onPress={close} className="items-center py-1">
           <Text className="text-[13px] text-muted">Not now</Text>
         </Pressable>
       </ScrollView>

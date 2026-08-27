@@ -39,7 +39,7 @@ type Msg = {
 export default function Chat() {
   const router = useRouter();
   const { items } = useInventory();
-  const { isPro } = usePro();
+  const { isPro, presentPaywallIfNeeded } = usePro();
   const [agent, setAgent] = useState<ChatAgentName>("Chef");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -86,8 +86,13 @@ export default function Chat() {
     const msg = text.trim();
     if (!msg || sending) return;
     if (!isPro && remaining <= 0) {
-      router.push("/paywall");
-      return;
+      // Try the native paywall; if it can't show (Expo Go / no dashboard paywall) or the
+      // user doesn't buy, send them to the full paywall screen.
+      const nowPro = await presentPaywallIfNeeded();
+      if (!nowPro) {
+        router.push("/paywall");
+        return;
+      }
     }
     setText("");
     setMessages((m) => [...m, { role: "user", text: msg }]);
