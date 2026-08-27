@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
     "@thatfridge/core": "workspace:*",
     "expo": "~57.0.17",
     "expo-camera": "~57.0.4",

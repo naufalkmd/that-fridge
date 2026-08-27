@@ -149,7 +149,7 @@ export default function Inventory() {
 
     <Pressable
       onPress={() => router.push("/add")}
-      className="absolute bottom-6 right-6 h-14 w-14 items-center justify-center rounded-full bg-warn active:opacity-80"
+      className="absolute bottom-4 right-6 h-14 w-14 items-center justify-center rounded-full bg-warn active:opacity-80"
       style={{ elevation: 4 }}
     >
       <Text className="text-[26px] font-bold leading-none text-[#0a0a0c]">+</Text>

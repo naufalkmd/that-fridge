@@ -31,21 +31,18 @@ export default function RootLayout() {
             >
               <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen name="sign-in" options={{ headerShown: false }} />
-              <Stack.Screen name="home" options={{ headerShown: false }} />
-              <Stack.Screen name="inventory" options={{ title: "Inventory" }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="item/[id]" options={{ title: "", presentation: "modal" }} />
               <Stack.Screen name="add" options={{ title: "Add item", presentation: "modal" }} />
               <Stack.Screen
                 name="scan"
                 options={{ headerShown: false, presentation: "fullScreenModal" }}
               />
-              <Stack.Screen name="notifications" options={{ title: "Notifications" }} />
               <Stack.Screen
                 name="notification-settings"
                 options={{ title: "Notification settings" }}
               />
               <Stack.Screen name="shopping" options={{ title: "Shopping list" }} />
-              <Stack.Screen name="eat" options={{ title: "What to eat" }} />
               <Stack.Screen name="chat" options={{ title: "Ask the crew" }} />
               <Stack.Screen name="profile" options={{ title: "Profile" }} />
               <Stack.Screen
