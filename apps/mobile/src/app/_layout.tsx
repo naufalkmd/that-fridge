@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider } from "@/lib/auth";
+import { ProProvider } from "@/lib/pro";
 import { InventoryProvider } from "@/lib/inventory";
 import { NotificationsProvider } from "@/lib/notifications";
 import { ShoppingProvider } from "@/lib/shopping";
@@ -14,6 +15,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
+       <ProProvider>
         <InventoryProvider>
           <NotificationsProvider>
            <ShoppingProvider>
@@ -46,10 +48,15 @@ export default function RootLayout() {
               <Stack.Screen name="eat" options={{ title: "What to eat" }} />
               <Stack.Screen name="chat" options={{ title: "Ask the crew" }} />
               <Stack.Screen name="profile" options={{ title: "Profile" }} />
+              <Stack.Screen
+                name="paywall"
+                options={{ title: "ThatFridge Pro", presentation: "modal" }}
+              />
             </Stack>
            </ShoppingProvider>
           </NotificationsProvider>
         </InventoryProvider>
+       </ProProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

@@ -4,11 +4,24 @@ import { useRouter } from "expo-router";
 
 import { describeError } from "@thatfridge/core";
 import { useAuth } from "@/lib/auth";
+import { usePro } from "@/lib/pro";
 
 export default function Profile() {
   const router = useRouter();
   const { user, signOut, deleteAccount } = useAuth();
+  const { isPro, available, restore, openCustomerCenter } = usePro();
   const [working, setWorking] = useState(false);
+
+  async function doRestore() {
+    setWorking(true);
+    try {
+      await restore();
+    } catch {
+      // restore surfaces its own result; ignore
+    } finally {
+      setWorking(false);
+    }
+  }
 
   async function doSignOut() {
     setWorking(true);
@@ -54,6 +67,35 @@ export default function Profile() {
         <Text className="text-2xl font-extrabold text-ink">{user?.name ?? "—"}</Text>
         <Text className="text-[13px] text-muted">@{user?.username}</Text>
         <Text className="text-[13px] text-faint">{user?.email}</Text>
+      </View>
+
+      <View className="rounded-2xl border border-hairline bg-surface p-4">
+        <Text className="text-[11px] font-bold uppercase tracking-widest text-faint">
+          Subscription
+        </Text>
+        <Text className="mt-1 text-[15px] font-semibold text-ink">
+          {isPro ? "ThatFridge Pro — active" : "Free plan"}
+        </Text>
+        {isPro && available ? (
+          <Pressable
+            onPress={openCustomerCenter}
+            className="mt-3 items-center rounded-lg border border-hairline py-2.5 active:opacity-70"
+          >
+            <Text className="font-semibold text-ink">Manage subscription</Text>
+          </Pressable>
+        ) : !isPro ? (
+          <Pressable
+            onPress={() => router.push("/paywall")}
+            className="mt-3 items-center rounded-lg bg-warn py-2.5 active:opacity-80"
+          >
+            <Text className="font-bold uppercase tracking-wide text-[#0a0a0c]">Go Pro</Text>
+          </Pressable>
+        ) : null}
+        {available && !isPro && (
+          <Pressable onPress={doRestore} className="mt-2 items-center py-1">
+            <Text className="text-[12.5px] font-semibold text-accent">Restore purchases</Text>
+          </Pressable>
+        )}
       </View>
 
       <View className="overflow-hidden rounded-2xl border border-hairline bg-surface">

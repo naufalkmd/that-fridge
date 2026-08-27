@@ -51,8 +51,8 @@ but don't market ThatFridge as "launched" anywhere before the store listing is l
 
 | Requirement | Status | Owner |
 |---|---|---|
-| RevenueCat SDK integrated, powering ≥1 IAP | ⬜ | B |
-| Paywall screen in the app | ⬜ | B / C |
+| RevenueCat SDK integrated, powering ≥1 IAP | 🟡 code done (`pro.tsx`); needs dashboard + a dev build | B |
+| Paywall screen in the app | ✅ `paywall.tsx` — hosted paywall + custom fallback | B |
 | ≥1 real IAP product in App Store Connect | 🔒 | A |
 | Paid Apps Agreement + banking + tax active (blocks IAP testing) | 🔒 | A |
 | App fully published & live by Sep 30 | ⬜ (launch plan) | A |
@@ -67,32 +67,44 @@ but don't market ThatFridge as "launched" anywhere before the store listing is l
 
 ## 4. Monetization design — "ThatFridge Pro"
 
-The minimum is one IAP. Make it a **monthly auto-renewing subscription** with a **7-day free
-trial** — the trial doubles as judge access, so no promo codes to manage.
+The minimum is one IAP. We ship **two auto-renewing subscriptions** — `monthly` and `yearly` —
+both with a **7-day free trial** (the trial doubles as judge access, so no promo codes).
 
-**Free tier:** 1 fridge, manual + barcode add, expiry notifications, shopping list.
+**Free tier:** 1 fridge, manual + barcode add, expiry notifications, shopping list,
+**5 AI chat messages / week**.
 
-**Pro** — `thatfridge_pro_monthly`, ~$3.99/mo, 7-day trial:
+**Pro** (`thatfridge_pro` entitlement):
 
-- Unlimited AI chat / "what to eat" (free tier capped, e.g. 5/week)
-- Receipt & photo scanning for bulk add
-- Multiple / shared fridges beyond the first
-- Advanced notification tuning
+- Unlimited AI chat / "what to eat"
+- Receipt & photo scanning for bulk add *(not yet in the app)*
+- Multiple / shared fridges beyond the first *(not yet gated)*
+- Advanced notification tuning *(not yet gated)*
 
-Gate whichever subset is cheapest — the gate just has to be real and visible. **Capping the
-existing AI chat + `sendChat` calls behind the entitlement is the smallest lift** (the chat
-screen already exists and already counts messages implicitly).
+**Implemented so far:** the AI-chat weekly cap is the live gate (`src/lib/chatQuota.ts` — a
+client-side ISO-week counter in SecureStore; move server-side post-launch). Hitting the cap
+routes to `/paywall`.
 
-**RevenueCat wiring:**
+**RevenueCat wiring (done — `src/lib/pro.tsx`, `src/app/paywall.tsx`):**
 
-- `react-native-purchases` (+ `react-native-purchases-ui`) via the Expo config plugin — needs a
-  dev build, which we need anyway.
-- One entitlement `pro`; one offering with the monthly package.
-- Paywall: RevenueCat's prebuilt `RevenueCatUI.presentPaywall()`, themed to our palette. Custom
-  paywall only if there's time.
-- Gate: `Purchases.getCustomerInfo()` → `entitlements.active["pro"]`, exposed as a `usePro()`
-  hook wrapping gated actions.
-- Restore purchases in Profile / Settings (Apple requires it).
+| Piece | Value |
+|---|---|
+| SDK | `react-native-purchases` + `react-native-purchases-ui` v10 (autolinked; needs a dev build) |
+| API key | `EXPO_PUBLIC_RC_IOS_KEY` in `apps/mobile/.env` (publishable; test-store key for now) |
+| Entitlement | `thatfridge_pro` |
+| Products / packages | `monthly`, `yearly` in the current offering |
+| Paywall | `RevenueCatUI.presentPaywall()` (hosted) with a **custom fallback** in `paywall.tsx` for before the dashboard paywall is configured |
+| Customer Center | `RevenueCatUI.presentCustomerCenter()` from Profile → "Manage subscription" |
+| Identity | `Purchases.logIn(user.id)` so entitlements follow the account |
+| Restore | Profile + paywall (Apple requires it) |
+
+**Still needed in the RevenueCat dashboard + App Store Connect** (Member A):
+
+1. App Store Connect: `thatfridge_pro_monthly` + `thatfridge_pro_yearly` subscription products
+   (one group), 7-day intro offer, Paid Apps Agreement active.
+2. RevenueCat: entitlement `thatfridge_pro`; offering `default` with packages `monthly` +
+   `yearly` mapped to those products; a Paywall design on that offering; the App Store shared
+   secret + App Store Connect API key.
+3. Swap the test-store key for the real `appl_…` App Store key in `.env` / EAS env.
 
 ---
 

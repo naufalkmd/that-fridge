@@ -10,6 +10,8 @@ import {
   View,
 } from "react-native";
 
+import { useRouter } from "expo-router";
+
 import {
   daysLabel,
   describeError,
@@ -18,6 +20,8 @@ import {
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
+import { usePro } from "@/lib/pro";
+import { FREE_CHATS_PER_WEEK, bumpChatUsed, getChatUsed } from "@/lib/chatQuota";
 
 const AGENTS: { key: ChatAgentName; blurb: string }[] = [
   { key: "Chef", blurb: "what to cook" },
@@ -33,14 +37,19 @@ type Msg = {
 };
 
 export default function Chat() {
+  const router = useRouter();
   const { items } = useInventory();
+  const { isPro } = usePro();
   const [agent, setAgent] = useState<ChatAgentName>("Chef");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [used, setUsed] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+
+  const remaining = Math.max(0, FREE_CHATS_PER_WEEK - used);
 
   const inventorySummary = useMemo(
     () =>
@@ -70,11 +79,16 @@ export default function Chat() {
         setLoading(false);
       }
     })();
+    getChatUsed().then(setUsed);
   }, []);
 
   async function send() {
     const msg = text.trim();
     if (!msg || sending) return;
+    if (!isPro && remaining <= 0) {
+      router.push("/paywall");
+      return;
+    }
     setText("");
     setMessages((m) => [...m, { role: "user", text: msg }]);
     setSending(true);
@@ -86,6 +100,10 @@ export default function Chat() {
         ...m,
         { role: "agent", text: res.agent_response, recipe: res.recipe_suggestion },
       ]);
+      if (!isPro) {
+        await bumpChatUsed();
+        setUsed((u) => u + 1);
+      }
     } catch (e) {
       setMessages((m) => [
         ...m,
@@ -123,6 +141,20 @@ export default function Chat() {
           );
         })}
       </View>
+
+      {!isPro && (
+        <Pressable
+          onPress={() => router.push("/paywall")}
+          className="mx-4 mb-1 flex-row items-center justify-between rounded-lg border border-hairline bg-surface px-3 py-2"
+        >
+          <Text className="text-[12px] text-muted">
+            {remaining > 0
+              ? `${remaining} free message${remaining === 1 ? "" : "s"} left this week`
+              : "Weekly free messages used up"}
+          </Text>
+          <Text className="text-[12px] font-bold text-accent">Go Pro</Text>
+        </Pressable>
+      )}
 
       <ScrollView
         ref={scrollRef}

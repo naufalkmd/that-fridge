@@ -46,8 +46,8 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
 
 | Item | Owner | Note |
 |---|---|---|
-| 🔒 **Paywall + RevenueCat** | B | `react-native-purchases` + `usePro()` + paywall; **needs the RevenueCat key + a real subscription product** (§ SHIPATON_2026 §3) |
-| 🔒 **`eas build --profile development`** | B | dev client so barcode scan + local notifications can actually be tested — needs the Apple account |
+| 🟡 **Paywall + RevenueCat** | B | code done — `react-native-purchases` + `react-native-purchases-ui`, `usePro()`, `paywall.tsx` (hosted + custom fallback), Customer Center, chat weekly-cap gate. **Needs:** RevenueCat dashboard (entitlement `thatfridge_pro`, offering with `monthly`/`yearly`, a paywall design), App Store Connect products, and a dev build to run |
+| 🔒 **`eas build --profile development`** | B | dev client so barcode scan, local notifications, and RevenueCat can actually be tested — needs the Apple account |
 | ⬜ Tab bar chrome | D | still a flat stack + quick-action grid; want Home / Inventory / Eat / Notifications tabs |
 | ⬜ Item icon picker | C | items show name initials; port `FoodIcon` + generated-icon library |
 | ⬜ ChatHistoryScreen | C | chat restores the latest session only; no session list / switch / delete |
