@@ -20,6 +20,7 @@ interface InventoryContextValue {
   refresh: () => Promise<void>;
   addItem: (data: Omit<CreateItemInput, "icon"> & { icon?: string }) => Promise<void>;
   lookupBarcode: (barcode: string) => Promise<BarcodeSuggestion>;
+  ensureFridgeId: () => Promise<string>;
   setItemQty: (itemId: string, qty: number) => Promise<void>;
   patchItem: (itemId: string, data: UpdateItemInput) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
@@ -77,23 +78,31 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     [load],
   );
 
+  // Ensure the account has at least one fridge, returning its id (creating "My Fridge"
+  // for a brand-new account).
+  const ensureFridgeId = useCallback(async (): Promise<string> => {
+    if (fridges.length > 0) return fridges[0].id;
+    const fridge = await api.createFridge("My Fridge");
+    setFridges([fridge]);
+    return fridge.id;
+  }, [fridges]);
+
   // Resolve where a new item goes: first section of the first fridge, creating a
   // fridge and/or "General" section on the fly for a brand-new account.
   const resolveTarget = useCallback(async (): Promise<string> => {
-    let list = fridges;
-    if (list.length === 0) {
-      const fridge = await api.createFridge("My Fridge");
-      list = [fridge];
-    }
-    let fridge = list[0];
+    const fridgeId = await ensureFridgeId();
+    const current = fridges.find((f) => f.id === fridgeId);
+    let fridge = current ?? (await api.listFridges()).find((f) => f.id === fridgeId)!;
     if (fridge.sections.length === 0) {
       const section = await api.createSection(fridge.id, "General");
       fridge = { ...fridge, sections: [section] };
-      list = [fridge, ...list.slice(1)];
-      setFridges(list);
+      setFridges((prev) => {
+        const has = prev.some((f) => f.id === fridge.id);
+        return has ? prev.map((f) => (f.id === fridge.id ? fridge : f)) : [fridge, ...prev];
+      });
     }
     return fridge.sections[0].id;
-  }, [fridges]);
+  }, [fridges, ensureFridgeId]);
 
   const addItem = useCallback<InventoryContextValue["addItem"]>(
     async (data) => {
@@ -162,6 +171,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       refresh: load,
       addItem,
       lookupBarcode,
+      ensureFridgeId,
       setItemQty,
       patchItem,
       removeItem,
@@ -175,6 +185,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       load,
       addItem,
       lookupBarcode,
+      ensureFridgeId,
       setItemQty,
       patchItem,
       removeItem,

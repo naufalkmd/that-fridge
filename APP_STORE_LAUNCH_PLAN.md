@@ -35,6 +35,8 @@ _Last updated: 2026-08-27. Branch: `mobile-app` (not yet merged to `main`)._
 - [x] **HomeScreen ported** — greeting, item/expiring-soon stats, "use it up" list, quick actions, notification bell with unread badge, pull-to-refresh
 - [x] **NotificationsScreen ported** — in-app feed (`/notification-events`, mark done/undo, active + cleared) + settings screen (`/notification-prefs` toggles)
 - [x] **Local expiry reminders** — `expo-notifications`, rescheduled from inventory on every sync, gated on the `expiryAlerts` pref + OS permission (best-effort; needs dev build to fire on iOS)
+- [x] **Shopping list ported** — `ShoppingProvider` + screen: add / check / uncheck / remove / clear-checked, optimistic, shared/fridge-scoped
+- [x] **WhatToEat ported** — `eat` screen: meal + vibe filters, `/recipes/suggest`, exact vs "almost" groups, expandable cards with ingredients/steps, "I made this" → `mark-made` + inventory refresh
 - [x] **`packages/core` grown** — fridge/section/item CRUD + `scanBarcode` + notification events/prefs + raw transforms + `flattenItems`; `domain.ts` (freshColor, daysLabel, timeAgo, category/location constants)
 - [x] `backend/scripts/seed-demo-fridge.sh` — local demo data with varied freshness
 - [x] iOS bundle verified building clean via Metro
@@ -46,12 +48,12 @@ _Last updated: 2026-08-27. Branch: `mobile-app` (not yet merged to `main`)._
 - [ ] `lib/thatfridge` full extraction into `packages/core` (see `packages/core/README.md`) — **Member B** (auth + fridge/item endpoints + domain helpers done incrementally so far)
 - [ ] Merge `mobile-app` → `main`
 - [ ] `eas build --profile development` so barcode scan + local notifications can actually be tested — **Member B**
-- [ ] WhatToEatSheet + RecipeDetail/MarkMade — **Member C**
-- [ ] ChatScreen + Shopping list — **Member C**
+- [ ] ChatScreen + ChatHistoryScreen — **Member C**
 - [ ] Icon picker for items (port `FoodIcon` / `GeneratedIconLibrary`) — **Member C**
-- [ ] Shared chrome: tab bar (Home / Inventory / Notifications / Profile), drawer, bottom sheets, toasts — **Member D**
+- [ ] Shared chrome: tab bar (Home / Inventory / Eat / Notifications), drawer, bottom sheets, toasts — **Member D**
 - [ ] Paywall + RevenueCat — **Member B**
 - [ ] ProfileDrawer/Settings + account deletion + AboutScreen — **Member D**
+- [ ] RecipeDetailSheet as a standalone route (currently inline expand in `eat`) — **Member C**
 - [ ] Proper backend demo-data **seeder** (replace the shell script) — **Member A**
 
 ### Blockers not started (external lead time — start now)

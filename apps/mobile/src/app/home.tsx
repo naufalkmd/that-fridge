@@ -103,6 +103,8 @@ export default function Home() {
         <View className="flex-row flex-wrap gap-3">
           <Action label="Add item" onPress={() => router.push("/add")} />
           <Action label="Scan" onPress={() => router.push("/scan")} />
+          <Action label="What to eat" onPress={() => router.push("/eat")} />
+          <Action label="Shopping list" onPress={() => router.push("/shopping")} />
           <Action label="Inventory" onPress={() => router.push("/inventory")} />
           <Action label="Notifications" onPress={() => router.push("/notifications")} />
         </View>

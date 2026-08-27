@@ -3,11 +3,16 @@ import type {
   CurrentUser,
   Fridge,
   Item,
+  MealType,
   NotificationEvent,
   NotificationPrefs,
   NutritionCategory,
+  Recipe,
   Section,
+  ShoppingItem,
   StorageLocation,
+  Vibe,
+  FoodFocus,
 } from "./types";
 
 export interface AuthResult {
@@ -108,6 +113,12 @@ export interface UpdateItemInput {
   shelf_life_days?: number;
   note?: string;
   shop_url?: string | null;
+}
+
+export interface WhatToEatResult {
+  exact: Recipe[];
+  similar: Recipe[];
+  exhausted: boolean;
 }
 
 export interface BarcodeSuggestion {
@@ -232,6 +243,47 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.patch<NotificationPrefs>("/notification-prefs", data);
   }
 
+  function listShoppingItems(): Promise<ShoppingItem[]> {
+    return http.get<ShoppingItem[]>("/shopping-items");
+  }
+
+  function addShoppingItem(fridgeId: string, name: string): Promise<ShoppingItem> {
+    return http.post<ShoppingItem>(`/fridges/${fridgeId}/shopping-items`, {
+      name,
+      icon: null,
+      section: "other",
+    });
+  }
+
+  function updateShoppingItem(
+    id: string,
+    data: Partial<{ name: string; checked: boolean; section: string }>,
+  ): Promise<ShoppingItem> {
+    return http.patch<ShoppingItem>(`/shopping-items/${id}`, data);
+  }
+
+  function deleteShoppingItem(id: string): Promise<void> {
+    return http.del(`/shopping-items/${id}`).then(() => undefined);
+  }
+
+  function suggestRecipes(params: {
+    mealType?: MealType | null;
+    vibes?: Vibe[];
+    foodFocus?: FoodFocus[];
+  }): Promise<WhatToEatResult> {
+    const q = new URLSearchParams();
+    if (params.mealType) q.set("meal_type", params.mealType);
+    (params.vibes ?? []).forEach((v) => q.append("vibes[]", v));
+    (params.foodFocus ?? []).forEach((f) => q.append("food_focus[]", f));
+    const qs = q.toString();
+    // Not wrapped in { data } server-side — returns { exact, similar, exhausted }.
+    return http.get<WhatToEatResult>(`/recipes/suggest${qs ? `?${qs}` : ""}`);
+  }
+
+  function markRecipeMade(id: string): Promise<Recipe> {
+    return http.post<Recipe>(`/recipes/${id}/mark-made`);
+  }
+
   return {
     login,
     register,
@@ -248,6 +300,12 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     markNotification,
     getNotificationPrefs,
     updateNotificationPrefs,
+    listShoppingItems,
+    addShoppingItem,
+    updateShoppingItem,
+    deleteShoppingItem,
+    suggestRecipes,
+    markRecipeMade,
   };
 }
 

@@ -7,6 +7,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "@/lib/auth";
 import { InventoryProvider } from "@/lib/inventory";
 import { NotificationsProvider } from "@/lib/notifications";
+import { ShoppingProvider } from "@/lib/shopping";
 import { ExpiryReminderSync } from "@/lib/ExpiryReminderSync";
 
 export default function RootLayout() {
@@ -15,6 +16,7 @@ export default function RootLayout() {
       <AuthProvider>
         <InventoryProvider>
           <NotificationsProvider>
+           <ShoppingProvider>
             <ExpiryReminderSync />
             <StatusBar style="light" />
             <Stack
@@ -40,7 +42,10 @@ export default function RootLayout() {
                 name="notification-settings"
                 options={{ title: "Notification settings" }}
               />
+              <Stack.Screen name="shopping" options={{ title: "Shopping list" }} />
+              <Stack.Screen name="eat" options={{ title: "What to eat" }} />
             </Stack>
+           </ShoppingProvider>
           </NotificationsProvider>
         </InventoryProvider>
       </AuthProvider>
