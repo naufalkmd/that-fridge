@@ -7,7 +7,7 @@ owns the build; this doc owns the hackathon-specific requirements and deadline.
 Source: <https://revenuecat-shipaton-2026.devpost.com/> and its Rules page — read those for the
 authoritative text; this is our working interpretation.
 
-_Last updated: 2026-08-27._
+_Last updated: 2026-08-28._
 Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external setup
 
 ---
@@ -25,9 +25,11 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
 - **Realistic prize targets:** Peace Prize, Design Award, #BuildInPublic — **not** the
   revenue-based Grand Prize (an app ~2 weeks live can't show real growth numbers).
 
-**Where we are:** the app's core loop is code-complete (see the launch plan §1). The
-RevenueCat integration, the paywall, and every account/store step below are **not started** and
-are the critical path.
+**Where we are:** every core screen is code-complete and ported to web-app visual parity (see
+the launch plan §1). The RevenueCat SDK, the entitlement/offering, and a published paywall
+design are **done**. The critical path is now the **external accounts** — Apple Developer
+enrollment, the Paid Apps Agreement, and a real App Store app + products in RevenueCat — plus a
+dev build to exercise it all.
 
 ---
 
@@ -51,8 +53,8 @@ but don't market ThatFridge as "launched" anywhere before the store listing is l
 
 | Requirement | Status | Owner |
 |---|---|---|
-| RevenueCat SDK integrated, powering ≥1 IAP | 🟡 code done (`pro.tsx`); needs dashboard + a dev build | B |
-| Paywall screen in the app | ✅ `paywall.tsx` — hosted paywall + custom fallback | B |
+| RevenueCat SDK integrated, powering ≥1 IAP | 🟡 SDK + `thatfridge_pro` entitlement + `default` offering done; needs a real App Store product + dev build | B |
+| Paywall screen in the app | ✅ `paywall.tsx` + a **published AI-designed paywall** on the offering | B |
 | ≥1 real IAP product in App Store Connect | 🔒 | A |
 | Paid Apps Agreement + banking + tax active (blocks IAP testing) | 🔒 | A |
 | App fully published & live by Sep 30 | ⬜ (launch plan) | A |
@@ -97,13 +99,18 @@ routes to `/paywall`.
 | Identity | `Purchases.logIn(user.id)` so entitlements follow the account |
 | Restore | Profile + paywall (Apple requires it) |
 
+**Done (2026-08-28):** RevenueCat project `ThatFridge` with the `thatfridge_pro` entitlement,
+`default` offering (`$rc_monthly` + `$rc_annual` on test-store `monthly`/`yearly` products), and
+an **AI-designed paywall published** on the `default` offering — App-Store-compliant (visible
+restore link, auto-renew terms). Renders via `RevenueCatUI.Paywall` in a dev build.
+
 **Still needed in the RevenueCat dashboard + App Store Connect** (Member A):
 
 1. App Store Connect: `thatfridge_pro_monthly` + `thatfridge_pro_yearly` subscription products
    (one group), 7-day intro offer, Paid Apps Agreement active.
-2. RevenueCat: entitlement `thatfridge_pro`; offering `default` with packages `monthly` +
-   `yearly` mapped to those products; a Paywall design on that offering; the App Store shared
-   secret + App Store Connect API key.
+2. RevenueCat: a real **App Store app** (`test.thatfridge.app`) alongside the test store; App
+   Store shared secret + App Store Connect API key; remap the offering's products to the real
+   ones once they exist.
 3. Swap the test-store key for the real `appl_…` App Store key in `.env` / EAS env.
 
 ---
@@ -114,7 +121,7 @@ routes to `/paywall`.
 |---|---|---|---|
 | **Peace Prize** (social impact) | $15–20k | Household food-waste reduction *is* the product thesis — expiry tracking, use-it-up, "know before you open the door" | low — already the pitch |
 | **#BuildInPublic** | $30k | We have a detailed plan, a live progress log, clean git history. Post updates 2–3×/week. Judged on the journey, not revenue | low–medium — discipline, not code |
-| **Design Award** | $15–20k | "Dark neon pixel tech" system, pixel font, the AI-crew concept | medium — the native port must look as good as the web app |
+| **Design Award** | $15–20k | "Dark neon pixel tech" system, pixel font, the AI-crew concept; the native port now matches the web app screen-for-screen | low–medium — parity done, polish left |
 | Grand Prize | $100k | Needs sustained install / MRR / growth numbers — not realistic ~2 weeks live | don't chase; work overlaps |
 | OneSignal (retention / push) | $25k | Our notifications could route through OneSignal instead of local-only | medium — only if push goes server-driven |
 | Catvertising (RevenueCat Ads) | $15–20k | Off-thesis for a paid utility app | skip |
@@ -161,10 +168,13 @@ server-driven anyway.
 1. Confirm each team member's eligibility (age of majority, country, not sponsor staff).
 2. **Member A:** start Apple Developer enrollment **and** the App Store Connect Paid Apps
    Agreement / banking / tax the same day.
-3. **Member A:** create the RevenueCat account + project (free).
-4. Lock the Pro gate — recommended: cap free-tier AI chat + lock receipt/photo scan.
-5. **Member B:** once EAS + the Apple account exist, add `react-native-purchases` and wire
-   `usePro()` + the paywall.
-6. **Member D:** create the Devpost draft (editable until the deadline) and start the
-   #BuildInPublic thread — the monorepo scaffold, the plan, and the progress log are good first
-   posts.
+3. ✅ RevenueCat account + project + `thatfridge_pro` entitlement + `default` offering + a
+   published paywall design.
+4. ✅ Pro gate locked — free-tier AI chat cap + receipt/photo add Pro-gated.
+5. ✅ `react-native-purchases` + `usePro()` + paywall wired (`src/lib/pro.tsx`,
+   `src/app/paywall.tsx`).
+6. **Member A:** once the Apple account exists — create the App Store app in RevenueCat,
+   `thatfridge_pro_monthly`/`_yearly` with the 7-day trial, swap in the `appl_` key.
+7. **Member B:** first `eas build --profile development`; verify a sandbox purchase + restore.
+8. **Member D:** Devpost draft + #BuildInPublic thread — the parity port + published paywall
+   are good posts.

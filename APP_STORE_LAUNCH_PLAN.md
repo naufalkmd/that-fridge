@@ -11,11 +11,12 @@ that date.
 
 **Team:** 4 people — roles in §4. Map them to A/B/C/D.
 
-> **The plan works only if:** (a) the MVP scope in §3 holds — no additions mid-sprint;
+> **The plan works only if:** (a) the §3 scope holds — every core screen is now ported to web
+> parity; further additions are post-launch OTA;
 > (b) Apple Developer enrollment is submitted immediately (the #1 schedule risk, §7);
 > (c) the App Store Connect Paid Apps Agreement is started the same day (blocks all IAP work).
 
-_Last updated: 2026-08-27 · working branch `mobile-app` (not yet merged to `main`)._
+_Last updated: 2026-08-28 · working branch `mobile-app` (not yet merged to `main`)._
 
 ---
 
@@ -46,14 +47,22 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
 
 | Item                                            | Owner | Note                                                                                                                                                                                                                                                                                                                                                        |
 | ----------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🟡**Paywall + RevenueCat**                | B     | code done —`react-native-purchases` + `react-native-purchases-ui`, `usePro()`, `paywall.tsx` (hosted + custom fallback), Customer Center, chat weekly-cap gate. **Needs:** RevenueCat dashboard (entitlement `thatfridge_pro`, offering with `monthly`/`yearly`, a paywall design), App Store Connect products, and a dev build to run |
+| ✅**Paywall + RevenueCat**                | B     | client code done; RevenueCat dashboard configured (project, `thatfridge_pro` entitlement, `default` offering with `monthly`/`yearly`); **AI paywall designed + published** on the `default` offering (test store). **Still needs:** a real App Store app in RevenueCat + `appl_` key + real trial products, and a dev build to run |
 | 🔒**`eas build --profile development`** | B     | dev client so barcode scan, local notifications, and RevenueCat can actually be tested — needs the Apple account                                                                                                                                                                                                                                           |
-| 🟡 Tab bar chrome                               | D     | `(tabs)` group live — Home / Inventory / Eat / Alerts, Ionicons, unread badge; other screens push/modal over it. Bottom-sheet system + toast/undo still ⬜                                                                                                                                                                                            |
-| ⬜ Item icon picker                             | C     | items show name initials; port`FoodIcon` + generated-icon library                                                                                                                                                                                                                                                                                         |
-| ⬜ ChatHistoryScreen                            | C     | chat restores the latest session only; no session list / switch / delete                                                                                                                                                                                                                                                                                    |
+| 🟡 Tab bar chrome                               | D     | `(tabs)` group live — Home / Inventory / Eat / Alerts, Ionicons, unread badge; toast/undo done; bottom-sheet **gesture** system (grab-to-dismiss) still ⬜                                                                                                                                                                                            |
+| ⬜ Item icon picker                             | C     | items show name initials + core pixel grids; port the generated-icon library                                                                                                                                                                                                                                                                              |
+| ⬜ ChatHistoryScreen                            | C     | chat restores the latest session only; "new chat" clears it; no session list / switch / delete                                                                                                                                                                                                                                                              |
 | ⬜ Native-feel pass                             | C/D   | haptics, skeleton loaders, safe-area audit on every screen, offline banners                                                                                                                                                                                                                                                                                 |
-| ⬜`lib/thatfridge` full extraction            | B     | ~half done incrementally; finish moving the pure modules + point`apps/web` at `packages/core` (see `packages/core/README.md`)                                                                                                                                                                                                                         |
+| ⬜`lib/thatfridge` full extraction            | B     | most Home logic now in `packages/core` (`home.ts`, score endpoints); finish moving the rest + point`apps/web` at `packages/core`                                                                                                                                                                                                                       |
 | ⬜ Merge`mobile-app` → `main`              | —    | additive; web app untouched                                                                                                                                                                                                                                                                                                                                 |
+
+> **Screen parity (2026-08-28):** every core screen — Home, Inventory, Search, Eat, Chat,
+> Notifications, Profile, Add, Item detail — is ported to match `apps/web`'s "dark neon pixel
+> tech" look: Home has the Kitchen-Score SVG gauge (wired to the real `usage-history` /
+> `organizer-tally` / `score-snapshots` endpoints), the animated CrewScene, the fridge hero
+> carousel and swipe-dismiss crew tips; a shared fridge-scope drives Home / Inventory / Search /
+> Profile. Deferred as unbuilt features (not layout): receipt/photo AI bulk-add, find-friend,
+> Goals/Badges/AI-Data screens, chat attachments/voice, the hero style-picker.
 
 ### External setup — not started (long lead time, start now)
 
@@ -120,25 +129,27 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
 
 ## 3. MVP scope — v1.0
 
-**IN** (status per §1):
+The bar for every mobile screen is now **visual parity with `apps/web`** (decided 2026-08-28),
+not the earlier stripped MVP. Status per §1.
 
 | Screen / feature                                                             | Status                                            |
 | ---------------------------------------------------------------------------- | ------------------------------------------------- |
 | Auth — register / login / logout / persistence                              | ✅                                                |
-| Inventory + item detail — list / add / edit / delete                        | ✅                                                |
-| Add + barcode scanning (`expo-camera`)                                     | ✅ (scan needs dev build)                         |
-| Home dashboard                                                               | ✅                                                |
-| Notifications feed + settings + local expiry reminders                       | ✅                                                |
-| What to eat + recipe view + "I made this"                                    | ✅                                                |
-| Chat (AI assistant)                                                          | ✅                                                |
+| Inventory + item detail — list / add / edit / delete, sort, category filter, search | ✅ web-parity                              |
+| Add — method picker (barcode / manual live; receipt + photo Pro-gated)        | ✅ web-parity                                     |
+| Home dashboard — Kitchen Score gauge, CrewScene, fridge carousel, crew tips   | ✅ web-parity                                     |
+| Notifications feed + settings + local expiry reminders                       | ✅ web-parity                                     |
+| What to eat + recipe card (have/need ingredients, steps) + "Mark as made"     | ✅ web-parity                                     |
+| Chat (AI assistant) — wallpaper, quick asks, markdown replies                 | ✅ web-parity                                     |
 | Shopping list                                                                | ✅                                                |
-| Profile / Settings +**account deletion** + **restore purchases** | ✅ deletion · ⬜ restore (with paywall)          |
-| **Paywall + "ThatFridge Pro"** (RevenueCat, `pro` entitlement gate)  | 🔒                                                |
-| Shared chrome — tab bar, bottom sheets, toasts, offline/error states        | 🟡 error/loading states done; tab bar + polish ⬜ |
+| Profile / Settings + **account deletion** + **restore purchases**            | ✅                                                |
+| **Paywall + "ThatFridge Pro"** (RevenueCat, `thatfridge_pro` gate)            | ✅ code + dashboard + published paywall; needs real App Store products |
+| Shared chrome — tab bar, toasts, fridge-scope, pixel headers                  | ✅ · sheet grab-to-dismiss gesture ⬜             |
 
 **OUT** — fast-follow via EAS Update after launch (all JS-only, no new review):
 sticky-notes board · Organizer · Goals · Badges · AI-data screen · RecipeFormSheet ·
-FridgeStyleSheet · dedicated Search · ChatHistory session list · item icon picker ·
+FridgeStyleSheet · ChatHistory session list · item icon (generated) library ·
+receipt/photo AI bulk-add · find-friend / shared-fridge invites · chat attachments + voice ·
 Android · server-driven push.
 
 A trivial OUT screen may be ported if there's slack, but it never delays an IN item.
@@ -295,7 +306,7 @@ A trivial OUT screen may be ported if there's slack, but it never delays an IN i
 ## 9. Post-launch backlog
 
 1. EAS Update: sticky notes, organizer, goals, badges, AI-data, recipe form, fridge style,
-   search, chat-history session list, item icon picker.
+   chat-history session list, generated-icon library, receipt/photo AI bulk-add, find-friend.
 2. Server-driven push: APNs auth key + FCM + device-token endpoint + backend sends.
 3. **Android:** `eas build -p android`; Play Console (register as an **organization** to skip the
    12-tester / 14-day closed-testing gate); Data Safety form; Android screenshots; submit.
