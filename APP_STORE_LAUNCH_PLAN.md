@@ -8,6 +8,41 @@
 
 ---
 
+## 0. Progress
+
+_Last updated: 2026-08-27. Branch: `mobile-app` (not yet merged to `main`)._
+
+### Done
+
+- [x] **Monorepo stood up** — pnpm workspaces + turborepo; `.npmrc` with `node-linker=hoisted` for Metro compatibility
+- [x] **`frontend/` → `apps/web/`** — pure `git mv`, web app otherwise untouched and frozen; README + pre-push hook + `.gitignore` updated
+- [x] **`apps/mobile` scaffolded** — Expo SDK 57, Expo Router, NativeWind, TypeScript
+- [x] **`app.config.ts`** — bundle id `test.thatfridge.app`, camera usage string, mic disabled, `ITSAppUsesNonExemptEncryption=false`
+- [x] **`eas.json`** — development / preview / production profiles (needs `eas init` to attach a project id, and real API URLs)
+- [x] **`packages/core` created** — `types.ts` (copied), platform-agnostic `HttpClient` (injected baseUrl + token store), `createApi` with `login`/`register`/`logout`/`me`, `describeError`
+- [x] **Mobile ↔ core wired** — `expo-secure-store` token store, `EXPO_PUBLIC_API_URL` env
+- [x] **AuthScreen ported** (`sign-in.tsx`) — login/signup toggle, validation matching backend rules, loading/error states, `__DEV__` demo-account fill
+- [x] **Auth session** — `AuthProvider` with token-restore on launch; `index.tsx` redirects by auth status; `home.tsx` placeholder
+- [x] iOS bundle verified building clean via Metro
+- [x] Runs in Expo Go (auth flow only — native modules need a dev build)
+
+### In progress / next
+
+- [ ] `eas init` + first `eas build --profile development` (dev client) — **Member B**
+- [ ] `lib/thatfridge` full extraction into `packages/core` (see `packages/core/README.md`) — **Member B**
+- [ ] Merge `mobile-app` → `main`
+- [ ] InventoryScreen + ItemDetailSheet — **Member C**
+- [ ] Shared chrome: tab bar, drawer, bottom sheets, toasts — **Member D**
+
+### Blockers not started (external lead time — start now)
+
+- [ ] **Apple Developer Program** enrollment (Individual) — **Member A/D**
+- [ ] Domain purchased (API + privacy policy) — **Member A**
+- [ ] Laravel API deployed to the VPS (HTTPS, Postgres, Redis, queue, scheduler) — **Member A**
+- [ ] Decide Google Play account type (personal vs organization) — **Member D**
+
+---
+
 ## 1. Approach
 
 `frontend/lib/thatfridge/` is **~5,850 LOC of portable logic** (API client, types, domain rules), already cleanly separated from **~9,100 LOC of web UI**. We move the logic into a shared package untouched and rebuild only the UI in React Native.
@@ -108,6 +143,10 @@ Owns everything else in MVP scope and the components every screen depends on.
 ---
 
 ## 4. 15-day timeline
+
+> See §0 for live progress. Ahead of this grid: monorepo, mobile scaffold, `eas.json`,
+> `app.config.ts`, `packages/core` (partial), AuthScreen + session all landed early.
+> Behind: nothing started yet on the Member A backend/enrollment track.
 
 ### Week 1 — Foundations + core skeleton (Days 1–5)
 
