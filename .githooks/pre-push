@@ -10,10 +10,15 @@ repo_root=$(git rev-parse --show-toplevel)
 echo "pre-push: running backend tests..."
 (cd "$repo_root/backend" && php artisan test)
 
-echo "pre-push: running frontend tests..."
+echo "pre-push: running web tests..."
 # NODE_ENV=production (set in some shells/tools) makes React ship a build that strips
 # out the `act` testing export, breaking every RTL test with a confusing "React.act is
 # not a function" instead of a real failure - force it off just for this.
-(cd "$repo_root/frontend" && env -u NODE_ENV npm test)
+(cd "$repo_root/apps/web" && env -u NODE_ENV npm test)
+
+if [ -f "$repo_root/apps/mobile/package.json" ]; then
+  echo "pre-push: running mobile tests..."
+  (cd "$repo_root/apps/mobile" && pnpm test --if-present)
+fi
 
 echo "pre-push: all tests passed."
