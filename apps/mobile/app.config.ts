@@ -10,6 +10,18 @@ const config: ExpoConfig = {
   icon: "./assets/images/icon.png",
   scheme: "thatfridge",
   userInterfaceStyle: "automatic",
+  owner: "avocacode",
+  extra: {
+    eas: {
+      projectId: "9d32771d-73bf-4ee1-9a24-fbd96b2a3ddc",
+    },
+  },
+  updates: {
+    url: "https://u.expo.dev/9d32771d-73bf-4ee1-9a24-fbd96b2a3ddc",
+  },
+  runtimeVersion: {
+    policy: "appVersion",
+  },
   ios: {
     supportsTablet: false,
     bundleIdentifier: "test.thatfridge.app",
