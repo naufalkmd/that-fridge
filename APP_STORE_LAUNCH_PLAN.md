@@ -4,6 +4,11 @@
 **Team:** 4 people, all full-time on this. Roles in §3.
 **Method:** Monorepo, share the existing logic layer, rebuild the UI native, cut scope hard, parallelize from Day 1.
 
+> **This launch is also our RevenueCat Shipaton 2026 entry** — see [`SHIPATON_2026.md`](SHIPATON_2026.md).
+> That adds two hard requirements: the **RevenueCat SDK powering ≥1 in-app purchase** (a "ThatFridge Pro"
+> subscription + paywall) and the app being **live on the store by Sep 30, 2026**. Both are folded into the
+> scope and tracks below.
+
 > This is an aggressive plan. It works only if: (a) all 4 people are heads-down, (b) the MVP scope cut in §2 holds — no additions mid-sprint, (c) Apple Developer enrollment is submitted **Day 1**. The single biggest schedule risk is Apple identity verification; §7 covers the mitigation.
 
 ---
@@ -37,9 +42,15 @@ _Last updated: 2026-08-27. Branch: `mobile-app` (not yet merged to `main`)._
 ### Blockers not started (external lead time — start now)
 
 - [ ] **Apple Developer Program** enrollment (Individual) — **Member A/D**
+- [ ] **App Store Connect: Paid Apps Agreement + banking + tax** (blocks IAP testing) — **Member A**
+- [ ] **RevenueCat account + project + entitlement/offering** — **Member A**
+- [ ] `thatfridge_pro_monthly` subscription product + 7-day trial in App Store Connect — **Member A**
 - [ ] Domain purchased (API + privacy policy) — **Member A**
 - [ ] Laravel API deployed to the VPS (HTTPS, Postgres, Redis, queue, scheduler) — **Member A**
+- [ ] Devpost draft project page + start #BuildInPublic thread — **Member D**
 - [ ] Decide Google Play account type (personal vs organization) — **Member D**
+
+See [`SHIPATON_2026.md`](SHIPATON_2026.md) for the full hackathon requirement mapping.
 
 ---
 
@@ -85,9 +96,10 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
 | NotificationsScreen + NotificationHistoryScreen | in-app feed + **local scheduled** expiry/low-stock alerts |
 | WhatToEatSheet | "what can I cook" |
 | RecipeDetailSheet + MarkRecipeMadeSheet | view a suggestion, mark made (decrements inventory) |
-| ChatScreen + ChatHistoryScreen | AI assistant |
+| ChatScreen + ChatHistoryScreen | AI assistant (free tier capped — see paywall) |
 | Shopping list | shared/fridge-scoped list |
-| ProfileDrawer / Settings + **account deletion** | Apple 5.1.1(v) requirement |
+| **Paywall + "ThatFridge Pro"** | RevenueCat SDK, `pro` entitlement gate on AI features — **Shipaton requirement**, see `SHIPATON_2026.md` §3 |
+| ProfileDrawer / Settings + **account deletion** + **restore purchases** | Apple 5.1.1(v) + IAP restore requirement |
 | AboutScreen | |
 | Shared chrome | tab bar, drawer, bottom sheets, toasts, offline/error states |
 
@@ -112,6 +124,7 @@ Backend deploy is front-loaded in Week 1; store/compliance is bursty (enrollment
 - **Privacy policy + Terms** pages on `apps/web`, deployed, public URLs.
 - Store listing: description, subtitle, keywords, support URL, screenshots (iPhone 6.9" + 6.5"), icon 1024².
 - **App Privacy** ("nutrition labels") form, age rating, App Review notes (demo credentials, "requires network").
+- **Shipaton / monetization** (see `SHIPATON_2026.md`): Day 1 also start the **Paid Apps Agreement + banking + tax** in App Store Connect (blocks IAP testing); create the `thatfridge_pro_monthly` subscription + 7-day trial; set up the RevenueCat account/project/entitlement/offering; own the Devpost submission (writeup, ≤2-min demo video, screenshots).
 - Submit to review; own the Resolution Center; turn rejections around within hours.
 
 ### Member B — Mobile Platform Lead
@@ -124,6 +137,7 @@ Owns the monorepo, Expo project, native config, and the build pipeline. **Needs 
 - **EAS Update** channel wired for post-launch OTA fixes.
 - `expo-notifications`: local scheduling from synced item expiry dates + permission priming.
 - Barcode scanning module (`expo-camera`) — prototype on a real device by Day 4.
+- **RevenueCat**: `react-native-purchases` + `react-native-purchases-ui` (config plugin, dev build); `Purchases.configure()` on launch with `EXPO_PUBLIC_RC_IOS_KEY`; a `usePro()` hook reading `entitlements.active.pro`.
 - Cut TestFlight builds; own the release runbook.
 
 ### Member C — App UI: core loop
