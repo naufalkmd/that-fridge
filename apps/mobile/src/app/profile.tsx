@@ -2,9 +2,13 @@ import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
+import Ionicons from "@expo/vector-icons/Ionicons";
+
 import { describeError } from "@thatfridge/core";
 import { useAuth } from "@/lib/auth";
 import { usePro } from "@/lib/pro";
+import { PixelText } from "@/components/brand";
+import { Eyebrow, SectionHeader } from "@/components/ui";
 
 export default function Profile() {
   const router = useRouter();
@@ -62,18 +66,23 @@ export default function Profile() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-canvas" contentContainerClassName="p-6 gap-6">
-      <View className="gap-1">
-        <Text className="text-2xl font-extrabold text-ink">{user?.name ?? "—"}</Text>
-        <Text className="text-[13px] text-muted">@{user?.username}</Text>
-        <Text className="text-[13px] text-faint">{user?.email}</Text>
+    <ScrollView className="flex-1 bg-canvas" contentContainerClassName="p-6 gap-7">
+      <View className="flex-row items-center gap-3.5">
+        <View className="h-14 w-14 items-center justify-center rounded-full border border-hairline bg-surface">
+          <Text className="text-lg font-bold text-ink">
+            {user?.name?.slice(0, 1).toUpperCase() ?? "?"}
+          </Text>
+        </View>
+        <View className="flex-1 gap-0.5">
+          <Text className="text-xl font-extrabold text-ink">{user?.name ?? "—"}</Text>
+          <Text className="text-[13px] text-muted">@{user?.username}</Text>
+          <Text className="text-[12px] text-faint">{user?.email}</Text>
+        </View>
       </View>
 
-      <View className="rounded-2xl border border-hairline bg-surface p-4">
-        <Text className="text-[11px] font-bold uppercase tracking-widest text-faint">
-          Subscription
-        </Text>
-        <Text className="mt-1 text-[15px] font-semibold text-ink">
+      <View className="rounded-[10px] border border-hairline bg-surface p-4">
+        <Eyebrow color="rgba(234,234,236,0.34)">Subscription</Eyebrow>
+        <Text className="mt-1.5 text-[15px] font-semibold text-ink">
           {isPro ? "ThatFridge Pro — active" : "Free plan"}
         </Text>
         {isPro && available ? (
@@ -98,14 +107,28 @@ export default function Profile() {
         )}
       </View>
 
-      <View className="overflow-hidden rounded-2xl border border-hairline bg-surface">
-        <LinkRow label="Notification settings" onPress={() => router.push("/notification-settings")} />
-        <LinkRow label="Shopping list" onPress={() => router.push("/shopping")} last />
+      <View>
+        <SectionHeader>Settings</SectionHeader>
+        <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
+          <LinkRow
+            icon="notifications-outline"
+            label="Notification settings"
+            onPress={() => router.push("/notification-settings")}
+          />
+          <LinkRow
+            icon="cart-outline"
+            label="Shopping list"
+            onPress={() => router.push("/shopping")}
+            last
+          />
+        </View>
       </View>
 
-      <View className="rounded-2xl border border-hairline bg-surface p-4">
-        <Text className="text-[13px] font-bold text-ink">About ThatFridge</Text>
-        <Text className="mt-1 text-[12.5px] leading-5 text-muted">
+      <View className="rounded-[10px] border border-hairline bg-surface p-4">
+        <View className="mb-1.5 flex-row items-center gap-2">
+          <PixelText style={{ fontSize: 12, color: "#eaeaec" }}>ThatFridge</PixelText>
+        </View>
+        <Text className="text-[12.5px] leading-5 text-muted">
           Know what&apos;s inside before you open the door. Track groceries and freshness,
           get pinged before things go bad, and see what you can cook with what you have —
           so less food ends up in the bin.
@@ -135,10 +158,12 @@ export default function Profile() {
 }
 
 function LinkRow({
+  icon,
   label,
   onPress,
   last,
 }: {
+  icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
   last?: boolean;
@@ -146,12 +171,13 @@ function LinkRow({
   return (
     <Pressable
       onPress={onPress}
-      className={`flex-row items-center justify-between px-4 py-3.5 active:bg-canvas ${
+      className={`flex-row items-center gap-3 px-4 py-3.5 active:bg-canvas ${
         last ? "" : "border-b border-hairline"
       }`}
     >
-      <Text className="text-[14px] text-ink">{label}</Text>
-      <Text className="text-muted">›</Text>
+      <Ionicons name={icon} size={18} color="rgba(234,234,236,0.58)" />
+      <Text className="flex-1 text-[14px] text-ink">{label}</Text>
+      <Ionicons name="chevron-forward" size={16} color="rgba(234,234,236,0.34)" />
     </Pressable>
   );
 }

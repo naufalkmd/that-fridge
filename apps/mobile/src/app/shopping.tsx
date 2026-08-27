@@ -14,6 +14,7 @@ import {
 
 import { describeError } from "@thatfridge/core";
 import { useShopping } from "@/lib/shopping";
+import { SectionHeader } from "@/components/ui";
 
 export default function Shopping() {
   const { items, loading, error, refresh, add, toggle, remove, clearChecked } = useShopping();
@@ -96,31 +97,32 @@ export default function Shopping() {
         )}
 
         {unchecked.length > 0 && (
-          <View className="overflow-hidden rounded-2xl border border-hairline bg-surface">
-            {unchecked.map((item, i) => (
-              <Row
-                key={item.id}
-                name={item.name}
-                checked={false}
-                last={i === unchecked.length - 1}
-                onToggle={() => toggle(item.id)}
-                onRemove={() => remove(item.id)}
-              />
-            ))}
+          <View className="mb-6">
+            <SectionHeader>To buy</SectionHeader>
+            <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
+              {unchecked.map((item, i) => (
+                <Row
+                  key={item.id}
+                  name={item.name}
+                  checked={false}
+                  last={i === unchecked.length - 1}
+                  onToggle={() => toggle(item.id)}
+                  onRemove={() => remove(item.id)}
+                />
+              ))}
+            </View>
           </View>
         )}
 
         {checked.length > 0 && (
-          <>
-            <View className="mb-2 mt-6 flex-row items-center justify-between">
-              <Text className="text-[12px] font-bold tracking-wide text-faint">
-                IN THE CART ({checked.length})
-              </Text>
-              <Pressable onPress={clearChecked} hitSlop={8}>
+          <View>
+            <View className="mb-2 flex-row items-center justify-between">
+              <SectionHeader>{`In the cart (${checked.length})`}</SectionHeader>
+              <Pressable onPress={clearChecked} hitSlop={8} className="mb-2">
                 <Text className="text-[12px] font-semibold text-accent">Clear</Text>
               </Pressable>
             </View>
-            <View className="overflow-hidden rounded-2xl border border-hairline bg-surface">
+            <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
               {checked.map((item, i) => (
                 <Row
                   key={item.id}
@@ -132,7 +134,7 @@ export default function Shopping() {
                 />
               ))}
             </View>
-          </>
+          </View>
         )}
       </ScrollView>
     </KeyboardAvoidingView>
