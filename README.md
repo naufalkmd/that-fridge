@@ -10,6 +10,9 @@ pnpm + turborepo monorepo:
 - `packages/core/` — shared logic (API client, types, domain rules)
 - Postgres + Redis via Docker Compose
 
+Hit a wall? Check [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) first — it collects the errors
+we've actually hit and the fixes.
+
 ## Setup
 
 1. Clone repo, start infra:
