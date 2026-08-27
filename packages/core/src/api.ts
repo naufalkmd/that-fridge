@@ -356,6 +356,25 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.get<ScoreSnapshot[]>(`/score-snapshots?weeks=${weeks}`);
   }
 
+  // Call when an item is used up (not thrown away) — increments/creates the usage entry the
+  // Shopkeeper agent and the Food Balance / Waste scores read. daysRemaining/freshness/category
+  // come straight off the item at the moment it's removed.
+  function recordItemUsage(data: {
+    name: string;
+    icon: string;
+    daysRemaining?: number;
+    freshness?: number;
+    category?: NutritionCategory | null;
+  }): Promise<UsageHistoryEntry> {
+    return http.post<UsageHistoryEntry>("/usage-history", {
+      name: data.name,
+      icon: data.icon,
+      ...(data.daysRemaining !== undefined ? { daysRemaining: data.daysRemaining } : {}),
+      ...(data.freshness !== undefined ? { freshness: data.freshness } : {}),
+      ...(data.category ? { category: data.category } : {}),
+    });
+  }
+
   return {
     login,
     register,
@@ -384,6 +403,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     getUsageHistory,
     getOrganizerTally,
     getScoreSnapshots,
+    recordItemUsage,
   };
 }
 

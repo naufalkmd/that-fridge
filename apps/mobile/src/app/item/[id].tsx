@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -11,6 +12,8 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import {
   NUTRITION_CATEGORIES,
@@ -21,10 +24,25 @@ import {
   type NutritionCategory,
   type StorageLocation,
 } from "@thatfridge/core";
+import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
+import { useShopping } from "@/lib/shopping";
+import { useKitchenScore } from "@/lib/kitchenScore";
 import { useToast } from "@/lib/toast";
 import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
+import { CategoryTag } from "@/components/tags";
+
+const AMBER = "#26c6da";
+const SURFACE = "#131316";
+const SURFACE2 = "#1a1a1f";
+const HAIRLINE = "rgba(255,255,255,0.09)";
+const INK = "#eaeaec";
+const MUTED = "rgba(234,234,236,0.58)";
+const FAINT = "rgba(234,234,236,0.34)";
+const BLUE = "#5b8dee";
+const GOOD = "#39e07f";
+const BAD = "#ff5567";
 
 const BEST_BEFORE_PRESETS = [
   { label: "2 days", days: 2 },
@@ -43,6 +61,8 @@ export default function ItemDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { itemById, setItemQty, patchItem, removeItem, restoreItem } = useInventory();
+  const { items: shoppingItems, add: addToShopping } = useShopping();
+  const { refresh: refreshScore } = useKitchenScore();
   const toast = useToast();
   const item = itemById(id);
 
@@ -51,8 +71,19 @@ export default function ItemDetail() {
   const [location, setLocation] = useState<StorageLocation>("fridge");
   const [category, setCategory] = useState<NutritionCategory | null>(null);
   const [note, setNote] = useState("");
+  const [shopUrl, setShopUrl] = useState("");
   const [expiryDays, setExpiryDays] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const onShoppingList = useMemo(
+    () =>
+      !!item &&
+      shoppingItems.some(
+        (s) => !s.checked && s.name.toLowerCase() === item.name.toLowerCase(),
+      ),
+    [shoppingItems, item],
+  );
 
   if (!item) {
     return (
@@ -66,12 +97,21 @@ export default function ItemDetail() {
   }
 
   const loc = STORAGE_LOCATIONS.find((l) => l.key === (item.location ?? "fridge"))!;
+  const fresh = freshColor(item.freshness);
+
+  const tip =
+    item.freshness < 30
+      ? `Use ${item.name.toLowerCase()} today for best quality.`
+      : item.freshness < 60
+        ? `Plan to use ${item.name.toLowerCase()} within the next couple of days.`
+        : `${item.name} is holding up well — no action needed.`;
 
   function startEdit() {
     setName(item!.name);
     setLocation(item!.location ?? "fridge");
     setCategory(item!.nutritionCategory ?? null);
     setNote(item!.note ?? "");
+    setShopUrl(item!.shopUrl ?? "");
     setExpiryDays(null);
     setEditing(true);
   }
@@ -88,6 +128,7 @@ export default function ItemDetail() {
         location,
         nutrition_category: category,
         note: note.trim(),
+        shop_url: shopUrl.trim() || null,
         ...(expiryDays != null
           ? { expiry_date: isoInDays(expiryDays), shelf_life_days: expiryDays }
           : {}),
@@ -100,23 +141,48 @@ export default function ItemDetail() {
     }
   }
 
-  function confirmDelete() {
-    const snapshot = item!;
-    Alert.alert("Delete item", `Remove "${snapshot.name}" from your fridge?`, [
+  async function usedItUp() {
+    const snap = item!;
+    setBusy(true);
+    try {
+      await api
+        .recordItemUsage({
+          name: snap.name,
+          icon: snap.icon,
+          daysRemaining: snap.days,
+          freshness: snap.freshness,
+          category: snap.nutritionCategory ?? null,
+        })
+        .catch(() => {});
+      await removeItem(snap.id);
+      refreshScore();
+      router.back();
+      toast.show(`Used up ${snap.name}`);
+    } catch (e) {
+      setBusy(false);
+      Alert.alert("Error", describeError(e, "Couldn't update that item."));
+    }
+  }
+
+  function throwAway() {
+    const snap = item!;
+    Alert.alert("Throw away", `Bin "${snap.name}"? This doesn't count toward your scores.`, [
       { text: "Cancel", style: "cancel" },
       {
-        text: "Delete",
+        text: "Throw away",
         style: "destructive",
         onPress: async () => {
+          setBusy(true);
           try {
-            await removeItem(snapshot.id);
+            await removeItem(snap.id);
             router.back();
-            toast.show(`Deleted ${snapshot.name}`, {
+            toast.show(`Removed ${snap.name}`, {
               actionLabel: "Undo",
-              onAction: () => restoreItem(snapshot),
+              onAction: () => restoreItem(snap),
             });
           } catch (e) {
-            Alert.alert("Error", e instanceof Error ? e.message : "Failed to delete.");
+            setBusy(false);
+            Alert.alert("Error", e instanceof Error ? e.message : "Failed to remove.");
           }
         },
       },
@@ -129,72 +195,79 @@ export default function ItemDetail() {
         className="flex-1 bg-canvas"
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <SheetHeader title="Edit item" onClose={() => setEditing(false)} />
-        <ScrollView contentContainerClassName="px-6 pb-8 pt-2 gap-5" keyboardShouldPersistTaps="handled">
-          <Labeled label="NAME">
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholderTextColor="rgba(234,234,236,0.34)"
-              className="rounded-lg border border-hairline bg-surface px-4 py-3 text-[14px] text-ink"
-            />
-          </Labeled>
-
-          <Labeled label="LOCATION">
+        <SheetHeader title="Edit item" onBack={() => setEditing(false)} onClose={() => setEditing(false)} />
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 4, paddingBottom: 40, gap: 16 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Field label="NAME">
+            <TextInput value={name} onChangeText={setName} placeholderTextColor={FAINT} style={inputStyle} />
+          </Field>
+          <Field label="LOCATION">
             <ChipRow
               options={STORAGE_LOCATIONS.map((l) => ({ key: l.key, label: l.label }))}
               value={location}
               onChange={(k) => setLocation(k as StorageLocation)}
             />
-          </Labeled>
-
-          <Labeled label="FOOD GROUP">
+          </Field>
+          <Field label="FOOD GROUP">
             <ChipRow
               options={NUTRITION_CATEGORIES.map((c) => ({ key: c.key, label: c.label }))}
               value={category}
               onChange={(k) => setCategory(category === k ? null : (k as NutritionCategory))}
             />
-          </Labeled>
-
-          <Labeled label="BEST BEFORE">
+          </Field>
+          <Field label="BEST BEFORE">
             <ChipRow
               options={BEST_BEFORE_PRESETS.map((p) => ({ key: String(p.days), label: p.label }))}
               value={expiryDays == null ? null : String(expiryDays)}
               onChange={(k) => setExpiryDays(Number(k))}
             />
-            <Text className="mt-1.5 text-[11px] text-faint">
+            <Text style={{ marginTop: 6, fontSize: 11, color: FAINT }}>
               {expiryDays == null
                 ? `Currently ${daysLabel(item.days)} — leave untouched to keep it`
                 : `New best-before: ${isoInDays(expiryDays)}`}
             </Text>
-          </Labeled>
-
-          <Labeled label="NOTE">
+          </Field>
+          <Field label="NOTE (OPTIONAL)">
             <TextInput
               value={note}
               onChangeText={setNote}
               placeholder="e.g. 2 loaves"
-              placeholderTextColor="rgba(234,234,236,0.34)"
-              className="rounded-lg border border-hairline bg-surface px-4 py-3 text-[14px] text-ink"
+              placeholderTextColor={FAINT}
+              style={inputStyle}
             />
-          </Labeled>
+          </Field>
+          <Field label="SHOP LINK (OPTIONAL)">
+            <TextInput
+              value={shopUrl}
+              onChangeText={setShopUrl}
+              placeholder="https://…"
+              placeholderTextColor={FAINT}
+              autoCapitalize="none"
+              keyboardType="url"
+              style={inputStyle}
+            />
+          </Field>
 
-          <View className="flex-row gap-3">
+          <View style={{ flexDirection: "row", gap: 12, marginTop: 4 }}>
             <Pressable
               onPress={() => setEditing(false)}
-              className="flex-1 items-center rounded-lg border border-hairline py-3 active:opacity-70"
+              style={{ flex: 1, alignItems: "center", paddingVertical: 13, borderRadius: 6, backgroundColor: SURFACE2, borderWidth: 1, borderColor: HAIRLINE }}
             >
-              <Text className="font-semibold text-ink">Cancel</Text>
+              <Text style={{ fontWeight: "700", color: INK }}>Cancel</Text>
             </Pressable>
             <Pressable
               onPress={save}
               disabled={saving}
-              className="flex-1 items-center rounded-lg bg-accent py-3 active:opacity-80"
+              style={{ flex: 1, alignItems: "center", paddingVertical: 13, borderRadius: 6, backgroundColor: AMBER }}
             >
               {saving ? (
                 <ActivityIndicator color="#0a0a0c" />
               ) : (
-                <Text className="font-bold uppercase tracking-wide text-[#0a0a0c]">Save</Text>
+                <Text style={{ fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
+                  Save
+                </Text>
               )}
             </Pressable>
           </View>
@@ -205,79 +278,171 @@ export default function ItemDetail() {
 
   return (
     <>
-    <SheetHeader title="Item" />
-    <ScrollView className="flex-1 bg-canvas" contentContainerClassName="px-6 pb-8 pt-2 gap-5">
-      <View className="flex-row items-start justify-between">
-        <View className="flex-1 flex-row items-center gap-3">
-          <FoodIcon icon={item.icon} iconUrl={item.iconUrl} name={item.name} size={52} />
-          <View className="flex-1 gap-1">
-            <Text className="text-2xl font-extrabold text-ink">{item.name}</Text>
-            <Text className="text-[13px] text-muted">
-              {item.sectionName} · {item.fridgeName}
-            </Text>
-          </View>
-        </View>
-        <Pressable onPress={startEdit} hitSlop={8} className="px-2 py-1">
-          <Text className="font-semibold text-accent">Edit</Text>
-        </Pressable>
-      </View>
-
-      <View className="gap-4 rounded-2xl border border-hairline bg-surface p-4">
-        <Row label="Expires">
-          <Text className="font-bold" style={{ color: freshColor(item.freshness) }}>
-            {daysLabel(item.days)}
-          </Text>
-        </Row>
-        <View className="h-1.5 overflow-hidden rounded-full bg-canvas">
-          <View
-            className="h-full rounded-full"
-            style={{
-              width: `${Math.max(3, item.freshness)}%`,
-              backgroundColor: freshColor(item.freshness),
-            }}
-          />
-        </View>
-        <Row label="Location">
-          <Text className="font-semibold" style={{ color: loc.color }}>
-            {loc.label}
-          </Text>
-        </Row>
-        {item.nutritionCategory && (
-          <Row label="Category">
-            <Text className="font-semibold capitalize text-ink">
-              {item.nutritionCategory.replace("_", " / ")}
-            </Text>
-          </Row>
-        )}
-        <Row label="Quantity">
-          <View className="flex-row items-center gap-3">
-            <Step label="−" onPress={() => setItemQty(item.id, item.qty - 1)} />
-            <Text className="min-w-6 text-center text-[15px] font-bold text-ink">{item.qty}</Text>
-            <Step label="+" onPress={() => setItemQty(item.id, item.qty + 1)} />
-          </View>
-        </Row>
-        {!!item.note && (
-          <Row label="Note">
-            <Text className="text-ink">{item.note}</Text>
-          </Row>
-        )}
-      </View>
-
-      <Pressable
-        onPress={confirmDelete}
-        className="items-center rounded-xl border border-bad py-3 active:opacity-70"
+      <SheetHeader title="Item" />
+      <ScrollView
+        className="flex-1 bg-canvas"
+        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 6, paddingBottom: 36 }}
       >
-        <Text className="font-semibold text-bad">Delete item</Text>
-      </Pressable>
-    </ScrollView>
+        <View style={{ alignItems: "center", marginBottom: 14 }}>
+          <View
+            style={{
+              width: 88,
+              height: 88,
+              borderRadius: 10,
+              backgroundColor: SURFACE2,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <FoodIcon icon={item.icon} iconUrl={item.iconUrl} name={item.name} size={52} />
+          </View>
+          <Pressable
+            onPress={startEdit}
+            style={{
+              position: "absolute",
+              top: -4,
+              right: "50%",
+              marginRight: -60,
+              width: 30,
+              height: 30,
+              borderRadius: 15,
+              backgroundColor: AMBER,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <MaterialCommunityIcons name="pencil" size={14} color="#0a0a0c" />
+          </Pressable>
+        </View>
+
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 2 }}>
+          <Text style={{ fontSize: 20, fontWeight: "700", color: INK, textAlign: "center" }}>{item.name}</Text>
+          <CategoryTag category={item.nutritionCategory} />
+        </View>
+        <Text style={{ textAlign: "center", fontSize: 12.5, color: FAINT, marginBottom: 18 }}>
+          {item.fridgeName} · {item.sectionName}
+        </Text>
+
+        <View style={{ backgroundColor: SURFACE2, borderRadius: 8, padding: 16, marginBottom: 14 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+            <Text style={{ fontSize: 12.5, fontWeight: "600", color: INK }}>Freshness</Text>
+            <Text style={{ fontSize: 12.5, fontWeight: "600", color: fresh }}>{item.freshness}%</Text>
+          </View>
+          <View style={{ height: 6, borderRadius: 3, backgroundColor: HAIRLINE, overflow: "hidden", marginBottom: 10 }}>
+            <View style={{ height: "100%", borderRadius: 3, width: `${Math.max(3, item.freshness)}%`, backgroundColor: fresh }} />
+          </View>
+          <Text style={{ fontSize: 12.5, color: MUTED }}>
+            {daysLabel(item.days)}
+            {item.note ? ` · ${item.note}` : ""}
+          </Text>
+        </View>
+
+        <View style={{ backgroundColor: SURFACE2, borderRadius: 6, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 16 }}>
+          <Text style={{ fontSize: 12.5, lineHeight: 18, color: INK }}>{tip}</Text>
+        </View>
+
+        <View style={{ marginBottom: 14 }}>
+          <Text style={{ fontSize: 12.5, color: MUTED, marginBottom: 8 }}>Quantity</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+            <Step icon="minus" onPress={() => setItemQty(item.id, item.qty - 1)} />
+            <Text style={{ minWidth: 24, textAlign: "center", fontSize: 15, fontWeight: "700", color: INK }}>
+              {item.qty}
+            </Text>
+            <Step icon="plus" onPress={() => setItemQty(item.id, item.qty + 1)} />
+          </View>
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
+          <Pressable
+            onPress={() => !onShoppingList && addToShopping(item.name)}
+            style={{
+              flex: 1,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              paddingVertical: 11,
+              borderRadius: 6,
+              backgroundColor: SURFACE2,
+              borderWidth: 1,
+              borderColor: HAIRLINE,
+            }}
+          >
+            <MaterialCommunityIcons
+              name={onShoppingList ? "check" : "cart-outline"}
+              size={14}
+              color={onShoppingList ? GOOD : BLUE}
+            />
+            <Text style={{ fontSize: 13, fontWeight: "700", color: onShoppingList ? GOOD : BLUE }}>
+              {onShoppingList ? "On your shopping list" : "Add to shopping list"}
+            </Text>
+          </Pressable>
+          {!!item.shopUrl && (
+            <Pressable
+              onPress={() => Linking.openURL(item.shopUrl!)}
+              style={{
+                width: 44,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 6,
+                backgroundColor: SURFACE2,
+                borderWidth: 1,
+                borderColor: HAIRLINE,
+              }}
+            >
+              <Ionicons name="open-outline" size={15} color={BLUE} />
+            </Pressable>
+          )}
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <Pressable
+            onPress={usedItUp}
+            disabled={busy}
+            style={{ flex: 1, alignItems: "center", paddingVertical: 13, borderRadius: 6, backgroundColor: AMBER }}
+          >
+            <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
+              Used it up
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={throwAway}
+            disabled={busy}
+            style={{
+              flex: 1,
+              alignItems: "center",
+              paddingVertical: 13,
+              borderRadius: 6,
+              backgroundColor: SURFACE,
+              borderWidth: 1,
+              borderColor: `${BAD}66`,
+            }}
+          >
+            <Text style={{ fontSize: 13.5, fontWeight: "700", color: BAD }}>Throw away</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
     </>
   );
 }
 
-function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
+const inputStyle = {
+  borderWidth: 1,
+  borderColor: HAIRLINE,
+  backgroundColor: SURFACE2,
+  borderRadius: 6,
+  paddingHorizontal: 14,
+  paddingVertical: 12,
+  fontSize: 13.5,
+  color: INK,
+} as const;
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <View>
-      <Text className="mb-1.5 text-[12px] font-bold tracking-wide text-faint">{label}</Text>
+      <Text style={{ marginBottom: 6, fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT }}>
+        {label}
+      </Text>
       {children}
     </View>
   );
@@ -293,20 +458,21 @@ function ChipRow({
   onChange: (key: string) => void;
 }) {
   return (
-    <View className="flex-row flex-wrap gap-2">
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
       {options.map((o) => {
         const active = value === o.key;
         return (
           <Pressable
             key={o.key}
             onPress={() => onChange(o.key)}
-            className={`rounded-lg border px-3 py-1.5 ${
-              active ? "border-accent bg-accent" : "border-hairline bg-surface"
-            }`}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 7,
+              borderRadius: 6,
+              backgroundColor: active ? AMBER : SURFACE2,
+            }}
           >
-            <Text
-              className={`text-[12.5px] font-bold ${active ? "text-[#0a0a0c]" : "text-ink"}`}
-            >
+            <Text style={{ fontSize: 12, fontWeight: "700", color: active ? "#0a0a0c" : INK }}>
               {o.label}
             </Text>
           </Pressable>
@@ -316,23 +482,21 @@ function ChipRow({
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <Text className="text-[13px] text-muted">{label}</Text>
-      {children}
-    </View>
-  );
-}
-
-function Step({ label, onPress }: { label: string; onPress: () => void }) {
+function Step({ icon, onPress }: { icon: "minus" | "plus"; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
       hitSlop={8}
-      className="h-7 w-7 items-center justify-center rounded-full bg-canvas active:opacity-60"
+      style={{
+        height: 28,
+        width: 28,
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 14,
+        backgroundColor: SURFACE,
+      }}
     >
-      <Text className="text-[15px] font-bold leading-none text-ink">{label}</Text>
+      <MaterialCommunityIcons name={icon} size={15} color={INK} />
     </Pressable>
   );
 }

@@ -15,6 +15,7 @@ import {
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
+import { useShopping } from "@/lib/shopping";
 import { PixelText } from "@/components/brand";
 import { FoodIcon } from "@/components/food-icon";
 
@@ -309,8 +310,19 @@ function ResultsTier({
 }
 
 function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) {
+  const { items } = useInventory();
+  const { items: shoppingItems, add: addToShopping } = useShopping();
   const [open, setOpen] = useState(false);
   const [marking, setMarking] = useState(false);
+
+  const ingredients = recipe.ingredients.map((ing) => ({
+    ...ing,
+    have: items.some((i) => i.icon === ing.icon || i.name.toLowerCase() === ing.name.toLowerCase()),
+    onList: shoppingItems.some(
+      (s) => !s.checked && s.name.toLowerCase() === ing.name.toLowerCase(),
+    ),
+  }));
+  const haveCount = ingredients.filter((i) => i.have).length;
 
   async function markMade() {
     setMarking(true);
@@ -336,47 +348,112 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
           <Text style={{ fontSize: 13.5, fontWeight: "700", color: INK }} numberOfLines={1}>
             {recipe.name}
           </Text>
-          <Text style={{ fontSize: 11, color: FAINT }}>{recipe.minutes} min</Text>
+          <Text style={{ fontSize: 11, color: FAINT }}>
+            {recipe.minutes} min · {haveCount}/{ingredients.length} ready
+          </Text>
         </View>
         <MaterialCommunityIcons name={open ? "chevron-up" : "chevron-down"} size={18} color={FAINT} />
       </Pressable>
 
       {open && (
-        <View style={{ gap: 12, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.09)", padding: 14 }}>
-          <View style={{ gap: 6 }}>
-            <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.3, color: FAINT }}>
+        <View style={{ gap: 14, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.09)", padding: 14 }}>
+          <View>
+            <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
               INGREDIENTS
             </Text>
-            {recipe.ingredients.map((ing, i) => (
-              <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <FoodIcon icon={ing.icon} name={ing.name} size={22} />
-                <Text style={{ fontSize: 13, color: INK }}>{ing.name}</Text>
-              </View>
-            ))}
+            <View style={{ borderRadius: 8, backgroundColor: SURFACE, overflow: "hidden" }}>
+              {ingredients.map((ing, i) => {
+                const done = ing.have || ing.onList;
+                const tint = ing.have ? GOOD : ing.onList ? "#5b8dee" : FAINT;
+                return (
+                  <Pressable
+                    key={i}
+                    onPress={done ? undefined : () => addToShopping(ing.name)}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 10,
+                      paddingVertical: 10,
+                      paddingHorizontal: 14,
+                      borderBottomWidth: i === ingredients.length - 1 ? 0 : 1,
+                      borderBottomColor: "rgba(255,255,255,0.09)",
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 6,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: `${tint}${done ? "" : "1a"}`,
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name={done ? "check" : "plus"}
+                        size={12}
+                        color={done ? "#0a0a0c" : tint}
+                      />
+                    </View>
+                    <Text style={{ flex: 1, fontSize: 13.5, fontWeight: "600", color: INK }}>
+                      {ing.name}
+                    </Text>
+                    <Text style={{ fontSize: 11.5, fontWeight: "700", color: tint }}>
+                      {ing.have ? "Have it" : ing.onList ? "On list" : "Need it"}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
-          <View style={{ gap: 4 }}>
-            <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.3, color: FAINT }}>STEPS</Text>
-            {recipe.steps.map((step, i) => (
-              <Text key={i} style={{ fontSize: 13, lineHeight: 19, color: INK }}>
-                {i + 1}. {step}
-              </Text>
-            ))}
+
+          <View>
+            <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
+              STEPS
+            </Text>
+            <View style={{ gap: 10 }}>
+              {recipe.steps.map((step, i) => (
+                <View key={i} style={{ flexDirection: "row", gap: 10 }}>
+                  <View
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 11,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: SURFACE,
+                    }}
+                  >
+                    <Text style={{ fontSize: 11.5, fontWeight: "800", color: "#5b8dee" }}>{i + 1}</Text>
+                  </View>
+                  <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 20, color: INK }}>{step}</Text>
+                </View>
+              ))}
+            </View>
           </View>
+
           <Pressable
             onPress={markMade}
             disabled={marking}
             style={{
+              flexDirection: "row",
               alignItems: "center",
-              paddingVertical: 10,
+              justifyContent: "center",
+              gap: 8,
+              paddingVertical: 12,
               borderRadius: 8,
-              borderWidth: 1,
-              borderColor: GOOD,
+              backgroundColor: AMBER,
             }}
           >
             {marking ? (
-              <ActivityIndicator color={GOOD} />
+              <ActivityIndicator color="#0a0a0c" />
             ) : (
-              <Text style={{ fontWeight: "600", color: GOOD }}>I made this</Text>
+              <>
+                <MaterialCommunityIcons name="chef-hat" size={15} color="#0a0a0c" />
+                <Text style={{ fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
+                  Mark as made
+                </Text>
+              </>
             )}
           </Pressable>
         </View>
