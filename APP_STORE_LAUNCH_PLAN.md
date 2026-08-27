@@ -69,6 +69,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
 | ⬜ Sentry on the Laravel app                                                   | A     |
 | ⬜ Privacy policy + Terms pages on`apps/web`                                 | A/D   |
 | ⬜ Devpost draft + start#BuildInPublic thread                                  | D     |
+| ⬜ **Buy PixelMix commercial license** ($25, andrewtyler.gumroad.com/l/pixelmix) — required before the App Store (commercial) release; see `assets/fonts/PixelMix-NOTES.md` | A |
 | ⬜ Decide Google Play account type (personal vs organization)                  | D     |
 
 > **Where we stand:** the app's core loop is code-complete and runs end-to-end in Expo Go

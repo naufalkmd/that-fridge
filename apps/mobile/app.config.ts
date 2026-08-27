@@ -35,19 +35,25 @@ const config: ExpoConfig = {
     package: "app.thatfridge",
     adaptiveIcon: {
       foregroundImage: "./assets/images/android-icon-foreground.png",
-      backgroundColor: "#0b0f14",
+      backgroundColor: "#0a0a0c",
     },
   },
   plugins: [
     "expo-router",
     "expo-secure-store",
     [
+      "expo-font",
+      {
+        fonts: ["./assets/fonts/PixelMix.ttf", "./assets/fonts/PixelMix-Bold.ttf"],
+      },
+    ],
+    [
       "expo-splash-screen",
       {
         image: "./assets/images/splash-icon.png",
         imageWidth: 160,
         resizeMode: "contain",
-        backgroundColor: "#0b0f14",
+        backgroundColor: "#0a0a0c",
       },
     ],
     [
