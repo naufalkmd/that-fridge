@@ -59,9 +59,10 @@ export default function Inventory() {
   }
 
   return (
+    <>
     <ScrollView
       className="flex-1 bg-canvas"
-      contentContainerClassName="px-5 pb-24 pt-3"
+      contentContainerClassName="px-5 pb-28 pt-3"
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9fb0c0" />
       }
@@ -145,6 +146,15 @@ export default function Inventory() {
         </View>
       )}
     </ScrollView>
+
+    <Pressable
+      onPress={() => router.push("/add")}
+      className="absolute bottom-6 right-6 h-14 w-14 items-center justify-center rounded-full bg-warn active:opacity-80"
+      style={{ elevation: 4 }}
+    >
+      <Text className="text-[26px] font-bold leading-none text-[#0a0a0c]">+</Text>
+    </Pressable>
+    </>
   );
 }
 

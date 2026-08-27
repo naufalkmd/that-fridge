@@ -2,8 +2,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import {
   describeError,
   flattenItems,
+  type BarcodeSuggestion,
+  type CreateItemInput,
   type FlatItem,
   type Fridge,
+  type UpdateItemInput,
 } from "@thatfridge/core";
 
 import { api } from "@/lib/api";
@@ -15,7 +18,10 @@ interface InventoryContextValue {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
+  addItem: (data: Omit<CreateItemInput, "icon"> & { icon?: string }) => Promise<void>;
+  lookupBarcode: (barcode: string) => Promise<BarcodeSuggestion>;
   setItemQty: (itemId: string, qty: number) => Promise<void>;
+  patchItem: (itemId: string, data: UpdateItemInput) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   itemById: (itemId: string) => FlatItem | undefined;
 }
@@ -71,6 +77,57 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     [load],
   );
 
+  // Resolve where a new item goes: first section of the first fridge, creating a
+  // fridge and/or "General" section on the fly for a brand-new account.
+  const resolveTarget = useCallback(async (): Promise<string> => {
+    let list = fridges;
+    if (list.length === 0) {
+      const fridge = await api.createFridge("My Fridge");
+      list = [fridge];
+    }
+    let fridge = list[0];
+    if (fridge.sections.length === 0) {
+      const section = await api.createSection(fridge.id, "General");
+      fridge = { ...fridge, sections: [section] };
+      list = [fridge, ...list.slice(1)];
+      setFridges(list);
+    }
+    return fridge.sections[0].id;
+  }, [fridges]);
+
+  const addItem = useCallback<InventoryContextValue["addItem"]>(
+    async (data) => {
+      const sectionId = await resolveTarget();
+      await api.createItem(sectionId, { icon: "generic", ...data });
+      await load();
+    },
+    [resolveTarget, load],
+  );
+
+  const lookupBarcode = useCallback(
+    async (barcode: string) => {
+      const sectionId = await resolveTarget();
+      return api.scanBarcode(sectionId, barcode);
+    },
+    [resolveTarget],
+  );
+
+  const patchItem = useCallback(
+    async (itemId: string, data: UpdateItemInput) => {
+      const updated = await api.updateItem(itemId, data);
+      setFridges((prev) =>
+        prev.map((f) => ({
+          ...f,
+          sections: f.sections.map((s) => ({
+            ...s,
+            items: s.items.map((it) => (it.id === itemId ? { ...it, ...updated } : it)),
+          })),
+        })),
+      );
+    },
+    [],
+  );
+
   const removeItem = useCallback(
     async (itemId: string) => {
       const snapshot = fridges;
@@ -97,8 +154,32 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const itemById = useCallback((id: string) => items.find((i) => i.id === id), [items]);
 
   const value = useMemo(
-    () => ({ fridges, items, loading, error, refresh: load, setItemQty, removeItem, itemById }),
-    [fridges, items, loading, error, load, setItemQty, removeItem, itemById],
+    () => ({
+      fridges,
+      items,
+      loading,
+      error,
+      refresh: load,
+      addItem,
+      lookupBarcode,
+      setItemQty,
+      patchItem,
+      removeItem,
+      itemById,
+    }),
+    [
+      fridges,
+      items,
+      loading,
+      error,
+      load,
+      addItem,
+      lookupBarcode,
+      setItemQty,
+      patchItem,
+      removeItem,
+      itemById,
+    ],
   );
 
   return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>;

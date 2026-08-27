@@ -108,6 +108,16 @@ export interface UpdateItemInput {
   shop_url?: string | null;
 }
 
+export interface BarcodeSuggestion {
+  name: string;
+  icon: string;
+  category: string | null;
+  default_shelf_life_days: number;
+  location: StorageLocation | null;
+  barcode: string;
+  image_url: string | null;
+}
+
 // A flat view of every item across fridges, carrying its section/fridge context —
 // what list screens actually render.
 export interface FlatItem extends Item {
@@ -174,6 +184,14 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return raw.map(toFridge);
   }
 
+  async function createFridge(name: string): Promise<Fridge> {
+    return toFridge(await http.post<RawFridge>("/fridges", { name }));
+  }
+
+  async function createSection(fridgeId: string, name: string): Promise<Section> {
+    return toSection(await http.post<RawSection>(`/fridges/${fridgeId}/sections`, { name }));
+  }
+
   async function createItem(sectionId: string, data: CreateItemInput): Promise<Item> {
     const raw = await http.post<RawItem>(`/sections/${sectionId}/items`, data);
     return toItem(raw);
@@ -188,7 +206,27 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     await http.del(`/items/${id}`);
   }
 
-  return { login, register, logout, me, listFridges, createItem, updateItem, deleteItem };
+  async function scanBarcode(sectionId: string, barcode: string): Promise<BarcodeSuggestion> {
+    const res = await http.post<{ suggestion: BarcodeSuggestion }>(
+      `/sections/${sectionId}/items/barcode`,
+      { barcode },
+    );
+    return res.suggestion;
+  }
+
+  return {
+    login,
+    register,
+    logout,
+    me,
+    listFridges,
+    createFridge,
+    createSection,
+    createItem,
+    updateItem,
+    deleteItem,
+    scanBarcode,
+  };
 }
 
 export type Api = ReturnType<typeof createApi>;

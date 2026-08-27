@@ -28,9 +28,11 @@ _Last updated: 2026-08-27. Branch: `mobile-app` (not yet merged to `main`)._
 - [x] **Mobile ↔ core wired** — `expo-secure-store` token store, `EXPO_PUBLIC_API_URL` env
 - [x] **AuthScreen ported** (`sign-in.tsx`) — login/signup toggle, validation matching backend rules, loading/error states, `__DEV__` demo-account fill
 - [x] **Auth session** — `AuthProvider` with token-restore on launch; `index.tsx` redirects by auth status
-- [x] **InventoryScreen ported** — `InventoryProvider` (fetch/refresh/optimistic qty/delete), list with sort + category filter, freshness bars, pull-to-refresh, empty/error states
-- [x] **ItemDetailSheet (v1)** — `item/[id]` modal: details, qty stepper, delete with confirm (name/expiry/location editing still TODO)
-- [x] **`packages/core` grown** — `listFridges` / `createItem` / `updateItem` / `deleteItem` + raw transforms + `flattenItems`; `domain.ts` (freshColor, daysLabel, category/location constants)
+- [x] **InventoryScreen ported** — `InventoryProvider` (fetch/refresh/optimistic qty/delete), list with sort + category filter, freshness bars, pull-to-refresh, empty/error states, FAB
+- [x] **ItemDetailSheet ported** — `item/[id]` modal: view + edit (name / location / food group / best-before / note), qty stepper, delete with confirm. (Icon picker + AI icon gen still TODO.)
+- [x] **AddScreen ported** — `add` modal: manual entry (name / qty / location / food group / best-before); auto-creates a fridge + "General" section for new accounts
+- [x] **Barcode scan** — `scan` screen with `expo-camera` `CameraView`; Open Food Facts lookup prefills the add form; falls back to blank add on miss. **Only runs in a dev build** — Expo Go shows a prompt.
+- [x] **`packages/core` grown** — fridge/section/item CRUD + `scanBarcode` + raw transforms + `flattenItems`; `domain.ts` (freshColor, daysLabel, category/location constants)
 - [x] `backend/scripts/seed-demo-fridge.sh` — local demo data with varied freshness
 - [x] iOS bundle verified building clean via Metro
 - [x] Runs in Expo Go (native modules still need a dev build)
@@ -40,8 +42,9 @@ _Last updated: 2026-08-27. Branch: `mobile-app` (not yet merged to `main`)._
 - [ ] `eas init` + first `eas build --profile development` (dev client) — **Member B**
 - [ ] `lib/thatfridge` full extraction into `packages/core` (see `packages/core/README.md`) — **Member B** (auth + fridge/item endpoints + domain helpers done incrementally so far)
 - [ ] Merge `mobile-app` → `main`
-- [ ] ItemDetailSheet — add name / expiry / location / category editing — **Member C**
-- [ ] AddScreen + barcode scanning — **Member C**
+- [ ] `eas build --profile development` so barcode scan (and future native modules) can actually be tested — **Member B**
+- [ ] HomeScreen + NotificationsScreen — **Member C**
+- [ ] Icon picker for items (port `FoodIcon` / `GeneratedIconLibrary`) — **Member C**
 - [ ] Shared chrome: tab bar, drawer, bottom sheets, toasts — **Member D**
 - [ ] Proper backend demo-data **seeder** (replace the shell script) — **Member A**
 

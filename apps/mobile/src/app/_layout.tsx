@@ -29,6 +29,14 @@ export default function RootLayout() {
               name="item/[id]"
               options={{ title: "", presentation: "modal" }}
             />
+            <Stack.Screen
+              name="add"
+              options={{ title: "Add item", presentation: "modal" }}
+            />
+            <Stack.Screen
+              name="scan"
+              options={{ headerShown: false, presentation: "fullScreenModal" }}
+            />
           </Stack>
         </InventoryProvider>
       </AuthProvider>
