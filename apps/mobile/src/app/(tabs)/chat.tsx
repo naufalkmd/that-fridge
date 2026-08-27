@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import {
@@ -26,7 +26,7 @@ import { usePro } from "@/lib/pro";
 import { FREE_CHATS_PER_WEEK, bumpChatUsed, getChatUsed } from "@/lib/chatQuota";
 import { MarkdownText } from "@/components/markdown-text";
 
-const WALLPAPER = require("../../assets/images/thatfridge/chat-wallpaper.png");
+const WALLPAPER = require("../../../assets/images/thatfridge/chat-wallpaper.png");
 
 const AMBER = "#26c6da";
 const SURFACE = "#131316";
@@ -59,6 +59,7 @@ type Msg = { role: "user" | "agent"; text: string; recipe?: RecipeSuggestionBloc
 
 export default function Chat() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { items } = useInventory();
   const { isPro, presentPaywallIfNeeded } = usePro();
   const [agent, setAgent] = useState<ChatAgentName>("Chef");
@@ -155,9 +156,6 @@ export default function Chat() {
               borderBottomColor: HAIRLINE,
             }}
           >
-            <Pressable onPress={() => router.back()} hitSlop={8}>
-              <Ionicons name="chevron-back" size={22} color={INK} />
-            </Pressable>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 15.5, fontWeight: "800", color: INK }}>Quick Chat</Text>
               <Text style={{ fontSize: 11.5, color: FAINT }}>Quick answers about your fridge</Text>
@@ -289,7 +287,8 @@ export default function Chat() {
               gap: 8,
               paddingHorizontal: 14,
               paddingTop: 8,
-              paddingBottom: 12,
+              // clear the floating tab bar (≈58 tall, sits ~insets.bottom+6 from the edge)
+              paddingBottom: insets.bottom + 74,
               borderTopWidth: 1,
               borderTopColor: HAIRLINE,
               backgroundColor: "rgba(19,19,22,0.9)",

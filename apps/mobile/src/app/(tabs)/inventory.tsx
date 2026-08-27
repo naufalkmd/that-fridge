@@ -101,7 +101,7 @@ export default function Inventory() {
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
       <ScrollView
-        contentContainerClassName="px-5 pt-3 pb-28"
+        contentContainerClassName="px-5 pt-3 pb-40"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8a8a90" />
         }
@@ -341,24 +341,6 @@ export default function Inventory() {
           </>
         )}
       </ScrollView>
-
-      <Pressable
-        onPress={() => router.push("/add")}
-        style={{
-          position: "absolute",
-          bottom: 16,
-          right: 24,
-          height: 56,
-          width: 56,
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: 28,
-          backgroundColor: ACCENT,
-          elevation: 4,
-        }}
-      >
-        <Text style={{ fontSize: 26, fontWeight: "700", lineHeight: 28, color: "#0a0a0c" }}>+</Text>
-      </Pressable>
     </SafeAreaView>
   );
 }

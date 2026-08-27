@@ -1,13 +1,11 @@
 import { Redirect, Tabs } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
-import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { useAuth } from "@/lib/auth";
-import { useNotifications } from "@/lib/notifications";
+import { FloatingTabBar } from "@/components/tab-bar";
 
 export default function TabsLayout() {
   const { status } = useAuth();
-  const { unread } = useNotifications();
 
   if (status === "loading") {
     return (
@@ -20,60 +18,14 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      screenOptions={{
-        headerStyle: { backgroundColor: "#0a0a0c" },
-        headerTintColor: "#eaeaec",
-        headerShadowVisible: false,
-        sceneStyle: { backgroundColor: "#0a0a0c" },
-        tabBarStyle: {
-          backgroundColor: "#0a0a0c",
-          borderTopColor: "rgba(255,255,255,0.09)",
-        },
-        tabBarActiveTintColor: "#26c6da",
-        tabBarInactiveTintColor: "rgba(234,234,236,0.34)",
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
-      }}
+      tabBar={(props) => <FloatingTabBar {...props} />}
+      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: "#0a0a0c" } }}
     >
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: "Home",
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="inventory"
-        options={{
-          title: "Inventory",
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="file-tray-stacked" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="eat"
-        options={{
-          title: "Eat",
-          headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="restaurant" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="notifications"
-        options={{
-          title: "Alerts",
-          headerShown: false,
-          tabBarBadge: unread > 0 ? unread : undefined,
-          tabBarBadgeStyle: { backgroundColor: "#c1452e", color: "#fff", fontSize: 10 },
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="notifications" size={size} color={color} />
-          ),
-        }}
-      />
+      {/* Order here drives FloatingTabBar: home · inventory · [＋] · chat · eat */}
+      <Tabs.Screen name="home" options={{ title: "Home" }} />
+      <Tabs.Screen name="inventory" options={{ title: "Inventory" }} />
+      <Tabs.Screen name="chat" options={{ title: "Chat" }} />
+      <Tabs.Screen name="eat" options={{ title: "Eat" }} />
     </Tabs>
   );
 }

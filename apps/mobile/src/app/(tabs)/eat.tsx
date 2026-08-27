@@ -90,7 +90,7 @@ export default function Eat() {
 
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-      <ScrollView contentContainerClassName="px-5 pt-4 pb-24" contentContainerStyle={{ gap: 18 }}>
+      <ScrollView contentContainerClassName="px-5 pt-4 pb-40" contentContainerStyle={{ gap: 18 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <MaterialCommunityIcons name="chef-hat" size={18} color={INK} />
           <PixelText style={{ fontSize: 14, color: INK }}>What should I eat?</PixelText>

@@ -158,7 +158,7 @@ export default function Home() {
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
       <ScrollView
-        contentContainerClassName="px-6 pt-4 pb-16"
+        contentContainerClassName="px-6 pt-4 pb-36"
         contentContainerStyle={{ gap: 22 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8a8a90" />

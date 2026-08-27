@@ -45,16 +45,21 @@ export default function Notifications() {
           flexDirection: "row",
           alignItems: "flex-start",
           justifyContent: "space-between",
-          paddingHorizontal: 20,
+          paddingHorizontal: 16,
           paddingTop: 16,
           paddingBottom: 8,
         }}
       >
-        <View>
-          <PixelText style={{ fontSize: 14, color: INK }}>Notifications</PixelText>
-          <Text style={{ fontSize: 11.5, color: FAINT, marginTop: 3 }}>
-            Tap Clear to mark as done
-          </Text>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+          <Pressable onPress={() => router.back()} hitSlop={8} style={{ paddingTop: 1 }}>
+            <Ionicons name="chevron-back" size={20} color={MUTED} />
+          </Pressable>
+          <View>
+            <PixelText style={{ fontSize: 14, color: INK }}>Notifications</PixelText>
+            <Text style={{ fontSize: 11.5, color: FAINT, marginTop: 3 }}>
+              Tap Clear to mark as done
+            </Text>
+          </View>
         </View>
         <Pressable onPress={() => router.push("/notification-settings")} hitSlop={8}>
           <View

@@ -75,7 +75,7 @@ export default function RootLayout() {
                 name="search"
                 options={{ headerShown: false, presentation: "modal" }}
               />
-              <Stack.Screen name="chat" options={{ headerShown: false }} />
+              <Stack.Screen name="notifications" options={{ headerShown: false }} />
               <Stack.Screen name="profile" options={{ title: "Profile" }} />
               <Stack.Screen
                 name="paywall"
