@@ -1,5 +1,12 @@
 import { ApiError, type HttpClient, type TokenStore } from "./http";
-import type { CurrentUser } from "./types";
+import type {
+  CurrentUser,
+  Fridge,
+  Item,
+  NutritionCategory,
+  Section,
+  StorageLocation,
+} from "./types";
 
 export interface AuthResult {
   user: CurrentUser;
@@ -10,8 +17,126 @@ export function describeError(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.message : fallback;
 }
 
-// The endpoint layer. Mirrors apps/web/lib/thatfridge/api.ts — the rest of its
-// ~60 functions land here during the packages/core extraction (see README).
+// --- raw backend shapes + transforms (mirror apps/web/lib/thatfridge) --------
+
+interface RawItem {
+  id: string;
+  name: string;
+  icon: string;
+  icon_url: string | null;
+  nutrition_category: NutritionCategory | null;
+  freshness: number | null;
+  days: number | null;
+  note: string | null;
+  location: StorageLocation | null;
+  quantity: number | null;
+  shop_url: string | null;
+}
+
+interface RawSection {
+  id: string;
+  name: string;
+  items: RawItem[];
+}
+
+interface RawFridge {
+  id: string;
+  name: string;
+  style: string | null;
+  photo_url: string | null;
+  role?: string | null;
+  member_count?: number;
+  sections: RawSection[];
+}
+
+function toItem(raw: RawItem): Item {
+  return {
+    id: raw.id,
+    name: raw.name,
+    icon: raw.icon,
+    iconUrl: raw.icon_url ?? null,
+    nutritionCategory: raw.nutrition_category ?? null,
+    freshness: raw.freshness ?? 0,
+    days: raw.days ?? 0,
+    note: raw.note ?? "",
+    qty: raw.quantity ?? 1,
+    opened: false,
+    location: raw.location ?? undefined,
+    shopUrl: raw.shop_url ?? null,
+  };
+}
+
+function toSection(raw: RawSection): Section {
+  return { id: raw.id, name: raw.name, items: raw.items.map(toItem) };
+}
+
+function toFridge(raw: RawFridge): Fridge {
+  return {
+    id: raw.id,
+    name: raw.name,
+    style: (raw.style as Fridge["style"]) ?? undefined,
+    photoUrl: raw.photo_url ?? undefined,
+    role: (raw.role as Fridge["role"]) ?? undefined,
+    memberCount: raw.member_count,
+    sections: raw.sections.map(toSection),
+  };
+}
+
+export interface CreateItemInput {
+  name: string;
+  icon: string;
+  icon_url?: string | null;
+  nutrition_category?: NutritionCategory | null;
+  location?: StorageLocation;
+  quantity?: number;
+  expiry_date?: string;
+  shelf_life_days?: number;
+  note?: string;
+  shop_url?: string | null;
+}
+
+export interface UpdateItemInput {
+  name?: string;
+  icon?: string;
+  nutrition_category?: NutritionCategory | null;
+  section_id?: string;
+  location?: StorageLocation;
+  quantity?: number;
+  expiry_date?: string;
+  shelf_life_days?: number;
+  note?: string;
+  shop_url?: string | null;
+}
+
+// A flat view of every item across fridges, carrying its section/fridge context —
+// what list screens actually render.
+export interface FlatItem extends Item {
+  sectionId: string;
+  sectionName: string;
+  fridgeId: string;
+  fridgeName: string;
+}
+
+export function flattenItems(fridges: Fridge[]): FlatItem[] {
+  const out: FlatItem[] = [];
+  for (const fridge of fridges) {
+    for (const section of fridge.sections) {
+      for (const item of section.items) {
+        out.push({
+          ...item,
+          sectionId: section.id,
+          sectionName: section.name,
+          fridgeId: fridge.id,
+          fridgeName: fridge.name,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+// --- the endpoint layer ----------------------------------------------------
+
 export function createApi(http: HttpClient, tokens: TokenStore) {
   async function login(email: string, password: string): Promise<AuthResult> {
     const res = await http.post<AuthResult>("/login", { email, password });
@@ -44,7 +169,26 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return res.user;
   }
 
-  return { login, register, logout, me };
+  async function listFridges(): Promise<Fridge[]> {
+    const raw = await http.get<RawFridge[]>("/fridges");
+    return raw.map(toFridge);
+  }
+
+  async function createItem(sectionId: string, data: CreateItemInput): Promise<Item> {
+    const raw = await http.post<RawItem>(`/sections/${sectionId}/items`, data);
+    return toItem(raw);
+  }
+
+  async function updateItem(id: string, data: UpdateItemInput): Promise<Item> {
+    const raw = await http.patch<RawItem>(`/items/${id}`, data);
+    return toItem(raw);
+  }
+
+  async function deleteItem(id: string): Promise<void> {
+    await http.del(`/items/${id}`);
+  }
+
+  return { login, register, logout, me, listFridges, createItem, updateItem, deleteItem };
 }
 
 export type Api = ReturnType<typeof createApi>;

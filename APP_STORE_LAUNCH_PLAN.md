@@ -27,17 +27,23 @@ _Last updated: 2026-08-27. Branch: `mobile-app` (not yet merged to `main`)._
 - [x] **`packages/core` created** — `types.ts` (copied), platform-agnostic `HttpClient` (injected baseUrl + token store), `createApi` with `login`/`register`/`logout`/`me`, `describeError`
 - [x] **Mobile ↔ core wired** — `expo-secure-store` token store, `EXPO_PUBLIC_API_URL` env
 - [x] **AuthScreen ported** (`sign-in.tsx`) — login/signup toggle, validation matching backend rules, loading/error states, `__DEV__` demo-account fill
-- [x] **Auth session** — `AuthProvider` with token-restore on launch; `index.tsx` redirects by auth status; `home.tsx` placeholder
+- [x] **Auth session** — `AuthProvider` with token-restore on launch; `index.tsx` redirects by auth status
+- [x] **InventoryScreen ported** — `InventoryProvider` (fetch/refresh/optimistic qty/delete), list with sort + category filter, freshness bars, pull-to-refresh, empty/error states
+- [x] **ItemDetailSheet (v1)** — `item/[id]` modal: details, qty stepper, delete with confirm (name/expiry/location editing still TODO)
+- [x] **`packages/core` grown** — `listFridges` / `createItem` / `updateItem` / `deleteItem` + raw transforms + `flattenItems`; `domain.ts` (freshColor, daysLabel, category/location constants)
+- [x] `backend/scripts/seed-demo-fridge.sh` — local demo data with varied freshness
 - [x] iOS bundle verified building clean via Metro
-- [x] Runs in Expo Go (auth flow only — native modules need a dev build)
+- [x] Runs in Expo Go (native modules still need a dev build)
 
 ### In progress / next
 
 - [ ] `eas init` + first `eas build --profile development` (dev client) — **Member B**
-- [ ] `lib/thatfridge` full extraction into `packages/core` (see `packages/core/README.md`) — **Member B**
+- [ ] `lib/thatfridge` full extraction into `packages/core` (see `packages/core/README.md`) — **Member B** (auth + fridge/item endpoints + domain helpers done incrementally so far)
 - [ ] Merge `mobile-app` → `main`
-- [ ] InventoryScreen + ItemDetailSheet — **Member C**
+- [ ] ItemDetailSheet — add name / expiry / location / category editing — **Member C**
+- [ ] AddScreen + barcode scanning — **Member C**
 - [ ] Shared chrome: tab bar, drawer, bottom sheets, toasts — **Member D**
+- [ ] Proper backend demo-data **seeder** (replace the shell script) — **Member A**
 
 ### Blockers not started (external lead time — start now)
 

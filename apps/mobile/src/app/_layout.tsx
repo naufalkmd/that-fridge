@@ -5,22 +5,32 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider } from "@/lib/auth";
+import { InventoryProvider } from "@/lib/inventory";
 
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: "#0b0f14" },
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="sign-in" />
-          <Stack.Screen name="home" />
-        </Stack>
+        <InventoryProvider>
+          <StatusBar style="light" />
+          <Stack
+            screenOptions={{
+              headerStyle: { backgroundColor: "#0b0f14" },
+              headerTintColor: "#e8eef4",
+              headerShadowVisible: false,
+              contentStyle: { backgroundColor: "#0b0f14" },
+            }}
+          >
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+            <Stack.Screen name="home" options={{ headerShown: false }} />
+            <Stack.Screen name="inventory" options={{ title: "Inventory" }} />
+            <Stack.Screen
+              name="item/[id]"
+              options={{ title: "", presentation: "modal" }}
+            />
+          </Stack>
+        </InventoryProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );
