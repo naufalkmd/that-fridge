@@ -119,24 +119,31 @@ export default function Profile() {
               const count = f.sections.reduce((n, s) => n + s.items.length, 0);
               const active = scope === f.id;
               return (
-                <Pressable
+                <View
                   key={f.id}
-                  onPress={() => {
-                    setScope(f.id);
-                    router.navigate("/inventory");
-                  }}
-                  className={`flex-row items-center justify-between px-4 py-3.5 active:bg-canvas ${
+                  className={`flex-row items-center px-4 py-3.5 ${
                     i === fridges.length - 1 ? "" : "border-b border-hairline"
                   }`}
                 >
-                  <Text
-                    className="text-[14px] font-semibold"
-                    style={{ color: active ? "#5b8dee" : "#eaeaec" }}
+                  <Pressable
+                    onPress={() => {
+                      setScope(f.id);
+                      router.navigate("/inventory");
+                    }}
+                    className="flex-1 flex-row items-center justify-between"
                   >
-                    {f.name}
-                  </Text>
-                  <Text className="text-[11.5px] text-faint">{count} items</Text>
-                </Pressable>
+                    <Text
+                      className="text-[14px] font-semibold"
+                      style={{ color: active ? "#5b8dee" : "#eaeaec" }}
+                    >
+                      {f.name}
+                    </Text>
+                    <Text className="mr-3 text-[11.5px] text-faint">{count} items</Text>
+                  </Pressable>
+                  <Pressable onPress={() => router.push(`/fridge/${f.id}`)} hitSlop={8}>
+                    <Ionicons name="settings-outline" size={15} color="rgba(234,234,236,0.34)" />
+                  </Pressable>
+                </View>
               );
             })}
           </View>

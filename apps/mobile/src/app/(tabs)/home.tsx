@@ -34,6 +34,7 @@ import { useNotifications } from "@/lib/notifications";
 import { useScope, scopeItems } from "@/lib/scope";
 import { useShopping } from "@/lib/shopping";
 import { useKitchenScore } from "@/lib/kitchenScore";
+import { useSocial } from "@/lib/social";
 import { PixelText } from "@/components/brand";
 import { SectionHeader } from "@/components/ui";
 import { FridgeScopePicker } from "@/components/fridge-scope";
@@ -74,6 +75,7 @@ export default function Home() {
   const { items: shoppingItems } = useShopping();
   const { scope } = useScope();
   const { usageHistory, organizerTally, scoreSnapshots } = useKitchenScore();
+  const { pendingCount } = useSocial();
 
   const [refreshing, setRefreshing] = useState(false);
   const [suggestions, setSuggestions] = useState<Recipe[] | null>(null);
@@ -185,37 +187,14 @@ export default function Home() {
             </View>
           </Pressable>
           <PixelText style={{ fontSize: 20, letterSpacing: 0.5, color: INK }}>ThatFridge</PixelText>
-          <Pressable onPress={() => router.navigate("/notifications")} hitSlop={8}>
-            <View
-              style={{
-                height: 34,
-                width: 34,
-                borderRadius: 17,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: SURFACE,
-                borderWidth: 1,
-                borderColor: HAIRLINE,
-              }}
-            >
-              <Ionicons name="notifications-outline" size={16} color={INK} />
-              {unread > 0 && (
-                <View
-                  style={{
-                    position: "absolute",
-                    top: 5,
-                    right: 6,
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: BAD,
-                    borderWidth: 1.5,
-                    borderColor: SURFACE,
-                  }}
-                />
-              )}
-            </View>
-          </Pressable>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <HeaderIcon icon="person-add-outline" dot={pendingCount > 0} onPress={() => router.push("/find-friend")} />
+            <HeaderIcon
+              icon="notifications-outline"
+              dot={unread > 0}
+              onPress={() => router.navigate("/notifications")}
+            />
+          </View>
         </View>
 
         {/* fridge scope picker */}
@@ -457,6 +436,50 @@ export default function Home() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function HeaderIcon({
+  icon,
+  dot,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  dot: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} hitSlop={8}>
+      <View
+        style={{
+          height: 34,
+          width: 34,
+          borderRadius: 17,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: SURFACE,
+          borderWidth: 1,
+          borderColor: HAIRLINE,
+        }}
+      >
+        <Ionicons name={icon} size={16} color={INK} />
+        {dot && (
+          <View
+            style={{
+              position: "absolute",
+              top: 5,
+              right: 6,
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: BAD,
+              borderWidth: 1.5,
+              borderColor: SURFACE,
+            }}
+          />
+        )}
+      </View>
+    </Pressable>
   );
 }
 

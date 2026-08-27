@@ -7,6 +7,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { timeAgo, type NotificationEvent, type NotificationKind } from "@thatfridge/core";
 import { useNotifications } from "@/lib/notifications";
+import { useSocial } from "@/lib/social";
 import { PixelText } from "@/components/brand";
 
 const SURFACE = "#131316";
@@ -30,7 +31,10 @@ const KIND: Record<
 export default function Notifications() {
   const router = useRouter();
   const { events, loading, error, refresh, markDone } = useNotifications();
+  const { myInvites, myJoinRequests, acceptInvite, declineInvite, approveRequest, declineRequest } =
+    useSocial();
   const [refreshing, setRefreshing] = useState(false);
+  const hasPending = myInvites.length + myJoinRequests.length > 0;
 
   async function onRefresh() {
     setRefreshing(true);
@@ -94,9 +98,34 @@ export default function Notifications() {
           </Pressable>
         )}
 
+        {hasPending && (
+          <View style={{ marginBottom: 14 }}>
+            {myJoinRequests.map((r) => (
+              <PendingRow
+                key={r.id}
+                icon="account-plus-outline"
+                title={`@${r.requesterUsername} wants to join ${r.fridgeName}`}
+                createdAt={r.createdAt}
+                onAccept={() => approveRequest(r.id)}
+                onDecline={() => declineRequest(r.id)}
+              />
+            ))}
+            {myInvites.map((inv) => (
+              <PendingRow
+                key={inv.id}
+                icon="email-outline"
+                title={`Invite to ${inv.fridgeName} from @${inv.inviterUsername}`}
+                createdAt={inv.createdAt}
+                onAccept={() => acceptInvite(inv.id)}
+                onDecline={() => declineInvite(inv.id)}
+              />
+            ))}
+          </View>
+        )}
+
         {loading ? (
           <ActivityIndicator color="#26c6da" style={{ marginTop: 40 }} />
-        ) : events.length === 0 ? (
+        ) : events.length === 0 && !hasPending ? (
           <Text style={{ textAlign: "center", paddingVertical: 60, color: FAINT, fontSize: 13 }}>
             You&apos;re all caught up — no notifications yet.
           </Text>
@@ -112,6 +141,50 @@ export default function Notifications() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function PendingRow({
+  icon,
+  title,
+  createdAt,
+  onAccept,
+  onDecline,
+}: {
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  title: string;
+  createdAt: number;
+  onAccept: () => void;
+  onDecline: () => void;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        padding: 13,
+        marginBottom: 10,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: HAIRLINE,
+        backgroundColor: SURFACE,
+      }}
+    >
+      <View style={{ width: 36, height: 36, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: `${BLUE}1a` }}>
+        <MaterialCommunityIcons name={icon} size={17} color={BLUE} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: INK, lineHeight: 17 }}>{title}</Text>
+        <Text style={{ fontSize: 11, color: FAINT, marginTop: 2 }}>{timeAgo(createdAt)}</Text>
+      </View>
+      <Pressable onPress={onAccept} hitSlop={6} style={{ padding: 4 }}>
+        <MaterialCommunityIcons name="check" size={18} color={GOOD} />
+      </Pressable>
+      <Pressable onPress={onDecline} hitSlop={6} style={{ padding: 4 }}>
+        <MaterialCommunityIcons name="close" size={16} color={FAINT} />
+      </Pressable>
+    </View>
   );
 }
 

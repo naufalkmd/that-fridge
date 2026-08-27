@@ -45,16 +45,16 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
 
 ### Build — remaining for v1.0
 
-| Item                                            | Owner | Note                                                                                                                                                                                                                                                                                                                                                        |
-| ----------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ✅**Paywall + RevenueCat**                | B     | client code done; RevenueCat dashboard configured (project, `thatfridge_pro` entitlement, `default` offering with `monthly`/`yearly`); **AI paywall designed + published** on the `default` offering (test store). **Still needs:** a real App Store app in RevenueCat + `appl_` key + real trial products, and a dev build to run |
-| 🔒**`eas build --profile development`** | B     | dev client so barcode scan, local notifications, and RevenueCat can actually be tested — needs the Apple account                                                                                                                                                                                                                                           |
-| 🟡 Tab bar chrome                               | D     | floating-pill nav matching the web — Home · Inventory · **[＋]** · Chat · Eat, active tab expands to its label, raised amber add-FAB; toast/undo done; bottom-sheet **grab-to-dismiss** gesture still ⬜                                                                                                                                              |
+| Item                                            | Owner | Note                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ✅**Paywall + RevenueCat**                | B     | client code done; RevenueCat dashboard configured (project,`thatfridge_pro` entitlement, `default` offering with `monthly`/`yearly`); **AI paywall designed + published** on the `default` offering (test store). **Still needs:** a real App Store app in RevenueCat + `appl_` key + real trial products, and a dev build to run |
+| 🔒**`eas build --profile development`** | B     | dev client so barcode scan, local notifications, and RevenueCat can actually be tested — needs the Apple account                                                                                                                                                                                                                                         |
+| 🟡 Tab bar chrome                               | D     | floating-pill nav matching the web — Home · Inventory ·**[＋]** · Chat · Eat, active tab expands to its label, raised amber add-FAB; toast/undo done; bottom-sheet **grab-to-dismiss** gesture still ⬜                                                                                                                                  |
 | ⬜ Item icon picker                             | C     | items show name initials + core pixel grids; port the generated-icon library                                                                                                                                                                                                                                                                              |
-| ⬜ ChatHistoryScreen                            | C     | chat restores the latest session only; "new chat" clears it; no session list / switch / delete                                                                                                                                                                                                                                                              |
-| ⬜ Native-feel pass                             | C/D   | haptics, skeleton loaders, safe-area audit on every screen, offline banners                                                                                                                                                                                                                                                                                 |
-| ⬜`lib/thatfridge` full extraction            | B     | most Home logic now in `packages/core` (`home.ts`, score endpoints); finish moving the rest + point`apps/web` at `packages/core`                                                                                                                                                                                                                       |
-| ⬜ Merge`mobile-app` → `main`              | —    | additive; web app untouched                                                                                                                                                                                                                                                                                                                                 |
+| ⬜ ChatHistoryScreen                            | C     | chat restores the latest session only; "new chat" clears it; no session list / switch / delete                                                                                                                                                                                                                                                            |
+| ⬜ Native-feel pass                             | C/D   | haptics, skeleton loaders, safe-area audit on every screen, offline banners                                                                                                                                                                                                                                                                               |
+| ⬜`lib/thatfridge` full extraction            | B     | most Home logic now in`packages/core` (`home.ts`, score endpoints); finish moving the rest + point`apps/web` at `packages/core`                                                                                                                                                                                                                   |
+| ⬜ Merge`mobile-app` → `main`              | —    | additive; web app untouched                                                                                                                                                                                                                                                                                                                               |
 
 > **Screen parity (2026-08-28):** every core screen — Home, Inventory, Search, Eat, Chat,
 > Notifications, Profile, Add, Item detail — is ported to match `apps/web`'s "dark neon pixel
@@ -66,20 +66,20 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
 
 ### External setup — not started (long lead time, start now)
 
-| Item                                                                           | Owner |
-| ------------------------------------------------------------------------------ | ----- |
-| 🔒 Apple Developer Program enrollment (**Individual**)                   | A     |
-| 🔒 App Store Connect: Paid Apps Agreement + banking + tax (blocks IAP testing) | A     |
-| 🔒 RevenueCat account + project +`pro` entitlement + offering                | A     |
-| 🔒`thatfridge_pro_monthly` subscription + 7-day trial in App Store Connect   | A     |
-| ⬜ Domain (API host + privacy-policy / terms pages)                            | A     |
-| ⬜ Laravel API deployed to the VPS (HTTPS, Postgres, Redis, queue, scheduler)  | A     |
-| ⬜ Proper backend demo-data seeder (replace the shell script)                  | A     |
-| ⬜ Sentry on the Laravel app                                                   | A     |
-| ⬜ Privacy policy + Terms pages on`apps/web`                                 | A/D   |
-| ⬜ Devpost draft + start#BuildInPublic thread                                  | D     |
-| ⬜ **Buy PixelMix commercial license** ($25, andrewtyler.gumroad.com/l/pixelmix) — required before the App Store (commercial) release; see `assets/fonts/PixelMix-NOTES.md` | A |
-| ⬜ Decide Google Play account type (personal vs organization)                  | D     |
+| Item                                                                                                                                                                                | Owner |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| 🔒 Apple Developer Program enrollment (**Individual**)                                                                                                                        | A     |
+| 🔒 App Store Connect: Paid Apps Agreement + banking + tax (blocks IAP testing)                                                                                                      | A     |
+| 🔒 RevenueCat account + project +`pro` entitlement + offering                                                                                                                     | A     |
+| 🔒`thatfridge_pro_monthly` subscription + 7-day trial in App Store Connect                                                                                                        | A     |
+| ⬜ Domain (API host + privacy-policy / terms pages)                                                                                                                                 | A     |
+| ⬜ Laravel API deployed to the VPS (HTTPS, Postgres, Redis, queue, scheduler)                                                                                                       | A     |
+| ⬜ Proper backend demo-data seeder (replace the shell script)                                                                                                                       | A     |
+| ⬜ Sentry on the Laravel app                                                                                                                                                        | A     |
+| ⬜ Privacy policy + Terms pages on`apps/web`                                                                                                                                      | A/D   |
+| ⬜ Devpost draft + start#BuildInPublic thread                                                                                                                                       | D     |
+| ⬜**Buy PixelMix commercial license** ($25, andrewtyler.gumroad.com/l/pixelmix) — required before the App Store (commercial) release; see `assets/fonts/PixelMix-NOTES.md` | A     |
+| ⬜ Decide Google Play account type (personal vs organization)                                                                                                                       | D     |
 
 > **Where we stand:** the app's core loop is code-complete and runs end-to-end in Expo Go
 > against a local API. Everything left is either gated on the external accounts above or is
@@ -132,19 +132,19 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
 The bar for every mobile screen is now **visual parity with `apps/web`** (decided 2026-08-28),
 not the earlier stripped MVP. Status per §1.
 
-| Screen / feature                                                             | Status                                            |
-| ---------------------------------------------------------------------------- | ------------------------------------------------- |
-| Auth — register / login / logout / persistence                              | ✅                                                |
-| Inventory + item detail — list / add / edit / delete, sort, category filter, search | ✅ web-parity                              |
-| Add — method picker (barcode / manual live; receipt + photo Pro-gated)        | ✅ web-parity                                     |
-| Home dashboard — Kitchen Score gauge, CrewScene, fridge carousel, crew tips   | ✅ web-parity                                     |
-| Notifications feed + settings + local expiry reminders                       | ✅ web-parity                                     |
-| What to eat + recipe card (have/need ingredients, steps) + "Mark as made"     | ✅ web-parity                                     |
-| Chat (AI assistant) — wallpaper, quick asks, markdown replies                 | ✅ web-parity                                     |
-| Shopping list                                                                | ✅                                                |
-| Profile / Settings + **account deletion** + **restore purchases**            | ✅                                                |
-| **Paywall + "ThatFridge Pro"** (RevenueCat, `thatfridge_pro` gate)            | ✅ code + dashboard + published paywall; needs real App Store products |
-| Shared chrome — tab bar, toasts, fridge-scope, pixel headers                  | ✅ · sheet grab-to-dismiss gesture ⬜             |
+| Screen / feature                                                                     | Status                                                                 |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| Auth — register / login / logout / persistence                                      | ✅                                                                     |
+| Inventory + item detail — list / add / edit / delete, sort, category filter, search | ✅ web-parity                                                          |
+| Add — method picker (barcode / manual live; receipt + photo Pro-gated)              | ✅ web-parity                                                          |
+| Home dashboard — Kitchen Score gauge, CrewScene, fridge carousel, crew tips         | ✅ web-parity                                                          |
+| Notifications feed + settings + local expiry reminders                               | ✅ web-parity                                                          |
+| What to eat + recipe card (have/need ingredients, steps) + "Mark as made"            | ✅ web-parity                                                          |
+| Chat (AI assistant) — wallpaper, quick asks, markdown replies                       | ✅ web-parity                                                          |
+| Shopping list                                                                        | ✅                                                                     |
+| Profile / Settings +**account deletion** + **restore purchases**         | ✅                                                                     |
+| **Paywall + "ThatFridge Pro"** (RevenueCat, `thatfridge_pro` gate)           | ✅ code + dashboard + published paywall; needs real App Store products |
+| Shared chrome — tab bar, toasts, fridge-scope, pixel headers                        | ✅ · sheet grab-to-dismiss gesture ⬜                                 |
 
 **OUT** — fast-follow via EAS Update after launch (all JS-only, no new review):
 sticky-notes board · Organizer · Goals · Badges · AI-data screen · RecipeFormSheet ·
@@ -330,19 +330,19 @@ component's size, as a rough effort signal. Every backend route named below alre
 
 ### A. Screens with no mobile equivalent
 
-| Web screen | LOC | What it does | Backend |
-| --- | --- | --- | --- |
-| `FoodHubScreen` | 649 | The recipe hub: browse/search the recipe library, category tabs, favourites, "tonight's pick", per-agent "activate" cards, shopping recommendations, embedded shopping panel, fridge notes | `/recipes`, `/recipes/suggest` |
-| `RecipeFormSheet` | 486 | Create / edit a custom recipe — name, category, ingredients, steps, **photo + video attachments** (record or pick), **import from a link** | `/recipes` POST/PATCH, `/recipes/attachments`, `/recipes/import-link` |
-| `FridgeStyleSheet` | 357 | Per-fridge look — pick a style photo or **upload a custom fridge photo**; also **rename / delete** a fridge and **leave** a shared one | `/fridges/{}` PATCH/DELETE, `/fridges/{}/leave` |
-| `GoalsScreen` | 201 | Set a weekly/monthly goal (waste rate / items rescued / freshness at use) and track progress | `/user-goal` GET/PATCH |
-| `FindFriendScreen` (+ `friendProfile`) | 193 | Search users by username, view a profile, send / accept **fridge invites & join requests** | `/users/{username}/profile`, `/invites`, `/join-requests`, `/fridges/{}/invites`, `/fridges/{}/join-requests` |
-| `RecipeDetailSheet` | 178 | Standalone recipe view. Mobile has an inline card in Eat with have/need rows + steps + "mark as made"; **missing:** favourite toggle, edit-own-recipe, attachments / reference media, category tag, `by @owner` | `/recipes/{}/favorite` |
-| `AIDataScreen` | 155 | See / manage what the crew remembers — chat-history entry, **usage-history list with per-row delete**, **memory facts** with delete + "extract from chats" | `/usage-history`, `/memory` (+ `/memory/extract`, `/memory/facts/{i}`) |
-| `MarkRecipeMadeSheet` | 144 | After "mark as made", reconcile which matched fridge items were **finished vs still remaining vs not used** — mobile currently calls `mark-made` with no reconciliation | `/recipes/{}/mark-made` |
-| `AboutScreen` | 132 | Standalone About + the 4 agent bios. Mobile folds a one-line blurb into Profile | — |
-| `BadgesScreen` | 81 | 4 achievement badges (`rescued_10`, `first_link_recipe`, `full_week_variety`, `zero_waste_week`) with progress | `/badges` (+ `/badges/{key}/progress`) |
-| `ChatHistoryScreen` | 73 | List past chat sessions, **restore or delete** one. Mobile restores only the latest; "new chat" just clears | `/chat/sessions`, `/chat/sessions/{id}` GET/DELETE |
+| Web screen                                 | LOC | What it does                                                                                                                                                                                                           | Backend                                                                                                                 |
+| ------------------------------------------ | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `FoodHubScreen`                          | 649 | The recipe hub: browse/search the recipe library, category tabs, favourites, "tonight's pick", per-agent "activate" cards, shopping recommendations, embedded shopping panel, fridge notes                             | `/recipes`, `/recipes/suggest`                                                                                      |
+| `RecipeFormSheet`                        | 486 | Create / edit a custom recipe — name, category, ingredients, steps,**photo + video attachments** (record or pick), **import from a link**                                                                 | `/recipes` POST/PATCH, `/recipes/attachments`, `/recipes/import-link`                                             |
+| `FridgeStyleSheet`                       | 357 | Per-fridge look — pick a style photo or**upload a custom fridge photo**; also **rename / delete** a fridge and **leave** a shared one                                                               | `/fridges/{}` PATCH/DELETE, `/fridges/{}/leave`                                                                     |
+| `GoalsScreen`                            | 201 | Set a weekly/monthly goal (waste rate / items rescued / freshness at use) and track progress                                                                                                                           | `/user-goal` GET/PATCH                                                                                                |
+| `FindFriendScreen` (+ `friendProfile`) | 193 | Search users by username, view a profile, send / accept**fridge invites & join requests**                                                                                                                        | `/users/{username}/profile`, `/invites`, `/join-requests`, `/fridges/{}/invites`, `/fridges/{}/join-requests` |
+| `RecipeDetailSheet`                      | 178 | Standalone recipe view. Mobile has an inline card in Eat with have/need rows + steps + "mark as made";**missing:** favourite toggle, edit-own-recipe, attachments / reference media, category tag, `by @owner` | `/recipes/{}/favorite`                                                                                                |
+| `AIDataScreen`                           | 155 | See / manage what the crew remembers — chat-history entry,**usage-history list with per-row delete**, **memory facts** with delete + "extract from chats"                                                 | `/usage-history`, `/memory` (+ `/memory/extract`, `/memory/facts/{i}`)                                          |
+| `MarkRecipeMadeSheet`                    | 144 | After "mark as made", reconcile which matched fridge items were**finished vs still remaining vs not used** — mobile currently calls `mark-made` with no reconciliation                                        | `/recipes/{}/mark-made`                                                                                               |
+| `AboutScreen`                            | 132 | Standalone About + the 4 agent bios. Mobile folds a one-line blurb into Profile                                                                                                                                        | —                                                                                                                      |
+| `BadgesScreen`                           | 81  | 4 achievement badges (`rescued_10`, `first_link_recipe`, `full_week_variety`, `zero_waste_week`) with progress                                                                                                 | `/badges` (+ `/badges/{key}/progress`)                                                                              |
+| `ChatHistoryScreen`                      | 73  | List past chat sessions,**restore or delete** one. Mobile restores only the latest; "new chat" just clears                                                                                                       | `/chat/sessions`, `/chat/sessions/{id}` GET/DELETE                                                                  |
 
 ### B. Multi-fridge & social (whole subsystem — currently single-fridge only on mobile)
 

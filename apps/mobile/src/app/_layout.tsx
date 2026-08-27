@@ -15,6 +15,7 @@ import { NotificationsProvider } from "@/lib/notifications";
 import { ShoppingProvider } from "@/lib/shopping";
 import { KitchenScoreProvider } from "@/lib/kitchenScore";
 import { RecipesProvider } from "@/lib/recipes";
+import { SocialProvider } from "@/lib/social";
 import { ToastProvider } from "@/lib/toast";
 import { ExpiryReminderSync } from "@/lib/ExpiryReminderSync";
 
@@ -39,6 +40,7 @@ export default function RootLayout() {
        <ProProvider>
         <InventoryProvider>
          <ScopeProvider>
+          <SocialProvider>
           <NotificationsProvider>
            <ShoppingProvider>
             <KitchenScoreProvider>
@@ -98,6 +100,7 @@ export default function RootLayout() {
             </KitchenScoreProvider>
            </ShoppingProvider>
           </NotificationsProvider>
+          </SocialProvider>
          </ScopeProvider>
         </InventoryProvider>
        </ProProvider>
