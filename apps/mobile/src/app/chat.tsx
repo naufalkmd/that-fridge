@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -9,8 +10,9 @@ import {
   TextInput,
   View,
 } from "react-native";
-
 import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import {
   daysLabel,
@@ -22,6 +24,17 @@ import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { usePro } from "@/lib/pro";
 import { FREE_CHATS_PER_WEEK, bumpChatUsed, getChatUsed } from "@/lib/chatQuota";
+import { MarkdownText } from "@/components/markdown-text";
+
+const WALLPAPER = require("../../assets/images/thatfridge/chat-wallpaper.png");
+
+const AMBER = "#26c6da";
+const SURFACE = "#131316";
+const SURFACE2 = "#1a1a1f";
+const HAIRLINE = "rgba(255,255,255,0.09)";
+const INK = "#eaeaec";
+const MUTED = "rgba(234,234,236,0.58)";
+const FAINT = "rgba(234,234,236,0.34)";
 
 const AGENTS: { key: ChatAgentName; blurb: string }[] = [
   { key: "Chef", blurb: "what to cook" },
@@ -29,19 +42,20 @@ const AGENTS: { key: ChatAgentName; blurb: string }[] = [
   { key: "Shopkeeper", blurb: "restocking" },
   { key: "Organizer", blurb: "planning" },
 ];
-
 const AGENT_COLOR: Record<ChatAgentName, string> = {
   Chef: "#f5a623",
   Guardian: "#ff5f56",
   Shopkeeper: "#39e07f",
   Organizer: "#3d6fe0",
 };
+const QUICK_ASKS = [
+  "What's expiring soon?",
+  "What can I cook tonight?",
+  "What do I need to buy?",
+  "How's my fridge doing?",
+];
 
-type Msg = {
-  role: "user" | "agent";
-  text: string;
-  recipe?: RecipeSuggestionBlock | null;
-};
+type Msg = { role: "user" | "agent"; text: string; recipe?: RecipeSuggestionBlock | null };
 
 export default function Chat() {
   const router = useRouter();
@@ -59,11 +73,7 @@ export default function Chat() {
   const remaining = Math.max(0, FREE_CHATS_PER_WEEK - used);
 
   const inventorySummary = useMemo(
-    () =>
-      items
-        .slice(0, 40)
-        .map((i) => `${i.name} (${daysLabel(i.days)})`)
-        .join(", "),
+    () => items.slice(0, 40).map((i) => `${i.name} (${daysLabel(i.days)})`).join(", "),
     [items],
   );
 
@@ -81,7 +91,7 @@ export default function Chat() {
           }),
         );
       } catch {
-        // fresh thread
+        /* fresh thread */
       } finally {
         setLoading(false);
       }
@@ -89,29 +99,24 @@ export default function Chat() {
     getChatUsed().then(setUsed);
   }, []);
 
-  async function send() {
-    const msg = text.trim();
+  async function send(preset?: string) {
+    const msg = (preset ?? text).trim();
     if (!msg || sending) return;
     if (!isPro && remaining <= 0) {
-      // Try the native paywall; if it can't show (Expo Go / no dashboard paywall) or the
-      // user doesn't buy, send them to the full paywall screen.
       const nowPro = await presentPaywallIfNeeded();
       if (!nowPro) {
         router.push("/paywall");
         return;
       }
     }
-    setText("");
+    if (!preset) setText("");
     setMessages((m) => [...m, { role: "user", text: msg }]);
     setSending(true);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     try {
       const res = await api.sendChat(msg, agent, { inventory: inventorySummary, sessionId });
       if (res.session_id) setSessionId(res.session_id);
-      setMessages((m) => [
-        ...m,
-        { role: "agent", text: res.agent_response, recipe: res.recipe_suggestion },
-      ]);
+      setMessages((m) => [...m, { role: "agent", text: res.agent_response, recipe: res.recipe_suggestion }]);
       if (!isPro) {
         await bumpChatUsed();
         setUsed((u) => u + 1);
@@ -127,111 +132,274 @@ export default function Chat() {
     }
   }
 
+  const showQuickAsks = !loading && messages.length <= 3;
+
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-canvas"
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={90}
-    >
-      <View className="flex-row gap-2 px-4 py-3">
-        {AGENTS.map((a) => {
-          const active = agent === a.key;
-          const color = AGENT_COLOR[a.key];
-          return (
+    <ImageBackground source={WALLPAPER} resizeMode="repeat" style={{ flex: 1, backgroundColor: "#0a0a0c" }}>
+      <SafeAreaView className="flex-1" edges={["top"]}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={0}
+        >
+          {/* header */}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+              paddingHorizontal: 16,
+              paddingBottom: 12,
+              backgroundColor: "rgba(19,19,22,0.8)",
+              borderBottomWidth: 1,
+              borderBottomColor: HAIRLINE,
+            }}
+          >
+            <Pressable onPress={() => router.back()} hitSlop={8}>
+              <Ionicons name="chevron-back" size={22} color={INK} />
+            </Pressable>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15.5, fontWeight: "800", color: INK }}>Quick Chat</Text>
+              <Text style={{ fontSize: 11.5, color: FAINT }}>Quick answers about your fridge</Text>
+            </View>
             <Pressable
-              key={a.key}
-              onPress={() => setAgent(a.key)}
-              className="flex-1 items-center rounded-lg border py-2"
+              onPress={() => {
+                setMessages([]);
+                setSessionId(null);
+              }}
+              hitSlop={8}
               style={{
-                borderColor: active ? color : "rgba(255,255,255,0.09)",
-                backgroundColor: active ? `${color}1a` : "transparent",
+                width: 30,
+                height: 30,
+                borderRadius: 15,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: SURFACE2,
+                borderWidth: 1,
+                borderColor: HAIRLINE,
               }}
             >
-              <Text
-                className="text-[12px] font-bold"
-                style={{ color: active ? color : "rgba(234,234,236,0.58)" }}
-              >
-                {a.key}
-              </Text>
+              <Ionicons name="create-outline" size={15} color={INK} />
             </Pressable>
-          );
-        })}
-      </View>
+          </View>
 
-      {!isPro && (
-        <Pressable
-          onPress={() => router.push("/paywall")}
-          className="mx-4 mb-1 flex-row items-center justify-between rounded-lg border border-hairline bg-surface px-3 py-2"
-        >
-          <Text className="text-[12px] text-muted">
-            {remaining > 0
-              ? `${remaining} free message${remaining === 1 ? "" : "s"} left this week`
-              : "Weekly free messages used up"}
-          </Text>
-          <Text className="text-[12px] font-bold text-accent">Go Pro</Text>
-        </Pressable>
-      )}
+          {/* agent picker */}
+          <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 10 }}>
+            {AGENTS.map((a) => {
+              const active = agent === a.key;
+              const color = AGENT_COLOR[a.key];
+              return (
+                <Pressable
+                  key={a.key}
+                  onPress={() => setAgent(a.key)}
+                  style={{
+                    flex: 1,
+                    alignItems: "center",
+                    paddingVertical: 7,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: active ? color : HAIRLINE,
+                    backgroundColor: active ? `${color}1a` : "rgba(19,19,22,0.6)",
+                  }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: active ? color : MUTED }}>
+                    {a.key}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
-      <ScrollView
-        ref={scrollRef}
-        className="flex-1"
-        contentContainerClassName="px-4 pb-4 gap-3"
-        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
-      >
-        {loading ? (
-          <ActivityIndicator color="#26c6da" className="mt-8" />
-        ) : messages.length === 0 ? (
-          <Text className="mt-8 text-center text-[13px] text-faint">
-            Ask {agent} about {AGENTS.find((a) => a.key === agent)?.blurb}.
-          </Text>
-        ) : (
-          messages.map((m, i) => <Bubble key={i} msg={m} />)
-        )}
-        {sending && <Text className="text-[12px] text-faint">{agent} is thinking…</Text>}
-      </ScrollView>
+          {!isPro && (
+            <Pressable
+              onPress={() => router.push("/paywall")}
+              style={{
+                marginHorizontal: 16,
+                marginBottom: 4,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: HAIRLINE,
+                backgroundColor: "rgba(19,19,22,0.85)",
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: MUTED }}>
+                {remaining > 0
+                  ? `${remaining} free message${remaining === 1 ? "" : "s"} left this week`
+                  : "Weekly free messages used up"}
+              </Text>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: AMBER }}>Go Pro</Text>
+            </Pressable>
+          )}
 
-      <View className="flex-row items-end gap-2 border-t border-hairline px-4 py-3">
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          placeholder={`Message ${agent}…`}
-          placeholderTextColor="rgba(234,234,236,0.34)"
-          multiline
-          className="max-h-24 flex-1 rounded-2xl border border-hairline bg-surface px-4 py-2.5 text-[14px] text-ink"
-        />
-        <Pressable
-          onPress={send}
-          disabled={sending || !text.trim()}
-          className="h-10 w-10 items-center justify-center rounded-full bg-accent active:opacity-80"
-          style={sending || !text.trim() ? { opacity: 0.5 } : undefined}
-        >
-          <Text className="text-[16px] font-bold text-[#0a0a0c]">↑</Text>
-        </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+          <ScrollView
+            ref={scrollRef}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 16, gap: 12 }}
+            onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
+            keyboardShouldPersistTaps="handled"
+          >
+            {loading ? (
+              <ActivityIndicator color={AMBER} style={{ marginTop: 32 }} />
+            ) : messages.length === 0 ? (
+              <Text style={{ marginTop: 24, textAlign: "center", fontSize: 13, color: FAINT }}>
+                Ask {agent} about {AGENTS.find((a) => a.key === agent)?.blurb}.
+              </Text>
+            ) : (
+              messages.map((m, i) => <Bubble key={i} msg={m} />)
+            )}
+            {sending && <TypingDots />}
+          </ScrollView>
+
+          {showQuickAsks && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flexGrow: 0 }}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 10, gap: 8 }}
+              keyboardShouldPersistTaps="handled"
+            >
+              {QUICK_ASKS.map((label) => (
+                <Pressable
+                  key={label}
+                  onPress={() => send(label)}
+                  style={{
+                    backgroundColor: "rgba(19,19,22,0.9)",
+                    borderWidth: 1,
+                    borderColor: HAIRLINE,
+                    borderRadius: 6,
+                    paddingVertical: 8,
+                    paddingHorizontal: 13,
+                  }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: INK }}>{label}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "flex-end",
+              gap: 8,
+              paddingHorizontal: 14,
+              paddingTop: 8,
+              paddingBottom: 12,
+              borderTopWidth: 1,
+              borderTopColor: HAIRLINE,
+              backgroundColor: "rgba(19,19,22,0.9)",
+            }}
+          >
+            <TextInput
+              value={text}
+              onChangeText={setText}
+              placeholder={`Ask ${agent} about your fridge…`}
+              placeholderTextColor={FAINT}
+              multiline
+              style={{
+                flex: 1,
+                maxHeight: 96,
+                backgroundColor: SURFACE2,
+                borderRadius: 20,
+                paddingHorizontal: 16,
+                paddingVertical: 11,
+                fontSize: 13.5,
+                color: INK,
+              }}
+            />
+            <Pressable
+              onPress={() => send()}
+              disabled={sending || !text.trim()}
+              style={{
+                width: 38,
+                height: 38,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 19,
+                backgroundColor: AMBER,
+                opacity: sending || !text.trim() ? 0.5 : 1,
+              }}
+            >
+              <Ionicons name="arrow-up" size={18} color="#0a0a0c" />
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </ImageBackground>
+  );
+}
+
+function TypingDots() {
+  return (
+    <View
+      style={{
+        alignSelf: "flex-start",
+        flexDirection: "row",
+        gap: 4,
+        backgroundColor: SURFACE,
+        borderWidth: 1,
+        borderColor: HAIRLINE,
+        borderTopLeftRadius: 4,
+        borderTopRightRadius: 16,
+        borderBottomLeftRadius: 16,
+        borderBottomRightRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 13,
+      }}
+    >
+      {[0, 1, 2].map((i) => (
+        <View key={i} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: FAINT }} />
+      ))}
+    </View>
   );
 }
 
 function Bubble({ msg }: { msg: Msg }) {
   const isUser = msg.role === "user";
   return (
-    <View className={isUser ? "items-end" : "items-start"}>
+    <View style={{ alignItems: isUser ? "flex-end" : "flex-start" }}>
       <View
-        className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${
-          isUser ? "bg-accent" : "border border-hairline bg-surface"
-        }`}
+        style={{
+          maxWidth: "85%",
+          paddingHorizontal: 14,
+          paddingVertical: 11,
+          backgroundColor: isUser ? AMBER : SURFACE,
+          borderWidth: isUser ? 0 : 1,
+          borderColor: HAIRLINE,
+          borderTopLeftRadius: isUser ? 16 : 4,
+          borderTopRightRadius: isUser ? 4 : 16,
+          borderBottomLeftRadius: 16,
+          borderBottomRightRadius: 16,
+        }}
       >
-        <Text className={`text-[14px] leading-5 ${isUser ? "text-[#0a0a0c]" : "text-ink"}`}>
-          {msg.text}
-        </Text>
+        {isUser ? (
+          <Text style={{ fontSize: 13.5, lineHeight: 20, color: "#0a0a0c" }}>{msg.text}</Text>
+        ) : (
+          <MarkdownText text={msg.text} />
+        )}
       </View>
       {msg.recipe && (
-        <View className="mt-2 max-w-[85%] rounded-2xl border border-accent bg-surface p-3">
-          <Text className="text-[14px] font-bold text-ink">{msg.recipe.name}</Text>
-          <Text className="mb-1 text-[11px] text-faint">{msg.recipe.minutes} min</Text>
-          <Text className="text-[12.5px] leading-5 text-muted">{msg.recipe.description}</Text>
+        <View
+          style={{
+            marginTop: 8,
+            maxWidth: "85%",
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: AMBER,
+            backgroundColor: SURFACE,
+            padding: 12,
+          }}
+        >
+          <Text style={{ fontSize: 14, fontWeight: "700", color: INK }}>{msg.recipe.name}</Text>
+          <Text style={{ fontSize: 11, color: FAINT, marginBottom: 4 }}>{msg.recipe.minutes} min</Text>
+          <Text style={{ fontSize: 12.5, lineHeight: 19, color: MUTED }}>{msg.recipe.description}</Text>
           {msg.recipe.steps.map((s, i) => (
-            <Text key={i} className="mt-1 text-[12.5px] leading-5 text-ink">
+            <Text key={i} style={{ marginTop: 4, fontSize: 12.5, lineHeight: 19, color: INK }}>
               {i + 1}. {s}
             </Text>
           ))}

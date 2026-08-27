@@ -66,6 +66,7 @@ export default function TabsLayout() {
         name="notifications"
         options={{
           title: "Alerts",
+          headerShown: false,
           tabBarBadge: unread > 0 ? unread : undefined,
           tabBarBadgeStyle: { backgroundColor: "#c1452e", color: "#fff", fontSize: 10 },
           tabBarIcon: ({ color, size }) => (

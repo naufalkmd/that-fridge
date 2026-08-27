@@ -73,7 +73,7 @@ export default function RootLayout() {
                 name="search"
                 options={{ headerShown: false, presentation: "modal" }}
               />
-              <Stack.Screen name="chat" options={{ title: "Ask the crew" }} />
+              <Stack.Screen name="chat" options={{ headerShown: false }} />
               <Stack.Screen name="profile" options={{ title: "Profile" }} />
               <Stack.Screen
                 name="paywall"

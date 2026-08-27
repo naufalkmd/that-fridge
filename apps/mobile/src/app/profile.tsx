@@ -6,6 +6,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { describeError } from "@thatfridge/core";
 import { useAuth } from "@/lib/auth";
+import { useInventory } from "@/lib/inventory";
+import { useScope } from "@/lib/scope";
 import { usePro } from "@/lib/pro";
 import { PixelText } from "@/components/brand";
 import { Eyebrow, SectionHeader } from "@/components/ui";
@@ -14,6 +16,8 @@ export default function Profile() {
   const router = useRouter();
   const { user, signOut, deleteAccount } = useAuth();
   const { isPro, available, restore, openCustomerCenter } = usePro();
+  const { fridges } = useInventory();
+  const { scope, setScope } = useScope();
   const [working, setWorking] = useState(false);
 
   async function doRestore() {
@@ -106,6 +110,38 @@ export default function Profile() {
           </Pressable>
         )}
       </View>
+
+      {fridges.length > 0 && (
+        <View>
+          <SectionHeader>Your fridges</SectionHeader>
+          <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
+            {fridges.map((f, i) => {
+              const count = f.sections.reduce((n, s) => n + s.items.length, 0);
+              const active = scope === f.id;
+              return (
+                <Pressable
+                  key={f.id}
+                  onPress={() => {
+                    setScope(f.id);
+                    router.navigate("/inventory");
+                  }}
+                  className={`flex-row items-center justify-between px-4 py-3.5 active:bg-canvas ${
+                    i === fridges.length - 1 ? "" : "border-b border-hairline"
+                  }`}
+                >
+                  <Text
+                    className="text-[14px] font-semibold"
+                    style={{ color: active ? "#5b8dee" : "#eaeaec" }}
+                  >
+                    {f.name}
+                  </Text>
+                  <Text className="text-[11.5px] text-faint">{count} items</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      )}
 
       <View>
         <SectionHeader>Settings</SectionHeader>
