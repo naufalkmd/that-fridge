@@ -32,7 +32,10 @@ _Last updated: 2026-08-27. Branch: `mobile-app` (not yet merged to `main`)._
 - [x] **ItemDetailSheet ported** — `item/[id]` modal: view + edit (name / location / food group / best-before / note), qty stepper, delete with confirm. (Icon picker + AI icon gen still TODO.)
 - [x] **AddScreen ported** — `add` modal: manual entry (name / qty / location / food group / best-before); auto-creates a fridge + "General" section for new accounts
 - [x] **Barcode scan** — `scan` screen with `expo-camera` `CameraView`; Open Food Facts lookup prefills the add form; falls back to blank add on miss. **Only runs in a dev build** — Expo Go shows a prompt.
-- [x] **`packages/core` grown** — fridge/section/item CRUD + `scanBarcode` + raw transforms + `flattenItems`; `domain.ts` (freshColor, daysLabel, category/location constants)
+- [x] **HomeScreen ported** — greeting, item/expiring-soon stats, "use it up" list, quick actions, notification bell with unread badge, pull-to-refresh
+- [x] **NotificationsScreen ported** — in-app feed (`/notification-events`, mark done/undo, active + cleared) + settings screen (`/notification-prefs` toggles)
+- [x] **Local expiry reminders** — `expo-notifications`, rescheduled from inventory on every sync, gated on the `expiryAlerts` pref + OS permission (best-effort; needs dev build to fire on iOS)
+- [x] **`packages/core` grown** — fridge/section/item CRUD + `scanBarcode` + notification events/prefs + raw transforms + `flattenItems`; `domain.ts` (freshColor, daysLabel, timeAgo, category/location constants)
 - [x] `backend/scripts/seed-demo-fridge.sh` — local demo data with varied freshness
 - [x] iOS bundle verified building clean via Metro
 - [x] Runs in Expo Go (native modules still need a dev build)
@@ -42,10 +45,13 @@ _Last updated: 2026-08-27. Branch: `mobile-app` (not yet merged to `main`)._
 - [ ] `eas init` + first `eas build --profile development` (dev client) — **Member B**
 - [ ] `lib/thatfridge` full extraction into `packages/core` (see `packages/core/README.md`) — **Member B** (auth + fridge/item endpoints + domain helpers done incrementally so far)
 - [ ] Merge `mobile-app` → `main`
-- [ ] `eas build --profile development` so barcode scan (and future native modules) can actually be tested — **Member B**
-- [ ] HomeScreen + NotificationsScreen — **Member C**
+- [ ] `eas build --profile development` so barcode scan + local notifications can actually be tested — **Member B**
+- [ ] WhatToEatSheet + RecipeDetail/MarkMade — **Member C**
+- [ ] ChatScreen + Shopping list — **Member C**
 - [ ] Icon picker for items (port `FoodIcon` / `GeneratedIconLibrary`) — **Member C**
-- [ ] Shared chrome: tab bar, drawer, bottom sheets, toasts — **Member D**
+- [ ] Shared chrome: tab bar (Home / Inventory / Notifications / Profile), drawer, bottom sheets, toasts — **Member D**
+- [ ] Paywall + RevenueCat — **Member B**
+- [ ] ProfileDrawer/Settings + account deletion + AboutScreen — **Member D**
 - [ ] Proper backend demo-data **seeder** (replace the shell script) — **Member A**
 
 ### Blockers not started (external lead time — start now)

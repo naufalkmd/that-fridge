@@ -1,11 +1,14 @@
 import { useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ApiError } from "@thatfridge/core";
 import { useInventory } from "@/lib/inventory";
+
+const isExpoGo = Constants.appOwnership === "expo";
 
 export default function Scan() {
   const router = useRouter();
@@ -13,6 +16,25 @@ export default function Scan() {
   const [permission, requestPermission] = useCameraPermissions();
   const [busy, setBusy] = useState(false);
   const handled = useRef(false);
+
+  if (isExpoGo) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center gap-4 bg-canvas p-6">
+        <Text className="text-center text-ink">
+          Barcode scanning needs a development build — the camera isn&apos;t available in Expo Go.
+        </Text>
+        <Pressable
+          onPress={() => router.replace("/add")}
+          className="rounded-lg bg-warn px-5 py-3 active:opacity-80"
+        >
+          <Text className="font-bold uppercase text-[#0a0a0c]">Add manually</Text>
+        </Pressable>
+        <Pressable onPress={() => router.back()}>
+          <Text className="text-muted">Cancel</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
 
   if (!permission) {
     return <View className="flex-1 bg-black" />;

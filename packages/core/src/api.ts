@@ -3,6 +3,8 @@ import type {
   CurrentUser,
   Fridge,
   Item,
+  NotificationEvent,
+  NotificationPrefs,
   NutritionCategory,
   Section,
   StorageLocation,
@@ -214,6 +216,22 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return res.suggestion;
   }
 
+  function listNotificationEvents(): Promise<NotificationEvent[]> {
+    return http.get<NotificationEvent[]>("/notification-events");
+  }
+
+  function markNotification(id: string, done: boolean): Promise<NotificationEvent> {
+    return http.patch<NotificationEvent>(`/notification-events/${id}`, { done });
+  }
+
+  function getNotificationPrefs(): Promise<NotificationPrefs> {
+    return http.get<NotificationPrefs>("/notification-prefs");
+  }
+
+  function updateNotificationPrefs(data: Partial<NotificationPrefs>): Promise<NotificationPrefs> {
+    return http.patch<NotificationPrefs>("/notification-prefs", data);
+  }
+
   return {
     login,
     register,
@@ -226,6 +244,10 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     updateItem,
     deleteItem,
     scanBarcode,
+    listNotificationEvents,
+    markNotification,
+    getNotificationPrefs,
+    updateNotificationPrefs,
   };
 }
 
