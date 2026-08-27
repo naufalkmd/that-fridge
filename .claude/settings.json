@@ -41,7 +41,17 @@
       "Bash(echo \"---exit: $?---\")",
       "Bash(grep -rn *)",
       "Bash(grep -n \"class=\\\\\"header\\\\\"\\\\|class=\\\\\"topbar\\\\\"\\\\|class=\\\\\"stats-row\\\\\"\\\\|Needs attention\\\\|t-attn\\\\|row-track-wrap\\\\|</div>$\" /private/tmp/claude-501/-Users-naufalkmd-Github-ThatFridge/105b4f4c-79e8-4908-8a9e-45a5210ea2db/scratchpad/home-redesign-mockup.html)",
-      "Bash(grep -n \"thatfridge-home-wide\\\\|^  \\);$\\\\|^}\" /Users/naufalkmd/Github/ThatFridge/frontend/components/thatfridge/screens/HomeScreen.tsx)"
+      "Bash(grep -n \"thatfridge-home-wide\\\\|^  \\);$\\\\|^}\" /Users/naufalkmd/Github/ThatFridge/frontend/components/thatfridge/screens/HomeScreen.tsx)",
+      "Bash(curl -s -X POST http://127.0.0.1:8000/api/register -H 'Content-Type: application/json' -d '{\"name\":\"Alex A __CMDSUB_OUTPUT__\",\"username\":\"alex_a___CMDSUB_OUTPUT__\",\"email\":\"alex_a___CMDSUB_OUTPUT__@thatfridge.test\",\"password\":\"password123\"}')",
+      "Bash(sed -i '' 's/await page.locator\\(.text=Crew.\\).first\\(\\).click\\(\\);/await page.locator\\(\"text=Crew\"\\).first\\(\\).click\\({ force: true }\\);/' verify_food_hub.mjs)",
+      "Bash(sed -i '' 's/await page.locator\\(.text=Favorites.\\).first\\(\\).click\\(\\);/await page.locator\\(\"text=Favorites\"\\).first\\(\\).click\\({ force: true }\\);/' verify_food_hub.mjs)",
+      "Bash(npx --yes -p playwright node verify_food_hub.mjs)",
+      "Bash(sed -i '' 's/await page.locator\\(\".thatfridge-tabbar svg\"\\).last\\(\\).click\\(\\);/await page.locator\\(\".thatfridge-tabbar svg\"\\).last\\(\\).click\\({ force: true }\\);/' verify_food_hub.mjs)",
+      "Bash(sed -i '' 's/await page.locator\\(\"div\", { hasText: \\\\/\\\\^Favorites\\\\$\\\\/ }\\).last\\(\\).click\\(\\);/await page.locator\\(\"div\", { hasText: \\\\/^Favorites$\\\\/ }\\).last\\(\\).click\\({ force: true }\\);/' verify_food_hub.mjs)",
+      "Bash(sed -i '' \"s/await page.locator\\('text=Riley Chili Test'\\).first\\(\\).click\\(\\);/await page.locator\\('text=Riley Chili Test'\\).first\\(\\).click\\({ force: true }\\);/\" verify_food_hub.mjs)",
+      "Bash(sed -i '' 's/page.waitForSelector\\(\"text=Your Kitchen This Week\", { timeout: 20000 }\\);/page.waitForSelector\\(\".thatfridge-home-wide\", { timeout: 20000, state: \"visible\" }\\);/' verify_desktop_only.mjs)",
+      "Bash(sed -i '' 's/desktop.waitForSelector\\(\"text=Your Kitchen This Week\", { timeout: 20000 }\\);/desktop.waitForSelector\\(\".thatfridge-home-wide\", { timeout: 20000, state: \"visible\" }\\);/' verify_desktop_only.mjs)",
+      "Bash(npx --yes -p playwright node verify_desktop_only.mjs)"
     ],
     "additionalDirectories": [
       "/private/tmp",
