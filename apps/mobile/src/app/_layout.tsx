@@ -44,6 +44,8 @@ export default function RootLayout() {
               />
               <Stack.Screen name="shopping" options={{ title: "Shopping list" }} />
               <Stack.Screen name="eat" options={{ title: "What to eat" }} />
+              <Stack.Screen name="chat" options={{ title: "Ask the crew" }} />
+              <Stack.Screen name="profile" options={{ title: "Profile" }} />
             </Stack>
            </ShoppingProvider>
           </NotificationsProvider>

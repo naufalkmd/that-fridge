@@ -10,7 +10,7 @@ import { useNotifications } from "@/lib/notifications";
 
 export default function Home() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { items, loading, refresh } = useInventory();
   const { unread } = useNotifications();
   const [refreshing, setRefreshing] = useState(false);
@@ -46,16 +46,25 @@ export default function Home() {
               Hi {user?.name?.split(" ")[0] ?? "there"}
             </Text>
           </View>
-          <Pressable onPress={() => router.push("/notifications")} hitSlop={8} className="p-1">
-            <View className="h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface">
-              <Text className="text-[15px]">🔔</Text>
-            </View>
-            {unread > 0 && (
-              <View className="absolute -right-0.5 -top-0.5 h-4 min-w-4 items-center justify-center rounded-full bg-bad px-1">
-                <Text className="text-[10px] font-bold text-white">{unread}</Text>
+          <View className="flex-row items-center gap-2">
+            <Pressable onPress={() => router.push("/notifications")} hitSlop={8} className="p-1">
+              <View className="h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface">
+                <Text className="text-[15px]">🔔</Text>
               </View>
-            )}
-          </Pressable>
+              {unread > 0 && (
+                <View className="absolute -right-0.5 -top-0.5 h-4 min-w-4 items-center justify-center rounded-full bg-bad px-1">
+                  <Text className="text-[10px] font-bold text-white">{unread}</Text>
+                </View>
+              )}
+            </Pressable>
+            <Pressable onPress={() => router.push("/profile")} hitSlop={8} className="p-1">
+              <View className="h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface">
+                <Text className="text-[13px] font-bold text-ink">
+                  {user?.name?.slice(0, 1).toUpperCase() ?? "?"}
+                </Text>
+              </View>
+            </Pressable>
+          </View>
         </View>
 
         {/* stat row */}
@@ -104,20 +113,10 @@ export default function Home() {
           <Action label="Add item" onPress={() => router.push("/add")} />
           <Action label="Scan" onPress={() => router.push("/scan")} />
           <Action label="What to eat" onPress={() => router.push("/eat")} />
+          <Action label="Ask the crew" onPress={() => router.push("/chat")} />
           <Action label="Shopping list" onPress={() => router.push("/shopping")} />
           <Action label="Inventory" onPress={() => router.push("/inventory")} />
-          <Action label="Notifications" onPress={() => router.push("/notifications")} />
         </View>
-
-        <Pressable
-          onPress={async () => {
-            await signOut();
-            router.replace("/sign-in");
-          }}
-          className="mt-2 items-center rounded-lg border border-hairline py-3 active:opacity-70"
-        >
-          <Text className="font-semibold text-bad">Sign out</Text>
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );

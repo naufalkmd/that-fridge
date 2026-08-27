@@ -121,6 +121,39 @@ export interface WhatToEatResult {
   exhausted: boolean;
 }
 
+export type ChatAgentName = "Chef" | "Guardian" | "Organizer" | "Shopkeeper";
+
+export interface RecipeSuggestionBlock {
+  name: string;
+  description: string;
+  minutes: number;
+  ingredients: { name: string }[];
+  steps: string[];
+}
+
+export interface SendChatResult {
+  agent: ChatAgentName;
+  user_message: string;
+  agent_response: string;
+  recipe_suggestion: RecipeSuggestionBlock | null;
+  session_id: string | null;
+  mocked: boolean;
+}
+
+export interface ChatHistoryRow {
+  id: number;
+  agent: ChatAgentName;
+  user_message: string;
+  agent_response: string | null;
+  recipe_suggestion: RecipeSuggestionBlock | null;
+  created_at: string;
+}
+
+export interface ChatHistoryResult {
+  messages: ChatHistoryRow[];
+  session_id: string | null;
+}
+
 export interface BarcodeSuggestion {
   name: string;
   icon: string;
@@ -190,6 +223,28 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   async function me(): Promise<CurrentUser> {
     const res = await http.get<{ user: CurrentUser }>("/me");
     return res.user;
+  }
+
+  async function deleteAccount(): Promise<void> {
+    await http.del("/me");
+    await tokens.clear();
+  }
+
+  function getChatHistory(): Promise<ChatHistoryResult> {
+    return http.get<ChatHistoryResult>("/chat");
+  }
+
+  function sendChat(
+    message: string,
+    agent: ChatAgentName,
+    opts: { inventory?: string; sessionId?: string | null } = {},
+  ): Promise<SendChatResult> {
+    return http.post<SendChatResult>("/chat", {
+      message,
+      agent,
+      inventory: opts.inventory,
+      session_id: opts.sessionId || undefined,
+    });
   }
 
   async function listFridges(): Promise<Fridge[]> {
@@ -289,6 +344,9 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     register,
     logout,
     me,
+    deleteAccount,
+    getChatHistory,
+    sendChat,
     listFridges,
     createFridge,
     createSection,

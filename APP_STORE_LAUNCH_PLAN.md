@@ -37,6 +37,9 @@ _Last updated: 2026-08-27. Branch: `mobile-app` (not yet merged to `main`)._
 - [x] **Local expiry reminders** — `expo-notifications`, rescheduled from inventory on every sync, gated on the `expiryAlerts` pref + OS permission (best-effort; needs dev build to fire on iOS)
 - [x] **Shopping list ported** — `ShoppingProvider` + screen: add / check / uncheck / remove / clear-checked, optimistic, shared/fridge-scoped
 - [x] **WhatToEat ported** — `eat` screen: meal + vibe filters, `/recipes/suggest`, exact vs "almost" groups, expandable cards with ingredients/steps, "I made this" → `mark-made` + inventory refresh
+- [x] **ChatScreen ported** — `chat` screen: agent picker (Chef/Guardian/Shopkeeper/Organizer), thread with history restore, inventory context, inline recipe-suggestion cards
+- [x] **Profile + account deletion** — `profile` screen: user info, settings links, about blurb, sign out, **two-step delete account**
+- [x] **Backend: `DELETE /api/me`** — hard-deletes user + tokens + owned fridges (FK cascade); 2 tests added, `AuthControllerTest` green
 - [x] **`packages/core` grown** — fridge/section/item CRUD + `scanBarcode` + notification events/prefs + raw transforms + `flattenItems`; `domain.ts` (freshColor, daysLabel, timeAgo, category/location constants)
 - [x] `backend/scripts/seed-demo-fridge.sh` — local demo data with varied freshness
 - [x] iOS bundle verified building clean via Metro
@@ -55,6 +58,13 @@ _Last updated: 2026-08-27. Branch: `mobile-app` (not yet merged to `main`)._
 - [ ] ProfileDrawer/Settings + account deletion + AboutScreen — **Member D**
 - [ ] RecipeDetailSheet as a standalone route (currently inline expand in `eat`) — **Member C**
 - [ ] Proper backend demo-data **seeder** (replace the shell script) — **Member A**
+
+### Not yet ported
+
+- [ ] ChatHistoryScreen (session list / switch / delete) — chat currently restores the latest session only
+- [ ] Item icon picker (`FoodIcon` / AI icon gen) — items show name initials
+- [ ] Tab bar chrome (Home / Inventory / Eat / Notifications) — still a flat stack + quick-action grid
+- [ ] RecipeFormSheet, FridgeStyleSheet, GoalsScreen, BadgesScreen, sticky notes, Organizer, AIDataScreen — all in the plan's OUT list (post-launch OTA)
 
 ### Blockers not started (external lead time — start now)
 

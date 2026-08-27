@@ -35,6 +35,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::delete('/me', [AuthController::class, 'destroy']);
 
     // TRACK B: Ingestion & Agents
     Route::prefix('sections/{section}')->group(function () {
