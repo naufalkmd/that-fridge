@@ -1,259 +1,267 @@
-# ThatFridge — 3-Week iOS Launch Plan (Expo / React Native)
+# ThatFridge — iOS Launch Plan (Expo / React Native)
 
-**Goal:** Ship ThatFridge to the **Apple App Store** in **3 weeks (15 working days)**. iOS only. Native app built with **Expo / React Native** — no Capacitor, no WebView.
-**Team:** 4 people, all full-time on this. Roles in §3.
-**Method:** Monorepo, share the existing logic layer, rebuild the UI native, cut scope hard, parallelize from Day 1.
+**Goal:** ship ThatFridge to the **Apple App Store**, live and approved. iOS only. Native app
+built with **Expo / React Native** — no Capacitor, no WebView.
 
-> **This launch is also our RevenueCat Shipaton 2026 entry** — see [`SHIPATON_2026.md`](SHIPATON_2026.md).
-> That adds two hard requirements: the **RevenueCat SDK powering ≥1 in-app purchase** (a "ThatFridge Pro"
-> subscription + paywall) and the app being **live on the store by Sep 30, 2026**. Both are folded into the
-> scope and tracks below.
+**Target:** originally a 3-week sprint (15 working days). This launch is also our
+**RevenueCat Shipaton 2026** entry ([`SHIPATON_2026.md`](SHIPATON_2026.md)), which sets a hard
+outside deadline of **Sep 30, 2026** and adds two requirements: the **RevenueCat SDK powering
+≥1 in-app purchase** (a "ThatFridge Pro" subscription + paywall) and the app being **live** by
+that date.
 
-> This is an aggressive plan. It works only if: (a) all 4 people are heads-down, (b) the MVP scope cut in §2 holds — no additions mid-sprint, (c) Apple Developer enrollment is submitted **Day 1**. The single biggest schedule risk is Apple identity verification; §7 covers the mitigation.
+**Team:** 4 people — roles in §4. Map them to A/B/C/D.
 
----
+> **The plan works only if:** (a) the MVP scope in §3 holds — no additions mid-sprint;
+> (b) Apple Developer enrollment is submitted immediately (the #1 schedule risk, §7);
+> (c) the App Store Connect Paid Apps Agreement is started the same day (blocks all IAP work).
 
-## 0. Progress
-
-_Last updated: 2026-08-27. Branch: `mobile-app` (not yet merged to `main`)._
-
-### Done
-
-- [x] **Monorepo stood up** — pnpm workspaces + turborepo; `.npmrc` with `node-linker=hoisted` for Metro compatibility
-- [x] **`frontend/` → `apps/web/`** — pure `git mv`, web app otherwise untouched and frozen; README + pre-push hook + `.gitignore` updated
-- [x] **`apps/mobile` scaffolded** — Expo SDK 57, Expo Router, NativeWind, TypeScript
-- [x] **`app.config.ts`** — bundle id `test.thatfridge.app`, camera usage string, mic disabled, `ITSAppUsesNonExemptEncryption=false`
-- [x] **`eas.json`** — development / preview / production profiles (needs `eas init` to attach a project id, and real API URLs)
-- [x] **`packages/core` created** — `types.ts` (copied), platform-agnostic `HttpClient` (injected baseUrl + token store), `createApi` with `login`/`register`/`logout`/`me`, `describeError`
-- [x] **Mobile ↔ core wired** — `expo-secure-store` token store, `EXPO_PUBLIC_API_URL` env
-- [x] **AuthScreen ported** (`sign-in.tsx`) — login/signup toggle, validation matching backend rules, loading/error states, `__DEV__` demo-account fill
-- [x] **Auth session** — `AuthProvider` with token-restore on launch; `index.tsx` redirects by auth status
-- [x] **InventoryScreen ported** — `InventoryProvider` (fetch/refresh/optimistic qty/delete), list with sort + category filter, freshness bars, pull-to-refresh, empty/error states, FAB
-- [x] **ItemDetailSheet ported** — `item/[id]` modal: view + edit (name / location / food group / best-before / note), qty stepper, delete with confirm. (Icon picker + AI icon gen still TODO.)
-- [x] **AddScreen ported** — `add` modal: manual entry (name / qty / location / food group / best-before); auto-creates a fridge + "General" section for new accounts
-- [x] **Barcode scan** — `scan` screen with `expo-camera` `CameraView`; Open Food Facts lookup prefills the add form; falls back to blank add on miss. **Only runs in a dev build** — Expo Go shows a prompt.
-- [x] **HomeScreen ported** — greeting, item/expiring-soon stats, "use it up" list, quick actions, notification bell with unread badge, pull-to-refresh
-- [x] **NotificationsScreen ported** — in-app feed (`/notification-events`, mark done/undo, active + cleared) + settings screen (`/notification-prefs` toggles)
-- [x] **Local expiry reminders** — `expo-notifications`, rescheduled from inventory on every sync, gated on the `expiryAlerts` pref + OS permission (best-effort; needs dev build to fire on iOS)
-- [x] **Shopping list ported** — `ShoppingProvider` + screen: add / check / uncheck / remove / clear-checked, optimistic, shared/fridge-scoped
-- [x] **WhatToEat ported** — `eat` screen: meal + vibe filters, `/recipes/suggest`, exact vs "almost" groups, expandable cards with ingredients/steps, "I made this" → `mark-made` + inventory refresh
-- [x] **ChatScreen ported** — `chat` screen: agent picker (Chef/Guardian/Shopkeeper/Organizer), thread with history restore, inventory context, inline recipe-suggestion cards
-- [x] **Profile + account deletion** — `profile` screen: user info, settings links, about blurb, sign out, **two-step delete account**
-- [x] **Backend: `DELETE /api/me`** — hard-deletes user + tokens + owned fridges (FK cascade); 2 tests added, `AuthControllerTest` green
-- [x] **`packages/core` grown** — fridge/section/item CRUD + `scanBarcode` + notification events/prefs + raw transforms + `flattenItems`; `domain.ts` (freshColor, daysLabel, timeAgo, category/location constants)
-- [x] `backend/scripts/seed-demo-fridge.sh` — local demo data with varied freshness
-- [x] iOS bundle verified building clean via Metro
-- [x] Runs in Expo Go (native modules still need a dev build)
-
-### In progress / next
-
-- [ ] `eas init` + first `eas build --profile development` (dev client) — **Member B**
-- [ ] `lib/thatfridge` full extraction into `packages/core` (see `packages/core/README.md`) — **Member B** (auth + fridge/item endpoints + domain helpers done incrementally so far)
-- [ ] Merge `mobile-app` → `main`
-- [ ] `eas build --profile development` so barcode scan + local notifications can actually be tested — **Member B**
-- [ ] ChatScreen + ChatHistoryScreen — **Member C**
-- [ ] Icon picker for items (port `FoodIcon` / `GeneratedIconLibrary`) — **Member C**
-- [ ] Shared chrome: tab bar (Home / Inventory / Eat / Notifications), drawer, bottom sheets, toasts — **Member D**
-- [ ] Paywall + RevenueCat — **Member B**
-- [ ] ProfileDrawer/Settings + account deletion + AboutScreen — **Member D**
-- [ ] RecipeDetailSheet as a standalone route (currently inline expand in `eat`) — **Member C**
-- [ ] Proper backend demo-data **seeder** (replace the shell script) — **Member A**
-
-### Not yet ported
-
-- [ ] ChatHistoryScreen (session list / switch / delete) — chat currently restores the latest session only
-- [ ] Item icon picker (`FoodIcon` / AI icon gen) — items show name initials
-- [ ] Tab bar chrome (Home / Inventory / Eat / Notifications) — still a flat stack + quick-action grid
-- [ ] RecipeFormSheet, FridgeStyleSheet, GoalsScreen, BadgesScreen, sticky notes, Organizer, AIDataScreen — all in the plan's OUT list (post-launch OTA)
-
-### Blockers not started (external lead time — start now)
-
-- [ ] **Apple Developer Program** enrollment (Individual) — **Member A/D**
-- [ ] **App Store Connect: Paid Apps Agreement + banking + tax** (blocks IAP testing) — **Member A**
-- [ ] **RevenueCat account + project + entitlement/offering** — **Member A**
-- [ ] `thatfridge_pro_monthly` subscription product + 7-day trial in App Store Connect — **Member A**
-- [ ] Domain purchased (API + privacy policy) — **Member A**
-- [ ] Laravel API deployed to the VPS (HTTPS, Postgres, Redis, queue, scheduler) — **Member A**
-- [ ] Devpost draft project page + start #BuildInPublic thread — **Member D**
-- [ ] Decide Google Play account type (personal vs organization) — **Member D**
-
-See [`SHIPATON_2026.md`](SHIPATON_2026.md) for the full hackathon requirement mapping.
+_Last updated: 2026-08-27 · working branch `mobile-app` (not yet merged to `main`)._
 
 ---
 
-## 1. Approach
+## 1. Status
 
-`frontend/lib/thatfridge/` is **~5,850 LOC of portable logic** (API client, types, domain rules), already cleanly separated from **~9,100 LOC of web UI**. We move the logic into a shared package untouched and rebuild only the UI in React Native.
+Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external setup
 
-**Expo, not bare React Native:** EAS Build (cloud iOS builds, one command), EAS Submit (CLI upload to App Store Connect), EAS Update (push JS bug-fixes with no re-review), pre-built native modules (`expo-camera`, `expo-notifications`, `expo-secure-store`). Prebuild/config-plugins are the escape hatch if we need custom native code.
+### Build — done
 
-**Locked decisions — no re-litigation during the sprint:**
-- Styling: **NativeWind** (Tailwind syntax — closest to the current web code, no learning curve).
-- Navigation: **Expo Router** (file-based, mirrors Next.js).
-- Package manager: **pnpm** workspaces + turborepo. Node 20 LTS.
-- Bundle id: `test.thatfridge.app`. iOS deployment target: **15.1**.
-- Apple enrollment: **Individual** (Organization needs a D-U-N-S number — weeks).
-- **v1 notifications are local/scheduled on-device** (from synced expiry dates). Server-driven push (APNs/FCM) is a post-launch fast-follow — it's off the critical path.
-- **Android is deferred entirely** to post-launch. The Expo code is cross-platform; it's a separate submission effort later.
-- Signing keys / Apple assets live in a shared password manager from Day 1.
+| Area | Detail |
+|---|---|
+| ✅ Monorepo | pnpm workspaces + turborepo; `.npmrc` `node-linker=hoisted` for Metro; `frontend/` → `apps/web/` (frozen, untouched) |
+| ✅ `apps/mobile` scaffold | Expo SDK 57, Expo Router, NativeWind, TypeScript; `app.config.ts` (bundle id `test.thatfridge.app`, camera string, mic off, `ITSAppUsesNonExemptEncryption=false`); `eas.json` dev/preview/prod profiles |
+| ✅ `packages/core` | platform-agnostic `HttpClient` (injected baseUrl + token store, `{data}` unwrap); `createApi` covering auth, fridge/section/item CRUD, barcode lookup, notifications, shopping, recipes, chat, account deletion; `domain.ts` (freshColor, daysLabel, timeAgo, nutrition/location constants); `flattenItems` |
+| ✅ Auth | `AuthProvider` — login / signup (validation matches backend rules), token in `expo-secure-store`, session restore on launch, `index.tsx` redirect by status |
+| ✅ Inventory | `InventoryProvider` (fetch / refresh / optimistic qty / delete / add / edit); list with sort + category filter, freshness bars, pull-to-refresh, FAB; `item/[id]` detail + full edit (name / location / food group / best-before / note) |
+| ✅ Add + scan | `add` modal (manual entry, auto-creates fridge + section for new accounts); `scan` screen (`expo-camera`, Open Food Facts lookup prefills add) — **needs dev build to run** |
+| ✅ Home | greeting, item / expiring-soon stats, "use it up" list, quick-action grid, notification bell + unread badge, profile avatar, pull-to-refresh |
+| ✅ Notifications | in-app feed (`/notification-events`, mark done / undo) + settings (`/notification-prefs` toggles); local `expo-notifications` expiry reminders rescheduled on every inventory sync, gated on pref + OS permission (best-effort, needs dev build to fire on iOS) |
+| ✅ Shopping list | `ShoppingProvider` + screen — add / check / remove / clear-checked, optimistic |
+| ✅ What to eat | `eat` screen — meal + vibe filters, `/recipes/suggest`, exact vs "almost" groups, expandable recipe cards, "I made this" → `mark-made` + inventory refresh |
+| ✅ Chat | `chat` screen — agent picker (Chef / Guardian / Shopkeeper / Organizer), thread with history restore, inventory context, inline recipe-suggestion cards |
+| ✅ Profile + account deletion | `profile` screen — user info, settings links, about, sign out, **two-step delete**; **backend `DELETE /api/me`** hard-deletes user + tokens + owned fridges (FK cascade), 2 tests, `AuthControllerTest` green |
+| ✅ Dev data | `backend/scripts/seed-demo-fridge.sh` — local demo fridge with varied freshness |
+| ✅ Verification | iOS bundle builds clean via Metro after every change; every endpoint above exercised against the live local API |
 
-### Target architecture
+### Build — remaining for v1.0
+
+| Item | Owner | Note |
+|---|---|---|
+| 🔒 **Paywall + RevenueCat** | B | `react-native-purchases` + `usePro()` + paywall; **needs the RevenueCat key + a real subscription product** (§ SHIPATON_2026 §3) |
+| 🔒 **`eas build --profile development`** | B | dev client so barcode scan + local notifications can actually be tested — needs the Apple account |
+| ⬜ Tab bar chrome | D | still a flat stack + quick-action grid; want Home / Inventory / Eat / Notifications tabs |
+| ⬜ Item icon picker | C | items show name initials; port `FoodIcon` + generated-icon library |
+| ⬜ ChatHistoryScreen | C | chat restores the latest session only; no session list / switch / delete |
+| ⬜ Native-feel pass | C/D | haptics, skeleton loaders, safe-area audit on every screen, offline banners |
+| ⬜ `lib/thatfridge` full extraction | B | ~half done incrementally; finish moving the pure modules + point `apps/web` at `packages/core` (see `packages/core/README.md`) |
+| ⬜ Merge `mobile-app` → `main` | — | additive; web app untouched |
+
+### External setup — not started (long lead time, start now)
+
+| Item | Owner |
+|---|---|
+| 🔒 Apple Developer Program enrollment (**Individual**) | A |
+| 🔒 App Store Connect: Paid Apps Agreement + banking + tax (blocks IAP testing) | A |
+| 🔒 RevenueCat account + project + `pro` entitlement + offering | A |
+| 🔒 `thatfridge_pro_monthly` subscription + 7-day trial in App Store Connect | A |
+| ⬜ Domain (API host + privacy-policy / terms pages) | A |
+| ⬜ Laravel API deployed to the VPS (HTTPS, Postgres, Redis, queue, scheduler) | A |
+| ⬜ Proper backend demo-data seeder (replace the shell script) | A |
+| ⬜ Sentry on the Laravel app | A |
+| ⬜ Privacy policy + Terms pages on `apps/web` | A/D |
+| ⬜ Devpost draft + start #BuildInPublic thread | D |
+| ⬜ Decide Google Play account type (personal vs organization) | D |
+
+> **Where we stand:** the app's core loop is code-complete and runs end-to-end in Expo Go
+> against a local API. Everything left is either gated on the external accounts above or is
+> polish (chrome, icons, native feel). The build track is well ahead of the original timeline;
+> the **release track (§4 Member A) has not started** and is now the critical path.
+
+---
+
+## 2. Approach
+
+`apps/web/lib/thatfridge/` is **~5,850 LOC of portable logic** already separated from
+**~9,100 LOC of web UI**. The logic moves into `packages/core` (mostly unchanged); only the UI
+is rebuilt in React Native. What transfers: API calls, transforms, domain rules, validation.
+What doesn't: every `<div>`/`className`/CSS — that's a hand-translation to `<View>` / `<Text>` /
+NativeWind.
+
+**Expo, not bare React Native:** EAS Build (cloud iOS builds), EAS Submit (CLI upload to App
+Store Connect), EAS Update (OTA JS fixes, no re-review), maintained native modules. Prebuild /
+config plugins are the escape hatch for custom native code.
+
+**Locked decisions — no re-litigation:**
+
+- Styling **NativeWind**; navigation **Expo Router**; **pnpm** workspaces + turborepo; Node 20.
+- Bundle id `test.thatfridge.app`; iOS deployment target **15.1**.
+- Apple enrollment **Individual** (Organization needs a D-U-N-S number — weeks).
+- **v1 notifications are local / on-device** from synced expiry dates. Server push (APNs/FCM)
+  is a post-launch fast-follow, off the critical path.
+- **Android deferred** entirely to post-launch (same Expo code, separate submission).
+- Signing keys + Apple assets in a shared password manager from day one.
+
+### Architecture
 
 ```
 thatfridge/                  (monorepo — pnpm workspaces + turborepo)
-├── packages/core/           ← frontend/lib/thatfridge, moved verbatim
-│                              API client, types, domain logic
-├── apps/mobile/             ← Expo + Expo Router. iOS. THE PRODUCT.
-├── apps/web/                ← current Next.js SPA — frozen, not touched this sprint
-│                              (hosts the privacy policy + terms pages)
-└── backend/                 ← Laravel API. Deploy only, minimal changes.
+├── packages/core/           shared logic: HttpClient, createApi, types, domain helpers
+├── apps/mobile/             Expo + Expo Router. iOS. THE PRODUCT.
+├── apps/web/                Next.js SPA — frozen; will host privacy policy + terms
+└── backend/                 Laravel API — deploy + a couple of new endpoints
 ```
 
 ---
 
-## 2. MVP scope — what ships in v1.0
+## 3. MVP scope — v1.0
 
-**IN (the core loop must be flawless):**
-| Screen | Note |
+**IN** (status per §1):
+
+| Screen / feature | Status |
 |---|---|
-| AuthScreen | register / login / logout / token persistence |
-| InventoryScreen + ItemDetailSheet | list, detail, add, edit, delete |
-| AddScreen + barcode scanning | `expo-camera` — the marquee native feature |
-| HomeScreen | dashboard / first screen |
-| NotificationsScreen + NotificationHistoryScreen | in-app feed + **local scheduled** expiry/low-stock alerts |
-| WhatToEatSheet | "what can I cook" |
-| RecipeDetailSheet + MarkRecipeMadeSheet | view a suggestion, mark made (decrements inventory) |
-| ChatScreen + ChatHistoryScreen | AI assistant (free tier capped — see paywall) |
-| Shopping list | shared/fridge-scoped list |
-| **Paywall + "ThatFridge Pro"** | RevenueCat SDK, `pro` entitlement gate on AI features — **Shipaton requirement**, see `SHIPATON_2026.md` §3 |
-| ProfileDrawer / Settings + **account deletion** + **restore purchases** | Apple 5.1.1(v) + IAP restore requirement |
-| AboutScreen | |
-| Shared chrome | tab bar, drawer, bottom sheets, toasts, offline/error states |
+| Auth — register / login / logout / persistence | ✅ |
+| Inventory + item detail — list / add / edit / delete | ✅ |
+| Add + barcode scanning (`expo-camera`) | ✅ (scan needs dev build) |
+| Home dashboard | ✅ |
+| Notifications feed + settings + local expiry reminders | ✅ |
+| What to eat + recipe view + "I made this" | ✅ |
+| Chat (AI assistant) | ✅ |
+| Shopping list | ✅ |
+| Profile / Settings + **account deletion** + **restore purchases** | ✅ deletion · ⬜ restore (with paywall) |
+| **Paywall + "ThatFridge Pro"** (RevenueCat, `pro` entitlement gate) | 🔒 |
+| Shared chrome — tab bar, bottom sheets, toasts, offline/error states | 🟡 error/loading states done; tab bar + polish ⬜ |
 
-**OUT — fast-follow via EAS Update after launch (all JS-only, no new review needed):**
-Sticky-notes board · Organizer page · GoalsScreen · BadgesScreen · AIDataScreen · RecipeFormSheet (custom recipe creation) · FridgeStyleSheet · dedicated SearchScreen · Android · server-driven push.
+**OUT** — fast-follow via EAS Update after launch (all JS-only, no new review):
+sticky-notes board · Organizer · Goals · Badges · AI-data screen · RecipeFormSheet ·
+FridgeStyleSheet · dedicated Search · ChatHistory session list · item icon picker ·
+Android · server-driven push.
 
-If a screen in the OUT list is trivial to port and there's slack, fine — but it is never allowed to delay an IN item.
+A trivial OUT screen may be ported if there's slack, but it never delays an IN item.
 
 ---
 
-## 3. Roles & ownership
+## 4. Roles & ownership
 
-### Member A — Backend, Infra & Release/Compliance
-Backend deploy is front-loaded in Week 1; store/compliance is bursty (enrollment Week 1, submission Week 3). These interleave for one person.
-- **Day 1:** submit Apple Developer enrollment (Individual); create the App Store Connect app record as soon as the account clears; reserve the name.
-- Deploy Laravel to the VPS: Nginx, PHP 8.2+, `migrate --force`, `config:cache`, `route:cache`, HTTPS on `api.thatfridge.<domain>`, `APP_DEBUG=false`, fresh `APP_KEY`, rate-limit auth routes.
-- Hosted **Postgres** + **Redis**; daily DB backups; **queue worker + scheduler** under systemd (freshness notifications depend on it — see `README.md`).
-- **New endpoint:** `DELETE /api/me` — hard-delete user + owned fridges/items, revoke all tokens. With tests.
-- Confirm the inventory API returns per-item expiry timestamps the app needs to schedule local notifications; add fields if missing.
-- Seed a stable **reviewer demo account** on prod with realistic data.
+### Member A — Backend, Infra & Release / Compliance  *(critical path — not started)*
+
+- **Now:** submit Apple Developer enrollment (Individual) **and** start the App Store Connect
+  Paid Apps Agreement + banking + tax the same day.
+- Deploy Laravel to the VPS: Nginx, PHP 8.2+, `migrate --force`, `config:cache`, `route:cache`,
+  HTTPS on `api.thatfridge.<domain>`, `APP_DEBUG=false`, fresh `APP_KEY`, rate-limit auth routes.
+- Hosted Postgres + Redis; daily backups; queue worker + scheduler under systemd (freshness
+  notifications depend on it).
+- Seed a stable **reviewer demo account** on prod with realistic data (replace the shell script).
 - Sentry on the Laravel app.
-- **Privacy policy + Terms** pages on `apps/web`, deployed, public URLs.
-- Store listing: description, subtitle, keywords, support URL, screenshots (iPhone 6.9" + 6.5"), icon 1024².
-- **App Privacy** ("nutrition labels") form, age rating, App Review notes (demo credentials, "requires network").
-- **Shipaton / monetization** (see `SHIPATON_2026.md`): Day 1 also start the **Paid Apps Agreement + banking + tax** in App Store Connect (blocks IAP testing); create the `thatfridge_pro_monthly` subscription + 7-day trial; set up the RevenueCat account/project/entitlement/offering; own the Devpost submission (writeup, ≤2-min demo video, screenshots).
+- Privacy policy + Terms pages on `apps/web`, deployed, public URLs.
+- Store listing: description, subtitle, keywords, support URL, screenshots (iPhone 6.9" + 6.5"),
+  icon 1024².
+- App Privacy ("nutrition labels") form, age rating, App Review notes (demo credentials).
+- RevenueCat: account, project, iOS app, `pro` entitlement, offering; App Store shared secret +
+  App Store Connect API key. Create `thatfridge_pro_monthly` + 7-day trial.
+- Devpost submission: writeup, ≤2-min demo video, screenshots.
 - Submit to review; own the Resolution Center; turn rejections around within hours.
+- ✅ done: `DELETE /api/me` endpoint + tests.
 
-### Member B — Mobile Platform Lead
-Owns the monorepo, Expo project, native config, and the build pipeline. **Needs a Mac.**
-- Stand up the monorepo (pnpm + turborepo). Move `frontend/lib/thatfridge` → `packages/core`; fix imports; add build step. **Timebox to Day 2** — if there are hidden web deps, stub them behind an interface, don't rewrite.
-- Scaffold `apps/mobile`: Expo + Expo Router + TypeScript + NativeWind.
-- `app.config.ts`: bundle id, deployment target, **camera permission string** ("Scan grocery barcodes"), `ITSAppUsesNonExemptEncryption = false`, icon, splash.
-- `expo-secure-store` for the auth token; wire `packages/core`'s API client to it.
-- `eas.json` with `development` / `preview` / `production` profiles; `EXPO_PUBLIC_API_URL` per profile. Get one green `eas build` by Day 2.
-- **EAS Update** channel wired for post-launch OTA fixes.
-- `expo-notifications`: local scheduling from synced item expiry dates + permission priming.
-- Barcode scanning module (`expo-camera`) — prototype on a real device by Day 4.
-- **RevenueCat**: `react-native-purchases` + `react-native-purchases-ui` (config plugin, dev build); `Purchases.configure()` on launch with `EXPO_PUBLIC_RC_IOS_KEY`; a `usePro()` hook reading `entitlements.active.pro`.
+### Member B — Mobile Platform Lead  *(needs a Mac)*
+
+- ✅ done: monorepo, Expo scaffold, `app.config.ts`, `eas.json`, `expo-secure-store` auth,
+  `expo-notifications` local scheduling, `expo-camera` barcode module, most of `packages/core`.
+- **Next:** `eas init` + first `eas build --profile development`; EAS Update channel.
+- **RevenueCat:** `react-native-purchases` (+ `react-native-purchases-ui`) config plugin;
+  `Purchases.configure()` on launch with `EXPO_PUBLIC_RC_IOS_KEY`; `usePro()` →
+  `entitlements.active.pro`; wire the paywall + restore-purchases.
+- Finish the `lib/thatfridge` → `packages/core` extraction; point `apps/web` at the package.
 - Cut TestFlight builds; own the release runbook.
 
 ### Member C — App UI: core loop
-Owns the screens users touch every day.
-- Port in order: **AuthScreen → InventoryScreen + ItemDetailSheet → AddScreen + barcode scan → HomeScreen → NotificationsScreen + NotificationHistoryScreen.**
-- Wire each to `packages/core` against the prod API.
-- Camera permission flow: allow / deny / deny-then-enable, with the priming screen.
-- Offline / error / loading states on every one of these screens — no infinite spinners.
 
-### Member D — App UI: secondary screens + shared chrome
-Owns everything else in MVP scope and the components every screen depends on.
-- **Day 1–3:** shared chrome — tab bar, drawer/sidebar, bottom-sheet system, toast/undo, skeleton loader, safe-area wrapper. C and A are blocked on these, so they come first.
-- Then port: WhatToEatSheet → RecipeDetailSheet + MarkRecipeMadeSheet → ChatScreen + ChatHistoryScreen → Shopping list → ProfileDrawer/Settings → AboutScreen.
-- **Account-deletion UI**: Settings → confirm dialog → `DELETE /api/me` → clear secure-store + local state → back to Auth.
-- Native-feel pass across all screens: haptics on key actions, pull-to-refresh on lists, momentum scrolling, keyboard-avoiding views.
+- ✅ done: Auth, Inventory + item detail, Add + scan, Home, Notifications, What-to-eat, Chat.
+- **Next:** item **icon picker** (port `FoodIcon` / generated-icon library); ChatHistoryScreen
+  (session list / switch / delete); RecipeDetailSheet as a standalone route.
+- Native-feel + offline pass on every core screen (with D).
+
+### Member D — App UI: chrome + secondary + compliance-adjacent
+
+- **Now:** the **tab bar** (Home / Inventory / Eat / Notifications) + bottom-sheet system +
+  toast/undo + skeleton loaders + safe-area wrapper.
+- Privacy policy + Terms page content (with A).
+- Native-feel pass: haptics, pull-to-refresh consistency, keyboard-avoiding views.
+- ✅ done: account-deletion UI, About content (folded into `profile`).
+- Devpost draft + #BuildInPublic thread.
 
 ---
 
-## 4. 15-day timeline
+## 5. Timeline (original 15-day sprint)
 
-> See §0 for live progress. Ahead of this grid: monorepo, mobile scaffold, `eas.json`,
-> `app.config.ts`, `packages/core` (partial), AuthScreen + session all landed early.
-> Behind: nothing started yet on the Member A backend/enrollment track.
+> Kept for reference. §1 is the live status. The build track ran ahead of this grid;
+> the Member A column has not started and is now the pacing constraint.
 
-### Week 1 — Foundations + core skeleton (Days 1–5)
+### Week 1 — foundations + core skeleton
 
 | Day | A (Backend/Release) | B (Platform) | C (Core UI) | D (Chrome + Secondary) |
 |---|---|---|---|---|
-| 1 | **Apple enrollment submitted.** VPS API deploy started. | Monorepo init; start `core` extraction. | Expo app scaffold + NativeWind + Router skeleton; dev client on a real iPhone. | Navigation shell: tabs + one stack + one sheet. |
-| 2 | API on HTTPS; CORS; prod migrate+seed; reviewer demo account. | `core` extracted & building; `eas.json`; one green `eas build --profile preview`. | AuthScreen ported, hitting prod API. | Tab bar + drawer + toast components. |
-| 3 | `DELETE /api/me` + tests. | `expo-secure-store` auth persistence; `app.config.ts` (bundle id, perms, icon, splash). | InventoryScreen + ItemDetailSheet. | Bottom-sheet system + skeleton loader; AddScreen form shell. |
-| 4 | Verify expiry fields in API; Sentry; draft privacy policy + terms. | `expo-camera` barcode scan prototype on device. | Inventory CRUD wired end-to-end. | HomeScreen. |
-| 5 | Privacy policy + terms deployed (public URLs). | TestFlight build #1 (if Apple cleared) or ad-hoc `preview` build. | **Checkpoint: register → scan → item in inventory → shows on Home, on a real device.** | Safe-area pass on ported screens. |
+| 1 | Apple enrollment + Paid Apps Agreement submitted; VPS deploy started | Monorepo + `core` extraction | Expo scaffold; dev client on a real iPhone | Nav shell: tabs + stack + sheet |
+| 2 | API on HTTPS; CORS; prod migrate+seed; reviewer demo account | `core` building; one green `eas build` | AuthScreen against prod API | Tab bar + drawer + toast |
+| 3 | ✅ `DELETE /api/me` + tests | `expo-secure-store`; `app.config.ts` | InventoryScreen + ItemDetailSheet | Bottom-sheet system + skeletons |
+| 4 | Verify expiry fields; Sentry; draft privacy policy | `expo-camera` scan prototype on device | Inventory CRUD end-to-end | HomeScreen |
+| 5 | Privacy policy + terms deployed | TestFlight build #1 (or ad-hoc) | **Checkpoint:** register → scan → inventory → home on a real device | Safe-area pass |
 
-### Week 2 — Full MVP port + native polish (Days 6–10)
+### Week 2 — full MVP port + native polish
 
 | Day | A | B | C | D |
 |---|---|---|---|---|
-| 6 | Store listing copy; screenshot plan. | Local notification scheduling from synced expiry dates. | Barcode scan production-ready (permission states + priming). | NotificationsScreen + NotificationHistoryScreen. |
-| 7 | App Privacy form; age rating. | Haptics, pull-to-refresh, momentum lists wired into the chrome. | WhatToEatSheet + RecipeDetailSheet + MarkRecipeMadeSheet. | Shopping list + **account-deletion UI**. |
-| 8 | Review notes w/ demo login; finalize screenshots. | Cold-start + bundle-size pass; EAS Update channel live. | Offline/error states across all core screens. | ChatScreen + ChatHistoryScreen; ProfileDrawer/Settings; AboutScreen. |
-| 9 | — full team: **bug bash on TestFlight build #2** — crashers + un-native feel first — | | | |
-| 10 | All store assets final. | TestFlight build #3 → team + ~5 friends. | **MVP feature-freeze.** | **MVP feature-freeze.** |
+| 6 | Store listing copy; screenshot plan | Local notification scheduling | Barcode scan production-ready + priming | Notifications feed + settings |
+| 7 | App Privacy form; age rating | RevenueCat SDK + `usePro()` | What-to-eat + recipe view + mark-made | Shopping list + account-deletion UI |
+| 8 | Review notes; finalize screenshots | Paywall + restore; cold-start pass | Offline/error states everywhere | Chat + Profile + About |
+| 9 | — full team: bug bash on TestFlight build #2 — | | | |
+| 10 | All store assets final | TestFlight build #3 → team + ~5 friends | **MVP feature-freeze** | **MVP feature-freeze** |
 
-### Week 3 — Harden, submit, review (Days 11–15)
+### Week 3 — harden, submit, review
 
 | Day | Everyone |
 |---|---|
-| 11 | Bug triage from build #3; polish; performance (list scroll, image loading, memory). |
-| 12 | Release candidate; version 1.0.0, manual release. **A submits to App Store review.** |
-| 13 | Respond to any metadata rejection same-day. 4.2 rebuttal ready (native camera, local notifications, offline, haptics, native nav) — a real RN app rarely triggers it. |
-| 14 | Buffer for one review round-trip (Apple ~24–48h/cycle). Fix + resubmit same day if rejected. |
-| 15 | Approved → manual release. Kick off post-launch backlog: OUT-scope screens via EAS Update, Android submission, server push. |
+| 11 | Bug triage; polish; performance (list scroll, images, memory) |
+| 12 | Release candidate; v1.0.0, manual release; **A submits to App Store review** |
+| 13 | Respond to metadata rejections same-day; 4.2 rebuttal ready (native camera, notifications, offline, haptics) |
+| 14 | Buffer for one review round-trip (~24–48h/cycle); fix + resubmit same day |
+| 15 | Approved → manual release; kick off post-launch backlog (§9) |
 
 ---
 
-## 5. Definition of done per phase
-
-- **End Week 1:** empty-ish app on a real device; auth works against prod; register→scan→inventory→home path is demoable.
-- **End Week 2:** every IN-scope screen present and functional; team dogfooding from TestFlight daily; feature-frozen.
-- **End Week 3:** build in review or approved; post-launch backlog written.
-
----
-
-## 6. QA matrix (A owns the process; whole team runs it in Week 2–3)
+## 6. QA matrix  *(A owns the process; whole team runs it)*
 
 | Area | Checks |
 |---|---|
-| Devices | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device. |
-| Auth | Register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session. |
-| Core loop | Add item, barcode scan (camera allow/deny/deny-then-enable), inventory edit/delete, mark recipe made decrements stock. |
-| Notifications | Local alert fires at the right time; tap routes to the item; permission denied handled. |
-| Native chrome | Safe areas top+bottom, status bar, splash→app transition, keyboard avoidance, sheet gestures, deep back-swipe. |
-| Network | Airplane mode on every screen; slow 3G; API 500s; retry paths. |
-| Lifecycle | Background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly. |
-| Compliance | Account deletion from a clean install; privacy policy link opens; demo account works fresh. |
+| Devices | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device |
+| Auth | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session |
+| Core loop | add item, barcode scan (camera allow / deny / deny-then-enable), inventory edit/delete, mark recipe made decrements stock |
+| Notifications | local alert fires at the right time, taps route to the item, permission denied handled |
+| Paywall | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow |
+| Native chrome | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe |
+| Network | airplane mode on every screen, slow 3G, API 500s, retry paths |
+| Lifecycle | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly |
+| Compliance | account deletion from a clean install, privacy-policy link opens, demo account works fresh |
 
 ---
 
 ## 7. Top risks & mitigations
 
-1. **Apple identity verification is slow (the #1 risk).** — Submit Day 1 as an Individual. *Everything except TestFlight and submission works without a paid account*: Expo dev client runs on a personal iPhone with a free Apple ID (7-day resign). If not cleared by **Day 8**, escalate to Apple support and check whether any team member already has an active Apple Developer account we can use.
-2. **Scope creep.** — The §2 IN list is the contract. Anything else is post-launch OTA. The person who wants to add a screen mid-sprint owns explaining which IN item slips.
-3. **`core` extraction hits hidden web dependencies.** — Timeboxed to Day 2; stub behind interfaces rather than rewrite.
-4. **Barcode scanning UX is worse than the web `@zxing` version.** — Prototype on a real device Day 4, not Week 3.
-5. **Review round-trip eats the buffer.** — Submit Day 12, keep the whole team on-call Days 13–15 for same-day resubmits.
-6. **Local-notification scheduling drift** (times wrong after inventory changes). — Reschedule the full local queue on every successful inventory sync; test with clock changes.
-7. **Lost signing keys.** — Shared password manager, Day 1.
-8. **One person (A) wearing backend + release.** — Backend work must be *done* by end of Week 1 so A is free for compliance and submission. If backend slips, B backstops the deploy.
+1. **Apple identity verification is slow (#1 risk).** Submit as an Individual now. Everything
+   except TestFlight and submission works without a paid account (Expo dev client on a personal
+   iPhone with a free Apple ID, 7-day resign). If not cleared within a week, escalate to Apple
+   support; check whether a teammate already has an active account.
+2. **App Store Connect financials lead time.** Paid Apps Agreement + banking + tax can take days
+   and needs real tax info. Until active, IAPs can't be tested and the RevenueCat requirement
+   can't be met. Start it the same day as enrollment.
+3. **Guideline 4.2 (thin-wrapper rejection).** Low for a real RN app, but keep native features
+   visible — camera, notifications, haptics, native nav. Have a written feature-list rebuttal.
+4. **Guideline 3.1.2 (subscription scrutiny).** Restore button, clear pricing, terms, no dark
+   patterns. Build the paywall to spec from the start.
+5. **"First public release" timing (Shipaton).** No public TestFlight link, ProductHunt, or
+   press before the store listing is live, or risk the "not brand-new" disqualification.
+6. **Review round-trips eat the buffer.** Submit early (~2 weeks before Sep 30); team on-call
+   for same-day resubmits.
+7. **Scope creep.** The §3 IN list is the contract. Anything else is post-launch OTA.
+8. **Lost signing keys.** Shared password manager, from day one.
 
 ---
 
@@ -265,20 +273,25 @@ Owns everything else in MVP scope and the components every screen depends on.
 - [ ] Privacy policy + terms URLs live and linked in-app
 - [ ] Camera permission string set; `ITSAppUsesNonExemptEncryption` set
 - [ ] Local notifications fire correctly and route on tap
-- [ ] Icon, splash, iPhone 6.9" + 6.5" screenshots
+- [ ] RevenueCat: sandbox purchase + restore verified; `pro` gate works both ways
+- [ ] Icon 1024², splash, iPhone 6.9" + 6.5" screenshots (no device frame — 1179×2556)
 - [ ] App Privacy form complete and accurate
 - [ ] Age rating done
 - [ ] Demo account + review notes filled in
 - [ ] TestFlight build validated by all 4 members on real devices
 - [ ] Crash-free session confirmed in Sentry
 - [ ] Version 1.0.0, build number set, release set to **manual**
-- [ ] EAS Update production channel wired for post-launch fixes
+- [ ] EAS Update production channel wired
+- [ ] Devpost submission drafted (see `SHIPATON_2026.md` §6)
 
 ---
 
-## 9. Post-launch backlog (starts Day 15)
+## 9. Post-launch backlog
 
-1. EAS Update: sticky notes, organizer, goals, badges, AI data, recipe form, fridge style, search.
+1. EAS Update: sticky notes, organizer, goals, badges, AI-data, recipe form, fridge style,
+   search, chat-history session list, item icon picker.
 2. Server-driven push: APNs auth key + FCM + device-token endpoint + backend sends.
-3. **Android**: `eas build -p android`, Play Console (register as an **organization** to skip the 12-tester / 14-day closed-testing gate), Data Safety form, Android screenshots, submit.
+3. **Android:** `eas build -p android`; Play Console (register as an **organization** to skip the
+   12-tester / 14-day closed-testing gate); Data Safety form; Android screenshots; submit.
 4. iPad layout pass if analytics show demand.
+5. Shipaton: sustained #BuildInPublic cadence + growth experiments through Sep 30.
