@@ -9,6 +9,7 @@ import { useInventory } from "@/lib/inventory";
 import { useNotifications } from "@/lib/notifications";
 import { PixelText } from "@/components/brand";
 import { AgentBadge, Card, Eyebrow, SectionHeader } from "@/components/ui";
+import { FoodIcon } from "@/components/food-icon";
 
 export default function Home() {
   const router = useRouter();
@@ -140,11 +141,12 @@ export default function Home() {
                 <Pressable
                   key={item.id}
                   onPress={() => router.push(`/item/${item.id}`)}
-                  className={`flex-row items-center justify-between px-4 py-3 active:bg-canvas ${
+                  className={`flex-row items-center gap-3 px-4 py-2.5 active:bg-canvas ${
                     i < Math.min(soon.length, 5) - 1 ? "border-b border-hairline" : ""
                   }`}
                 >
-                  <Text className="text-[14px] font-semibold text-ink">{item.name}</Text>
+                  <FoodIcon icon={item.icon} iconUrl={item.iconUrl} name={item.name} size={32} />
+                  <Text className="flex-1 text-[14px] font-semibold text-ink">{item.name}</Text>
                   <Text className="text-[12px] font-bold" style={{ color: freshColor(item.freshness) }}>
                     {daysLabel(item.days)}
                   </Text>

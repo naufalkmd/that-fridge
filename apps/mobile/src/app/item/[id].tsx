@@ -22,6 +22,7 @@ import {
   type StorageLocation,
 } from "@thatfridge/core";
 import { useInventory } from "@/lib/inventory";
+import { FoodIcon } from "@/components/food-icon";
 
 const BEST_BEFORE_PRESETS = [
   { label: "2 days", days: 2 },
@@ -198,11 +199,14 @@ export default function ItemDetail() {
   return (
     <ScrollView className="flex-1 bg-canvas" contentContainerClassName="p-6 gap-5">
       <View className="flex-row items-start justify-between">
-        <View className="flex-1 gap-1">
-          <Text className="text-2xl font-extrabold text-ink">{item.name}</Text>
-          <Text className="text-[13px] text-muted">
-            {item.sectionName} · {item.fridgeName}
-          </Text>
+        <View className="flex-1 flex-row items-center gap-3">
+          <FoodIcon icon={item.icon} iconUrl={item.iconUrl} name={item.name} size={52} />
+          <View className="flex-1 gap-1">
+            <Text className="text-2xl font-extrabold text-ink">{item.name}</Text>
+            <Text className="text-[13px] text-muted">
+              {item.sectionName} · {item.fridgeName}
+            </Text>
+          </View>
         </View>
         <Pressable onPress={startEdit} hitSlop={8} className="px-2 py-1">
           <Text className="font-semibold text-accent">Edit</Text>

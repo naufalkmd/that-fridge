@@ -12,6 +12,7 @@ import {
 } from "@thatfridge/core";
 import { useInventory } from "@/lib/inventory";
 import { SectionHeader } from "@/components/ui";
+import { FoodIcon } from "@/components/food-icon";
 
 type Sort = "expiry" | "name" | "category";
 const SORTS: Sort[] = ["expiry", "name", "category"];
@@ -197,11 +198,7 @@ function ItemRow({ item, last, onPress }: { item: FlatItem; last: boolean; onPre
         last ? "" : "border-b border-hairline"
       }`}
     >
-      <View className="h-10 w-10 items-center justify-center rounded-lg bg-canvas">
-        <Text className="text-[13px] font-bold text-muted">
-          {item.name.slice(0, 2).toUpperCase()}
-        </Text>
-      </View>
+      <FoodIcon icon={item.icon} iconUrl={item.iconUrl} name={item.name} size={40} />
 
       <View className="flex-1">
         <View className="mb-1 flex-row items-center gap-1.5">
