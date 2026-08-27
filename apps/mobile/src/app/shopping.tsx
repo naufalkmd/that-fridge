@@ -14,11 +14,19 @@ import {
 
 import { describeError } from "@thatfridge/core";
 import { useShopping } from "@/lib/shopping";
+import { useToast } from "@/lib/toast";
 import { SectionHeader } from "@/components/ui";
 
 export default function Shopping() {
   const { items, loading, error, refresh, add, toggle, remove, clearChecked } = useShopping();
+  const toast = useToast();
   const [text, setText] = useState("");
+
+  function removeWithUndo(id: string, name: string) {
+    remove(id);
+    toast.show(`Removed ${name}`, { actionLabel: "Undo", onAction: () => add(name) });
+  }
+
   const [refreshing, setRefreshing] = useState(false);
   const [adding, setAdding] = useState(false);
 
@@ -107,7 +115,7 @@ export default function Shopping() {
                   checked={false}
                   last={i === unchecked.length - 1}
                   onToggle={() => toggle(item.id)}
-                  onRemove={() => remove(item.id)}
+                  onRemove={() => removeWithUndo(item.id, item.name)}
                 />
               ))}
             </View>
@@ -130,7 +138,7 @@ export default function Shopping() {
                   checked
                   last={i === checked.length - 1}
                   onToggle={() => toggle(item.id)}
-                  onRemove={() => remove(item.id)}
+                  onRemove={() => removeWithUndo(item.id, item.name)}
                 />
               ))}
             </View>

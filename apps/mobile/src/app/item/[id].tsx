@@ -22,6 +22,7 @@ import {
   type StorageLocation,
 } from "@thatfridge/core";
 import { useInventory } from "@/lib/inventory";
+import { useToast } from "@/lib/toast";
 import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
 
@@ -41,7 +42,8 @@ function isoInDays(days: number): string {
 export default function ItemDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { itemById, setItemQty, patchItem, removeItem } = useInventory();
+  const { itemById, setItemQty, patchItem, removeItem, restoreItem } = useInventory();
+  const toast = useToast();
   const item = itemById(id);
 
   const [editing, setEditing] = useState(false);
@@ -99,15 +101,20 @@ export default function ItemDetail() {
   }
 
   function confirmDelete() {
-    Alert.alert("Delete item", `Remove "${item!.name}" from your fridge?`, [
+    const snapshot = item!;
+    Alert.alert("Delete item", `Remove "${snapshot.name}" from your fridge?`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
         onPress: async () => {
           try {
-            await removeItem(item!.id);
+            await removeItem(snapshot.id);
             router.back();
+            toast.show(`Deleted ${snapshot.name}`, {
+              actionLabel: "Undo",
+              onAction: () => restoreItem(snapshot),
+            });
           } catch (e) {
             Alert.alert("Error", e instanceof Error ? e.message : "Failed to delete.");
           }

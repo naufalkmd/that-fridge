@@ -12,6 +12,7 @@ import { ProProvider } from "@/lib/pro";
 import { InventoryProvider } from "@/lib/inventory";
 import { NotificationsProvider } from "@/lib/notifications";
 import { ShoppingProvider } from "@/lib/shopping";
+import { ToastProvider } from "@/lib/toast";
 import { ExpiryReminderSync } from "@/lib/ExpiryReminderSync";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -30,6 +31,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
+     <ToastProvider>
       <AuthProvider>
        <ProProvider>
         <InventoryProvider>
@@ -77,6 +79,7 @@ export default function RootLayout() {
         </InventoryProvider>
        </ProProvider>
       </AuthProvider>
+     </ToastProvider>
     </SafeAreaProvider>
   );
 }

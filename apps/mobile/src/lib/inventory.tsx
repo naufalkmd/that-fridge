@@ -24,6 +24,7 @@ interface InventoryContextValue {
   setItemQty: (itemId: string, qty: number) => Promise<void>;
   patchItem: (itemId: string, data: UpdateItemInput) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
+  restoreItem: (item: FlatItem) => Promise<void>;
   itemById: (itemId: string) => FlatItem | undefined;
 }
 
@@ -159,6 +160,19 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     [fridges],
   );
 
+  // Re-create a just-deleted item (undo). A fresh row/id — the API has no un-delete.
+  const restoreItem = useCallback(async (item: FlatItem) => {
+    await api.createItem(item.sectionId, {
+      name: item.name,
+      icon: item.icon || "generic",
+      nutrition_category: item.nutritionCategory ?? null,
+      location: item.location,
+      quantity: item.qty,
+      note: item.note || undefined,
+    });
+    await load();
+  }, [load]);
+
   const items = useMemo(() => flattenItems(fridges), [fridges]);
   const itemById = useCallback((id: string) => items.find((i) => i.id === id), [items]);
 
@@ -175,6 +189,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       setItemQty,
       patchItem,
       removeItem,
+      restoreItem,
       itemById,
     }),
     [
@@ -188,6 +203,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       ensureFridgeId,
       setItemQty,
       patchItem,
+      restoreItem,
       removeItem,
       itemById,
     ],
