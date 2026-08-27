@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
@@ -60,6 +60,7 @@ type Msg = { role: "user" | "agent"; text: string; recipe?: RecipeSuggestionBloc
 export default function Chat() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { session } = useLocalSearchParams<{ session?: string }>();
   const { items } = useInventory();
   const { isPro, presentPaywallIfNeeded } = usePro();
   const [agent, setAgent] = useState<ChatAgentName>("Chef");
@@ -80,8 +81,11 @@ export default function Chat() {
 
   useEffect(() => {
     (async () => {
+      setLoading(true);
       try {
-        const h = await api.getChatHistory();
+        const h = session
+          ? await api.getChatSessionMessages(session)
+          : await api.getChatHistory();
         setSessionId(h.session_id);
         setMessages(
           h.messages.flatMap((row) => {
@@ -98,7 +102,7 @@ export default function Chat() {
       }
     })();
     getChatUsed().then(setUsed);
-  }, []);
+  }, [session]);
 
   async function send(preset?: string) {
     const msg = (preset ?? text).trim();

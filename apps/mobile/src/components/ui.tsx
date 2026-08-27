@@ -1,6 +1,37 @@
-import { Text, View, type ViewProps } from "react-native";
+import { Pressable, Text, View, type ViewProps } from "react-native";
+import { useRouter } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { PixelText } from "@/components/brand";
+
+/** Back-chevron + pixel title (+ optional subtitle) — the header on the web's secondary screens. */
+export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+  const router = useRouter();
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 10,
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        paddingBottom: 10,
+      }}
+    >
+      <Pressable onPress={() => router.back()} hitSlop={8} style={{ paddingTop: 1 }}>
+        <Ionicons name="chevron-back" size={20} color="rgba(234,234,236,0.58)" />
+      </Pressable>
+      <View>
+        <PixelText style={{ fontSize: 14, color: "#eaeaec" }}>{title}</PixelText>
+        {subtitle && (
+          <Text style={{ fontSize: 11.5, color: "rgba(234,234,236,0.34)", marginTop: 3 }}>
+            {subtitle}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+}
 
 /** Pixel-font section header — mirrors the web's "Overview" / "Your crew" headers. */
 export function SectionHeader({ children }: { children: string }) {

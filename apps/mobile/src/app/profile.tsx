@@ -146,15 +146,20 @@ export default function Profile() {
       <View>
         <SectionHeader>Settings</SectionHeader>
         <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
+          <LinkRow icon="restaurant-outline" label="Recipe book" onPress={() => router.push("/recipes")} />
+          <LinkRow icon="flag-outline" label="Goal" onPress={() => router.push("/goals")} />
+          <LinkRow icon="ribbon-outline" label="Badges" onPress={() => router.push("/badges")} />
+          <LinkRow icon="sparkles-outline" label="AI Data & Memory" onPress={() => router.push("/ai-data")} />
           <LinkRow
             icon="notifications-outline"
             label="Notification settings"
             onPress={() => router.push("/notification-settings")}
           />
+          <LinkRow icon="cart-outline" label="Shopping list" onPress={() => router.push("/shopping")} />
           <LinkRow
-            icon="cart-outline"
-            label="Shopping list"
-            onPress={() => router.push("/shopping")}
+            icon="information-circle-outline"
+            label="About ThatFridge"
+            onPress={() => router.push("/about")}
             last
           />
         </View>
