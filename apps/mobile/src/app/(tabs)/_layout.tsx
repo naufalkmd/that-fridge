@@ -56,6 +56,7 @@ export default function TabsLayout() {
         name="eat"
         options={{
           title: "Eat",
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="restaurant" size={size} color={color} />
           ),

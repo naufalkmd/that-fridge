@@ -1,15 +1,13 @@
-import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Image } from "expo-image";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import {
   describeError,
+  type FoodFocus,
   type MealType,
   type Recipe,
   type Vibe,
@@ -17,38 +15,63 @@ import {
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
-import { SectionHeader } from "@/components/ui";
+import { PixelText } from "@/components/brand";
 import { FoodIcon } from "@/components/food-icon";
 
-const MEALS: { key: MealType; label: string }[] = [
+const CHEF = require("../../../assets/images/thatfridge/chef.gif");
+
+const AMBER = "#26c6da"; // brand accent (the theme's "amber" token)
+const SURFACE = "#131316";
+const SURFACE2 = "#1a1a1f";
+const STRONG = "rgba(255,255,255,0.18)";
+const INK = "#eaeaec";
+const MUTED = "rgba(234,234,236,0.58)";
+const FAINT = "rgba(234,234,236,0.34)";
+const GOOD = "#39e07f";
+
+const MEAL_TYPES: { key: MealType; label: string }[] = [
   { key: "breakfast", label: "Breakfast" },
   { key: "lunch", label: "Lunch" },
   { key: "dinner", label: "Dinner" },
   { key: "snack", label: "Snack" },
 ];
-
 const VIBES: { key: Vibe; label: string }[] = [
-  { key: "quick_easy", label: "Quick & easy" },
   { key: "comfort", label: "Comfort" },
-  { key: "light_fresh", label: "Light & fresh" },
-  { key: "use_it_up", label: "Use it up" },
+  { key: "light_fresh", label: "Light & Fresh" },
+  { key: "quick_easy", label: "Quick & Easy" },
+  { key: "something_new", label: "Something New" },
+  { key: "use_it_up", label: "Use It Up" },
+];
+const FOOD_FOCUS: { key: FoodFocus; label: string }[] = [
+  { key: "high_protein", label: "High Protein" },
+  { key: "high_veg", label: "High Veg" },
+  { key: "low_carb", label: "Low Carb" },
+  { key: "balanced", label: "Balanced" },
 ];
 
 export default function Eat() {
+  const router = useRouter();
   const { refresh: refreshInventory } = useInventory();
+
   const [meal, setMeal] = useState<MealType | null>(null);
-  const [vibe, setVibe] = useState<Vibe | null>(null);
+  const [vibes, setVibes] = useState<Vibe[]>([]);
+  const [focus, setFocus] = useState<FoodFocus[]>([]);
   const [result, setResult] = useState<WhatToEatResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exactPage, setExactPage] = useState(0);
+  const [similarPage, setSimilarPage] = useState(0);
+
+  const toggle = <T,>(list: T[], set: (v: T[]) => void, key: T) =>
+    set(list.includes(key) ? list.filter((k) => k !== key) : [...list, key]);
 
   const run = async () => {
     setLoading(true);
     setError(null);
+    setExactPage(0);
+    setSimilarPage(0);
     try {
-      setResult(
-        await api.suggestRecipes({ mealType: meal, vibes: vibe ? [vibe] : [] }),
-      );
+      setResult(await api.suggestRecipes({ mealType: meal, vibes, foodFocus: focus }));
     } catch (e) {
       setError(describeError(e, "Couldn't get suggestions."));
     } finally {
@@ -61,79 +84,226 @@ export default function Eat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const hasResults = result !== null;
+  const exhausted = result?.exhausted && (result?.exact.length ?? 0) === 0;
+
   return (
-    <ScrollView className="flex-1 bg-canvas" contentContainerClassName="px-5 pb-24 pt-3 gap-4">
-      <View className="gap-2">
-        <Text className="text-[12px] font-bold tracking-wide text-faint">MEAL</Text>
-        <ChipRow
-          options={MEALS}
-          value={meal}
-          onChange={(k) => setMeal(meal === k ? null : (k as MealType))}
-        />
-      </View>
-      <View className="gap-2">
-        <Text className="text-[12px] font-bold tracking-wide text-faint">VIBE</Text>
-        <ChipRow
-          options={VIBES}
-          value={vibe}
-          onChange={(k) => setVibe(vibe === k ? null : (k as Vibe))}
-        />
-      </View>
+    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+      <ScrollView contentContainerClassName="px-5 pt-4 pb-24" contentContainerStyle={{ gap: 18 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <MaterialCommunityIcons name="chef-hat" size={18} color={INK} />
+          <PixelText style={{ fontSize: 14, color: INK }}>What should I eat?</PixelText>
+        </View>
 
-      <Pressable
-        onPress={run}
-        disabled={loading}
-        className="items-center rounded-lg bg-accent py-3 active:opacity-80"
-      >
-        {loading ? (
-          <ActivityIndicator color="#0a0a0c" />
-        ) : (
-          <Text className="font-bold uppercase tracking-wide text-[#0a0a0c]">
-            What can I cook?
-          </Text>
-        )}
-      </Pressable>
-
-      {error && (
-        <Pressable onPress={run} className="rounded-xl border border-bad bg-surface p-3">
-          <Text className="font-semibold text-bad">{error}</Text>
-        </Pressable>
-      )}
-
-      {result && !loading && (
-        <>
-          {result.exact.length === 0 && result.similar.length === 0 && (
-            <Text className="mt-6 text-center text-[13px] text-faint">
-              Nothing matches right now. Try clearing the filters or adding items.
+        <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
+          <Image source={CHEF} style={{ width: 56, height: 56 }} contentFit="contain" />
+          <View
+            style={{
+              backgroundColor: SURFACE2,
+              borderRadius: 14,
+              borderBottomLeftRadius: 4,
+              paddingVertical: 9,
+              paddingHorizontal: 13,
+              marginBottom: 6,
+            }}
+          >
+            <Text style={{ fontSize: 12.5, fontWeight: "600", color: INK }}>
+              What are the vibes today?
             </Text>
-          )}
+          </View>
+        </View>
 
-          {result.exact.length > 0 && (
-            <Section title="You have everything for these">
-              {result.exact.map((r) => (
-                <RecipeCard key={r.id} recipe={r} onMade={refreshInventory} />
-              ))}
-            </Section>
-          )}
+        <ChipGroup label="MEAL TYPE" scroll>
+          {MEAL_TYPES.map((o) => (
+            <Chip
+              key={o.key}
+              label={o.label}
+              active={meal === o.key}
+              onPress={() => setMeal(meal === o.key ? null : o.key)}
+            />
+          ))}
+        </ChipGroup>
 
-          {result.similar.length > 0 && (
-            <Section title="Almost — missing a couple things">
-              {result.similar.map((r) => (
-                <RecipeCard key={r.id} recipe={r} onMade={refreshInventory} />
-              ))}
-            </Section>
-          )}
-        </>
-      )}
-    </ScrollView>
+        <ChipGroup label="VIBES">
+          {VIBES.map((o) => (
+            <Chip
+              key={o.key}
+              label={o.label}
+              active={vibes.includes(o.key)}
+              onPress={() => toggle(vibes, setVibes, o.key)}
+            />
+          ))}
+        </ChipGroup>
+
+        <ChipGroup label="FOOD FOCUS">
+          {FOOD_FOCUS.map((o) => (
+            <Chip
+              key={o.key}
+              label={o.label}
+              active={focus.includes(o.key)}
+              onPress={() => toggle(focus, setFocus, o.key)}
+            />
+          ))}
+        </ChipGroup>
+
+        <Pressable
+          onPress={loading ? undefined : run}
+          style={{
+            alignItems: "center",
+            paddingVertical: 13,
+            borderRadius: 8,
+            backgroundColor: loading ? SURFACE2 : AMBER,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 13.5,
+              fontWeight: "700",
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
+              color: loading ? FAINT : "#0a0a0c",
+            }}
+          >
+            {loading ? "Finding meals…" : "Find meals"}
+          </Text>
+        </Pressable>
+
+        {error && (
+          <Pressable
+            onPress={run}
+            style={{ borderRadius: 12, borderWidth: 1, borderColor: "#ff5567", backgroundColor: SURFACE, padding: 12 }}
+          >
+            <Text style={{ fontWeight: "600", color: "#ff5567" }}>{error}</Text>
+          </Pressable>
+        )}
+
+        {hasResults && !loading && (
+          <View>
+            {exhausted ? (
+              <View style={{ alignItems: "center", paddingVertical: 18, paddingHorizontal: 10 }}>
+                <Text style={{ fontSize: 12.5, color: MUTED, marginBottom: 12, textAlign: "center" }}>
+                  Nothing in your saved recipes matches that combination yet.
+                </Text>
+                <AskChef primary onPress={() => router.push("/chat")} />
+              </View>
+            ) : (
+              <>
+                <ResultsTier
+                  label="EXACT MATCHES"
+                  results={result!.exact}
+                  page={exactPage}
+                  onShuffle={() => setExactPage((p) => p + 1)}
+                  onMade={refreshInventory}
+                />
+                <ResultsTier
+                  label="SIMILAR MATCHES"
+                  results={result!.similar}
+                  page={similarPage}
+                  onShuffle={() => setSimilarPage((p) => p + 1)}
+                  onMade={refreshInventory}
+                />
+                {(result!.exact.length > 0 || result!.similar.length > 0) && (
+                  <View style={{ alignItems: "center", paddingTop: 18, paddingBottom: 4 }}>
+                    <Text style={{ fontSize: 11.5, color: FAINT, marginBottom: 10 }}>
+                      Still nothing to your liking? Let&apos;s find something.
+                    </Text>
+                    <AskChef onPress={() => router.push("/chat")} />
+                  </View>
+                )}
+                {result!.exact.length === 0 && result!.similar.length === 0 && (
+                  <Text style={{ marginTop: 6, textAlign: "center", fontSize: 13, color: FAINT }}>
+                    Nothing matches right now. Try clearing the filters or adding items.
+                  </Text>
+                )}
+              </>
+            )}
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function AskChef({ onPress, primary }: { onPress: () => void; primary?: boolean }) {
   return (
-    <View className="gap-2.5">
-      <SectionHeader>{title}</SectionHeader>
-      {children}
+    <Pressable
+      onPress={onPress}
+      style={{
+        paddingVertical: primary ? 11 : 10,
+        paddingHorizontal: primary ? 20 : 18,
+        borderRadius: 8,
+        backgroundColor: primary ? AMBER : "transparent",
+        borderWidth: primary ? 0 : 1,
+        borderColor: STRONG,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: primary ? 13 : 12.5,
+          fontWeight: "700",
+          textTransform: primary ? "uppercase" : "none",
+          letterSpacing: primary ? 0.5 : 0,
+          color: primary ? "#0a0a0c" : INK,
+        }}
+      >
+        Ask Chef instead
+      </Text>
+    </Pressable>
+  );
+}
+
+function ResultsTier({
+  label,
+  results,
+  page,
+  onShuffle,
+  onMade,
+}: {
+  label: string;
+  results: Recipe[];
+  page: number;
+  onShuffle: () => void;
+  onMade: () => void;
+}) {
+  const visible = useMemo(() => {
+    if (results.length <= 3) return results;
+    const start = (page * 3) % results.length;
+    const rotated = [...results.slice(start), ...results.slice(0, start)];
+    return rotated.slice(0, 3);
+  }, [results, page]);
+
+  if (results.length === 0) return null;
+
+  return (
+    <View style={{ marginBottom: 16 }}>
+      <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
+        {label}
+      </Text>
+      <View style={{ gap: 8, marginBottom: results.length > 3 ? 10 : 0 }}>
+        {visible.map((r) => (
+          <RecipeCard key={r.id} recipe={r} onMade={onMade} />
+        ))}
+      </View>
+      {results.length > 3 && (
+        <Pressable
+          onPress={onShuffle}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            paddingVertical: 11,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: STRONG,
+          }}
+        >
+          <MaterialCommunityIcons name="shuffle-variant" size={14} color={INK} />
+          <Text style={{ fontSize: 12.5, fontWeight: "700", color: INK }}>
+            Not feeling these? Shuffle
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -156,32 +326,38 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
   }
 
   return (
-    <View className="overflow-hidden rounded-2xl border border-hairline bg-surface">
-      <Pressable onPress={() => setOpen((v) => !v)} className="p-4 active:bg-canvas">
-        <View className="flex-row items-center justify-between">
-          <Text className="flex-1 text-[15px] font-bold text-ink">{recipe.name}</Text>
-          <Text className="text-[12px] text-muted">{recipe.minutes} min</Text>
+    <View style={{ borderRadius: 8, backgroundColor: SURFACE2, overflow: "hidden" }}>
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12 }}
+      >
+        <FoodIcon icon={recipe.ingredients[0]?.icon ?? "leftovers"} name={recipe.name} size={32} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ fontSize: 13.5, fontWeight: "700", color: INK }} numberOfLines={1}>
+            {recipe.name}
+          </Text>
+          <Text style={{ fontSize: 11, color: FAINT }}>{recipe.minutes} min</Text>
         </View>
-        <Text className="mt-1 text-[11.5px] text-faint">
-          {recipe.ingredients.map((i) => i.name).join(" · ")}
-        </Text>
+        <MaterialCommunityIcons name={open ? "chevron-up" : "chevron-down"} size={18} color={FAINT} />
       </Pressable>
 
       {open && (
-        <View className="gap-3 border-t border-hairline p-4">
-          <View className="gap-1.5">
-            <Text className="text-[12px] font-bold tracking-wide text-faint">INGREDIENTS</Text>
+        <View style={{ gap: 12, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.09)", padding: 14 }}>
+          <View style={{ gap: 6 }}>
+            <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.3, color: FAINT }}>
+              INGREDIENTS
+            </Text>
             {recipe.ingredients.map((ing, i) => (
-              <View key={i} className="flex-row items-center gap-2">
-                <FoodIcon icon={ing.icon} name={ing.name} size={24} />
-                <Text className="text-[13px] text-ink">{ing.name}</Text>
+              <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <FoodIcon icon={ing.icon} name={ing.name} size={22} />
+                <Text style={{ fontSize: 13, color: INK }}>{ing.name}</Text>
               </View>
             ))}
           </View>
-          <View className="gap-1">
-            <Text className="text-[12px] font-bold tracking-wide text-faint">STEPS</Text>
+          <View style={{ gap: 4 }}>
+            <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.3, color: FAINT }}>STEPS</Text>
             {recipe.steps.map((step, i) => (
-              <Text key={i} className="text-[13px] leading-5 text-ink">
+              <Text key={i} style={{ fontSize: 13, lineHeight: 19, color: INK }}>
                 {i + 1}. {step}
               </Text>
             ))}
@@ -189,12 +365,18 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
           <Pressable
             onPress={markMade}
             disabled={marking}
-            className="mt-1 items-center rounded-lg border border-good py-2.5 active:opacity-70"
+            style={{
+              alignItems: "center",
+              paddingVertical: 10,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: GOOD,
+            }}
           >
             {marking ? (
-              <ActivityIndicator color="#3f8f5c" />
+              <ActivityIndicator color={GOOD} />
             ) : (
-              <Text className="font-semibold text-good">I made this</Text>
+              <Text style={{ fontWeight: "600", color: GOOD }}>I made this</Text>
             )}
           </Pressable>
         </View>
@@ -203,33 +385,48 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
   );
 }
 
-function ChipRow({
-  options,
-  value,
-  onChange,
+function ChipGroup({
+  label,
+  scroll,
+  children,
 }: {
-  options: { key: string; label: string }[];
-  value: string | null;
-  onChange: (key: string) => void;
+  label: string;
+  scroll?: boolean;
+  children: React.ReactNode;
 }) {
   return (
-    <View className="flex-row flex-wrap gap-2">
-      {options.map((o) => {
-        const active = value === o.key;
-        return (
-          <Pressable
-            key={o.key}
-            onPress={() => onChange(o.key)}
-            className={`rounded-lg border px-3 py-1.5 ${
-              active ? "border-accent bg-accent" : "border-hairline bg-surface"
-            }`}
-          >
-            <Text className={`text-[12.5px] font-bold ${active ? "text-[#0a0a0c]" : "text-ink"}`}>
-              {o.label}
-            </Text>
-          </Pressable>
-        );
-      })}
+    <View style={{ gap: 8 }}>
+      <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.3, color: FAINT }}>{label}</Text>
+      {scroll ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginHorizontal: -20 }}
+          contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+        >
+          {children}
+        </ScrollView>
+      ) : (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{children}</View>
+      )}
     </View>
+  );
+}
+
+function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        paddingVertical: 7,
+        paddingHorizontal: 14,
+        borderRadius: 6,
+        backgroundColor: active ? AMBER : SURFACE2,
+      }}
+    >
+      <Text style={{ fontSize: 12.5, fontWeight: "700", color: active ? "#0a0a0c" : INK }}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
