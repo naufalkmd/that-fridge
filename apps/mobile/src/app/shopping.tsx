@@ -77,7 +77,7 @@ export default function Shopping() {
           />
           <Pressable
             onPress={submit}
-            className="items-center justify-center rounded-lg bg-warn px-4 active:opacity-80"
+            className="items-center justify-center rounded-lg bg-accent px-4 active:opacity-80"
           >
             <Text className="text-[18px] font-bold text-[#0a0a0c]">+</Text>
           </Pressable>

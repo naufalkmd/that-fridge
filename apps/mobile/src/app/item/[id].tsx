@@ -181,7 +181,7 @@ export default function ItemDetail() {
             <Pressable
               onPress={save}
               disabled={saving}
-              className="flex-1 items-center rounded-lg bg-warn py-3 active:opacity-80"
+              className="flex-1 items-center rounded-lg bg-accent py-3 active:opacity-80"
             >
               {saving ? (
                 <ActivityIndicator color="#0a0a0c" />
@@ -287,7 +287,7 @@ function ChipRow({
             key={o.key}
             onPress={() => onChange(o.key)}
             className={`rounded-lg border px-3 py-1.5 ${
-              active ? "border-warn bg-warn" : "border-hairline bg-surface"
+              active ? "border-accent bg-accent" : "border-hairline bg-surface"
             }`}
           >
             <Text

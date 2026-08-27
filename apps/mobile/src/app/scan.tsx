@@ -25,7 +25,7 @@ export default function Scan() {
         </Text>
         <Pressable
           onPress={() => router.replace("/add")}
-          className="rounded-lg bg-warn px-5 py-3 active:opacity-80"
+          className="rounded-lg bg-accent px-5 py-3 active:opacity-80"
         >
           <Text className="font-bold uppercase text-[#0a0a0c]">Add manually</Text>
         </Pressable>
@@ -48,7 +48,7 @@ export default function Scan() {
         </Text>
         <Pressable
           onPress={requestPermission}
-          className="rounded-lg bg-warn px-5 py-3 active:opacity-80"
+          className="rounded-lg bg-accent px-5 py-3 active:opacity-80"
         >
           <Text className="font-bold uppercase text-[#0a0a0c]">Grant access</Text>
         </Pressable>

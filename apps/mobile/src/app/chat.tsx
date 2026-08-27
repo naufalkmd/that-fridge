@@ -191,7 +191,7 @@ export default function Chat() {
         <Pressable
           onPress={send}
           disabled={sending || !text.trim()}
-          className="h-10 w-10 items-center justify-center rounded-full bg-warn active:opacity-80"
+          className="h-10 w-10 items-center justify-center rounded-full bg-accent active:opacity-80"
           style={sending || !text.trim() ? { opacity: 0.5 } : undefined}
         >
           <Text className="text-[16px] font-bold text-[#0a0a0c]">↑</Text>
@@ -207,7 +207,7 @@ function Bubble({ msg }: { msg: Msg }) {
     <View className={isUser ? "items-end" : "items-start"}>
       <View
         className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${
-          isUser ? "bg-warn" : "border border-hairline bg-surface"
+          isUser ? "bg-accent" : "border border-hairline bg-surface"
         }`}
       >
         <Text className={`text-[14px] leading-5 ${isUser ? "text-[#0a0a0c]" : "text-ink"}`}>

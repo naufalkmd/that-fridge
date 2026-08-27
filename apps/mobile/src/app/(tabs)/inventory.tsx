@@ -1,12 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import {
@@ -18,8 +11,10 @@ import {
   type NutritionCategory,
 } from "@thatfridge/core";
 import { useInventory } from "@/lib/inventory";
+import { SectionHeader } from "@/components/ui";
 
-type Sort = "expiry" | "name";
+type Sort = "expiry" | "name" | "category";
+const SORTS: Sort[] = ["expiry", "name", "category"];
 
 const CAT_LABEL = Object.fromEntries(
   NUTRITION_CATEGORIES.map((c) => [c.key, c.label]),
@@ -37,12 +32,28 @@ export default function Inventory() {
     return NUTRITION_CATEGORIES.filter((c) => set.has(c.key));
   }, [items]);
 
-  const shown = useMemo(() => {
-    const filtered = cat === "all" ? items : items.filter((i) => i.nutritionCategory === cat);
-    return [...filtered].sort((a, b) =>
-      sort === "name" ? a.name.localeCompare(b.name) : a.freshness - b.freshness,
-    );
-  }, [items, cat, sort]);
+  const filtered = useMemo(
+    () => (cat === "all" ? items : items.filter((i) => i.nutritionCategory === cat)),
+    [items, cat],
+  );
+
+  const flat = useMemo(
+    () =>
+      [...filtered].sort((a, b) =>
+        sort === "name" ? a.name.localeCompare(b.name) : a.freshness - b.freshness,
+      ),
+    [filtered, sort],
+  );
+
+  const groups = useMemo(() => {
+    if (sort !== "category") return null;
+    return NUTRITION_CATEGORIES.map((c) => ({
+      label: c.label,
+      items: filtered
+        .filter((i) => (i.nutritionCategory ?? "other_extras") === c.key)
+        .sort((a, b) => a.freshness - b.freshness),
+    })).filter((g) => g.items.length > 0);
+  }, [filtered, sort]);
 
   async function onRefresh() {
     setRefreshing(true);
@@ -60,113 +71,122 @@ export default function Inventory() {
 
   return (
     <>
-    <ScrollView
-      className="flex-1 bg-canvas"
-      contentContainerClassName="px-5 pb-28 pt-3"
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8a8a90" />
-      }
-    >
-      {error && (
-        <Pressable
-          onPress={refresh}
-          className="mb-4 rounded-xl border border-bad bg-surface p-3"
-        >
-          <Text className="font-semibold text-bad">{error}</Text>
-          <Text className="mt-0.5 text-[12px] text-muted">Tap to retry.</Text>
-        </Pressable>
-      )}
+      <ScrollView
+        className="flex-1 bg-canvas"
+        contentContainerClassName="px-5 pb-28 pt-3"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8a8a90" />
+        }
+      >
+        {error && (
+          <Pressable onPress={refresh} className="mb-4 rounded-xl border border-bad bg-surface p-3">
+            <Text className="font-semibold text-bad">{error}</Text>
+            <Text className="mt-0.5 text-[12px] text-muted">Tap to retry.</Text>
+          </Pressable>
+        )}
 
-      {/* controls */}
-      <View className="mb-3 flex-row items-center justify-between">
-        <Text className="text-[15px] font-bold text-ink">
-          {shown.length} item{shown.length === 1 ? "" : "s"}
-        </Text>
-        <View className="flex-row rounded-lg bg-surface p-1">
-          {(["expiry", "name"] as const).map((s) => (
-            <Pressable
-              key={s}
-              onPress={() => setSort(s)}
-              className={`rounded-md px-3 py-1.5 ${sort === s ? "bg-canvas" : ""}`}
-            >
-              <Text
-                className={`text-[12px] font-bold capitalize ${
-                  sort === s ? "text-ink" : "text-muted"
-                }`}
-              >
-                {s}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-
-      {presentCats.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="mb-4 -mx-5"
-          contentContainerClassName="px-5 gap-2"
-        >
-          {[{ key: "all", label: "All" }, ...presentCats].map((c) => {
-            const active = cat === c.key;
-            return (
+        <View className="mb-3 flex-row items-center justify-between">
+          <Text className="text-[15px] font-bold text-ink">
+            {filtered.length} item{filtered.length === 1 ? "" : "s"}
+          </Text>
+          <View className="flex-row rounded-lg bg-surface p-1">
+            {SORTS.map((s) => (
               <Pressable
-                key={c.key}
-                onPress={() => setCat(c.key as NutritionCategory | "all")}
-                className={`rounded-lg border px-3.5 py-1.5 ${
-                  active ? "border-ink bg-ink" : "border-hairline bg-surface"
-                }`}
+                key={s}
+                onPress={() => setSort(s)}
+                className={`rounded-md px-2.5 py-1.5 ${sort === s ? "bg-canvas" : ""}`}
               >
                 <Text
-                  className={`text-[12.5px] font-bold ${active ? "text-canvas" : "text-ink"}`}
+                  className={`text-[11.5px] font-bold capitalize ${
+                    sort === s ? "text-ink" : "text-muted"
+                  }`}
                 >
-                  {c.label}
+                  {s}
                 </Text>
               </Pressable>
-            );
-          })}
-        </ScrollView>
-      )}
-
-      {shown.length === 0 ? (
-        <Text className="mt-10 text-center text-[13px] text-faint">
-          {items.length === 0 ? "Nothing in your fridge yet." : "No items in this category."}
-        </Text>
-      ) : (
-        <View className="overflow-hidden rounded-2xl border border-hairline bg-surface">
-          {shown.map((item, i) => (
-            <ItemRow
-              key={item.id}
-              item={item}
-              last={i === shown.length - 1}
-              onPress={() => router.push(`/item/${item.id}`)}
-            />
-          ))}
+            ))}
+          </View>
         </View>
-      )}
-    </ScrollView>
 
-    <Pressable
-      onPress={() => router.push("/add")}
-      className="absolute bottom-4 right-6 h-14 w-14 items-center justify-center rounded-full bg-warn active:opacity-80"
-      style={{ elevation: 4 }}
-    >
-      <Text className="text-[26px] font-bold leading-none text-[#0a0a0c]">+</Text>
-    </Pressable>
+        {presentCats.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="mb-4 -mx-5"
+            contentContainerClassName="px-5 gap-2"
+          >
+            {[{ key: "all", label: "All" }, ...presentCats].map((c) => {
+              const active = cat === c.key;
+              return (
+                <Pressable
+                  key={c.key}
+                  onPress={() => setCat(c.key as NutritionCategory | "all")}
+                  className={`rounded-lg border px-3.5 py-1.5 ${
+                    active ? "border-ink bg-ink" : "border-hairline bg-surface"
+                  }`}
+                >
+                  <Text
+                    className={`text-[12.5px] font-bold ${active ? "text-canvas" : "text-ink"}`}
+                  >
+                    {c.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        {filtered.length === 0 ? (
+          <Text className="mt-10 text-center text-[13px] text-faint">
+            {items.length === 0 ? "Nothing in your fridge yet." : "No items in this category."}
+          </Text>
+        ) : groups ? (
+          <View className="gap-5">
+            {groups.map((g) => (
+              <View key={g.label}>
+                <View className="mb-2 flex-row items-baseline justify-between">
+                  <SectionHeader>{g.label}</SectionHeader>
+                  <Text className="text-[11px] text-faint">{g.items.length}</Text>
+                </View>
+                <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
+                  {g.items.map((item, i) => (
+                    <ItemRow
+                      key={item.id}
+                      item={item}
+                      last={i === g.items.length - 1}
+                      onPress={() => router.push(`/item/${item.id}`)}
+                    />
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
+            {flat.map((item, i) => (
+              <ItemRow
+                key={item.id}
+                item={item}
+                last={i === flat.length - 1}
+                onPress={() => router.push(`/item/${item.id}`)}
+              />
+            ))}
+          </View>
+        )}
+      </ScrollView>
+
+      <Pressable
+        onPress={() => router.push("/add")}
+        className="absolute bottom-4 right-6 h-14 w-14 items-center justify-center rounded-full bg-accent active:opacity-80"
+        style={{ elevation: 4 }}
+      >
+        <Text className="text-[26px] font-bold leading-none text-[#0a0a0c]">+</Text>
+      </Pressable>
     </>
   );
 }
 
-function ItemRow({
-  item,
-  last,
-  onPress,
-}: {
-  item: FlatItem;
-  last: boolean;
-  onPress: () => void;
-}) {
+function ItemRow({ item, last, onPress }: { item: FlatItem; last: boolean; onPress: () => void }) {
   const { setItemQty } = useInventory();
   const loc = STORAGE_LOCATIONS.find((l) => l.key === (item.location ?? "fridge"))!;
 
@@ -185,13 +205,10 @@ function ItemRow({
 
       <View className="flex-1">
         <View className="mb-1 flex-row items-center gap-1.5">
-          <Text className="text-[14px] font-semibold text-ink" numberOfLines={1}>
+          <Text className="shrink text-[14px] font-semibold text-ink" numberOfLines={1}>
             {item.name}
           </Text>
-          <View
-            className="rounded px-1 py-px"
-            style={{ backgroundColor: `${loc.color}26` }}
-          >
+          <View className="rounded px-1 py-px" style={{ backgroundColor: `${loc.color}26` }}>
             <Text className="text-[9px] font-bold" style={{ color: loc.color }}>
               {loc.short}
             </Text>

@@ -155,7 +155,7 @@ export default function Add() {
         <Pressable
           onPress={submit}
           disabled={saving}
-          className="mt-1 items-center rounded-lg bg-warn py-3.5 active:opacity-80"
+          className="mt-1 items-center rounded-lg bg-accent py-3.5 active:opacity-80"
         >
           {saving ? (
             <ActivityIndicator color="#0a0a0c" />
@@ -197,7 +197,7 @@ function ChipRow({
             key={o.key}
             onPress={() => onChange(o.key)}
             className={`rounded-lg border px-3 py-1.5 ${
-              active ? "border-warn bg-warn" : "border-hairline bg-surface"
+              active ? "border-accent bg-accent" : "border-hairline bg-surface"
             }`}
           >
             <Text className={`text-[12.5px] font-bold ${active ? "text-[#0a0a0c]" : "text-ink"}`}>

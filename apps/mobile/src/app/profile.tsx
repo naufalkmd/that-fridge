@@ -86,7 +86,7 @@ export default function Profile() {
         ) : !isPro ? (
           <Pressable
             onPress={() => router.push("/paywall")}
-            className="mt-3 items-center rounded-lg bg-warn py-2.5 active:opacity-80"
+            className="mt-3 items-center rounded-lg bg-accent py-2.5 active:opacity-80"
           >
             <Text className="font-bold uppercase tracking-wide text-[#0a0a0c]">Go Pro</Text>
           </Pressable>
