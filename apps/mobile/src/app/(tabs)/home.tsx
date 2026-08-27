@@ -33,6 +33,7 @@ import { useInventory } from "@/lib/inventory";
 import { useNotifications } from "@/lib/notifications";
 import { useScope, scopeItems } from "@/lib/scope";
 import { useShopping } from "@/lib/shopping";
+import { useKitchenScore } from "@/lib/kitchenScore";
 import { PixelText } from "@/components/brand";
 import { SectionHeader } from "@/components/ui";
 import { FridgeScopePicker } from "@/components/fridge-scope";
@@ -72,6 +73,7 @@ export default function Home() {
   const { events, unread } = useNotifications();
   const { items: shoppingItems } = useShopping();
   const { scope } = useScope();
+  const { usageHistory, organizerTally, scoreSnapshots } = useKitchenScore();
 
   const [refreshing, setRefreshing] = useState(false);
   const [suggestions, setSuggestions] = useState<Recipe[] | null>(null);
@@ -106,8 +108,10 @@ export default function Home() {
       items: scoped.map((i) => ({ days: i.days, freshness: i.freshness })),
       notificationEvents: events.map((e) => ({ kind: e.kind, done: e.done })),
       shoppingList: shoppingItems.map((s) => ({ checked: s.checked })),
+      usageHistory,
+      organizerTally,
     }),
-    [scoped, events, shoppingItems],
+    [scoped, events, shoppingItems, usageHistory, organizerTally],
   );
 
   const scoreByKey = useMemo(() => {
@@ -246,7 +250,7 @@ export default function Home() {
         </View>
 
         {/* your kitchen this week */}
-        <KitchenScore input={scoreInput} />
+        <KitchenScore input={scoreInput} snapshots={scoreSnapshots} />
 
         {/* fridge hero carousel */}
         <View>

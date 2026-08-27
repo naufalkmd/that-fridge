@@ -7,10 +7,13 @@ import type {
   NotificationEvent,
   NotificationPrefs,
   NutritionCategory,
+  OrganizerTally,
   Recipe,
+  ScoreSnapshot,
   Section,
   ShoppingItem,
   StorageLocation,
+  UsageHistoryEntry,
   Vibe,
   FoodFocus,
 } from "./types";
@@ -339,6 +342,20 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.post<Recipe>(`/recipes/${id}/mark-made`);
   }
 
+  // "Your Kitchen This Week" inputs — read-only on mobile. The API Resources already return
+  // camelCase matching the core types; http.get unwraps the { data } envelope.
+  function getUsageHistory(): Promise<UsageHistoryEntry[]> {
+    return http.get<UsageHistoryEntry[]>("/usage-history");
+  }
+
+  function getOrganizerTally(): Promise<OrganizerTally> {
+    return http.get<OrganizerTally>("/organizer-tally");
+  }
+
+  function getScoreSnapshots(weeks = 12): Promise<ScoreSnapshot[]> {
+    return http.get<ScoreSnapshot[]>(`/score-snapshots?weeks=${weeks}`);
+  }
+
   return {
     login,
     register,
@@ -364,6 +381,9 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     deleteShoppingItem,
     suggestRecipes,
     markRecipeMade,
+    getUsageHistory,
+    getOrganizerTally,
+    getScoreSnapshots,
   };
 }
 
