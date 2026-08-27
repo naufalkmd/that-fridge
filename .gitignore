@@ -1,8 +1,24 @@
 .env
 .env.local
 *.env
-frontend/node_modules/
-frontend/.next/
-backend/vendor/
 .DS_Store
 .vscode/
+
+# node
+node_modules/
+apps/web/node_modules/
+apps/web/.next/
+backend/vendor/
+
+# turbo
+.turbo/
+
+# expo / mobile
+apps/mobile/.expo/
+apps/mobile/dist/
+apps/mobile/ios/
+apps/mobile/android/
+apps/mobile/*.log
+
+# packages
+packages/*/dist/

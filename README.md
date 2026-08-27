@@ -2,8 +2,12 @@
 
 ## Stack
 
-- `backend/` — Laravel API
-- `frontend/` — Next.js app
+pnpm + turborepo monorepo:
+
+- `backend/` — Laravel API (npm/composer, not in the pnpm workspace)
+- `apps/web/` — Next.js app (still npm-managed; frozen during the iOS sprint — see `APP_STORE_LAUNCH_PLAN.md`)
+- `apps/mobile/` — Expo / React Native app (iOS-first)
+- `packages/core/` — shared logic (API client, types, domain rules)
 - Postgres + Redis via Docker Compose
 
 ## Setup
@@ -63,19 +67,28 @@
    | kemed@thatfridge.test | password123 |
 
    Already migrated without `--seed`? Run `php artisan db:seed` on its own — safe to run anytime, it only adds these 4 users.
-3. Frontend:
+3. Web app:
 
    ```bash
-   cd frontend
+   cd apps/web
    npm install
    npm run dev
    ```
 
-   The frontend talks to the backend via `NEXT_PUBLIC_API_URL`, set in `frontend/.env.local` (defaults to `http://127.0.0.1:8000/api` if unset).
+   The web app talks to the backend via `NEXT_PUBLIC_API_URL`, set in `apps/web/.env.local` (defaults to `http://127.0.0.1:8000/api` if unset).
+
+4. Mobile app:
+
+   ```bash
+   pnpm install          # from the repo root
+   pnpm mobile           # or: cd apps/mobile && pnpm start
+   ```
+
+   The mobile app talks to the backend via `EXPO_PUBLIC_API_URL`, set in `apps/mobile/.env` (defaults to `http://127.0.0.1:8000/api` if unset). On a physical device, point it at your machine's LAN IP, not `127.0.0.1`.
 
 ## Trying login against the API directly
 
-Before wiring up the frontend, you can confirm the backend works with `curl` (backend must be running via `php artisan serve`, defaults to `http://127.0.0.1:8000`):
+Before wiring up a frontend, you can confirm the backend works with `curl` (backend must be running via `php artisan serve`, defaults to `http://127.0.0.1:8000`):
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/login \
@@ -94,10 +107,11 @@ curl http://127.0.0.1:8000/api/me \
 
 ```bash
 cd backend && php artisan test
-cd frontend && npm test
+cd apps/web && npm test
+cd apps/mobile && pnpm test
 ```
 
-A tracked pre-push hook runs both suites automatically before every `git push`, so a
+A tracked pre-push hook runs these suites automatically before every `git push`, so a
 regression gets caught locally instead of landing on `main` unnoticed. One-time setup
 per machine:
 
