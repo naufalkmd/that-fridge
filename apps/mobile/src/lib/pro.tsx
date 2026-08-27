@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { Platform } from "react-native";
 import Constants from "expo-constants";
 import Purchases, {
   LOG_LEVEL,
@@ -23,9 +24,11 @@ export const ENTITLEMENT_ID = "thatfridge_pro";
 
 const RC_IOS_KEY = process.env.EXPO_PUBLIC_RC_IOS_KEY;
 
-// react-native-purchases is a native module — it can't run in Expo Go. There (or with
-// no key configured) the whole thing no-ops: `available` is false and `isPro` is false.
-const AVAILABLE = Constants.appOwnership !== "expo" && !!RC_IOS_KEY;
+// react-native-purchases is a native module — it can't run in Expo Go or (for our
+// purposes) on web. There, or with no key configured, the whole thing no-ops:
+// `available` is false and `isPro` is false.
+const AVAILABLE =
+  Platform.OS !== "web" && Constants.appOwnership !== "expo" && !!RC_IOS_KEY;
 
 interface ProContextValue {
   /** IAPs are usable in this build (dev build + key present). */

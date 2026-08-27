@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo/metro-runtime": "~57.0.14",
     "@expo/vector-icons": "^15.1.1",
     "@thatfridge/core": "workspace:*",
     "expo": "~57.0.17",

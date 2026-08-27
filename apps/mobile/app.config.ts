@@ -38,6 +38,13 @@ const config: ExpoConfig = {
       backgroundColor: "#0a0a0c",
     },
   },
+  // Universal: the same screens render on the web via react-native-web. Live web
+  // deployment is a post-launch fast-follow — see APP_STORE_LAUNCH_PLAN.md.
+  web: {
+    bundler: "metro",
+    output: "single",
+    favicon: "./assets/images/favicon.png",
+  },
   plugins: [
     "expo-router",
     "expo-secure-store",

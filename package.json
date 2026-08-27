@@ -7,9 +7,10 @@
     "node": ">=20"
   },
   "scripts": {
-    "mobile": "pnpm --filter mobile start",
-    "mobile:ios": "pnpm --filter mobile ios",
-    "web": "npm --prefix apps/web run dev",
+    "app": "pnpm --filter mobile start",
+    "app:ios": "pnpm --filter mobile ios",
+    "app:web": "pnpm --filter mobile web",
+    "legacy-web": "npm --prefix apps/web run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",

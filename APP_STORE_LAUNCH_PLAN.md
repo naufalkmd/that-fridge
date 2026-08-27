@@ -99,6 +99,10 @@ config plugins are the escape hatch for custom native code.
 - **v1 notifications are local / on-device** from synced expiry dates. Server push (APNs/FCM)
   is a post-launch fast-follow, off the critical path.
 - **Android deferred** entirely to post-launch (same Expo code, separate submission).
+- **One universal UI codebase.** `apps/mobile` screens are RN primitives + NativeWind, so
+  `react-native-web` renders the same code in a browser. Web output is wired (`app.config.ts`
+  `web`, `@expo/metro-runtime`) but **not deployed until post-launch**; the legacy `apps/web`
+  Next.js app is retired once web output is live. iOS stays the Sep 30 priority.
 - Signing keys + Apple assets in a shared password manager from day one.
 
 ### Architecture
@@ -106,8 +110,9 @@ config plugins are the escape hatch for custom native code.
 ```
 thatfridge/                  (monorepo — pnpm workspaces + turborepo)
 ├── packages/core/           shared logic: HttpClient, createApi, types, domain helpers
-├── apps/mobile/             Expo + Expo Router. iOS. THE PRODUCT.
-├── apps/web/                Next.js SPA — frozen; will host privacy policy + terms
+├── apps/mobile/             Expo + Expo Router — iOS + Android + web from one codebase. THE PRODUCT.
+│   └── src/components/      universal UI primitives (brand, ui, food-icon, sheet)
+├── apps/web/                LEGACY Next.js SPA — frozen; retired once web output ships
 └── backend/                 Laravel API — deploy + a couple of new endpoints
 ```
 
@@ -294,5 +299,10 @@ A trivial OUT screen may be ported if there's slack, but it never delays an IN i
 2. Server-driven push: APNs auth key + FCM + device-token endpoint + backend sends.
 3. **Android:** `eas build -p android`; Play Console (register as an **organization** to skip the
    12-tester / 14-day closed-testing gate); Data Safety form; Android screenshots; submit.
-4. iPad layout pass if analytics show demand.
-5. Shipaton: sustained #BuildInPublic cadence + growth experiments through Sep 30.
+4. **Web deployment** (universal codebase): `expo export -p web` → host the static build; add
+   wide-viewport branches to the screens where the phone layout is too narrow (Inventory
+   grid, Home two-column); wire the API `EXPO_PUBLIC_API_URL` for the web origin; add
+   `Platform.OS === "web"` guards where native modules are touched. Then **retire `apps/web`**
+   (the Next.js SPA) and point the domain at the new build.
+5. iPad layout pass (shares the web wide-viewport work).
+6. Shipaton: sustained #BuildInPublic cadence + growth experiments through Sep 30.
