@@ -328,6 +328,16 @@ The core screens are at visual parity (§3); this is the long tail. Nothing here
 v1.0 submission — it's the post-launch roadmap, ordered roughly by value. LOC is the web
 component's size, as a rough effort signal. Every backend route named below already exists.
 
+> **Built 2026-08-28** (commits `2e96ca4`…`98ee167`): §A — a **Recipe book** (`recipes.tsx`
+> library + `recipe/[id]` detail + `recipe-form` create/edit with import-from-link), **Goals**,
+> **Badges**, **AI Data & Memory**, **Chat History**, **About**. §B — the **multi-fridge &
+> social subsystem**: `lib/social.tsx`, `find-friend.tsx`, `fridge/[id]` (rename / style photo /
+> members / invite / join requests / leave-delete), Home find-friend icon, pending rows in
+> Notifications. Core gained ~40 API methods + `progress.ts`.
+> **Still open in §A/B:** custom fridge-photo upload, recipe photo/video attachments,
+> `MarkRecipeMadeSheet` ingredient reconciliation, FoodHub's agent-activation + shopping-rec
+> extras.
+
 ### A. Screens with no mobile equivalent
 
 | Web screen                                 | LOC | What it does                                                                                                                                                                                                           | Backend                                                                                                                 |
