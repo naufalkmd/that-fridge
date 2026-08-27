@@ -46,6 +46,7 @@ export default function TabsLayout() {
         name="inventory"
         options={{
           title: "Inventory",
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="file-tray-stacked" size={size} color={color} />
           ),

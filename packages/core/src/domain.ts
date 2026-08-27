@@ -25,6 +25,26 @@ export function timeAgo(ms: number): string {
   return `${Math.round(hrs / 24)}d ago`;
 }
 
+// Best-effort icon → food-group fallback for items added before the category picker existed
+// (or anything left uncategorised). Mirrors ICON_NUTRITION_CATEGORY in apps/web's data.ts for
+// the icon keys the core pixel set covers.
+const ICON_NUTRITION_CATEGORY: Record<string, NutritionCategory> = {
+  milk: "dairy",
+  yogurt: "dairy",
+  cheese: "dairy",
+  eggs: "protein",
+  meat: "protein",
+  spinach: "vegetables",
+  carrot: "vegetables",
+  apple: "fruit",
+  berries: "fruit",
+  leftovers: "other_extras",
+};
+
+export function guessNutritionCategory(icon: string | null | undefined): NutritionCategory | null {
+  return (icon && ICON_NUTRITION_CATEGORY[icon]) || null;
+}
+
 export const NUTRITION_CATEGORIES: { key: NutritionCategory; label: string }[] = [
   { key: "protein", label: "Protein" },
   { key: "vegetables", label: "Vegetables" },

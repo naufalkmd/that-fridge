@@ -15,7 +15,6 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import {
   daysLabel,
@@ -32,9 +31,11 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useInventory } from "@/lib/inventory";
 import { useNotifications } from "@/lib/notifications";
+import { useScope, scopeItems } from "@/lib/scope";
 import { useShopping } from "@/lib/shopping";
 import { PixelText } from "@/components/brand";
 import { SectionHeader } from "@/components/ui";
+import { FridgeScopePicker } from "@/components/fridge-scope";
 import { KitchenScore } from "@/components/home/KitchenScore";
 import { CrewScene } from "@/components/home/CrewScene";
 
@@ -70,10 +71,9 @@ export default function Home() {
   const { items, fridges, loading, refresh } = useInventory();
   const { events, unread } = useNotifications();
   const { items: shoppingItems } = useShopping();
+  const { scope } = useScope();
 
   const [refreshing, setRefreshing] = useState(false);
-  const [scope, setScope] = useState<"all" | string>("all");
-  const [scopeMenu, setScopeMenu] = useState(false);
   const [suggestions, setSuggestions] = useState<Recipe[] | null>(null);
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
   const [heroWidth, setHeroWidth] = useState(0);
@@ -92,12 +92,7 @@ export default function Home() {
     };
   }, [items.length]);
 
-  const scoped = useMemo(
-    () => (scope === "all" ? items : items.filter((i) => i.fridgeId === scope)),
-    [items, scope],
-  );
-  const scopeLabel =
-    scope === "all" ? "All Fridges" : fridges.find((f) => f.id === scope)?.name ?? "This Fridge";
+  const scoped = useMemo(() => scopeItems(items, scope), [items, scope]);
 
   const expiringCount = scoped.filter((i) => i.freshness < 50).length;
   const heroViews = useMemo(() => fridgeHeroViews(fridges), [fridges]);
@@ -220,65 +215,7 @@ export default function Home() {
         </View>
 
         {/* fridge scope picker */}
-        <View style={{ zIndex: 10 }}>
-          <Pressable
-            onPress={() => setScopeMenu((v) => !v)}
-            style={{
-              alignSelf: "flex-start",
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              paddingVertical: 7,
-              paddingHorizontal: 12,
-              borderRadius: 6,
-              backgroundColor: SURFACE,
-              borderWidth: 1,
-              borderColor: HAIRLINE,
-            }}
-          >
-            <MaterialCommunityIcons name="fridge-outline" size={14} color={INK} />
-            <Text style={{ fontSize: 12.5, fontWeight: "700", color: INK }}>{scopeLabel}</Text>
-            <MaterialCommunityIcons name="chevron-down" size={14} color={INK} />
-          </Pressable>
-          {scopeMenu && (
-            <View
-              style={{
-                position: "absolute",
-                top: 42,
-                left: 0,
-                minWidth: 170,
-                backgroundColor: SURFACE,
-                borderRadius: 6,
-                borderWidth: 1,
-                borderColor: HAIRLINE,
-                padding: 6,
-              }}
-            >
-              {[{ id: "all", name: "All Fridges" }, ...fridges].map((opt) => {
-                const active = opt.id === scope;
-                return (
-                  <Pressable
-                    key={opt.id}
-                    onPress={() => {
-                      setScope(opt.id);
-                      setScopeMenu(false);
-                    }}
-                    style={{
-                      paddingVertical: 8,
-                      paddingHorizontal: 10,
-                      borderRadius: 6,
-                      backgroundColor: active ? SURFACE2 : "transparent",
-                    }}
-                  >
-                    <Text style={{ fontSize: 12.5, fontWeight: "600", color: active ? BLUE : INK }}>
-                      {opt.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
-        </View>
+        <FridgeScopePicker />
 
         {/* overview */}
         <View>

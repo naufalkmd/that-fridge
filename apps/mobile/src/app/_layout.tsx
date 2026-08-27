@@ -10,6 +10,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "@/lib/auth";
 import { ProProvider } from "@/lib/pro";
 import { InventoryProvider } from "@/lib/inventory";
+import { ScopeProvider } from "@/lib/scope";
 import { NotificationsProvider } from "@/lib/notifications";
 import { ShoppingProvider } from "@/lib/shopping";
 import { ToastProvider } from "@/lib/toast";
@@ -35,6 +36,7 @@ export default function RootLayout() {
       <AuthProvider>
        <ProProvider>
         <InventoryProvider>
+         <ScopeProvider>
           <NotificationsProvider>
            <ShoppingProvider>
             <ExpiryReminderSync />
@@ -67,6 +69,10 @@ export default function RootLayout() {
                 options={{ title: "Notification settings" }}
               />
               <Stack.Screen name="shopping" options={{ title: "Shopping list" }} />
+              <Stack.Screen
+                name="search"
+                options={{ headerShown: false, presentation: "modal" }}
+              />
               <Stack.Screen name="chat" options={{ title: "Ask the crew" }} />
               <Stack.Screen name="profile" options={{ title: "Profile" }} />
               <Stack.Screen
@@ -76,6 +82,7 @@ export default function RootLayout() {
             </Stack>
            </ShoppingProvider>
           </NotificationsProvider>
+         </ScopeProvider>
         </InventoryProvider>
        </ProProvider>
       </AuthProvider>
