@@ -8,12 +8,8 @@ const workspaceRoot = path.resolve(projectRoot, "../..");
 
 const config = getDefaultConfig(projectRoot);
 
-// Watch the whole monorepo so changes in packages/* trigger reloads.
+// Watch the whole monorepo so edits in packages/* trigger reloads.
+// (node-linker=hoisted in the root .npmrc keeps dependency resolution flat.)
 config.watchFolders = [workspaceRoot];
-config.resolver.nodeModulesPaths = [
-  path.resolve(projectRoot, "node_modules"),
-  path.resolve(workspaceRoot, "node_modules"),
-];
-config.resolver.disableHierarchicalLookup = true;
 
 module.exports = withNativeWind(config, { input: "./src/global.css" });
