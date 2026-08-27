@@ -1,21 +1,37 @@
 import { ApiError, type HttpClient, type TokenStore } from "./http";
 import type {
+  BadgeKey,
+  BadgeProgress,
   CurrentUser,
+  FoodFocus,
+  FriendProfile,
   Fridge,
+  FridgeJoinRequest,
+  FridgeMember,
+  FridgeNote,
+  FridgeNoteColor,
+  GoalMetricType,
+  GoalPeriod,
   Item,
   MealType,
+  MyInvite,
+  MyJoinRequest,
   NotificationEvent,
   NotificationPrefs,
   NutritionCategory,
   OrganizerTally,
   Recipe,
+  RecipeAttachment,
+  RecipeCategory,
+  RecipeIngredient,
   ScoreSnapshot,
   Section,
   ShoppingItem,
   StorageLocation,
   UsageHistoryEntry,
+  UserGoal,
+  UserSearchResult,
   Vibe,
-  FoodFocus,
 } from "./types";
 
 export interface AuthResult {
@@ -155,6 +171,35 @@ export interface ChatHistoryRow {
 export interface ChatHistoryResult {
   messages: ChatHistoryRow[];
   session_id: string | null;
+}
+
+export interface ChatSessionSummary {
+  session_id: string;
+  first_message: string;
+  updated_at: string;
+  message_count: number;
+}
+
+export interface RecipeInput {
+  name: string;
+  minutes: number;
+  category?: RecipeCategory | null;
+  ingredients: RecipeIngredient[];
+  steps: string[];
+  attachments?: RecipeAttachment[];
+}
+
+export interface RecipeLinkImportResult {
+  found: boolean;
+  recipe?: {
+    name: string;
+    description: string;
+    minutes: number;
+    category: RecipeCategory | null;
+    ingredients: { name: string }[];
+    steps: string[];
+  };
+  reason?: string;
 }
 
 export interface BarcodeSuggestion {
@@ -356,6 +401,148 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.get<ScoreSnapshot[]>(`/score-snapshots?weeks=${weeks}`);
   }
 
+  // ---- recipes -----------------------------------------------------------------
+  function listRecipes(): Promise<Recipe[]> {
+    return http.get<Recipe[]>("/recipes");
+  }
+  function createRecipe(data: RecipeInput): Promise<Recipe> {
+    return http.post<Recipe>("/recipes", data);
+  }
+  function updateRecipe(id: string, data: Partial<RecipeInput>): Promise<Recipe> {
+    return http.patch<Recipe>(`/recipes/${id}`, data);
+  }
+  function deleteRecipe(id: string): Promise<void> {
+    return http.del(`/recipes/${id}`).then(() => undefined);
+  }
+  function favoriteRecipe(id: string): Promise<Recipe> {
+    return http.post<Recipe>(`/recipes/${id}/favorite`);
+  }
+  function unfavoriteRecipe(id: string): Promise<Recipe> {
+    return http.del<Recipe>(`/recipes/${id}/favorite`);
+  }
+  function importRecipeFromLink(url: string): Promise<RecipeLinkImportResult> {
+    return http.post<RecipeLinkImportResult>("/recipes/import-link", { url });
+  }
+
+  // ---- fridge management -------------------------------------------------------
+  function updateFridge(
+    id: string,
+    data: Partial<{ name: string; style: string; photo_url: string | null }>,
+  ): Promise<Fridge> {
+    return http.patch<RawFridge>(`/fridges/${id}`, data).then(toFridge);
+  }
+  function deleteFridge(id: string): Promise<void> {
+    return http.del(`/fridges/${id}`).then(() => undefined);
+  }
+  function listFridgeMembers(fridgeId: string): Promise<FridgeMember[]> {
+    return http.get<FridgeMember[]>(`/fridges/${fridgeId}/members`);
+  }
+  function removeFridgeMember(fridgeId: string, userId: string): Promise<void> {
+    return http.del(`/fridges/${fridgeId}/members/${userId}`).then(() => undefined);
+  }
+  function leaveFridge(fridgeId: string): Promise<void> {
+    return http.post(`/fridges/${fridgeId}/leave`).then(() => undefined);
+  }
+
+  // ---- social: friends, invites, join requests --------------------------------
+  function searchUsers(q: string): Promise<UserSearchResult[]> {
+    return http.get<UserSearchResult[]>(`/users/search?q=${encodeURIComponent(q)}`);
+  }
+  function getFriendProfile(username: string): Promise<FriendProfile> {
+    return http.get<FriendProfile>(`/users/${encodeURIComponent(username)}/profile`);
+  }
+  function requestJoinFridge(fridgeId: string): Promise<FridgeJoinRequest> {
+    return http.post<FridgeJoinRequest>(`/fridges/${fridgeId}/join-requests`);
+  }
+  function listJoinRequests(fridgeId: string): Promise<FridgeJoinRequest[]> {
+    return http.get<FridgeJoinRequest[]>(`/fridges/${fridgeId}/join-requests`);
+  }
+  function inviteToFridge(fridgeId: string, userId: string): Promise<FridgeJoinRequest> {
+    return http.post<FridgeJoinRequest>(`/fridges/${fridgeId}/invites`, { userId });
+  }
+  function getMyInvites(): Promise<MyInvite[]> {
+    return http.get<MyInvite[]>("/invites");
+  }
+  function getMyJoinRequests(): Promise<MyJoinRequest[]> {
+    return http.get<MyJoinRequest[]>("/join-requests");
+  }
+  function approveJoinRequest(id: string): Promise<void> {
+    return http.post(`/join-requests/${id}/approve`).then(() => undefined);
+  }
+  function declineJoinRequest(id: string): Promise<void> {
+    return http.post(`/join-requests/${id}/decline`).then(() => undefined);
+  }
+
+  // ---- fridge notes -----------------------------------------------------------
+  function listFridgeNotes(): Promise<FridgeNote[]> {
+    return http.get<FridgeNote[]>("/notes");
+  }
+  function createFridgeNote(
+    fridgeId: string,
+    data: { text: string; color: FridgeNoteColor },
+  ): Promise<FridgeNote> {
+    return http.post<FridgeNote>(`/fridges/${fridgeId}/notes`, data);
+  }
+  function updateFridgeNote(
+    id: string,
+    data: Partial<{ text: string; color: FridgeNoteColor }>,
+  ): Promise<FridgeNote> {
+    return http.patch<FridgeNote>(`/notes/${id}`, data);
+  }
+  function deleteFridgeNote(id: string): Promise<void> {
+    return http.del(`/notes/${id}`).then(() => undefined);
+  }
+
+  // ---- goals + badges + organizer -------------------------------------------
+  function getUserGoal(): Promise<UserGoal> {
+    return http.get<UserGoal>("/user-goal");
+  }
+  function updateUserGoal(data: {
+    metricType?: GoalMetricType;
+    targetValue?: number;
+    period?: GoalPeriod;
+    isActive?: boolean;
+  }): Promise<UserGoal> {
+    return http.patch<UserGoal>("/user-goal", data);
+  }
+  function getBadges(): Promise<BadgeProgress[]> {
+    return http.get<BadgeProgress[]>("/badges");
+  }
+  function postBadgeProgress(badgeKey: BadgeKey, incrementBy = 1): Promise<BadgeProgress> {
+    return http.post<BadgeProgress>(`/badges/${badgeKey}/progress`, { incrementBy });
+  }
+  function incrementOrganizerTally(data: { checked: number; correct: number }): Promise<OrganizerTally> {
+    return http.post<OrganizerTally>("/organizer-tally/increment", data);
+  }
+
+  // ---- AI data & memory -----------------------------------------------------
+  function getMemoryFacts(): Promise<string[]> {
+    return http.get<{ facts: string[] }>("/memory").then((r) => r.facts);
+  }
+  function deleteMemoryFact(index: number): Promise<string[]> {
+    return http.del<{ facts: string[] }>(`/memory/facts/${index}`).then((r) => r.facts);
+  }
+  function clearMemoryFacts(): Promise<void> {
+    return http.del("/memory").then(() => undefined);
+  }
+  function deleteUsageHistoryEntry(id: string): Promise<void> {
+    return http.del(`/usage-history/${id}`).then(() => undefined);
+  }
+  function clearUsageHistory(): Promise<void> {
+    return http.del("/usage-history").then(() => undefined);
+  }
+
+  // ---- chat sessions -------------------------------------------------------
+  function listChatSessions(): Promise<ChatSessionSummary[]> {
+    return http.get<{ sessions: ChatSessionSummary[] }>("/chat/sessions").then((r) => r.sessions);
+  }
+  function getChatSessionMessages(sessionId: string): Promise<ChatHistoryResult> {
+    return http.get<ChatHistoryResult>(`/chat/sessions/${sessionId}`);
+  }
+  function deleteChatSession(sessionId: string): Promise<void> {
+    return http.del(`/chat/sessions/${sessionId}`).then(() => undefined);
+  }
+
   // Call when an item is used up (not thrown away) — increments/creates the usage entry the
   // Shopkeeper agent and the Food Balance / Waste scores read. daysRemaining/freshness/category
   // come straight off the item at the moment it's removed.
@@ -404,6 +591,44 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     getOrganizerTally,
     getScoreSnapshots,
     recordItemUsage,
+    listRecipes,
+    createRecipe,
+    updateRecipe,
+    deleteRecipe,
+    favoriteRecipe,
+    unfavoriteRecipe,
+    importRecipeFromLink,
+    updateFridge,
+    deleteFridge,
+    listFridgeMembers,
+    removeFridgeMember,
+    leaveFridge,
+    searchUsers,
+    getFriendProfile,
+    requestJoinFridge,
+    listJoinRequests,
+    inviteToFridge,
+    getMyInvites,
+    getMyJoinRequests,
+    approveJoinRequest,
+    declineJoinRequest,
+    listFridgeNotes,
+    createFridgeNote,
+    updateFridgeNote,
+    deleteFridgeNote,
+    getUserGoal,
+    updateUserGoal,
+    getBadges,
+    postBadgeProgress,
+    incrementOrganizerTally,
+    getMemoryFacts,
+    deleteMemoryFact,
+    clearMemoryFacts,
+    deleteUsageHistoryEntry,
+    clearUsageHistory,
+    listChatSessions,
+    getChatSessionMessages,
+    deleteChatSession,
   };
 }
 
