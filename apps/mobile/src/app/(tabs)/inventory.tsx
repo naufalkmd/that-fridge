@@ -391,10 +391,11 @@ function ItemRow({
           <LocationTag location={item.location} />
           <CategoryTag category={item.nutritionCategory} />
         </View>
-        <Text style={{ fontSize: 10.5, color: FAINT, marginBottom: 5 }} numberOfLines={1}>
-          {item.sectionName}
-          {showFridge ? ` · ${item.fridgeName}` : ""}
-        </Text>
+        {showFridge && (
+          <Text style={{ fontSize: 10.5, color: FAINT, marginBottom: 5 }} numberOfLines={1}>
+            {item.fridgeName}
+          </Text>
+        )}
         <View style={{ height: 4, borderRadius: 2, backgroundColor: SURFACE2, overflow: "hidden" }}>
           <View
             style={{

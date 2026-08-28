@@ -30,7 +30,7 @@ export default function Search() {
   const results = useMemo(() => {
     if (!q) return [];
     return scopeItems(items, scope).filter(
-      (i) => i.name.toLowerCase().includes(q) || i.sectionName.toLowerCase().includes(q),
+      (i) => i.name.toLowerCase().includes(q) || i.fridgeName.toLowerCase().includes(q),
     );
   }, [items, scope, q]);
 
@@ -138,10 +138,11 @@ export default function Search() {
                   <Text style={{ fontSize: 14, fontWeight: "600", color: INK }} numberOfLines={1}>
                     {item.name}
                   </Text>
-                  <Text style={{ fontSize: 11.5, color: FAINT }} numberOfLines={1}>
-                    {item.sectionName}
-                    {showFridge ? ` · ${item.fridgeName}` : ""}
-                  </Text>
+                  {showFridge && (
+                    <Text style={{ fontSize: 11.5, color: FAINT }} numberOfLines={1}>
+                      {item.fridgeName}
+                    </Text>
+                  )}
                 </View>
                 <Text style={{ fontSize: 12, fontWeight: "700", color: freshColor(item.freshness) }}>
                   {daysLabel(item.days)}

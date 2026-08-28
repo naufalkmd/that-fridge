@@ -473,10 +473,11 @@ function GuardianPanel({ items, onOpenItem }: { items: FlatItem[]; onOpenItem: (
                 <FoodIcon icon={it.icon} iconUrl={it.iconUrl} name={it.name} size={28} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={{ fontSize: 14, fontWeight: "600", color: INK }}>{it.name}</Text>
-                  <Text style={{ fontSize: 11.5, color: FAINT }} numberOfLines={1}>
-                    {it.sectionName}
-                    {it.note ? ` · ${it.note}` : ""}
-                  </Text>
+                  {!!it.note && (
+                    <Text style={{ fontSize: 11.5, color: FAINT }} numberOfLines={1}>
+                      {it.note}
+                    </Text>
+                  )}
                 </View>
                 <Text style={{ fontSize: 11.5, fontWeight: "700", color: freshColor(it.freshness) }}>{daysLabel(it.days)}</Text>
               </Pressable>
