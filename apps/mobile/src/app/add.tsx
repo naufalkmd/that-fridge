@@ -676,21 +676,24 @@ function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => v
                 </View>
               )}
 
-              {sections.length > 1 && (
-                <ChipRow
-                  options={sections.map((s) => ({ key: s.id, label: s.name }))}
-                  value={d.sectionId}
-                  onChange={(k) => set(d.id, { sectionId: k })}
-                />
-              )}
-
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{ flex: 1 }}>
-                  <ChipRow
-                    options={STORAGE_LOCATIONS.map((l) => ({ key: l.key, label: l.label }))}
-                    value={d.location}
-                    onChange={(k) => set(d.id, { location: k as StorageLocation })}
-                  />
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <View style={{ flexDirection: "row", gap: 6 }}>
+                  {STORAGE_LOCATIONS.map((l) => {
+                    const on = d.location === l.key;
+                    return (
+                      <Pressable
+                        key={l.key}
+                        onPress={() => set(d.id, { location: l.key })}
+                        style={{ width: 30, height: 30, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: on ? AMBER : SURFACE2 }}
+                      >
+                        <MaterialCommunityIcons
+                          name={l.key === "freezer" ? "snowflake" : l.key === "pantry" ? "archive-outline" : "fridge-outline"}
+                          size={15}
+                          color={on ? "#0a0a0c" : MUTED}
+                        />
+                      </Pressable>
+                    );
+                  })}
                 </View>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <Step icon="minus" onPress={() => set(d.id, { qty: Math.max(1, d.qty - 1) })} />
@@ -699,14 +702,30 @@ function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => v
                 </View>
               </View>
 
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <View style={{ flex: 1, minWidth: 160 }}>
-                  <ChipRow
-                    options={BEST_BEFORE_PRESETS.map((p) => ({ key: String(p.days), label: p.label }))}
-                    value={d.expiryDays == null ? null : String(d.expiryDays)}
-                    onChange={(k) => set(d.id, { expiryDays: Number(k) })}
-                  />
-                </View>
+              {sections.length > 1 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                  {sections.map((s) => {
+                    const on = d.sectionId === s.id;
+                    return (
+                      <Pressable key={s.id} onPress={() => set(d.id, { sectionId: s.id })} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: on ? AMBER : SURFACE2 }}>
+                        <Text style={{ fontSize: 11, fontWeight: "700", color: on ? "#0a0a0c" : INK }}>{s.name}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              )}
+
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }} style={{ flex: 1 }}>
+                  {BEST_BEFORE_PRESETS.map((p) => {
+                    const on = d.expiryDays === p.days;
+                    return (
+                      <Pressable key={p.days} onPress={() => set(d.id, { expiryDays: p.days })} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: on ? AMBER : SURFACE2 }}>
+                        <Text style={{ fontSize: 11, fontWeight: "700", color: on ? "#0a0a0c" : INK }}>{p.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
                 <Pressable onPress={() => scanDate(d)} disabled={scanningDateId === d.id} hitSlop={4} style={{ padding: 6, borderRadius: 6, backgroundColor: "rgba(38,198,218,0.14)" }}>
                   {scanningDateId === d.id ? <ActivityIndicator color={AMBER} size="small" /> : <MaterialCommunityIcons name="camera-outline" size={14} color={AMBER} />}
                 </Pressable>
