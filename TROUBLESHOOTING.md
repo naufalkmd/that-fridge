@@ -188,7 +188,7 @@ Do **not** run `pnpm install --force` when low on disk — it re-downloads every
 Needs, in order: (1) a dev build (not Expo Go); (2) `EXPO_PUBLIC_RC_IOS_KEY` in
 `apps/mobile/.env`; (3) an **offering with packages** configured in the RevenueCat dashboard;
 (4) a published **Paywall** design on that offering (otherwise the custom fallback list shows).
-Entitlement id is `thatfridge_pro`. See `SHIPATON_2026.md` §4 for the full dashboard checklist.
+Entitlement id is `thatfridge_pro`. See `TO_DO.md` §3 for the full dashboard checklist.
 
 ### `new NativeEventEmitter() requires a non-null argument`
 

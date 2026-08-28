@@ -5,7 +5,7 @@
 pnpm + turborepo monorepo:
 
 - `backend/` — Laravel API (npm/composer, not in the pnpm workspace)
-- `apps/web/` — Next.js app (still npm-managed; frozen during the iOS sprint — see `APP_STORE_LAUNCH_PLAN.md`)
+- `apps/web/` — Next.js app (still npm-managed; frozen during the iOS sprint — see `TO_DO.md`)
 - `apps/mobile/` — Expo / React Native app (iOS-first)
 - `packages/core/` — shared logic (API client, types, domain rules)
 - Postgres + Redis via Docker Compose

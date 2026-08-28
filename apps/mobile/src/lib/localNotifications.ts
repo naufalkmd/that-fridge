@@ -1,7 +1,7 @@
 import * as Notifications from "expo-notifications";
 import type { FlatItem } from "@thatfridge/core";
 
-// Local, on-device expiry reminders (v1 — no server push; see APP_STORE_LAUNCH_PLAN.md).
+// Local, on-device expiry reminders (v1 — no server push; see TO_DO.md).
 // Best-effort: any failure (Expo Go quirks, denied permission) is swallowed — the in-app
 // feed is the source of truth, these are just a nudge.
 
