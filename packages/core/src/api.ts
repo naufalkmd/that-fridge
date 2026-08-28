@@ -285,8 +285,23 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   function sendChat(
     message: string,
     agent: ChatAgentName,
-    opts: { inventory?: string; sessionId?: string | null } = {},
+    opts: {
+      inventory?: string;
+      sessionId?: string | null;
+      /** A photo to attach — RN: `{ uri, name, type }`; web: a `File`/`Blob`. */
+      image?: unknown;
+    } = {},
   ): Promise<SendChatResult> {
+    if (opts.image && typeof FormData !== "undefined") {
+      const fd = new FormData();
+      fd.append("message", message);
+      fd.append("agent", agent);
+      if (opts.inventory) fd.append("inventory", opts.inventory);
+      if (opts.sessionId) fd.append("session_id", opts.sessionId);
+      // RN's FormData accepts { uri, name, type }; the DOM one accepts Blob/File.
+      fd.append("image", opts.image as never);
+      return http.post<SendChatResult>("/chat", fd);
+    }
     return http.post<SendChatResult>("/chat", {
       message,
       agent,

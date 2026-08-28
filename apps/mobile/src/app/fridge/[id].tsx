@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
@@ -86,6 +87,26 @@ export default function ManageFridge() {
       await refresh();
     } catch (e) {
       Alert.alert("Error", describeError(e, "Couldn't change the style."));
+    }
+  }
+
+  async function uploadPhoto() {
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.6,
+      base64: true,
+      allowsEditing: true,
+      aspect: [4, 3],
+    });
+    if (res.canceled || !res.assets[0]?.base64) return;
+    try {
+      await api.updateFridge(id, {
+        style: "custom",
+        photo_url: `data:image/jpeg;base64,${res.assets[0].base64}`,
+      });
+      await refresh();
+    } catch (e) {
+      Alert.alert("Error", describeError(e, "Couldn't upload that photo."));
     }
   }
 
@@ -176,7 +197,7 @@ export default function ManageFridge() {
         <Label>LOOK</Label>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }} contentContainerStyle={{ gap: 10 }}>
           {STYLES.map((s) => {
-            const active = styleKey === s.key;
+            const active = styleKey === s.key && style !== "custom";
             return (
               <Pressable key={s.key} onPress={() => setStyle(s.key)} style={{ alignItems: "center", gap: 4 }}>
                 <View style={{ width: 84, height: 60, borderRadius: 8, overflow: "hidden", borderWidth: 2, borderColor: active ? AMBER : "transparent" }}>
@@ -186,6 +207,31 @@ export default function ManageFridge() {
               </Pressable>
             );
           })}
+          <Pressable onPress={uploadPhoto} style={{ alignItems: "center", gap: 4 }}>
+            <View
+              style={{
+                width: 84,
+                height: 60,
+                borderRadius: 8,
+                overflow: "hidden",
+                borderWidth: 2,
+                borderColor: style === "custom" ? AMBER : "rgba(255,255,255,0.18)",
+                borderStyle: style === "custom" ? "solid" : "dashed",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: SURFACE2,
+              }}
+            >
+              {style === "custom" && fridge.photoUrl ? (
+                <Image source={{ uri: fridge.photoUrl }} style={{ flex: 1, alignSelf: "stretch" }} contentFit="cover" />
+              ) : (
+                <MaterialCommunityIcons name="image-plus" size={18} color={FAINT} />
+              )}
+            </View>
+            <Text style={{ fontSize: 10.5, fontWeight: "700", color: style === "custom" ? AMBER : FAINT }}>
+              Custom
+            </Text>
+          </Pressable>
         </ScrollView>
 
         <Label>MEMBERS ({members.length})</Label>

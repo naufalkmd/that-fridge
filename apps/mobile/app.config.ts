@@ -74,6 +74,12 @@ const config: ExpoConfig = {
       },
     ],
     [
+      "expo-image-picker",
+      {
+        photosPermission: "ThatFridge lets you attach a photo of your fridge or a receipt to a chat.",
+      },
+    ],
+    [
       "expo-notifications",
       {
         // Local notifications only for v1 (expiry / low-stock reminders).

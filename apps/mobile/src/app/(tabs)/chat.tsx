@@ -12,6 +12,8 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import {
@@ -61,6 +63,7 @@ type Msg = {
   text: string;
   recipe?: RecipeSuggestionBlock | null;
   mocked?: boolean;
+  attachmentUri?: string;
 };
 
 export default function Chat() {
@@ -76,6 +79,7 @@ export default function Chat() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [used, setUsed] = useState(0);
+  const [attachment, setAttachment] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   const remaining = Math.max(0, FREE_CHATS_PER_WEEK - used);
@@ -110,9 +114,17 @@ export default function Chat() {
     getChatUsed().then(setUsed);
   }, [session]);
 
+  async function pickImage() {
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.7,
+    });
+    if (!res.canceled && res.assets[0]) setAttachment(res.assets[0].uri);
+  }
+
   async function send(preset?: string) {
     const msg = (preset ?? text).trim();
-    if (!msg || sending) return;
+    if ((!msg && !attachment) || sending) return;
     if (!isPro && remaining <= 0) {
       const nowPro = await presentPaywallIfNeeded();
       if (!nowPro) {
@@ -120,12 +132,18 @@ export default function Chat() {
         return;
       }
     }
+    const img = attachment;
     if (!preset) setText("");
-    setMessages((m) => [...m, { role: "user", text: msg }]);
+    setAttachment(null);
+    setMessages((m) => [...m, { role: "user", text: msg, attachmentUri: img ?? undefined }]);
     setSending(true);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     try {
-      const res = await api.sendChat(msg, agent, { inventory: inventorySummary, sessionId });
+      const res = await api.sendChat(msg || "What's in this photo?", agent, {
+        inventory: inventorySummary,
+        sessionId,
+        image: img ? { uri: img, name: "photo.jpg", type: "image/jpeg" } : undefined,
+      });
       if (res.session_id) setSessionId(res.session_id);
       setMessages((m) => [
         ...m,
@@ -295,9 +313,6 @@ export default function Chat() {
 
           <View
             style={{
-              flexDirection: "row",
-              alignItems: "flex-end",
-              gap: 8,
               paddingHorizontal: 14,
               paddingTop: 8,
               // clear the floating tab bar (≈58 tall, sits ~insets.bottom+6 from the edge)
@@ -307,38 +322,69 @@ export default function Chat() {
               backgroundColor: "rgba(19,19,22,0.9)",
             }}
           >
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              placeholder={`Ask ${agent} about your fridge…`}
-              placeholderTextColor={FAINT}
-              multiline
-              style={{
-                flex: 1,
-                maxHeight: 96,
-                backgroundColor: SURFACE2,
-                borderRadius: 20,
-                paddingHorizontal: 16,
-                paddingVertical: 11,
-                fontSize: 13.5,
-                color: INK,
-              }}
-            />
-            <Pressable
-              onPress={() => send()}
-              disabled={sending || !text.trim()}
-              style={{
-                width: 38,
-                height: 38,
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 19,
-                backgroundColor: AMBER,
-                opacity: sending || !text.trim() ? 0.5 : 1,
-              }}
-            >
-              <Ionicons name="arrow-up" size={18} color="#0a0a0c" />
-            </Pressable>
+            {attachment && (
+              <View style={{ marginBottom: 8, width: 56, height: 56 }}>
+                <Image source={{ uri: attachment }} style={{ flex: 1, borderRadius: 6 }} contentFit="cover" />
+                <Pressable
+                  onPress={() => setAttachment(null)}
+                  style={{
+                    position: "absolute",
+                    top: -6,
+                    right: -6,
+                    width: 18,
+                    height: 18,
+                    borderRadius: 9,
+                    backgroundColor: "#0a0a0c",
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.18)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons name="close" size={11} color={INK} />
+                </Pressable>
+              </View>
+            )}
+            <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+              <Pressable
+                onPress={pickImage}
+                style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: SURFACE2, alignItems: "center", justifyContent: "center" }}
+              >
+                <Ionicons name="image-outline" size={17} color={INK} />
+              </Pressable>
+              <TextInput
+                value={text}
+                onChangeText={setText}
+                placeholder={`Ask ${agent} about your fridge…`}
+                placeholderTextColor={FAINT}
+                multiline
+                style={{
+                  flex: 1,
+                  maxHeight: 96,
+                  backgroundColor: SURFACE2,
+                  borderRadius: 20,
+                  paddingHorizontal: 16,
+                  paddingVertical: 11,
+                  fontSize: 13.5,
+                  color: INK,
+                }}
+              />
+              <Pressable
+                onPress={() => send()}
+                disabled={sending || (!text.trim() && !attachment)}
+                style={{
+                  width: 38,
+                  height: 38,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 19,
+                  backgroundColor: AMBER,
+                  opacity: sending || (!text.trim() && !attachment) ? 0.5 : 1,
+                }}
+              >
+                <Ionicons name="arrow-up" size={18} color="#0a0a0c" />
+              </Pressable>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -399,8 +445,9 @@ function Bubble({ msg }: { msg: Msg }) {
       <View
         style={{
           maxWidth: "85%",
-          paddingHorizontal: 14,
-          paddingVertical: 11,
+          padding: msg.attachmentUri ? 6 : undefined,
+          paddingHorizontal: msg.attachmentUri ? 6 : 14,
+          paddingVertical: msg.attachmentUri ? 6 : 11,
           backgroundColor: isUser ? AMBER : SURFACE,
           borderWidth: isUser ? 0 : 1,
           borderColor: HAIRLINE,
@@ -410,8 +457,19 @@ function Bubble({ msg }: { msg: Msg }) {
           borderBottomRightRadius: 16,
         }}
       >
+        {msg.attachmentUri && (
+          <Image
+            source={{ uri: msg.attachmentUri }}
+            style={{ width: 180, height: 180, borderRadius: 10, marginBottom: msg.text ? 6 : 0 }}
+            contentFit="cover"
+          />
+        )}
         {isUser ? (
-          <Text style={{ fontSize: 13.5, lineHeight: 20, color: "#0a0a0c" }}>{msg.text}</Text>
+          !!msg.text && (
+            <Text style={{ fontSize: 13.5, lineHeight: 20, color: "#0a0a0c", paddingHorizontal: msg.attachmentUri ? 8 : 0, paddingBottom: msg.attachmentUri ? 4 : 0 }}>
+              {msg.text}
+            </Text>
+          )
         ) : (
           <>
             {msg.mocked && (
