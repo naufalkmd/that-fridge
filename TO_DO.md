@@ -166,7 +166,10 @@ multiple / shared fridges, advanced notification tuning.
   package. (Most Home + score logic already moved.)
 - [X] **Merge `mobile-app` → `main`** — additive, web app untouched (merged 2026-08-28, commit
   `ac0886a`; keep merging back periodically so it doesn't drift again).
-- [ ] EAS Update production channel wired.
+- [X] EAS Update production channel wired (`channel: production` in `eas.json`; `eas update
+  --branch production` for OTA JS ships). **TestFlight CI:** `.github/workflows/testflight.yml`
+  (tag `v*` or manual → `eas build -p ios --profile production --auto-submit`). One-time setup
+  in `apps/mobile/RELEASE.md` (ASC API key → `eas credentials`, `EXPO_TOKEN` secret, `ascAppId`).
 
 **Locked decisions — no re-litigation:** NativeWind · Expo Router · pnpm workspaces + turborepo ·
 Node 20 · bundle id `test.thatfridge.app` · iOS target 15.1 · Apple enrollment Individual · v1
@@ -321,7 +324,7 @@ carousel + swipe-dismiss agent insights, undo toasts, skeleton loaders — all p
 - [ ] TestFlight build validated by all 4 members on real devices
 - [ ] Crash-free session confirmed in Sentry
 - [ ] Version 1.0.0, build number set, release set to **manual**
-- [ ] EAS Update production channel wired
+- [X] EAS Update production channel wired · TestFlight CI (`.github/workflows/testflight.yml`)
 - [ ] Devpost submission drafted
 
 ---
