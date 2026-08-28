@@ -83,6 +83,7 @@ export default function RootLayout() {
               <Stack.Screen name="notifications" options={{ headerShown: false }} />
               <Stack.Screen name="recipes" options={{ headerShown: false }} />
               <Stack.Screen name="recipe/[id]" options={{ headerShown: false, presentation: "modal" }} />
+              <Stack.Screen name="recipe/mark-made" options={{ headerShown: false, presentation: "modal" }} />
               <Stack.Screen name="recipe-form" options={{ headerShown: false, presentation: "modal" }} />
               <Stack.Screen name="goals" options={{ headerShown: false }} />
               <Stack.Screen name="badges" options={{ headerShown: false }} />
