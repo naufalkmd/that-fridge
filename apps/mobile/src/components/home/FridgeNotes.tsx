@@ -22,7 +22,11 @@ const NOTE_COLOR: Record<FridgeNoteColor, string> = {
 };
 const SWATCHES: FridgeNoteColor[] = ["amber", "blue", "good", "warn", "bad"];
 
-export function FridgeNotes() {
+/**
+ * `variant="grid"` (Home): read-only sticky-note squares.
+ * `variant="editor"` (Organizer): compose / edit / delete.
+ */
+export function FridgeNotes({ variant = "editor" }: { variant?: "grid" | "editor" }) {
   const { fridges } = useInventory();
   const { scope } = useScope();
   const { notes, add, edit, remove } = useNotes();
@@ -39,6 +43,7 @@ export function FridgeNotes() {
   );
 
   if (fridges.length === 0) return null;
+  if (variant === "grid" && visible.length === 0) return null;
 
   async function submit() {
     if (!text.trim() || !targetFridgeId) return;
@@ -63,110 +68,139 @@ export function FridgeNotes() {
         NOTES{visible.length ? ` (${visible.length})` : ""}
       </Text>
 
-      <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          placeholder="Leave a note for the household…"
-          placeholderTextColor={FAINT}
-          style={{
-            flex: 1,
-            borderWidth: 1,
-            borderColor: HAIRLINE,
-            backgroundColor: SURFACE,
-            borderRadius: 6,
-            paddingHorizontal: 14,
-            paddingVertical: 11,
-            fontSize: 13.5,
-            color: INK,
-          }}
-        />
-        <Pressable
-          onPress={submit}
-          style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: NOTE_COLOR[color], alignItems: "center", justifyContent: "center" }}
-        >
-          <MaterialCommunityIcons name={editingId ? "check" : "send"} size={16} color="#0a0a0c" />
-        </Pressable>
-      </View>
-
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 }}>
-        <View style={{ flexDirection: "row", gap: 6 }}>
-          {SWATCHES.map((c) => (
-            <Pressable
-              key={c}
-              onPress={() => setColor(c)}
-              style={{
-                width: 18,
-                height: 18,
-                borderRadius: 9,
-                backgroundColor: NOTE_COLOR[c],
-                borderWidth: 2,
-                borderColor: color === c ? INK : "transparent",
-              }}
-            />
-          ))}
-        </View>
-        {editingId && (
-          <Pressable
-            onPress={() => {
-              setEditingId(null);
-              setText("");
-            }}
-            style={{ marginLeft: "auto" }}
-          >
-            <Text style={{ fontSize: 11, fontWeight: "700", color: BLUE }}>Cancel</Text>
-          </Pressable>
-        )}
-      </View>
-
-      {visible.length === 0 ? (
-        <Text style={{ textAlign: "center", color: FAINT, fontSize: 12.5, paddingVertical: 12 }}>
-          No notes yet — leave one for the household.
-        </Text>
-      ) : (
-        <View style={{ gap: 6 }}>
+      {variant === "grid" ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {visible.map((note) => (
             <View
               key={note.id}
               style={{
-                flexDirection: "row",
-                alignItems: "flex-start",
-                gap: 10,
-                backgroundColor: `${NOTE_COLOR[note.color]}12`,
+                width: "47.5%",
+                aspectRatio: 1,
+                backgroundColor: `${NOTE_COLOR[note.color]}1f`,
                 borderWidth: 1,
-                borderColor: HAIRLINE,
-                borderLeftWidth: 3,
-                borderLeftColor: NOTE_COLOR[note.color],
-                borderRadius: 6,
-                paddingVertical: 10,
-                paddingHorizontal: 12,
+                borderColor: `${NOTE_COLOR[note.color]}55`,
+                borderRadius: 8,
+                padding: 12,
+                justifyContent: "space-between",
               }}
             >
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ fontSize: 13, lineHeight: 18, color: INK }}>{note.text}</Text>
-                <Text style={{ fontSize: 10.5, color: FAINT, marginTop: 4 }}>
-                  {note.authorUsername ? `by @${note.authorUsername}` : "by a former member"} ·{" "}
-                  {timeAgo(note.createdAt)}
-                  {showFridge ? ` · ${note.fridgeName}` : ""}
-                </Text>
-              </View>
-              <Pressable
-                onPress={() => {
-                  setEditingId(note.id);
-                  setText(note.text);
-                  setColor(note.color);
-                }}
-                hitSlop={6}
-                style={{ padding: 4 }}
-              >
-                <MaterialCommunityIcons name="pencil" size={13} color={FAINT} />
-              </Pressable>
-              <Pressable onPress={() => remove(note.id)} hitSlop={6} style={{ padding: 4 }}>
-                <MaterialCommunityIcons name="close" size={14} color={FAINT} />
-              </Pressable>
+              <Text style={{ fontSize: 13, lineHeight: 18, color: INK }} numberOfLines={5}>
+                {note.text}
+              </Text>
+              <Text style={{ fontSize: 10, color: FAINT }} numberOfLines={1}>
+                {note.authorUsername ? `@${note.authorUsername}` : "—"} · {timeAgo(note.createdAt)}
+              </Text>
             </View>
           ))}
         </View>
+      ) : (
+        <>
+          <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+            <TextInput
+              value={text}
+              onChangeText={setText}
+              placeholder="Leave a note for the household…"
+              placeholderTextColor={FAINT}
+              style={{
+                flex: 1,
+                borderWidth: 1,
+                borderColor: HAIRLINE,
+                backgroundColor: SURFACE,
+                borderRadius: 6,
+                paddingHorizontal: 14,
+                paddingVertical: 11,
+                fontSize: 13.5,
+                color: INK,
+              }}
+            />
+            <Pressable
+              onPress={submit}
+              style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: NOTE_COLOR[color], alignItems: "center", justifyContent: "center" }}
+            >
+              <MaterialCommunityIcons name={editingId ? "check" : "send"} size={16} color="#0a0a0c" />
+            </Pressable>
+          </View>
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 }}>
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              {SWATCHES.map((c) => (
+                <Pressable
+                  key={c}
+                  onPress={() => setColor(c)}
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: 9,
+                    backgroundColor: NOTE_COLOR[c],
+                    borderWidth: 2,
+                    borderColor: color === c ? INK : "transparent",
+                  }}
+                />
+              ))}
+            </View>
+            {editingId && (
+              <Pressable
+                onPress={() => {
+                  setEditingId(null);
+                  setText("");
+                }}
+                style={{ marginLeft: "auto" }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: "700", color: BLUE }}>Cancel</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {visible.length === 0 ? (
+            <Text style={{ textAlign: "center", color: FAINT, fontSize: 12.5, paddingVertical: 12 }}>
+              No notes yet — leave one for the household.
+            </Text>
+          ) : (
+            <View style={{ gap: 6 }}>
+              {visible.map((note) => (
+                <View
+                  key={note.id}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "flex-start",
+                    gap: 10,
+                    backgroundColor: `${NOTE_COLOR[note.color]}12`,
+                    borderWidth: 1,
+                    borderColor: HAIRLINE,
+                    borderLeftWidth: 3,
+                    borderLeftColor: NOTE_COLOR[note.color],
+                    borderRadius: 6,
+                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                  }}
+                >
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ fontSize: 13, lineHeight: 18, color: INK }}>{note.text}</Text>
+                    <Text style={{ fontSize: 10.5, color: FAINT, marginTop: 4 }}>
+                      {note.authorUsername ? `by @${note.authorUsername}` : "by a former member"} ·{" "}
+                      {timeAgo(note.createdAt)}
+                      {showFridge ? ` · ${note.fridgeName}` : ""}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => {
+                      setEditingId(note.id);
+                      setText(note.text);
+                      setColor(note.color);
+                    }}
+                    hitSlop={6}
+                    style={{ padding: 4 }}
+                  >
+                    <MaterialCommunityIcons name="pencil" size={13} color={FAINT} />
+                  </Pressable>
+                  <Pressable onPress={() => remove(note.id)} hitSlop={6} style={{ padding: 4 }}>
+                    <MaterialCommunityIcons name="close" size={14} color={FAINT} />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          )}
+        </>
       )}
     </View>
   );

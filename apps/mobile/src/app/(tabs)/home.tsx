@@ -443,8 +443,8 @@ export default function Home() {
           />
         )}
 
-        {/* fridge notes */}
-        <FridgeNotes />
+        {/* fridge notes — read-only squares; compose/edit lives on the Organizer tab */}
+        <FridgeNotes variant="grid" />
       </ScrollView>
     </SafeAreaView>
   );
