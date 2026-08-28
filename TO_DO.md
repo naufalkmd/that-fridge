@@ -17,23 +17,21 @@ localized store listings + Korean UI fast-follow — see §4a.
 offering, and a published AI-designed paywall are done. **Backend infra is done:** the API is
 live at `https://api.thatfridge.com` with GitHub Actions CD (test → auto-deploy), TLS, backups,
 queue + scheduler; the legal site is live at `https://thatfridge.com`; email routing works.
-`mobile-app` is merged to `main` and kept in sync. **The critical path is now just the Apple
-accounts (§1) — not started.**
+`mobile-app` is merged to `main` and kept in sync. **Apple Developer enrollment is approved
+(Team ID issued 2026-08-28).** Next: confirm the Paid Apps agreement goes Active, then App
+Store Connect setup (app record + subscription products) + first EAS build + smoke test.
 
 Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external setup
 
 ---
 
-## 1. Critical path — external accounts (Member A) 🔒
+## 1. Critical path — external accounts (Member A)
 
-Everything downstream is blocked on these. They take days to weeks. **Start today.**
-
-- [ ] **Apple Developer Program enrollment — Individual** (Organization needs a D-U-N-S number,
-  weeks). #1 schedule risk; if not cleared within a week, escalate to Apple support / check
-  if a teammate has an active account.
-- [ ] **App Store Connect: Paid Apps Agreement + banking + tax** — needs real tax info; until
-  active, IAPs can't be tested and the Shipaton requirement can't be met. Start the **same
-  day** as enrollment.
+- [X] **Apple Developer Program enrollment — Individual** — approved 2026-08-28, Team ID issued.
+- [🟡] **App Store Connect: Paid Apps Agreement + banking + tax** — W-8BEN submitted (Malaysian
+  individual, no US treaty → 30% withholding on US sales only; FTIN = LHDN tax number).
+  **Confirm the Paid Applications agreement shows "Active"** (bank + tax rows green) — processing
+  takes ~1–2 days. IAPs can't be tested until it's Active.
 - [X] Domain + privacy/terms/support pages (2026-08-28). `apps/legal/` deployed as a
   Git-connected Cloudflare Worker (static assets); **live at `https://thatfridge.com`** +
   `www` with TLS, auto-redeploy on push to `main`. Placeholders filled (operator *Muhammad
