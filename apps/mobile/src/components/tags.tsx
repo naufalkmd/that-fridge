@@ -1,38 +1,28 @@
 import { Pressable, Text, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { NUTRITION_CATEGORIES, type NutritionCategory, type StorageLocation } from "@thatfridge/core";
+import { type NutritionCategory, type StorageLocation } from "@thatfridge/core";
 
-// Mirrors apps/web CategoryTag — other_extras keeps its hand-picked purple (no theme token).
-const CATEGORY_COLOR: Record<NutritionCategory, string> = {
-  protein: "#ff5f56",
-  vegetables: "#39e07f",
-  fruit: "#f5a623",
-  grains: "#b5702f",
-  dairy: "#3d6fe0",
-  other_extras: "#7a5cb0",
-};
-
-const CAT_LABEL = Object.fromEntries(NUTRITION_CATEGORIES.map((c) => [c.key, c.label])) as Record<
+// other_extras keeps its hand-picked purple (no theme token). Icons mirror the food-group
+// row on the Kitchen Score card.
+const CATEGORY_META: Record<
   NutritionCategory,
-  string
->;
+  { icon: keyof typeof MaterialCommunityIcons.glyphMap; color: string }
+> = {
+  protein: { icon: "food-drumstick", color: "#ff5f56" },
+  vegetables: { icon: "carrot", color: "#39e07f" },
+  fruit: { icon: "food-apple", color: "#f5a623" },
+  grains: { icon: "barley", color: "#b5702f" },
+  dairy: { icon: "cheese", color: "#3d6fe0" },
+  other_extras: { icon: "food-variant", color: "#7a5cb0" },
+};
 
 export function CategoryTag({ category }: { category?: NutritionCategory | null }) {
   if (!category) return null;
-  const color = CATEGORY_COLOR[category];
+  const meta = CATEGORY_META[category] ?? CATEGORY_META.other_extras;
   return (
-    <View
-      style={{
-        backgroundColor: `${color}1a`,
-        paddingHorizontal: 7,
-        paddingVertical: 2,
-        borderRadius: 6,
-      }}
-    >
-      <Text style={{ fontSize: 9.5, fontWeight: "800", letterSpacing: 0.2, color }}>
-        {CAT_LABEL[category] ?? category}
-      </Text>
+    <View style={{ padding: 3, borderRadius: 6, backgroundColor: `${meta.color}1a` }}>
+      <MaterialCommunityIcons name={meta.icon} size={11} color={meta.color} />
     </View>
   );
 }
