@@ -340,13 +340,19 @@ component's size, as a rough effort signal. Every backend route named below alre
 > - §F — Waste Saver **score-trend** delta vs last week, Guardian **overdue pill** in the score
 >   expand.
 > - §G — **fridge sticky notes** (`lib/notes.tsx` + `FridgeNotes` on Home).
-> - Core gained ~40 API methods + `progress.ts` + `getScoreTrend`.
+> - §C — **receipt + fridge-photo AI add**: `scanReceipt` / `scanFridgePhoto` in core,
+>   `addManyItems` batch create, a pick-photo → scan → editable review list → add-N flow in
+>   the Add screen (Pro-gated).
+> - §J — **shopping recommendations** (`getShoppingRecommendations`) — a "Suggested" chip row
+>   on the shopping list.
+> - §K — **skeleton loaders** (`Skeleton` / `SkeletonList`) on Inventory + Recipe book.
+> - Core gained ~45 API methods + `progress.ts` + `getScoreTrend` + `getShoppingRecommendations`.
 >
-> **Still open:** §C receipt/photo AI add · §D "opened" state (needs a backend `opened` field) +
-> AI icon generation · §E voice input (no Expo STT module) · §F Organizer sweeps (feeds Tidiness)
-> + Chef/Organizer/Shopkeeper score extras · §H richer notification-settings · §J shopping
-> recommendations · §K skeleton loaders / sheet grab-to-dismiss / offline banners ·
-> recipe photo/video attachments · `MarkRecipeMadeSheet` ingredient reconciliation.
+> **Still open:** §D "opened" item state (needs a backend `opened` field) + AI icon generation ·
+> §E voice input (no Expo STT module) · §F Organizer sweeps (feeds Tidiness) +
+> Chef/Organizer/Shopkeeper score extras · §H richer notification-settings · §K sheet
+> grab-to-dismiss + offline banners · recipe photo/video attachments ·
+> `MarkRecipeMadeSheet` ingredient reconciliation.
 
 ### A. Screens with no mobile equivalent
 
