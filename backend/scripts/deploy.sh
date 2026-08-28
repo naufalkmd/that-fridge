@@ -37,12 +37,12 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan event:cache
-php artisan storage:link || true
+php artisan storage:link --force
 
 echo "==> restart workers + reload php-fpm"
 php artisan queue:restart                              # graceful: worker finishes its job, then systemd respawns it
-sudo systemctl restart thatfridge-scheduler            # schedule:work does not hot-reload code
-sudo systemctl reload "$PHP_FPM"                       # clear OPcache
+sudo -n systemctl restart thatfridge-scheduler         # schedule:work does not hot-reload code
+sudo -n systemctl reload "$PHP_FPM"                    # clear OPcache
 
 php artisan up
 trap - EXIT
