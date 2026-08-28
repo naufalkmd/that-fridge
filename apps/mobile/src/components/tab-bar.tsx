@@ -22,7 +22,7 @@ const META: Record<
   home: { label: "Home", icon: "home-outline", activeIcon: "home" },
   inventory: { label: "Inventory", icon: "file-tray-stacked-outline", activeIcon: "file-tray-stacked" },
   chat: { label: "Chat", icon: "chatbubble-outline", activeIcon: "chatbubble" },
-  eat: { label: "Eat", icon: "restaurant-outline", activeIcon: "restaurant" },
+  eat: { label: "Crew", icon: "people-outline", activeIcon: "people" },
 };
 const ORDER = ["home", "inventory", "chat", "eat"] as const;
 
