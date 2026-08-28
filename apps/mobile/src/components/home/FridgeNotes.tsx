@@ -69,26 +69,26 @@ export function FridgeNotes({ variant = "editor" }: { variant?: "grid" | "editor
       </Text>
 
       {variant === "grid" ? (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {visible.map((note) => (
             <View
               key={note.id}
               style={{
-                width: "47.5%",
+                width: "31.5%",
                 aspectRatio: 1,
                 backgroundColor: `${NOTE_COLOR[note.color]}1f`,
                 borderWidth: 1,
                 borderColor: `${NOTE_COLOR[note.color]}55`,
                 borderRadius: 8,
-                padding: 12,
+                padding: 8,
                 justifyContent: "space-between",
               }}
             >
-              <Text style={{ fontSize: 13, lineHeight: 18, color: INK }} numberOfLines={5}>
+              <Text style={{ fontSize: 11, lineHeight: 15, color: INK }} numberOfLines={4}>
                 {note.text}
               </Text>
-              <Text style={{ fontSize: 10, color: FAINT }} numberOfLines={1}>
-                {note.authorUsername ? `@${note.authorUsername}` : "—"} · {timeAgo(note.createdAt)}
+              <Text style={{ fontSize: 8.5, color: FAINT }} numberOfLines={1}>
+                {note.authorUsername ? `@${note.authorUsername}` : "—"}
               </Text>
             </View>
           ))}
