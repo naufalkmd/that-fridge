@@ -356,6 +356,24 @@ export function kitchenScoreResults(input: KitchenScoreInput): KitchenScoreResul
 
 export const WASTE_STREAK_THRESHOLD = 70;
 
+/**
+ * Delta of a live sub-score vs the most recent weekly snapshot — the "▲ +3 vs last week"
+ * readout on the Waste Saver / Food Balance cards. null when there's no snapshot or no live score.
+ */
+export function getScoreTrend(
+  snapshots: ScoreSnapshot[],
+  key: "waste" | "balance",
+  currentScore: number | null,
+): { delta: number; weekOf: string } | null {
+  if (currentScore === null || snapshots.length === 0) return null;
+  const mostRecent = [...snapshots].sort((a, b) =>
+    a.weekOf < b.weekOf ? 1 : a.weekOf > b.weekOf ? -1 : 0,
+  )[0];
+  const compare = key === "waste" ? mostRecent.wasteScore : mostRecent.balanceScore;
+  if (compare === null) return null;
+  return { delta: currentScore - compare, weekOf: mostRecent.weekOf };
+}
+
 export function computeStreak(
   snapshots: ScoreSnapshot[],
   threshold: number = WASTE_STREAK_THRESHOLD,

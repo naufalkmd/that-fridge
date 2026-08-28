@@ -24,6 +24,7 @@ import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { usePro } from "@/lib/pro";
 import { FREE_CHATS_PER_WEEK, bumpChatUsed, getChatUsed } from "@/lib/chatQuota";
+import { useRecipes } from "@/lib/recipes";
 import { MarkdownText } from "@/components/markdown-text";
 
 const WALLPAPER = require("../../../assets/images/thatfridge/chat-wallpaper.png");
@@ -55,7 +56,12 @@ const QUICK_ASKS = [
   "How's my fridge doing?",
 ];
 
-type Msg = { role: "user" | "agent"; text: string; recipe?: RecipeSuggestionBlock | null };
+type Msg = {
+  role: "user" | "agent";
+  text: string;
+  recipe?: RecipeSuggestionBlock | null;
+  mocked?: boolean;
+};
 
 export default function Chat() {
   const router = useRouter();
@@ -121,7 +127,10 @@ export default function Chat() {
     try {
       const res = await api.sendChat(msg, agent, { inventory: inventorySummary, sessionId });
       if (res.session_id) setSessionId(res.session_id);
-      setMessages((m) => [...m, { role: "agent", text: res.agent_response, recipe: res.recipe_suggestion }]);
+      setMessages((m) => [
+        ...m,
+        { role: "agent", text: res.agent_response, recipe: res.recipe_suggestion, mocked: res.mocked },
+      ]);
       if (!isPro) {
         await bumpChatUsed();
         setUsed((u) => u + 1);
@@ -364,6 +373,27 @@ function TypingDots() {
 
 function Bubble({ msg }: { msg: Msg }) {
   const isUser = msg.role === "user";
+  const { recipes, create } = useRecipes();
+  const [added, setAdded] = useState(false);
+  const alreadyInBook =
+    !!msg.recipe && recipes.some((r) => r.name.trim().toLowerCase() === msg.recipe!.name.trim().toLowerCase());
+
+  async function addToBook() {
+    if (!msg.recipe) return;
+    setAdded(true);
+    try {
+      await create({
+        name: msg.recipe.name,
+        minutes: msg.recipe.minutes || 20,
+        category: null,
+        ingredients: msg.recipe.ingredients.map((i) => ({ name: i.name, icon: "leftovers" })),
+        steps: msg.recipe.steps,
+      });
+    } catch {
+      setAdded(false);
+    }
+  }
+
   return (
     <View style={{ alignItems: isUser ? "flex-end" : "flex-start" }}>
       <View
@@ -383,7 +413,23 @@ function Bubble({ msg }: { msg: Msg }) {
         {isUser ? (
           <Text style={{ fontSize: 13.5, lineHeight: 20, color: "#0a0a0c" }}>{msg.text}</Text>
         ) : (
-          <MarkdownText text={msg.text} />
+          <>
+            {msg.mocked && (
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: "700",
+                  letterSpacing: 0.4,
+                  textTransform: "uppercase",
+                  color: FAINT,
+                  marginBottom: 4,
+                }}
+              >
+                Demo reply — no AI key configured
+              </Text>
+            )}
+            <MarkdownText text={msg.text} />
+          </>
         )}
       </View>
       {msg.recipe && (
@@ -406,6 +452,20 @@ function Bubble({ msg }: { msg: Msg }) {
               {i + 1}. {s}
             </Text>
           ))}
+          {added || alreadyInBook ? (
+            <Text style={{ marginTop: 10, fontSize: 12, fontWeight: "700", color: "#39e07f" }}>
+              ✓ In your recipe book
+            </Text>
+          ) : (
+            <Pressable
+              onPress={addToBook}
+              style={{ marginTop: 10, alignItems: "center", paddingVertical: 9, borderRadius: 6, backgroundColor: AMBER }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
+                Add to recipe book
+              </Text>
+            </Pressable>
+          )}
         </View>
       )}
     </View>

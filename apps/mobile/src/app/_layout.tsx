@@ -16,6 +16,7 @@ import { ShoppingProvider } from "@/lib/shopping";
 import { KitchenScoreProvider } from "@/lib/kitchenScore";
 import { RecipesProvider } from "@/lib/recipes";
 import { SocialProvider } from "@/lib/social";
+import { NotesProvider } from "@/lib/notes";
 import { ToastProvider } from "@/lib/toast";
 import { ExpiryReminderSync } from "@/lib/ExpiryReminderSync";
 
@@ -45,6 +46,7 @@ export default function RootLayout() {
            <ShoppingProvider>
             <KitchenScoreProvider>
             <RecipesProvider>
+            <NotesProvider>
             <ExpiryReminderSync />
             <StatusBar style="light" />
             <Stack
@@ -96,6 +98,7 @@ export default function RootLayout() {
                 options={{ headerShown: false, presentation: "modal" }}
               />
             </Stack>
+            </NotesProvider>
             </RecipesProvider>
             </KitchenScoreProvider>
            </ShoppingProvider>

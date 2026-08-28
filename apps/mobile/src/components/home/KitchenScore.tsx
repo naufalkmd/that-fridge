@@ -6,6 +6,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
   computeStreak,
   getOverallScore,
+  getScoreTrend,
   kitchenScoreResults,
   type KitchenScoreInput,
   type KitchenScoreResult,
@@ -109,6 +110,11 @@ export function KitchenScore({
   const overall = getOverallScore(ordered);
   const scoredCount = ordered.filter((r) => r.score !== null).length;
   const streak = snapshots.length > 0 ? computeStreak(snapshots) : null;
+  const wasteTrend = getScoreTrend(
+    snapshots,
+    "waste",
+    ordered.find((r) => r.key === "waste")?.score ?? null,
+  );
   const puck = overall !== null ? puckPosition(overall) : null;
 
   return (
@@ -197,6 +203,19 @@ export function KitchenScore({
                 ? "Guardian, Chef, Organizer & Shopkeeper, averaged"
                 : `Averaged across ${scoredCount} of 4 agents so far`}
             </Text>
+
+            {wasteTrend && wasteTrend.delta !== 0 && (
+              <Text
+                style={{
+                  marginTop: 4,
+                  fontSize: 10.5,
+                  fontWeight: "700",
+                  color: wasteTrend.delta > 0 ? "#39e07f" : "#ff5567",
+                }}
+              >
+                {wasteTrend.delta > 0 ? "▲" : "▼"} {Math.abs(wasteTrend.delta)} Waste Saver vs last week
+              </Text>
+            )}
           </>
         ) : (
           <Text

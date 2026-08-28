@@ -40,6 +40,7 @@ import { SectionHeader } from "@/components/ui";
 import { FridgeScopePicker } from "@/components/fridge-scope";
 import { KitchenScore } from "@/components/home/KitchenScore";
 import { CrewScene } from "@/components/home/CrewScene";
+import { FridgeNotes } from "@/components/home/FridgeNotes";
 
 const ACCENT = "#26c6da";
 const BLUE = "#5b8dee";
@@ -434,6 +435,9 @@ export default function Home() {
             </Text>
           </TipCard>
         )}
+
+        {/* fridge notes */}
+        <FridgeNotes />
       </ScrollView>
     </SafeAreaView>
   );
