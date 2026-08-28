@@ -16,8 +16,8 @@ const BENEFITS = [
   "Advanced notification tuning",
 ];
 
-const TERMS_URL = "https://thatfridge.app/terms";
-const PRIVACY_URL = "https://thatfridge.app/privacy";
+const TERMS_URL = "https://thatfridge.com/terms/";
+const PRIVACY_URL = "https://thatfridge.com/privacy/";
 
 function packageLabel(pkg: PurchasesPackage): string {
   if (pkg.packageType === "ANNUAL") return "Yearly";

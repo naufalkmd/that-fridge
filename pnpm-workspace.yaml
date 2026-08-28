@@ -1,6 +1,6 @@
 # apps/web is intentionally NOT in the workspace yet — it stays npm-managed and
 # frozen for the 3-week iOS sprint. Folding it in (and switching it to pnpm) is
-# part of the packages/core dedup task — see APP_STORE_LAUNCH_PLAN.md, Member B.
+# part of the packages/core dedup task — see TO_DO.md §4, Member B.
 packages:
   - "apps/mobile"
   - "packages/*"
