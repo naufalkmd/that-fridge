@@ -202,6 +202,21 @@ export interface RecipeLinkImportResult {
   reason?: string;
 }
 
+/** One item the receipt-OCR / fridge-vision call thinks it saw. `parsed_name` is the cleaned name. */
+export interface ScanDetectedItem {
+  parsed_name: string;
+  icon: string;
+  parsed_quantity?: number;
+  condition?: "vibrant" | "wilting" | "past_best" | null;
+}
+
+export interface ScanResult {
+  status: string;
+  file_url: string;
+  detected_items: ScanDetectedItem[];
+  message: string;
+}
+
 export interface BarcodeSuggestion {
   name: string;
   icon: string;
@@ -343,6 +358,19 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       { barcode },
     );
     return res.suggestion;
+  }
+
+  // Receipt / fridge-photo AI scan → a list of detected items to review. The caller then
+  // creates them via addManyItems (the backend /confirm route is a mock that creates nothing).
+  function scanReceipt(sectionId: string, image: unknown): Promise<ScanResult> {
+    const fd = new FormData();
+    fd.append("image", image as never);
+    return http.post<ScanResult>(`/sections/${sectionId}/items/receipt/scan`, fd);
+  }
+  function scanFridgePhoto(sectionId: string, image: unknown): Promise<ScanResult> {
+    const fd = new FormData();
+    fd.append("image", image as never);
+    return http.post<ScanResult>(`/sections/${sectionId}/items/photo/scan`, fd);
   }
 
   function listNotificationEvents(): Promise<NotificationEvent[]> {
@@ -592,6 +620,8 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     updateItem,
     deleteItem,
     scanBarcode,
+    scanReceipt,
+    scanFridgePhoto,
     listNotificationEvents,
     markNotification,
     getNotificationPrefs,

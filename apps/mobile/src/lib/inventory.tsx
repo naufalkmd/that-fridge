@@ -19,8 +19,20 @@ interface InventoryContextValue {
   error: string | null;
   refresh: () => Promise<void>;
   addItem: (data: Omit<CreateItemInput, "icon"> & { icon?: string }) => Promise<void>;
+  addManyItems: (
+    items: {
+      name: string;
+      icon?: string;
+      location?: "fridge" | "freezer" | "pantry";
+      quantity?: number;
+      sectionId?: string;
+      expiry_date?: string;
+      shelf_life_days?: number;
+    }[],
+  ) => Promise<number>;
   lookupBarcode: (barcode: string) => Promise<BarcodeSuggestion>;
   ensureFridgeId: () => Promise<string>;
+  ensureSectionId: () => Promise<string>;
   setItemQty: (itemId: string, qty: number) => Promise<void>;
   patchItem: (itemId: string, data: UpdateItemInput) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
@@ -114,6 +126,30 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     [resolveTarget, load],
   );
 
+  // Batch add (receipt / photo scan) — resolve the target section once, create in parallel,
+  // reload once. Returns how many succeeded.
+  const addManyItems = useCallback<InventoryContextValue["addManyItems"]>(
+    async (list) => {
+      if (list.length === 0) return 0;
+      const sectionId = await resolveTarget();
+      const results = await Promise.allSettled(
+        list.map((d) =>
+          api.createItem(d.sectionId || sectionId, {
+            name: d.name,
+            icon: d.icon || "generic",
+            location: d.location ?? "fridge",
+            quantity: d.quantity ?? 1,
+            ...(d.expiry_date ? { expiry_date: d.expiry_date, shelf_life_days: d.shelf_life_days } : {}),
+            note: "Just added",
+          }),
+        ),
+      );
+      await load();
+      return results.filter((r) => r.status === "fulfilled").length;
+    },
+    [resolveTarget, load],
+  );
+
   const lookupBarcode = useCallback(
     async (barcode: string) => {
       const sectionId = await resolveTarget();
@@ -184,8 +220,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       error,
       refresh: load,
       addItem,
+      addManyItems,
       lookupBarcode,
       ensureFridgeId,
+      ensureSectionId: resolveTarget,
       setItemQty,
       patchItem,
       removeItem,
@@ -199,8 +237,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       error,
       load,
       addItem,
+      addManyItems,
       lookupBarcode,
       ensureFridgeId,
+      resolveTarget,
       setItemQty,
       patchItem,
       restoreItem,

@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import Constants from "expo-constants";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -22,6 +23,7 @@ import {
   type NutritionCategory,
   type StorageLocation,
 } from "@thatfridge/core";
+import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { usePro } from "@/lib/pro";
 import { SheetHeader } from "@/components/sheet";
@@ -193,6 +195,8 @@ export default function Add() {
             </Pressable>
           ))}
         </ScrollView>
+      ) : method === "receipt" || method === "photo" ? (
+        <ScanFlow mode={method} onDone={() => router.back()} />
       ) : (
         <ScrollView
           contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 4, paddingBottom: 32, gap: 18 }}
@@ -262,6 +266,167 @@ export default function Add() {
         </ScrollView>
       )}
     </KeyboardAvoidingView>
+  );
+}
+
+type Detected = {
+  name: string;
+  icon: string;
+  qty: number;
+  location: StorageLocation;
+  checked: boolean;
+};
+
+function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => void }) {
+  const { ensureSectionId, addManyItems } = useInventory();
+  const [status, setStatus] = useState<"idle" | "scanning" | "review">("idle");
+  const [items, setItems] = useState<Detected[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  async function pickAndScan() {
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7 });
+    if (res.canceled || !res.assets[0]) return;
+    setStatus("scanning");
+    try {
+      const sectionId = await ensureSectionId();
+      const image = { uri: res.assets[0].uri, name: "scan.jpg", type: "image/jpeg" };
+      const scan = mode === "receipt"
+        ? await api.scanReceipt(sectionId, image)
+        : await api.scanFridgePhoto(sectionId, image);
+      setItems(
+        scan.detected_items.map((d) => ({
+          name: d.parsed_name,
+          icon: d.icon || "generic",
+          qty: Math.max(1, d.parsed_quantity ?? 1),
+          location: "fridge" as StorageLocation,
+          checked: true,
+        })),
+      );
+      setStatus("review");
+    } catch (e) {
+      setStatus("idle");
+      Alert.alert("Scan failed", describeError(e, "Couldn't read that photo. Try a clearer shot."));
+    }
+  }
+
+  async function confirm() {
+    const toAdd = items.filter((i) => i.checked && i.name.trim());
+    if (toAdd.length === 0) return;
+    setSaving(true);
+    try {
+      const n = await addManyItems(
+        toAdd.map((d) => ({ name: d.name.trim(), icon: d.icon, quantity: d.qty, location: d.location })),
+      );
+      onDone();
+      setTimeout(() => Alert.alert("Added", `${n} item${n === 1 ? "" : "s"} added to your fridge.`), 300);
+    } catch (e) {
+      setSaving(false);
+      Alert.alert("Error", describeError(e, "Couldn't add those items."));
+    }
+  }
+
+  if (status === "idle") {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, gap: 16 }}>
+        <MaterialCommunityIcons
+          name={mode === "receipt" ? "receipt" : "fridge-outline"}
+          size={40}
+          color={FAINT}
+        />
+        <Text style={{ fontSize: 13, color: MUTED, textAlign: "center", lineHeight: 19 }}>
+          {mode === "receipt"
+            ? "Snap a photo of your grocery receipt and we'll pull out the items."
+            : "Take a photo inside your fridge and the crew will spot what changed."}
+        </Text>
+        <Pressable
+          onPress={pickAndScan}
+          style={{ backgroundColor: AMBER, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 }}
+        >
+          <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
+            Choose a photo
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (status === "scanning") {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 14 }}>
+        <ActivityIndicator color={AMBER} size="large" />
+        <Text style={{ fontSize: 13, color: MUTED }}>
+          {mode === "receipt" ? "Reading receipt…" : "Scanning fridge photo…"}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 4, paddingBottom: 32 }}>
+      <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 10 }}>
+        FOUND {items.filter((i) => i.checked).length} ITEM{items.filter((i) => i.checked).length === 1 ? "" : "S"}
+      </Text>
+      {items.length === 0 ? (
+        <Text style={{ fontSize: 13, color: FAINT, textAlign: "center", marginTop: 20 }}>
+          Nothing recognised. Try a clearer photo, or add manually.
+        </Text>
+      ) : (
+        <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
+          {items.map((it, i) => (
+            <View
+              key={i}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+                padding: 10,
+                borderBottomWidth: i === items.length - 1 ? 0 : 1,
+                borderBottomColor: HAIRLINE,
+                opacity: it.checked ? 1 : 0.45,
+              }}
+            >
+              <Pressable
+                onPress={() => setItems((p) => p.map((x, idx) => (idx === i ? { ...x, checked: !x.checked } : x)))}
+                hitSlop={6}
+              >
+                <MaterialCommunityIcons
+                  name={it.checked ? "checkbox-marked" : "checkbox-blank-outline"}
+                  size={20}
+                  color={it.checked ? AMBER : FAINT}
+                />
+              </Pressable>
+              <TextInput
+                value={it.name}
+                onChangeText={(t) => setItems((p) => p.map((x, idx) => (idx === i ? { ...x, name: t } : x)))}
+                style={{ flex: 1, fontSize: 13.5, color: INK, paddingVertical: 6 }}
+              />
+              <Step icon="minus" onPress={() => setItems((p) => p.map((x, idx) => (idx === i ? { ...x, qty: Math.max(1, x.qty - 1) } : x)))} />
+              <Text style={{ minWidth: 16, textAlign: "center", fontSize: 12, fontWeight: "700", color: INK }}>{it.qty}</Text>
+              <Step icon="plus" onPress={() => setItems((p) => p.map((x, idx) => (idx === i ? { ...x, qty: x.qty + 1 } : x)))} />
+            </View>
+          ))}
+        </View>
+      )}
+      <Pressable
+        onPress={confirm}
+        disabled={saving || items.filter((i) => i.checked).length === 0}
+        style={{
+          alignItems: "center",
+          paddingVertical: 14,
+          borderRadius: 8,
+          backgroundColor: AMBER,
+          opacity: saving || items.filter((i) => i.checked).length === 0 ? 0.5 : 1,
+        }}
+      >
+        {saving ? (
+          <ActivityIndicator color="#0a0a0c" />
+        ) : (
+          <Text style={{ fontSize: 14, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
+            Add {items.filter((i) => i.checked).length} to fridge
+          </Text>
+        )}
+      </Pressable>
+    </ScrollView>
   );
 }
 
