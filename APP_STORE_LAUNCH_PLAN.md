@@ -328,15 +328,25 @@ The core screens are at visual parity (§3); this is the long tail. Nothing here
 v1.0 submission — it's the post-launch roadmap, ordered roughly by value. LOC is the web
 component's size, as a rough effort signal. Every backend route named below already exists.
 
-> **Built 2026-08-28** (commits `2e96ca4`…`98ee167`): §A — a **Recipe book** (`recipes.tsx`
-> library + `recipe/[id]` detail + `recipe-form` create/edit with import-from-link), **Goals**,
-> **Badges**, **AI Data & Memory**, **Chat History**, **About**. §B — the **multi-fridge &
-> social subsystem**: `lib/social.tsx`, `find-friend.tsx`, `fridge/[id]` (rename / style photo /
-> members / invite / join requests / leave-delete), Home find-friend icon, pending rows in
-> Notifications. Core gained ~40 API methods + `progress.ts`.
-> **Still open in §A/B:** custom fridge-photo upload, recipe photo/video attachments,
-> `MarkRecipeMadeSheet` ingredient reconciliation, FoodHub's agent-activation + shopping-rec
-> extras.
+> **Built 2026-08-28** (commits `2e96ca4`…`7fe32c0`):
+> - §A — **Recipe book** (`recipes.tsx` + `recipe/[id]` + `recipe-form` with import-from-link),
+>   **Goals**, **Badges**, **AI Data & Memory**, **Chat History**, **About**.
+> - §B — the **multi-fridge & social subsystem**: `lib/social.tsx`, `find-friend.tsx`,
+>   `fridge/[id]` (rename / style photo / **custom photo upload** / members / invite / join
+>   requests / leave-delete), Home find-friend icon, pending rows in Notifications.
+> - §E — chat **photo attachment** (`expo-image-picker` → multipart `/chat`), **"Add to recipe
+>   book"** from a suggestion, **"Demo reply"** label on mocked responses.
+> - §D — item **section reassignment** in the edit form.
+> - §F — Waste Saver **score-trend** delta vs last week, Guardian **overdue pill** in the score
+>   expand.
+> - §G — **fridge sticky notes** (`lib/notes.tsx` + `FridgeNotes` on Home).
+> - Core gained ~40 API methods + `progress.ts` + `getScoreTrend`.
+>
+> **Still open:** §C receipt/photo AI add · §D "opened" state (needs a backend `opened` field) +
+> AI icon generation · §E voice input (no Expo STT module) · §F Organizer sweeps (feeds Tidiness)
+> + Chef/Organizer/Shopkeeper score extras · §H richer notification-settings · §J shopping
+> recommendations · §K skeleton loaders / sheet grab-to-dismiss / offline banners ·
+> recipe photo/video attachments · `MarkRecipeMadeSheet` ingredient reconciliation.
 
 ### A. Screens with no mobile equivalent
 
