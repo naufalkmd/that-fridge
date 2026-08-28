@@ -15,12 +15,12 @@
       "distribution": "internal",
       "channel": "preview",
       "ios": { "simulator": false },
-      "env": { "EXPO_PUBLIC_API_URL": "https://api.thatfridge.example/api" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://api.thatfridge.com/api" }
     },
     "production": {
       "autoIncrement": true,
       "channel": "production",
-      "env": { "EXPO_PUBLIC_API_URL": "https://api.thatfridge.example/api" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://api.thatfridge.com/api" }
     }
   },
   "submit": {
