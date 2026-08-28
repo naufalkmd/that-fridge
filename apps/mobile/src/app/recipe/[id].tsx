@@ -207,7 +207,14 @@ export default function RecipeDetail() {
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {recipe.attachments.map((att, i) => (
-                <Pressable key={i} onPress={() => Linking.openURL(att.url)}>
+                <Pressable
+                  key={i}
+                  onPress={() =>
+                    att.type === "image"
+                      ? router.push({ pathname: "/recipe/attachment", params: { url: att.url } })
+                      : Linking.openURL(att.url)
+                  }
+                >
                   <View style={{ width: 64, height: 64, borderRadius: 6, overflow: "hidden", backgroundColor: "#000" }}>
                     {att.type === "image" ? (
                       <Image source={{ uri: att.url }} style={{ flex: 1 }} contentFit="cover" />

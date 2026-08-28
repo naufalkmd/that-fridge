@@ -479,6 +479,12 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   function updateRecipe(id: string, data: Partial<RecipeInput>): Promise<Recipe> {
     return http.patch<Recipe>(`/recipes/${id}`, data);
   }
+  /** Upload one recipe reference photo/video → its stored `{ type, url }`. */
+  function uploadRecipeAttachment(file: unknown): Promise<RecipeAttachment> {
+    const fd = new FormData();
+    fd.append("file", file as never);
+    return http.post<RecipeAttachment>("/recipes/attachments", fd);
+  }
   function deleteRecipe(id: string): Promise<void> {
     return http.del(`/recipes/${id}`).then(() => undefined);
   }
@@ -675,6 +681,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     listRecipes,
     createRecipe,
     updateRecipe,
+    uploadRecipeAttachment,
     deleteRecipe,
     favoriteRecipe,
     unfavoriteRecipe,
