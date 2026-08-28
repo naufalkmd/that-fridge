@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
@@ -19,7 +20,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   daysLabel,
   describeError,
-  type ChatAgentName,
+  routeChatAgent,
   type RecipeSuggestionBlock,
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
@@ -39,18 +40,7 @@ const INK = "#eaeaec";
 const MUTED = "rgba(234,234,236,0.58)";
 const FAINT = "rgba(234,234,236,0.34)";
 
-const AGENTS: { key: ChatAgentName; blurb: string }[] = [
-  { key: "Chef", blurb: "what to cook" },
-  { key: "Guardian", blurb: "freshness" },
-  { key: "Shopkeeper", blurb: "restocking" },
-  { key: "Organizer", blurb: "planning" },
-];
-const AGENT_COLOR: Record<ChatAgentName, string> = {
-  Chef: "#f5a623",
-  Guardian: "#ff5f56",
-  Shopkeeper: "#39e07f",
-  Organizer: "#3d6fe0",
-};
+const GREETING: Msg = { role: "agent", text: "Hi! Ask me anything about what's in your fridge." };
 const QUICK_ASKS = [
   "What's expiring soon?",
   "What can I cook tonight?",
@@ -72,8 +62,7 @@ export default function Chat() {
   const { session } = useLocalSearchParams<{ session?: string }>();
   const { items } = useInventory();
   const { isPro, presentPaywallIfNeeded } = usePro();
-  const [agent, setAgent] = useState<ChatAgentName>("Chef");
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const [messages, setMessages] = useState<Msg[]>([GREETING]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
@@ -97,16 +86,15 @@ export default function Chat() {
           ? await api.getChatSessionMessages(session)
           : await api.getChatHistory();
         setSessionId(h.session_id);
-        setMessages(
-          h.messages.flatMap((row) => {
-            const out: Msg[] = [{ role: "user", text: row.user_message }];
-            if (row.agent_response)
-              out.push({ role: "agent", text: row.agent_response, recipe: row.recipe_suggestion });
-            return out;
-          }),
-        );
+        const restored = h.messages.flatMap((row) => {
+          const out: Msg[] = [{ role: "user" as const, text: row.user_message }];
+          if (row.agent_response)
+            out.push({ role: "agent", text: row.agent_response, recipe: row.recipe_suggestion });
+          return out;
+        });
+        setMessages(restored.length ? restored : [GREETING]);
       } catch {
-        /* fresh thread */
+        setMessages([GREETING]);
       } finally {
         setLoading(false);
       }
@@ -138,8 +126,9 @@ export default function Chat() {
     setMessages((m) => [...m, { role: "user", text: msg, attachmentUri: img ?? undefined }]);
     setSending(true);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    const messageForApi = msg || "What do you see in this photo?";
     try {
-      const res = await api.sendChat(msg || "What's in this photo?", agent, {
+      const res = await api.sendChat(messageForApi, routeChatAgent(messageForApi), {
         inventory: inventorySummary,
         sessionId,
         image: img ? { uri: img, name: "photo.jpg", type: "image/jpeg" } : undefined,
@@ -149,6 +138,8 @@ export default function Chat() {
         ...m,
         { role: "agent", text: res.agent_response, recipe: res.recipe_suggestion, mocked: res.mocked },
       ]);
+      // Fire-and-forget: let the crew update what it remembers from this exchange.
+      api.extractMemory(messageForApi, res.agent_response).catch(() => {});
       if (!isPro) {
         await bumpChatUsed();
         setUsed((u) => u + 1);
@@ -191,52 +182,14 @@ export default function Chat() {
               <Text style={{ fontSize: 15.5, fontWeight: "800", color: INK }}>Quick Chat</Text>
               <Text style={{ fontSize: 11.5, color: FAINT }}>Quick answers about your fridge</Text>
             </View>
-            <Pressable
+            <HeaderBtn icon="time-outline" onPress={() => router.push("/chat-history")} />
+            <HeaderBtn
+              icon="create-outline"
               onPress={() => {
-                setMessages([]);
+                setMessages([GREETING]);
                 setSessionId(null);
               }}
-              hitSlop={8}
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: 15,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: SURFACE2,
-                borderWidth: 1,
-                borderColor: HAIRLINE,
-              }}
-            >
-              <Ionicons name="create-outline" size={15} color={INK} />
-            </Pressable>
-          </View>
-
-          {/* agent picker */}
-          <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 10 }}>
-            {AGENTS.map((a) => {
-              const active = agent === a.key;
-              const color = AGENT_COLOR[a.key];
-              return (
-                <Pressable
-                  key={a.key}
-                  onPress={() => setAgent(a.key)}
-                  style={{
-                    flex: 1,
-                    alignItems: "center",
-                    paddingVertical: 7,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: active ? color : HAIRLINE,
-                    backgroundColor: active ? `${color}1a` : "rgba(19,19,22,0.6)",
-                  }}
-                >
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: active ? color : MUTED }}>
-                    {a.key}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            />
           </View>
 
           {!isPro && (
@@ -274,10 +227,6 @@ export default function Chat() {
           >
             {loading ? (
               <ActivityIndicator color={AMBER} style={{ marginTop: 32 }} />
-            ) : messages.length === 0 ? (
-              <Text style={{ marginTop: 24, textAlign: "center", fontSize: 13, color: FAINT }}>
-                Ask {agent} about {AGENTS.find((a) => a.key === agent)?.blurb}.
-              </Text>
             ) : (
               messages.map((m, i) => <Bubble key={i} msg={m} />)
             )}
@@ -355,7 +304,7 @@ export default function Chat() {
               <TextInput
                 value={text}
                 onChangeText={setText}
-                placeholder={`Ask ${agent} about your fridge…`}
+                placeholder="Ask about your fridge…"
                 placeholderTextColor={FAINT}
                 multiline
                 style={{
@@ -392,12 +341,62 @@ export default function Chat() {
   );
 }
 
+function HeaderBtn({ icon, onPress }: { icon: keyof typeof Ionicons.glyphMap; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      style={{
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: SURFACE2,
+        borderWidth: 1,
+        borderColor: HAIRLINE,
+      }}
+    >
+      <Ionicons name={icon} size={15} color={INK} />
+    </Pressable>
+  );
+}
+
+function Dot({ delay }: { delay: number }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(v, { toValue: 1, duration: 350, useNativeDriver: true }),
+        Animated.timing(v, { toValue: 0, duration: 350, useNativeDriver: true }),
+        Animated.delay(700 - delay),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [v, delay]);
+  return (
+    <Animated.View
+      style={{
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: FAINT,
+        opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+        transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) }],
+      }}
+    />
+  );
+}
+
 function TypingDots() {
   return (
     <View
       style={{
         alignSelf: "flex-start",
         flexDirection: "row",
+        alignItems: "center",
         gap: 4,
         backgroundColor: SURFACE,
         borderWidth: 1,
@@ -410,9 +409,9 @@ function TypingDots() {
         paddingVertical: 13,
       }}
     >
-      {[0, 1, 2].map((i) => (
-        <View key={i} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: FAINT }} />
-      ))}
+      <Dot delay={0} />
+      <Dot delay={150} />
+      <Dot delay={300} />
     </View>
   );
 }

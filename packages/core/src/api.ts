@@ -570,6 +570,15 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   function getMemoryFacts(): Promise<string[]> {
     return http.get<{ facts: string[] }>("/memory").then((r) => r.facts);
   }
+  /** Fire-and-forget after a chat exchange — asks the model to update remembered facts. */
+  function extractMemory(userMessage: string, agentResponse: string): Promise<string[]> {
+    return http
+      .post<{ facts: string[] }>("/memory/extract", {
+        user_message: userMessage,
+        agent_response: agentResponse,
+      })
+      .then((r) => r.facts);
+  }
   function deleteMemoryFact(index: number): Promise<string[]> {
     return http.del<{ facts: string[] }>(`/memory/facts/${index}`).then((r) => r.facts);
   }
@@ -676,6 +685,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     postBadgeProgress,
     incrementOrganizerTally,
     getMemoryFacts,
+    extractMemory,
     deleteMemoryFact,
     clearMemoryFacts,
     deleteUsageHistoryEntry,

@@ -1,4 +1,36 @@
 import type { NutritionCategory, StorageLocation } from "./types";
+import type { ChatAgentName } from "./api";
+
+// Picks which crew member should answer a Quick Chat message, from keywords — mirrors
+// routeChatAgent in apps/web. Defaults to Chef.
+const AGENT_KEYWORDS: { agent: ChatAgentName; pattern: RegExp }[] = [
+  {
+    agent: "Guardian",
+    pattern:
+      /\b(expir(e|es|ing|ed|y)|spoil(ed|ing)?|go(es|ing)? bad|moldy|mold|smell(s|y)?|safe to eat|food safety|throw (it|them) out|how('?s| is)( my| the)? fridge( doing)?)\b/i,
+  },
+  {
+    agent: "Shopkeeper",
+    pattern:
+      /\b(buy|shopping|shopping list|restock|grocery|groceries|running low|need to (get|buy)|out of|purchase)\b/i,
+  },
+  {
+    agent: "Organizer",
+    pattern:
+      /\b(organi[sz]e|storage|store (it|them)|arrange|where should|which shelf|fridge vs freezer|freezer or fridge)\b/i,
+  },
+  {
+    agent: "Chef",
+    pattern: /\b(cook|recipe|meal|make (for|tonight)|dinner|lunch|breakfast|dish|ingredients)\b/i,
+  },
+];
+
+export function routeChatAgent(message: string): ChatAgentName {
+  for (const { agent, pattern } of AGENT_KEYWORDS) {
+    if (pattern.test(message)) return agent;
+  }
+  return "Chef";
+}
 
 // Freshness → colour. Mirrors apps/web/lib/thatfridge/utils.ts.
 export const FRESH_GREEN = "#3f8f5c";
