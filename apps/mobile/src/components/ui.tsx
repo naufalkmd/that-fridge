@@ -1,8 +1,75 @@
-import { Pressable, Text, View, type ViewProps } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Pressable, Text, View, type DimensionValue, type ViewProps } from "react-native";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { PixelText } from "@/components/brand";
+
+/** Pulsing placeholder block for loading states. */
+export function Skeleton({
+  width = "100%",
+  height = 14,
+  radius = 6,
+  style,
+}: {
+  width?: DimensionValue;
+  height?: number;
+  radius?: number;
+  style?: object;
+}) {
+  const pulse = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  return (
+    <Animated.View
+      style={[{ width, height, borderRadius: radius, backgroundColor: "#1a1a1f", opacity: pulse }, style]}
+    />
+  );
+}
+
+/** A few stacked skeleton rows mimicking a list card. */
+export function SkeletonList({ rows = 5 }: { rows?: number }) {
+  return (
+    <View
+      style={{
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.09)",
+        backgroundColor: "#131316",
+        overflow: "hidden",
+      }}
+    >
+      {Array.from({ length: rows }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            padding: 12,
+            borderBottomWidth: i === rows - 1 ? 0 : 1,
+            borderBottomColor: "rgba(255,255,255,0.09)",
+          }}
+        >
+          <Skeleton width={38} height={38} radius={6} />
+          <View style={{ flex: 1, gap: 6 }}>
+            <Skeleton width="55%" height={12} />
+            <Skeleton width="80%" height={8} />
+          </View>
+          <Skeleton width={30} height={12} />
+        </View>
+      ))}
+    </View>
+  );
+}
 
 /** Back-chevron + pixel title (+ optional subtitle) — the header on the web's secondary screens. */
 export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {

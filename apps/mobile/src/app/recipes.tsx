@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -10,6 +10,7 @@ import { useInventory } from "@/lib/inventory";
 import { useRecipes } from "@/lib/recipes";
 import { PixelText } from "@/components/brand";
 import { FoodIcon } from "@/components/food-icon";
+import { SkeletonList } from "@/components/ui";
 
 const AMBER = "#26c6da";
 const SURFACE = "#131316";
@@ -150,7 +151,7 @@ export default function Recipes() {
         )}
 
         {loading ? (
-          <ActivityIndicator color={AMBER} style={{ marginTop: 40 }} />
+          <View style={{ marginTop: 12 }}><SkeletonList rows={6} /></View>
         ) : recipes.length === 0 ? (
           <Text style={{ textAlign: "center", paddingVertical: 60, color: FAINT, fontSize: 13 }}>
             No saved recipes yet. Tap ＋ to add one, or save Chef&apos;s suggestions from chat.

@@ -1,12 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -26,6 +19,7 @@ import { PixelText } from "@/components/brand";
 import { FridgeScopePicker } from "@/components/fridge-scope";
 import { CategoryTag, LocationTag } from "@/components/tags";
 import { FoodIcon } from "@/components/food-icon";
+import { SkeletonList } from "@/components/ui";
 
 const SURFACE = "#131316";
 const SURFACE2 = "#1a1a1f";
@@ -33,7 +27,6 @@ const HAIRLINE = "rgba(255,255,255,0.09)";
 const INK = "#eaeaec";
 const BLUE = "#5b8dee";
 const FAINT = "rgba(234,234,236,0.34)";
-const ACCENT = "#26c6da";
 
 type Sort = "category" | "expiry" | "name";
 const SORT_OPTIONS: { key: Sort; label: string }[] = [
@@ -159,7 +152,9 @@ export default function Inventory() {
         )}
 
         {loading ? (
-          <ActivityIndicator color={ACCENT} style={{ marginTop: 40 }} />
+          <View style={{ marginTop: 12 }}>
+            <SkeletonList rows={6} />
+          </View>
         ) : (
           <>
             {/* all items + sort */}
