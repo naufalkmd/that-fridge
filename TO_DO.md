@@ -59,7 +59,7 @@ All USD, approximate. "Recurring" = keep paying to keep the app live.
 | Apple Developer Program                 | $99 / yr     | Recurring | ✅ Paid  | Individual enrollment                                                        |
 | Domain —`thatfridge.com`             | ~$10.46 / yr | Recurring | ✅ Paid  | API host + privacy/terms/support pages                                       |
 | PixelMix commercial font licence        | $25          | One-time  | ✅ Paid  | via Sellfy 2026-08-28; embedding confirmation still pending (§1)            |
-| VPS — Laravel API + Postgres + Redis   | $21.60 / mo  | Recurring | 🟡 Live  | DigitalOcean **SGP1**, 2 vCPU / 2 GB ($18) + weekly backups ($3.60). IP `167.172.88.75`. Being provisioned per `backend/DEPLOY.md` §2. |
+| VPS — Laravel API + Postgres + Redis   | $21.60 / mo  | Recurring | ✅ Live  | DigitalOcean **SGP1**, 2 vCPU / 2 GB ($18) + weekly backups ($3.60). `api.thatfridge.com` → `167.172.88.75`. Deployed 2026-08-28. |
 | Privacy / terms / support pages hosting | $0           | —        | ⬜       | Cloudflare Pages / GitHub Pages free tier                                    |
 | Sentry (crash monitoring)               | $0           | —        | ⬜       | Free developer tier (§2)                                                    |
 | RevenueCat                              | $0           | —        | ✅       | Free under $2.5k tracked revenue / mo                                        |
@@ -75,13 +75,17 @@ Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ *
 
 ## 2. Backend / infra (Member A)
 
-- [ ] Deploy Laravel to the VPS — **step-by-step runbook: `backend/DEPLOY.md`** (Nginx, PHP 8.3,
-  Postgres, Redis, Certbot on `api.thatfridge.com`, `APP_DEBUG=false`, fresh `APP_KEY`, queue +
-  scheduler systemd units, daily pg_dump + storage backup, reviewer demo seed).
+- [X] Deploy Laravel to the VPS (2026-08-28) — live at `https://api.thatfridge.com` (HTTP 200 on
+  `/up`, auth + `/api/fridges` verified). Ubuntu 24.04, **PHP 8.5** (ondrej PPA — lock needs
+  Symfony 8), Nginx, Postgres 16, Redis 7, Certbot (auto-renew, expires Nov 26), `APP_DEBUG=false`,
+  queue + scheduler systemd units, daily pg_dump + storage backup. **CD:** `.github/workflows/deploy-api.yml`
+  (push to `main` → PHPUnit → SSH `backend/scripts/deploy.sh`); runbook `backend/DEPLOY.md`.
+- [ ] **Add the 3 GitHub Actions secrets** (`DEPLOY_HOST` `DEPLOY_USER` `DEPLOY_SSH_KEY`) so CD can
+  run — until then `deploy.sh` is manual-over-SSH. See `backend/DEPLOY.md` §12a.
 - [ ] Rate-limit `/api/login` + `/api/register` (throttle middleware).
-- [ ] Copy backups off-box (provider snapshots or rclone to object storage).
-- [ ] Seed a stable **reviewer demo account** on prod with realistic data (replace
-  `backend/scripts/seed-demo-fridge.sh`).
+- [ ] Copy backups off-box (DO weekly droplet snapshot is on — add pg_dump → object storage).
+- [X] Seed a stable **reviewer demo account** on prod — `keira@thatfridge.test` / `password123`
+  with a seeded fridge + 7 curated recipes. **Change the password before submitting.**
 - [ ] Sentry on the Laravel app.
 - [ ] Privacy policy + Terms + Support pages: drafted in `apps/legal/` (static site, not
   `apps/web`). Deploy to Cloudflare Pages on the `thatfridge.com` apex; fill the placeholders
