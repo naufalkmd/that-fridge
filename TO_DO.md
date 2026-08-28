@@ -150,12 +150,9 @@ multiple / shared fridges, advanced notification tuning.
 
 ## 4. Mobile app (Members B / C / D)
 
-- [ ] **First `eas build --profile development`** (dev client) so barcode scan, local
-  notifications, and RevenueCat can actually be tested. Simulator builds need no paid Apple
-  account (`eas.json` dev profile has `ios.simulator: true`). **Next up now that the API is live.**
-  Note: `eas.json` `preview`/`production` now point at `https://api.thatfridge.com/api`; the
-  `development` profile still points at localhost:8000 — override if testing the dev client
-  against prod.
+- [X] **`eas build`** — dev-client simulator build (`development-prod`) verified against the
+  live API; **production build 1 submitted to TestFlight 2026-08-28** (`eas build/submit`,
+  automated in `.github/workflows/testflight.yml`).
 - [ ] Full **smoke-test on a real device / simulator** against the live API — nothing since the
   parity port has run.
 - [ ] Bottom-sheet **grab-to-dismiss** gesture on modal screens (needs
@@ -321,7 +318,7 @@ carousel + swipe-dismiss agent insights, undo toasts, skeleton loaders — all p
 - [ ] Icon 1024², splash, iPhone 6.9" + 6.5" screenshots (no device frame — 1179×2556)
 - [ ] App Privacy form complete and accurate · Age rating done
 - [ ] Demo account + review notes filled in
-- [ ] TestFlight build validated by all 4 members on real devices
+- [🟡] TestFlight build validated by all 4 members on real devices — **build 1 (v1.0.0) submitted 2026-08-28** via `eas build/submit`; processing at App Store Connect. Add internal testers + a "What to Test" note.
 - [ ] Crash-free session confirmed in Sentry
 - [ ] Version 1.0.0, build number set, release set to **manual**
 - [X] EAS Update production channel wired · TestFlight CI (`.github/workflows/testflight.yml`)
