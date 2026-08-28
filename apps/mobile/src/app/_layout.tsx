@@ -88,6 +88,7 @@ export default function RootLayout() {
               <Stack.Screen name="goals" options={{ headerShown: false }} />
               <Stack.Screen name="badges" options={{ headerShown: false }} />
               <Stack.Screen name="organizer" options={{ headerShown: false }} />
+              <Stack.Screen name="what-to-eat" options={{ headerShown: false, presentation: "modal" }} />
               <Stack.Screen name="ai-data" options={{ headerShown: false }} />
               <Stack.Screen name="chat-history" options={{ headerShown: false }} />
               <Stack.Screen name="about" options={{ headerShown: false }} />
