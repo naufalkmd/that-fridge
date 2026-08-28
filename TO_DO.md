@@ -13,9 +13,12 @@ localized store listings + Korean UI fast-follow — see §4a.
 (Apple review passed), not just submitted — review takes days, so submit ~2 weeks early.
 
 **Where we are (2026-08-28):** every core screen + most of the web feature set is ported to
-`apps/mobile` at visual parity with `apps/web` (see §7). The RevenueCat SDK, entitlement,
-`default` offering, and a published AI-designed paywall are done. **The critical path is now the
-external accounts (§1) — none started.** Working branch: `mobile-app` (not merged to `main`).
+`apps/mobile` at visual parity with `apps/web` (see §7). RevenueCat SDK, entitlement, `default`
+offering, and a published AI-designed paywall are done. **Backend infra is done:** the API is
+live at `https://api.thatfridge.com` with GitHub Actions CD (test → auto-deploy), TLS, backups,
+queue + scheduler; the legal site is live at `https://thatfridge.com`; email routing works.
+`mobile-app` is merged to `main` and kept in sync. **The critical path is now just the Apple
+accounts (§1) — not started.**
 
 Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external setup
 
@@ -62,7 +65,8 @@ All USD, approximate. "Recurring" = keep paying to keep the app live.
 | Domain —`thatfridge.com`             | ~$10.46 / yr | Recurring | ✅ Paid  | API host + privacy/terms/support pages                                       |
 | PixelMix commercial font licence        | $25          | One-time  | ✅ Paid  | via Sellfy 2026-08-28; embedding confirmation still pending (§1)            |
 | VPS — Laravel API + Postgres + Redis   | $21.60 / mo  | Recurring | ✅ Live  | DigitalOcean **SGP1**, 2 vCPU / 2 GB ($18) + weekly backups ($3.60). `api.thatfridge.com` → `167.172.88.75`. Deployed 2026-08-28. |
-| Privacy / terms / support pages hosting | $0           | —        | ⬜       | Cloudflare Pages / GitHub Pages free tier                                    |
+| Privacy / terms / support pages hosting | $0           | —        | ✅ Live | Cloudflare Workers static assets (free), `thatfridge.com`                     |
+| Cloudflare Email Routing                 | $0           | —        | ✅ Live | `support@` / `privacy@thatfridge.com` → Gmail                                 |
 | Sentry (crash monitoring)               | $0           | —        | ⬜       | Free developer tier (§2)                                                    |
 | RevenueCat                              | $0           | —        | ✅       | Free under $2.5k tracked revenue / mo                                        |
 | Expo EAS builds                         | $0           | —        | ✅       | Free tier covers launch build cadence                                        |
@@ -82,16 +86,18 @@ Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ *
   Symfony 8), Nginx, Postgres 16, Redis 7, Certbot (auto-renew, expires Nov 26), `APP_DEBUG=false`,
   queue + scheduler systemd units, daily pg_dump + storage backup. **CD:** `.github/workflows/deploy-api.yml`
   (push to `main` → PHPUnit → SSH `backend/scripts/deploy.sh`); runbook `backend/DEPLOY.md`.
-- [ ] **Add the 3 GitHub Actions secrets** (`DEPLOY_HOST` `DEPLOY_USER` `DEPLOY_SSH_KEY`) so CD can
-  run — until then `deploy.sh` is manual-over-SSH. See `backend/DEPLOY.md` §12a.
-- [ ] Rate-limit `/api/login` + `/api/register` (throttle middleware).
+- [X] GitHub Actions CD secrets (`DEPLOY_HOST` `DEPLOY_USER` `DEPLOY_SSH_KEY`) added — full
+  pipeline verified green (manual `workflow_dispatch` run deployed `6dbc889` to the box).
+- [ ] Rate-limit `/api/login` + `/api/register` (throttle middleware). **Launch security item.**
 - [ ] Copy backups off-box (DO weekly droplet snapshot is on — add pg_dump → object storage).
 - [X] Seed a stable **reviewer demo account** on prod — `keira@thatfridge.test` / `password123`
-  with a seeded fridge + 7 curated recipes. **Change the password before submitting.**
+  with a seeded fridge + 7 curated recipes. **⚠ Change the password before submitting.**
 - [ ] Sentry on the Laravel app.
-- [ ] Privacy policy + Terms + Support pages: drafted in `apps/legal/` (static site, not
-  `apps/web`). Deploy to Cloudflare Pages on the `thatfridge.com` apex; fill the placeholders
-  first (see `apps/legal/README.md`).
+- [ ] Transactional email provider (Postmark/Resend free tier) — prod is `MAIL_MAILER=log`, so
+  password-reset emails don't send yet.
+- [ ] Restrict `config/cors.php` `allowed_origins` before the web build ships (currently allows all).
+- [X] Privacy / Terms / Support pages — live at `https://thatfridge.com` (see §1; `apps/legal/`,
+  Git-connected Cloudflare Worker, auto-redeploy on `main`).
 - [X] `DELETE /api/me` endpoint + tests (hard-deletes user + tokens + owned fridges).
 
 ---
@@ -131,8 +137,12 @@ multiple / shared fridges, advanced notification tuning.
 
 - [ ] **First `eas build --profile development`** (dev client) so barcode scan, local
   notifications, and RevenueCat can actually be tested. Simulator builds need no paid Apple
-  account (`eas.json` dev profile has `ios.simulator: true`).
-- [ ] Full **smoke-test on a real device / simulator** — nothing since the parity port has run.
+  account (`eas.json` dev profile has `ios.simulator: true`). **Next up now that the API is live.**
+  Note: `eas.json` `preview`/`production` now point at `https://api.thatfridge.com/api`; the
+  `development` profile still points at localhost:8000 — override if testing the dev client
+  against prod.
+- [ ] Full **smoke-test on a real device / simulator** against the live API — nothing since the
+  parity port has run.
 - [ ] Bottom-sheet **grab-to-dismiss** gesture on modal screens (needs
   `react-native-gesture-handler` root wiring).
 - [ ] Native-feel pass: haptics, safe-area audit on every screen, keyboard-avoiding views,
@@ -265,10 +275,12 @@ badge catalog, shopping recs, `getScoreTrend`, `routeChatAgent`, `suggestItemDet
 
 ## 8. Pre-submission checklist
 
-- [ ] Prod API on HTTPS, `APP_DEBUG=false`, queue + scheduler running, backups on
-- [ ] App built against prod `EXPO_PUBLIC_API_URL`; no localhost reachable
-- [ ] Account deletion works from a clean install
-- [ ] Privacy policy + terms URLs live and linked in-app
+- [X] Prod API on HTTPS, `APP_DEBUG=false`, queue + scheduler running, backups on (2026-08-28)
+- [ ] App built against prod `EXPO_PUBLIC_API_URL`; no localhost reachable (`eas.json`
+  preview/production done; verify at build time)
+- [ ] Account deletion works from a clean install (against the live API)
+- [X] Privacy / terms / support URLs live (`thatfridge.com`) — [ ] still confirm they're linked in-app
+- [ ] Transactional email working (password reset) — prod still on `MAIL_MAILER=log`
 - [ ] Camera permission string set; `ITSAppUsesNonExemptEncryption` set
 - [ ] Local notifications fire correctly and route on tap
 - [ ] RevenueCat: sandbox purchase + restore verified; `thatfridge_pro` gate works both ways
