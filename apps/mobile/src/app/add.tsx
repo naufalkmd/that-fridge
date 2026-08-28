@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -382,7 +382,6 @@ type Detected = {
   iconUrl: string | null;
   qty: number;
   location: StorageLocation;
-  sectionId: string | null;
   expiryDays: number | null;
   condition: "vibrant" | "wilting" | "past_best" | null;
   checked: boolean;
@@ -394,7 +393,7 @@ const CONDITION_PHRASE: Record<string, string> = {
 };
 
 function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => void }) {
-  const { ensureSectionId, addManyItems, fridges } = useInventory();
+  const { ensureSectionId, addManyItems } = useInventory();
   const [status, setStatus] = useState<"idle" | "scanning" | "review">("idle");
   const [items, setItems] = useState<Detected[]>([]);
   const [saving, setSaving] = useState(false);
@@ -406,7 +405,6 @@ function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => v
   const [generating, setGenerating] = useState(false);
   const [library, setLibrary] = useState<GeneratedIcon[]>([]);
 
-  const sections = useMemo(() => fridges[0]?.sections ?? [], [fridges]);
   const checkedCount = items.filter((i) => i.checked && i.name.trim()).length;
   const set = (id: string, patch: Partial<Detected>) =>
     setItems((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x)));
@@ -429,7 +427,6 @@ function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => v
           iconUrl: null,
           qty: Math.max(1, d.parsed_quantity ?? 1),
           location: "fridge" as StorageLocation,
-          sectionId: null,
           expiryDays: null,
           condition: d.condition ?? null,
           checked: true,
@@ -526,7 +523,6 @@ function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => v
           icon_url: d.iconUrl,
           quantity: d.qty,
           location: d.location,
-          sectionId: d.sectionId ?? undefined,
           ...(d.expiryDays != null
             ? { expiry_date: isoInDays(d.expiryDays), shelf_life_days: d.expiryDays }
             : {}),
@@ -702,19 +698,6 @@ function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => v
                 </View>
               </View>
 
-              {sections.length > 1 && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                  {sections.map((s) => {
-                    const on = d.sectionId === s.id;
-                    return (
-                      <Pressable key={s.id} onPress={() => set(d.id, { sectionId: s.id })} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: on ? AMBER : SURFACE2 }}>
-                        <Text style={{ fontSize: 11, fontWeight: "700", color: on ? "#0a0a0c" : INK }}>{s.name}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              )}
-
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }} style={{ flex: 1 }}>
                   {BEST_BEFORE_PRESETS.map((p) => {
@@ -749,7 +732,7 @@ function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => v
               onPress={() =>
                 setItems((p) => [
                   ...p,
-                  { id: `d${Date.now()}`, name: "", icon: "generic", iconUrl: null, qty: 1, location: "fridge", sectionId: null, expiryDays: null, condition: null, checked: true },
+                  { id: `d${Date.now()}`, name: "", icon: "generic", iconUrl: null, qty: 1, location: "fridge", expiryDays: null, condition: null, checked: true },
                 ])
               }
               style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: 13, borderRadius: 8, borderWidth: 1.5, borderColor: STRONG_BORDER, borderStyle: "dashed" }}
