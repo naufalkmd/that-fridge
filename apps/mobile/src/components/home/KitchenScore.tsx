@@ -6,6 +6,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
   computeStreak,
   getOverallScore,
+  getOverdueItemStats,
   getScoreTrend,
   kitchenScoreResults,
   type KitchenScoreInput,
@@ -69,6 +70,34 @@ function AgentBar({ result }: { result: KitchenScoreResult }) {
   );
 }
 
+/** Guardian's own tell — its score is fundamentally an overdue-items check. */
+function GuardianPill({ overdue }: { overdue: number }) {
+  const clear = overdue === 0;
+  const color = clear ? "#39e07f" : "#ff5567";
+  return (
+    <View
+      style={{
+        alignSelf: "flex-start",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        marginTop: 8,
+        paddingVertical: 3,
+        paddingHorizontal: 8,
+        borderRadius: 20,
+        backgroundColor: `${color}1a`,
+        borderWidth: 1,
+        borderColor: color,
+      }}
+    >
+      <MaterialCommunityIcons name={clear ? "check" : "alert-outline"} size={10} color={color} />
+      <Text style={{ fontSize: 9.5, fontWeight: "700", letterSpacing: 0.3, textTransform: "uppercase", color }}>
+        {clear ? "nothing overdue" : `${overdue} overdue`}
+      </Text>
+    </View>
+  );
+}
+
 /** Small L-bracket in each corner — the web card's "corner brackets" brand moment. */
 function Corner({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   const isTop = pos[0] === "t";
@@ -115,6 +144,7 @@ export function KitchenScore({
     "waste",
     ordered.find((r) => r.key === "waste")?.score ?? null,
   );
+  const overdue = getOverdueItemStats(input.items).overdueCount;
   const puck = overall !== null ? puckPosition(overall) : null;
 
   return (
@@ -333,6 +363,7 @@ export function KitchenScore({
                   {r.headline}
                 </Text>
                 <Text style={{ fontSize: 10.5, lineHeight: 15, color: MUTED }}>{r.detail}</Text>
+                {r.key === "waste" && <GuardianPill overdue={overdue} />}
               </View>
             ))}
           </View>
