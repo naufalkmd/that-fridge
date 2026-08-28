@@ -16,16 +16,19 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Explicit create (not User::factory()) so this seeder runs on a production box
+        // where fakerphp/faker — a require-dev package — isn't installed. updateOrCreate
+        // keyed on email keeps re-runs idempotent.
         foreach ([
-            ['name' => 'Keira', 'email' => 'keira@thatfridge.test'],
-            ['name' => 'Hazim', 'email' => 'hazim@thatfridge.test'],
-            ['name' => 'Joey', 'email' => 'joey@thatfridge.test'],
-            ['name' => 'Kemed', 'email' => 'kemed@thatfridge.test'],
+            ['name' => 'Keira', 'email' => 'keira@thatfridge.test', 'username' => 'keira'],
+            ['name' => 'Hazim', 'email' => 'hazim@thatfridge.test', 'username' => 'hazim'],
+            ['name' => 'Joey', 'email' => 'joey@thatfridge.test', 'username' => 'joey'],
+            ['name' => 'Kemed', 'email' => 'kemed@thatfridge.test', 'username' => 'kemed'],
         ] as $attrs) {
-            User::factory()->create([
-                ...$attrs,
-                'password' => 'password123',
-            ]);
+            User::updateOrCreate(
+                ['email' => $attrs['email']],
+                [...$attrs, 'password' => 'password123', 'email_verified_at' => now()],
+            );
         }
 
         $this->seedCuratedRecipes();
