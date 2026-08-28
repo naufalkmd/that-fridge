@@ -216,6 +216,28 @@ export function hasFullFoodGroupVariety(usageHistory: UsageHistoryEntry[] = []):
   return COUNTED_CATEGORIES.every((g) => counts[g] > 0);
 }
 
+export interface FoodGroupCoverage {
+  key: NutritionCategory;
+  label: string;
+  used: boolean;
+}
+
+/**
+ * Per-group used/missing for the Chef card's icon row + "x/5 groups" caption. Shares
+ * countableUsage/tallyByCategory and the BALANCE_MIN_ENTRIES gate with computeFoodBalanceScore,
+ * so the two never disagree about whether there's enough data yet. null = not enough data.
+ */
+export function getFoodGroupCoverage(usageHistory: UsageHistoryEntry[] = []): FoodGroupCoverage[] | null {
+  const usage = countableUsage(usageHistory);
+  if (usage.length < BALANCE_MIN_ENTRIES) return null;
+  const counts = tallyByCategory(usage);
+  return COUNTED_CATEGORIES.map((key) => ({
+    key,
+    label: CATEGORY_LABELS[key] ?? key,
+    used: counts[key] > 0,
+  }));
+}
+
 export function computeFoodBalanceScore(input: KitchenScoreInput): KitchenScoreResult {
   const usage = countableUsage(input.usageHistory ?? []);
 
@@ -372,6 +394,34 @@ export function getScoreTrend(
   const compare = key === "waste" ? mostRecent.wasteScore : mostRecent.balanceScore;
   if (compare === null) return null;
   return { delta: currentScore - compare, weekOf: mostRecent.weekOf };
+}
+
+export interface ScoreSeriesPoint {
+  weekOf: string;
+  score: number;
+}
+
+const SPARKLINE_MAX_POINTS = 8;
+
+/**
+ * Oldest→newest waste/balance series for the sparkline: real weekly snapshots plus the current
+ * live score as the final "now" point, capped to the most recent SPARKLINE_MAX_POINTS so the
+ * line doesn't grow unbounded over a long account history. Mirrors apps/web's getScoreSeries.
+ */
+export function getScoreSeries(
+  snapshots: ScoreSnapshot[],
+  key: "waste" | "balance",
+  currentScore: number | null,
+): ScoreSeriesPoint[] {
+  if (currentScore === null) return [];
+  const sorted = [...snapshots].sort((a, b) => (a.weekOf < b.weekOf ? -1 : a.weekOf > b.weekOf ? 1 : 0));
+  const points: ScoreSeriesPoint[] = [];
+  for (const s of sorted) {
+    const score = key === "waste" ? s.wasteScore : s.balanceScore;
+    if (score !== null) points.push({ weekOf: s.weekOf, score });
+  }
+  points.push({ weekOf: "now", score: currentScore });
+  return points.slice(-SPARKLINE_MAX_POINTS);
 }
 
 export function computeStreak(

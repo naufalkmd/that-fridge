@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import { LayoutAnimation, Platform, Pressable, Text, UIManager, View } from "react-native";
-import Svg, { Circle, G, Rect } from "react-native-svg";
+import Svg, { Circle, G, Polyline, Rect } from "react-native-svg";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import {
   computeStreak,
+  getFoodGroupCoverage,
   getOverallScore,
   getOverdueItemStats,
+  getScoreSeries,
   getScoreTrend,
   kitchenScoreResults,
   type KitchenScoreInput,
@@ -98,6 +100,133 @@ function GuardianPill({ overdue }: { overdue: number }) {
   );
 }
 
+/**
+ * Waste Saver's weekly trend as a tiny polyline — real snapshots + the live score as the last
+ * point (see core's getScoreSeries). Mirrors the web card's sparkline. Hidden until there are
+ * at least two points to draw a line between.
+ */
+function Sparkline({ points }: { points: { score: number }[] }) {
+  if (points.length < 2) return null;
+  const W = 96;
+  const H = 22;
+  const PAD = 2;
+  const scores = points.map((p) => p.score);
+  const min = Math.min(...scores);
+  const max = Math.max(...scores);
+  const span = max - min || 1;
+  const step = (W - PAD * 2) / (points.length - 1);
+  const coords = points
+    .map((p, i) => {
+      const x = PAD + i * step;
+      const y = PAD + (H - PAD * 2) * (1 - (p.score - min) / span);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  const last = coords.split(" ").at(-1)!.split(",").map(Number);
+  const rising = scores.at(-1)! >= scores[0];
+  const color = rising ? "#39e07f" : "#ff5567";
+  return (
+    <Svg width={W} height={H} style={{ marginTop: 6 }}>
+      <Polyline points={coords} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+      <Circle cx={last[0]} cy={last[1]} r={2} fill={color} />
+    </Svg>
+  );
+}
+
+const FOOD_GROUP_ICON: Record<string, string> = {
+  protein: "food-drumstick",
+  vegetables: "carrot",
+  fruit: "food-apple",
+  grains: "barley",
+  dairy: "cheese",
+};
+
+/** Chef's tell — the 5 food-group icons, lit when that group's been used lately. */
+function ChefExtra({ input }: { input: KitchenScoreInput }) {
+  const coverage = getFoodGroupCoverage(input.usageHistory ?? []);
+  if (!coverage) return null;
+  return (
+    <View style={{ flexDirection: "row", gap: 4, marginTop: 8 }}>
+      {coverage.map((c) => (
+        <View
+          key={c.key}
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: 9,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: c.used ? "rgba(57,224,127,0.13)" : "transparent",
+            borderWidth: 1,
+            borderColor: c.used ? "#39e07f" : STRONG,
+          }}
+        >
+          <MaterialCommunityIcons
+            name={FOOD_GROUP_ICON[c.key] as never}
+            size={10}
+            color={c.used ? "#39e07f" : FAINT}
+          />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** Organizer's tell — its score IS a ratio, so a completion ring. */
+function OrganizerExtra({ input }: { input: KitchenScoreInput }) {
+  const tally = input.organizerTally;
+  if (!tally || tally.itemsCheckedTotal === 0) return null;
+  const ratio = tally.itemsCorrectTotal / tally.itemsCheckedTotal;
+  const r = 11;
+  const c = 2 * Math.PI * r;
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 }}>
+      <Svg width={26} height={26} viewBox="0 0 26 26">
+        <Circle cx={13} cy={13} r={r} fill="none" stroke={STRONG} strokeWidth={3} />
+        <G rotation={-90} origin="13, 13">
+          <Circle
+            cx={13}
+            cy={13}
+            r={r}
+            fill="none"
+            stroke="#3d6fe0"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeDasharray={`${(c * ratio).toFixed(1)}, ${c.toFixed(1)}`}
+          />
+        </G>
+      </Svg>
+      <Text style={{ fontSize: 10, fontWeight: "700", color: FAINT }}>
+        {tally.itemsCorrectTotal}/{tally.itemsCheckedTotal} in the right spot
+      </Text>
+    </View>
+  );
+}
+
+/** Shopkeeper's tell — its score IS the checked/total split, so a receipt-style bar. */
+function ShopkeeperExtra({ input }: { input: KitchenScoreInput }) {
+  const list = input.shoppingList ?? [];
+  if (list.length === 0) return null;
+  const checked = list.filter((i) => i.checked).length;
+  return (
+    <View style={{ marginTop: 8 }}>
+      <View style={{ height: 4, borderRadius: 2, backgroundColor: STRONG, overflow: "hidden" }}>
+        <View style={{ height: "100%", borderRadius: 2, width: `${(checked / list.length) * 100}%`, backgroundColor: "#39e07f" }} />
+      </View>
+      <Text style={{ marginTop: 4, fontSize: 10, fontWeight: "700", color: FAINT }}>
+        {checked}/{list.length} picked up
+      </Text>
+    </View>
+  );
+}
+
+function AgentExtra({ agentKey, input }: { agentKey: KitchenScoreResult["key"]; input: KitchenScoreInput }) {
+  if (agentKey === "balance") return <ChefExtra input={input} />;
+  if (agentKey === "organizer") return <OrganizerExtra input={input} />;
+  if (agentKey === "shopkeeper") return <ShopkeeperExtra input={input} />;
+  return null;
+}
+
 /** Small L-bracket in each corner — the web card's "corner brackets" brand moment. */
 function Corner({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   const isTop = pos[0] === "t";
@@ -139,11 +268,9 @@ export function KitchenScore({
   const overall = getOverallScore(ordered);
   const scoredCount = ordered.filter((r) => r.score !== null).length;
   const streak = snapshots.length > 0 ? computeStreak(snapshots) : null;
-  const wasteTrend = getScoreTrend(
-    snapshots,
-    "waste",
-    ordered.find((r) => r.key === "waste")?.score ?? null,
-  );
+  const wasteScore = ordered.find((r) => r.key === "waste")?.score ?? null;
+  const wasteTrend = getScoreTrend(snapshots, "waste", wasteScore);
+  const wasteSeries = getScoreSeries(snapshots, "waste", wasteScore);
   const overdue = getOverdueItemStats(input.items).overdueCount;
   const puck = overall !== null ? puckPosition(overall) : null;
 
@@ -246,6 +373,8 @@ export function KitchenScore({
                 {wasteTrend.delta > 0 ? "▲" : "▼"} {Math.abs(wasteTrend.delta)} Waste Saver vs last week
               </Text>
             )}
+
+            <Sparkline points={wasteSeries} />
           </>
         ) : (
           <Text
@@ -363,7 +492,7 @@ export function KitchenScore({
                   {r.headline}
                 </Text>
                 <Text style={{ fontSize: 10.5, lineHeight: 15, color: MUTED }}>{r.detail}</Text>
-                {r.key === "waste" && <GuardianPill overdue={overdue} />}
+                {r.key === "waste" ? <GuardianPill overdue={overdue} /> : <AgentExtra agentKey={r.key} input={input} />}
               </View>
             ))}
           </View>
