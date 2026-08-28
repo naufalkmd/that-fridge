@@ -37,7 +37,7 @@ export default function MarkRecipeMade() {
   const router = useRouter();
   const toast = useToast();
   const { byId } = useRecipes();
-  const { items, removeItem } = useInventory();
+  const { items, removeItem, patchItem } = useInventory();
   const { refresh: refreshScore } = useKitchenScore();
   const [busy, setBusy] = useState(false);
 
@@ -80,10 +80,14 @@ export default function MarkRecipeMade() {
       // both used up and still in the fridge.
       const itemIds = Array.from(new Set(rows.map((r) => r.itemId)));
       for (const itemId of itemIds) {
-        const finished = rows.some((r) => r.itemId === itemId && status[r.id] === "finished");
-        if (!finished) continue; // "remaining" → leave it in the fridge
         const it = items.find((i) => i.id === itemId);
         if (!it) continue;
+        const finished = rows.some((r) => r.itemId === itemId && status[r.id] === "finished");
+        if (!finished) {
+          // "remaining" → used from, not finished: keep it, mark opened
+          if (!it.opened) await patchItem(itemId, { opened: true }).catch(() => {});
+          continue;
+        }
         await api
           .recordItemUsage({
             name: it.name,

@@ -264,8 +264,9 @@ badge catalog, shopping recs, `getScoreTrend`, `routeChatAgent`, `suggestItemDet
 
 ### Still open vs. the web (post-launch, all JS-only OTA)
 
-- **§D "Opened it" item state** — mobile `/fridges` payload has no `opened` field; needs a
-  backend Item + resource change. **(Batch 3 — next)**
+- ~~**§D "Opened it" item state**~~ ✅ done 2026-08-28 — persisted: `items.opened` column,
+  `ItemResource` caps effective days at 3 when opened; "Opened it" on item detail; Mark-as-made
+  "Remaining" sets it.
 - **Voice input** in chat — needs a native STT module (no Expo one). **Blocked.**
 - ~~**AI icon generation**~~ ✅ done 2026-08-28 — `icon-picker` modal (prompt→fal.ai +
   saved library + curated grid), reached from the item-detail edit form. The full ~165-PNG

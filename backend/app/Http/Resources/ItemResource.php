@@ -19,6 +19,12 @@ class ItemResource extends JsonResource
             ? (int) now()->startOfDay()->diffInDays($this->expiry_date->copy()->startOfDay(), false)
             : null;
 
+        // An opened item goes bad sooner — cap its effective days so freshness/urgency reflect
+        // "already started", matching the web's markItemOpened behaviour.
+        if ($this->opened && $days !== null) {
+            $days = min($days, 3);
+        }
+
         $freshness = null;
         if ($days !== null && $shelfLifeDays) {
             $freshness = (int) max(0, min(100, round(($days / $shelfLifeDays) * 100)));
@@ -32,6 +38,7 @@ class ItemResource extends JsonResource
             'nutrition_category' => $this->nutrition_category,
             'freshness' => $freshness,
             'days' => $days,
+            'opened' => (bool) $this->opened,
             'note' => $this->note,
             'location' => $this->location,
             'quantity' => $this->quantity,

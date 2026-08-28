@@ -174,6 +174,20 @@ export default function ItemDetail() {
     }
   }
 
+  async function markOpened() {
+    if (item!.opened) return;
+    setBusy(true);
+    try {
+      await patchItem(item!.id, { opened: true });
+      refreshScore();
+      toast.show(`${item!.name} marked opened`);
+    } catch (e) {
+      Alert.alert("Error", describeError(e, "Couldn't update that."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function throwAway() {
     const snap = item!;
     Alert.alert("Throw away", `Bin "${snap.name}"? This doesn't count toward your scores.`, [
@@ -425,6 +439,31 @@ export default function ItemDetail() {
             </Pressable>
           )}
         </View>
+
+        <Pressable
+          onPress={markOpened}
+          disabled={busy || item.opened}
+          style={{
+            alignItems: "center",
+            paddingVertical: 11,
+            borderRadius: 6,
+            marginBottom: 10,
+            backgroundColor: SURFACE2,
+            borderWidth: 1,
+            borderColor: HAIRLINE,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <MaterialCommunityIcons
+              name={item.opened ? "package-variant" : "package-variant-closed"}
+              size={14}
+              color={item.opened ? FAINT : BLUE}
+            />
+            <Text style={{ fontSize: 13, fontWeight: "700", color: item.opened ? FAINT : BLUE }}>
+              {item.opened ? "Opened — going bad sooner" : "Opened it"}
+            </Text>
+          </View>
+        </Pressable>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <Pressable

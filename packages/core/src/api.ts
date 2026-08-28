@@ -53,6 +53,7 @@ interface RawItem {
   nutrition_category: NutritionCategory | null;
   freshness: number | null;
   days: number | null;
+  opened?: boolean;
   note: string | null;
   location: StorageLocation | null;
   quantity: number | null;
@@ -86,7 +87,7 @@ function toItem(raw: RawItem): Item {
     days: raw.days ?? 0,
     note: raw.note ?? "",
     qty: raw.quantity ?? 1,
-    opened: false,
+    opened: raw.opened ?? false,
     location: raw.location ?? undefined,
     shopUrl: raw.shop_url ?? null,
   };
@@ -131,6 +132,7 @@ export interface UpdateItemInput {
   quantity?: number;
   expiry_date?: string;
   shelf_life_days?: number;
+  opened?: boolean;
   note?: string;
   shop_url?: string | null;
 }
