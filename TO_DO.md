@@ -278,12 +278,12 @@ it" item state** persisted (`items.opened` column, freshness capped when opened)
 
 ### Still open vs. the web
 
-- **Receipt/photo scan review is thin.** Web lets you edit *each* detected item — icon (+
-  generate), expiry (+ scan), location, section, condition (photo), per-item or bulk auto-fill,
-  and add a blank row. Mobile `ScanFlow` only does: include-toggle, name, quantity, then bulk-adds
-  everything to one section. **Biggest remaining parity gap.** (post-launch OTA)
-- **Icon generation not wired into the Add flow** — web has `generateIconForManual` /
-  `generateIconForDetected`; mobile only reaches the icon picker from the item-detail edit form.
+- ~~**Receipt/photo scan review is thin**~~ ✅ done 2026-08-28 — per-item inline icon picker
+  (pack + generate + library), section/location chips, qty, best-before + per-item date-scan +
+  per-item/all Auto-fill, condition note, remove, "add item the scan missed". **Not yet
+  smoke-tested live** (needs a Pro account + a real scan) — typechecks and is a direct port.
+- **Icon generation in the *manual* Add form** — the scan review has it now; the plain
+  manual-add form still only auto-guesses the icon (no generate). Minor.
 - **Organizer move dismiss** — mobile applies/sweeps moves but has no per-move "dismiss"
   (`dismissOrganizerMove` on web). Minor.
 - **Voice input** in chat — needs a native STT module (no Expo one). **Blocked.**

@@ -23,6 +23,7 @@ interface InventoryContextValue {
     items: {
       name: string;
       icon?: string;
+      icon_url?: string | null;
       location?: "fridge" | "freezer" | "pantry";
       quantity?: number;
       sectionId?: string;
@@ -137,6 +138,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           api.createItem(d.sectionId || sectionId, {
             name: d.name,
             icon: d.icon || "generic",
+            ...(d.icon_url ? { icon_url: d.icon_url } : {}),
             location: d.location ?? "fridge",
             quantity: d.quantity ?? 1,
             ...(d.expiry_date ? { expiry_date: d.expiry_date, shelf_life_days: d.shelf_life_days } : {}),
