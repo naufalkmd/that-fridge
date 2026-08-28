@@ -1,9 +1,164 @@
-# Troubleshooting
+# Setup & Troubleshooting
 
-Problems we've actually hit while building ThatFridge, and the fix that worked. Newest
-entries at the top of each section. When you hit and solve something new, add it here.
+Get ThatFridge running locally, plus every wall we've actually hit and the fix that worked.
 
 _Last updated: 2026-08-28._
+
+---
+
+# Part 1 — Setup
+
+## What you need
+
+| Tool | Version | Notes |
+|---|---|---|
+| **Node** | 20–22 | This repo's `engines` says ≥20. EAS CLI officially supports ≤22 — if you're on 24/25, `nvm install 22 && nvm use 22` for anything EAS. |
+| **pnpm** | 10.x | `corepack enable` then `corepack prepare pnpm@10.32.1 --activate`, or `npm i -g pnpm`. |
+| **PHP** | 8.2+ | + Composer. |
+| **Docker Desktop** | any | For Postgres + Redis. (Or bring your own Postgres 15/16 — see the Docker note.) |
+| **Xcode** | latest | macOS only, for the iOS Simulator. Not needed for Expo Go. |
+
+Backend and mobile talk over your LAN, so **your phone/simulator and your Mac must be on the
+same Wi-Fi**.
+
+## 1. Clone + install
+
+```bash
+git clone <repo> ThatFridge && cd ThatFridge
+pnpm install                     # installs apps/mobile + packages/core (backend/web are separate)
+git config core.hooksPath .githooks   # one-time: run test suites before every push
+```
+
+## 2. Backend (Laravel API)
+
+```bash
+cd backend
+cp .env.example .env
+composer install
+php artisan key:generate
+```
+
+Start the database (Docker):
+
+```bash
+cd ..                            # repo root
+docker compose up -d             # postgres:16 on host port 5433, redis on 6379
+```
+
+Check `backend/.env` matches `docker-compose.yml`:
+
+```
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5433                      # container maps 5433→5432 to dodge a local Postgres
+DB_DATABASE=thatfridge
+DB_USERNAME=devuser
+DB_PASSWORD=devpassword
+```
+
+Migrate + seed, then serve **on all interfaces** so the LAN can reach it:
+
+```bash
+cd backend
+php artisan migrate --seed
+php artisan serve --host 0.0.0.0 --port 8000
+```
+
+In a **second terminal**, run the scheduler so expiry / low-stock notifications get generated
+(nothing else fires `app:check-item-freshness`):
+
+```bash
+cd backend && php artisan schedule:work
+# or, to populate notifications right now:
+php artisan app:check-item-freshness
+```
+
+**Demo accounts** (`--seed` creates 4, all password `password123`):
+
+| Email | Has a demo fridge? |
+|---|---|
+| `keira@thatfridge.test` | ✅ (seed script runs for keira by default) |
+| `hazim@thatfridge.test` | ⬜ |
+| `joey@thatfridge.test` | ⬜ |
+| `kemed@thatfridge.test` | ⬜ |
+
+Seed a fridge with varied freshness for any account:
+
+```bash
+EMAIL=joey@thatfridge.test PASS=password123 sh backend/scripts/seed-demo-fridge.sh
+```
+
+**Sanity check** — before touching a frontend:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/login \
+  -H 'Content-Type: application/json' -H 'Accept: application/json' \
+  -d '{"email":"keira@thatfridge.test","password":"password123"}'
+# → { "user": {...}, "token": "..." }
+```
+
+## 3. Mobile app (Expo / React Native — the product)
+
+```bash
+cd apps/mobile
+cp .env.example .env
+```
+
+Edit `apps/mobile/.env`:
+
+```
+# Simulator: 127.0.0.1 is fine. Physical device: your Mac's LAN IP (`ipconfig getifaddr en0`).
+EXPO_PUBLIC_API_URL=http://192.168.x.x:8000/api
+# Publishable RevenueCat key — ask the account owner for the current test-store key.
+EXPO_PUBLIC_RC_IOS_KEY=test_...
+```
+
+Then, easiest first:
+
+```bash
+pnpm mobile                      # from repo root — `expo start`, then press i / a / w or scan the QR
+```
+
+- **Expo Go** works for most of the app. `expo-camera` (barcode scan), `expo-notifications`,
+  and `react-native-purchases` (paywall) **do not** — those need a dev build.
+- **iOS Simulator without a paid Apple account:** the `eas.json` `development` profile is a
+  `ios.simulator: true` build.
+
+  ```bash
+  cd apps/mobile
+  pnpm exec eas login                                   # first time; needs access to the `avocacode` org
+  pnpm exec eas build --profile development --platform ios
+  pnpm exec eas build:run -p ios                        # installs the finished build to a booted simulator
+  pnpm exec expo start --dev-client                     # serve JS to it
+  ```
+
+## 4. Legacy web app (`apps/web`) — optional, frozen
+
+Only needed to compare against the design; it's frozen during the iOS sprint.
+
+```bash
+cd apps/web
+npm install
+npm run dev                      # NEXT_PUBLIC_API_URL in apps/web/.env.local, defaults to :8000/api
+```
+
+## Tests
+
+```bash
+cd backend    && php artisan test
+cd apps/mobile && pnpm exec tsc --noEmit -p tsconfig.json    # typecheck (no test suite yet)
+pnpm --filter @thatfridge/core typecheck
+cd apps/web   && npm test
+```
+
+The pre-push hook runs these; skip once with `git push --no-verify`.
+
+---
+
+# Part 2 — Troubleshooting
+
+Problems we've actually hit, and the fix that worked. Newest entries at the top of each
+section. When you hit and solve something new, add it here.
 
 ---
 

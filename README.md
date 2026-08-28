@@ -10,8 +10,13 @@ pnpm + turborepo monorepo:
 - `packages/core/` — shared logic (API client, types, domain rules)
 - Postgres + Redis via Docker Compose
 
-Hit a wall? Check [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) first — it collects the errors
-we've actually hit and the fixes.
+## Getting started
+
+**Full step-by-step onboarding — prerequisites, backend + mobile setup, demo logins, dev
+build — is in [`SETUP_TROUBLESHOOTING.md`](SETUP_TROUBLESHOOTING.md)**, which also collects
+every error we've hit and the fix.
+
+The quick version below assumes you know the stack.
 
 ## Setup
 
