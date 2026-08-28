@@ -31,11 +31,11 @@ Everything downstream is blocked on these. They take days to weeks. **Start toda
 - [ ] **App Store Connect: Paid Apps Agreement + banking + tax** — needs real tax info; until
   active, IAPs can't be tested and the Shipaton requirement can't be met. Start the **same
   day** as enrollment.
-- [ ] Domain for the API host + privacy-policy / terms pages. 🟡 `thatfridge.com` bought.
-  `/privacy` `/terms` `/support` pages **drafted** in `apps/legal/` (static site) — still need:
-  fill placeholders (`[OPERATOR LEGAL NAME]`, `[JURISDICTION]`, hosting provider name), set up a
-  `support@thatfridge.com` inbox, deploy (Cloudflare Pages), and DNS (`api` A-record → VPS IP;
-  apex + `www` → Pages). See `apps/legal/README.md`. App URLs in `paywall.tsx` → `thatfridge.com`.
+- [ ] Domain + privacy/terms/support pages. 🟡 `thatfridge.com` bought; `api` A-record →
+  `167.172.88.75` live (API deployed, §2). `apps/legal/` pages **content-complete** (placeholders
+  filled 2026-08-28: operator *Muhammad Naufal Kamaruddin*, Malaysian law). **Still need:**
+  set up `support@thatfridge.com` + `privacy@thatfridge.com` inboxes, deploy `apps/legal/` to
+  Cloudflare Pages, point apex + `www` at it. See `apps/legal/README.md`.
 - [X] **Buy the PixelMix commercial licence** — bought via Sellfy ($25, 2026-08-28). EULA saved
   at `apps/mobile/assets/fonts/PixelMix-EULA.docx`. **Two follow-ups** (see
   `PixelMix-NOTES.md`): (a) the desktop EULA doesn't clearly grant app/web *embedding* — email
