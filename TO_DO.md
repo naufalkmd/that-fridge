@@ -279,9 +279,10 @@ it" item state** persisted (`items.opened` column, freshness capped when opened)
 ### Still open vs. the web
 
 - ~~**Receipt/photo scan review is thin**~~ ✅ done 2026-08-28 — per-item inline icon picker
-  (pack + generate + library), section/location chips, qty, best-before + per-item date-scan +
-  per-item/all Auto-fill, condition note, remove, "add item the scan missed". **Not yet
-  smoke-tested live** (needs a Pro account + a real scan) — typechecks and is a direct port.
+  (pack + generate + library), compact location icons + section/best-before chips, qty,
+  per-item date-scan + per-item/all Auto-fill, condition note, remove, "add item the scan
+  missed". Review UI verified rendering on the simulator; the full pick-photo → OCR → confirm
+  cycle still needs a real device pass.
 - **Icon generation in the *manual* Add form** — the scan review has it now; the plain
   manual-add form still only auto-guesses the icon (no generate). Minor.
 - **Organizer move dismiss** — mobile applies/sweeps moves but has no per-move "dismiss"
