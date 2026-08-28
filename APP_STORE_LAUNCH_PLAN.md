@@ -346,13 +346,22 @@ component's size, as a rough effort signal. Every backend route named below alre
 > - §J — **shopping recommendations** (`getShoppingRecommendations`) — a "Suggested" chip row
 >   on the shopping list.
 > - §K — **skeleton loaders** (`Skeleton` / `SkeletonList`) on Inventory + Recipe book.
-> - Core gained ~45 API methods + `progress.ts` + `getScoreTrend` + `getShoppingRecommendations`.
+> - §F — **Organizer sweep** (`organizer.tsx`): "Check my fridge" → per-item AI location
+>   suggestion → apply/keep → `/organizer-tally` — **makes the Tidiness score real**. Linked
+>   from Profile + the CrewScene organizer zone.
+> - **Badges now actually unlock**: `postBadgeProgress` on `rescued_10` (used up an item with
+>   ≤3 days left), `first_link_recipe` (recipe link import), `full_week_variety` (all 5 groups).
+> - §C — manual-add **"Auto-fill"** button (`suggestItemDetails` → expiry + location).
+> - §3 — Home crew tips now show **real one-shot agent insights** (`lib/agentInsight.ts`,
+>   cached per launch), with the data line as fallback.
+> - Core gained ~47 API methods + `progress.ts` + `getScoreTrend` + `getShoppingRecommendations`
+>   + `suggestItemDetails`.
 >
 > **Still open:** §D "opened" item state (needs a backend `opened` field) + AI icon generation ·
-> §E voice input (no Expo STT module) · §F Organizer sweeps (feeds Tidiness) +
-> Chef/Organizer/Shopkeeper score extras · §H richer notification-settings · §K sheet
-> grab-to-dismiss + offline banners · recipe photo/video attachments ·
-> `MarkRecipeMadeSheet` ingredient reconciliation.
+> §E voice input (no Expo STT module) · §F Chef/Organizer/Shopkeeper score-card extras ·
+> §H richer notification-settings · §K sheet grab-to-dismiss + offline banners ·
+> recipe photo/video attachments · `MarkRecipeMadeSheet` ingredient reconciliation ·
+> FoodHub's Guardian/Shopping sub-tabs.
 
 ### A. Screens with no mobile equivalent
 
