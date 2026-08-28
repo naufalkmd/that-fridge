@@ -124,6 +124,7 @@ export interface CreateItemInput {
 export interface UpdateItemInput {
   name?: string;
   icon?: string;
+  icon_url?: string | null;
   nutrition_category?: NutritionCategory | null;
   section_id?: string;
   location?: StorageLocation;
@@ -215,6 +216,13 @@ export interface ScanResult {
   file_url: string;
   detected_items: ScanDetectedItem[];
   message: string;
+}
+
+/** One saved AI-generated icon in the user's library (`/icons/generated`). */
+export interface GeneratedIcon {
+  id: string;
+  prompt: string;
+  image_url: string;
 }
 
 /** Result of `/items/expiry-scan` — the printed best-before date read off a package photo. */
@@ -388,6 +396,18 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     const fd = new FormData();
     fd.append("image", image as never);
     return http.post<ExpiryScanResult>(`/sections/${sectionId}/items/expiry-scan`, fd);
+  }
+
+  /** AI icon generation (fal.ai, throttled 10/min) — the result is auto-saved to the library. */
+  function generateIcon(prompt: string): Promise<{ icon_url: string; generated_icon_id: string }> {
+    return http.post("/icons/generate", { prompt });
+  }
+  /** The current user's saved AI-generated icons, newest first. */
+  function listGeneratedIcons(): Promise<GeneratedIcon[]> {
+    return http.get<GeneratedIcon[]>("/icons/generated");
+  }
+  function deleteGeneratedIcon(id: string): Promise<void> {
+    return http.del(`/icons/generated/${id}`).then(() => undefined);
   }
 
   /** AI "auto-fill" — suggest a shelf life + storage location from an item's name. */
@@ -663,6 +683,9 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     scanReceipt,
     scanFridgePhoto,
     scanExpiryPhoto,
+    generateIcon,
+    listGeneratedIcons,
+    deleteGeneratedIcon,
     suggestItemDetails,
     listNotificationEvents,
     markNotification,

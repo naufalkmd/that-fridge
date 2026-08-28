@@ -68,6 +68,10 @@ export default function RootLayout() {
                 options={{ headerShown: false, presentation: "modal" }}
               />
               <Stack.Screen
+                name="icon-picker"
+                options={{ headerShown: false, presentation: "modal" }}
+              />
+              <Stack.Screen
                 name="scan"
                 options={{ headerShown: false, presentation: "fullScreenModal" }}
               />
