@@ -20,6 +20,7 @@ import {
   NUTRITION_CATEGORIES,
   STORAGE_LOCATIONS,
   describeError,
+  guessFoodIcon,
   type NutritionCategory,
   type StorageLocation,
 } from "@thatfridge/core";
@@ -172,6 +173,7 @@ export default function Add() {
     try {
       await addItem({
         name: name.trim(),
+        icon: guessFoodIcon(name.trim()) ?? "generic",
         quantity: qty,
         location,
         nutrition_category: category,

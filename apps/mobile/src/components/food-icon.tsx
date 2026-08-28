@@ -1,11 +1,13 @@
 import { Text, View } from "react-native";
 import { Image } from "expo-image";
 
-import { resolveFoodIcon } from "@thatfridge/core";
+import { foodIconFile, guessFoodIcon, resolveFoodIcon } from "@thatfridge/core";
+import { FOOD_ICON_ASSETS } from "@/lib/food-icon-assets";
 
 /**
- * Blocky pixel food icon — mirrors the web `FoodIcon`. Renders an AI-generated icon
- * (iconUrl), else one of the core pixel grids, else the name's initials.
+ * Blocky pixel food icon — mirrors the web `FoodIcon`. Resolution order:
+ * AI-generated (iconUrl) → the 164-icon pixel-art pack (by key, else guessed from the name) →
+ * one of the hand-coded core grids → the name's initials.
  */
 export function FoodIcon({
   icon,
@@ -18,17 +20,23 @@ export function FoodIcon({
   name: string;
   size?: number;
 }) {
+  const wrap = { width: size, height: size } as const;
+
   if (iconUrl) {
     return (
-      <View
-        style={{ width: size, height: size }}
-        className="items-center justify-center rounded-lg bg-canvas"
-      >
-        <Image
-          source={{ uri: iconUrl }}
-          style={{ width: size * 0.72, height: size * 0.72 }}
-          contentFit="contain"
-        />
+      <View style={wrap} className="items-center justify-center rounded-lg bg-canvas">
+        <Image source={{ uri: iconUrl }} style={{ width: size * 0.78, height: size * 0.78 }} contentFit="contain" />
+      </View>
+    );
+  }
+
+  // Pixel-art pack: use the item's own key if it's a pack key, otherwise guess from the name
+  // (covers items still stored with a generic/legacy key).
+  const file = foodIconFile(icon) ?? foodIconFile(guessFoodIcon(name));
+  if (file && FOOD_ICON_ASSETS[file]) {
+    return (
+      <View style={wrap} className="items-center justify-center rounded-lg bg-canvas">
+        <Image source={FOOD_ICON_ASSETS[file]} style={{ width: size * 0.82, height: size * 0.82 }} contentFit="contain" />
       </View>
     );
   }
@@ -37,23 +45,10 @@ export function FoodIcon({
   if (grid) {
     const cell = (size * 0.72) / grid.cols;
     return (
-      <View
-        style={{ width: size, height: size }}
-        className="items-center justify-center rounded-lg bg-canvas"
-      >
-        <View
-          style={{
-            width: cell * grid.cols,
-            height: cell * grid.rows,
-            flexDirection: "row",
-            flexWrap: "wrap",
-          }}
-        >
+      <View style={wrap} className="items-center justify-center rounded-lg bg-canvas">
+        <View style={{ width: cell * grid.cols, height: cell * grid.rows, flexDirection: "row", flexWrap: "wrap" }}>
           {grid.cells.map((hex, i) => (
-            <View
-              key={i}
-              style={{ width: cell, height: cell, backgroundColor: hex ?? "transparent" }}
-            />
+            <View key={i} style={{ width: cell, height: cell, backgroundColor: hex ?? "transparent" }} />
           ))}
         </View>
       </View>
@@ -61,10 +56,7 @@ export function FoodIcon({
   }
 
   return (
-    <View
-      style={{ width: size, height: size }}
-      className="items-center justify-center rounded-lg bg-canvas"
-    >
+    <View style={wrap} className="items-center justify-center rounded-lg bg-canvas">
       <Text className="text-[13px] font-bold text-muted">{name.slice(0, 2).toUpperCase()}</Text>
     </View>
   );
