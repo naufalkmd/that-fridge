@@ -1,4 +1,5 @@
 {
+  "enabledMcpjsonServers": ["revenuecat"],
   "permissions": {
     "allow": [
       "mcp__claude_ai_Replicate__get_models",

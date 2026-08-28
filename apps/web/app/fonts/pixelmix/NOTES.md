@@ -1,11 +1,14 @@
 PixelMix by Andrew Tyler (font@andrewtyler.net).
 
-The bundled `LICENSE.txt` (CC BY-NC-ND) conflicts with the readme that shipped alongside it
-(which cited CC BY-SA). Per the author's own sale listing at
-https://andrewtyler.gumroad.com/l/pixelmix, the actual current terms are: free for personal/
-non-commercial use, $25 one-time for a commercial license.
+## Status: commercial licence PURCHASED (2026-08-28)
 
-**Status: using it under the personal-use terms during development.**
+Bought via Sellfy ($25 one-time). The governing licence is now `PixelMix-EULA.docx`, which
+**supersedes** the old `LICENSE.txt` (CC BY-NC-ND).
 
-TODO before deploying ThatFridge commercially: buy the $25 commercial license at the link above.
-Until that's done, this repo is only covered to use PixelMix non-commercially.
+Full notes — including the two open caveats (app/web embedding needs written confirmation
+from font@andrewtyler.net; the bold is not an official file and the EULA forbids DIY weights)
+— live in `apps/mobile/assets/fonts/PixelMix-NOTES.md`.
+
+`apps/web` is frozen during the iOS sprint, so `pixelmix_bold.ttf` and its `weight: "700"`
+entry in `app/layout.tsx` are left in place for now. Drop both when `apps/web` is de-frozen
+or retired (the mobile app already dropped its unofficial bold).

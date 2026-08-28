@@ -5,10 +5,18 @@
 pnpm + turborepo monorepo:
 
 - `backend/` — Laravel API (npm/composer, not in the pnpm workspace)
-- `apps/web/` — Next.js app (still npm-managed; frozen during the iOS sprint — see `APP_STORE_LAUNCH_PLAN.md`)
+- `apps/web/` — Next.js app (still npm-managed; frozen during the iOS sprint — see `TO_DO.md`)
 - `apps/mobile/` — Expo / React Native app (iOS-first)
 - `packages/core/` — shared logic (API client, types, domain rules)
 - Postgres + Redis via Docker Compose
+
+## Getting started
+
+**Full step-by-step onboarding — prerequisites, backend + mobile setup, demo logins, dev
+build — is in [`SETUP_TROUBLESHOOTING.md`](SETUP_TROUBLESHOOTING.md)**, which also collects
+every error we've hit and the fix.
+
+The quick version below assumes you know the stack.
 
 ## Setup
 
@@ -102,6 +110,12 @@ Should return a `user` object and a `token`. Use that token on any authenticated
 curl http://127.0.0.1:8000/api/me \
   -H "Accept: application/json" -H "Authorization: Bearer <token from above>"
 ```
+
+## Deploying
+
+The production API deploy (VPS: Nginx + PHP 8.3 + Postgres + Redis + queue/scheduler + HTTPS on
+`api.thatfridge.com`) has a step-by-step runbook: [`backend/DEPLOY.md`](backend/DEPLOY.md). The
+public `thatfridge.com` pages (privacy / terms / support) live in [`apps/legal/`](apps/legal/).
 
 ## Testing
 

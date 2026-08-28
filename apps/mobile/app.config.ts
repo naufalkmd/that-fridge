@@ -1,7 +1,7 @@
 import type { ExpoConfig } from "expo/config";
 
 // iOS-first. Android keys are kept so `eas build -p android` works later, but Android
-// is a post-launch effort — see APP_STORE_LAUNCH_PLAN.md §9.
+// is a post-launch effort — see TO_DO.md §7.
 const config: ExpoConfig = {
   name: "ThatFridge",
   slug: "thatfridge",
@@ -10,6 +10,18 @@ const config: ExpoConfig = {
   icon: "./assets/images/icon.png",
   scheme: "thatfridge",
   userInterfaceStyle: "automatic",
+  owner: "avocacode",
+  extra: {
+    eas: {
+      projectId: "9d32771d-73bf-4ee1-9a24-fbd96b2a3ddc",
+    },
+  },
+  updates: {
+    url: "https://u.expo.dev/9d32771d-73bf-4ee1-9a24-fbd96b2a3ddc",
+  },
+  runtimeVersion: {
+    policy: "appVersion",
+  },
   ios: {
     supportsTablet: false,
     bundleIdentifier: "test.thatfridge.app",
@@ -23,19 +35,33 @@ const config: ExpoConfig = {
     package: "app.thatfridge",
     adaptiveIcon: {
       foregroundImage: "./assets/images/android-icon-foreground.png",
-      backgroundColor: "#0b0f14",
+      backgroundColor: "#0a0a0c",
     },
+  },
+  // Universal: the same screens render on the web via react-native-web. Live web
+  // deployment is a post-launch fast-follow — see TO_DO.md.
+  web: {
+    bundler: "metro",
+    output: "single",
+    favicon: "./assets/images/favicon.png",
   },
   plugins: [
     "expo-router",
     "expo-secure-store",
     [
+      "expo-font",
+      {
+        fonts: ["./assets/fonts/PixelMix.ttf"],
+      },
+    ],
+    [
       "expo-splash-screen",
       {
         image: "./assets/images/splash-icon.png",
-        imageWidth: 160,
+        imageWidth: 200,
         resizeMode: "contain",
-        backgroundColor: "#0b0f14",
+        backgroundColor: "#0a0a0c",
+        dark: { backgroundColor: "#0a0a0c" },
       },
     ],
     [
@@ -45,6 +71,12 @@ const config: ExpoConfig = {
         // Barcode scanning only — no mic. Keeps the iOS review surface minimal.
         microphonePermission: false,
         recordAudioAndroid: false,
+      },
+    ],
+    [
+      "expo-image-picker",
+      {
+        photosPermission: "ThatFridge lets you attach a photo of your fridge or a receipt to a chat.",
       },
     ],
     [

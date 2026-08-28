@@ -75,6 +75,24 @@ class AuthController extends Controller
     }
 
     /**
+     * Permanently delete the authenticated user and everything they own. Required by
+     * Apple App Store Guideline 5.1.1(v) for any app with account registration.
+     *
+     * Owned fridges (and their sections/items/notes/shopping items via FK cascade),
+     * chat history, recipes, usage history, score snapshots and badges all cascade
+     * from the users row. Tokens are revoked explicitly first.
+     */
+    public function destroy(Request $request)
+    {
+        $user = $request->user();
+
+        $user->tokens()->delete();
+        $user->delete();
+
+        return response()->json(['message' => 'Account deleted.']);
+    }
+
+    /**
      * Shared shape for the "current user" payload returned by register/login/me. Needs its
      * own id (the shared-fridge member list renders "(you)" and disables self-removal by
      * comparing against it) and username (find-a-friend search matches on this).

@@ -1,22 +1,41 @@
 /** @type {import('tailwindcss').Config} */
+// Mirror of apps/web/lib/thatfridge/theme.ts — the "dark neon pixel tech" system.
+// Keep these values in exact sync with the web theme until packages/core owns them.
 module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
-      // ThatFridge "dark neon pixel tech" palette — mirror of apps/web theme.ts.
-      // Keep in sync until packages/core owns the shared token source.
       colors: {
-        canvas: "#0b0f14",
-        surface: "#141b23",
-        hairline: "#243040",
-        ink: "#e8eef4",
-        muted: "#9fb0c0",
-        faint: "#5f7285",
-        good: "#3f8f5c",
-        warn: "#d99a2b",
-        bad: "#c1452e",
-        accent: "#4de1c1",
+        canvas: "#0a0a0c",
+        surface: "#131316",
+        surface2: "#1a1a1f",
+        hairline: "rgba(255,255,255,0.09)",
+        "hairline-strong": "rgba(255,255,255,0.18)",
+        ink: "#eaeaec",
+        muted: "rgba(234,234,236,0.58)",
+        faint: "rgba(234,234,236,0.34)",
+        // brand accent — primary CTAs, active nav, brand moments (turquoise, not the amber)
+        accent: "#26c6da",
+        blue: "#5b8dee",
+        good: "#39e07f",
+        warn: "#f5a623",
+        bad: "#ff5567",
+        "agent-guardian": "#ff5f56",
+        "agent-organizer": "#3d6fe0",
+        "agent-chef": "#f5a623",
+        "agent-shopkeeper": "#39e07f",
+      },
+      borderRadius: {
+        sm: "6px",
+        DEFAULT: "8px",
+        md: "8px",
+        lg: "10px",
+        xl: "14px",
+      },
+      fontFamily: {
+        pixel: ["PixelMix"],
+        "pixel-bold": ["PixelMix-Bold"],
       },
     },
   },

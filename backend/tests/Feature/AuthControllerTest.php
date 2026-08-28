@@ -63,4 +63,23 @@ class AuthControllerTest extends TestCase
         $meResponse->assertStatus(200);
         $meResponse->assertJson(['user' => ['username' => 'jordan']]);
     }
+
+    public function test_delete_me_removes_the_user_their_tokens_and_owned_fridges(): void
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('t')->plainTextToken;
+        $fridge = $user->fridges()->create(['name' => 'Home']);
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")->deleteJson('/api/me');
+
+        $response->assertStatus(200);
+        $this->assertDatabaseMissing('users', ['id' => $user->id]);
+        $this->assertDatabaseMissing('fridges', ['id' => $fridge->id]);
+        $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $user->id]);
+    }
+
+    public function test_delete_me_requires_auth(): void
+    {
+        $this->deleteJson('/api/me')->assertStatus(401);
+    }
 }

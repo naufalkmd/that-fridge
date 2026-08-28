@@ -64,11 +64,13 @@ export function createHttpClient({ baseUrl, tokens }: HttpClientConfig): HttpCli
     if (!res.ok) {
       throw new ApiError(
         res.status,
-        data?.message ?? `Request failed (${res.status})`,
+        data?.message ?? data?.error ?? `Request failed (${res.status})`,
         data?.errors,
       );
     }
-    return data as T;
+    // Laravel API Resources wrap collections/models in { data: ... }; plain
+    // responses (auth) are already unwrapped. Mirror the web client.
+    return (data?.data ?? data) as T;
   }
 
   const body = (b: unknown) =>

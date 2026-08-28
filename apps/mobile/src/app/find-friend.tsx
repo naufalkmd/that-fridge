@@ -1,0 +1,262 @@
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+
+import {
+  describeError,
+  type FriendProfile,
+  type UserSearchResult,
+} from "@thatfridge/core";
+import { api } from "@/lib/api";
+import { useSocial } from "@/lib/social";
+import { PixelText } from "@/components/brand";
+
+const SURFACE = "#131316";
+const SURFACE2 = "#1a1a1f";
+const HAIRLINE = "rgba(255,255,255,0.09)";
+const INK = "#eaeaec";
+const MUTED = "rgba(234,234,236,0.58)";
+const FAINT = "rgba(234,234,236,0.34)";
+const BLUE = "#5b8dee";
+const GOOD = "#39e07f";
+
+export default function FindFriend() {
+  const router = useRouter();
+  const { myInvites, acceptInvite, declineInvite, refresh } = useSocial();
+
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<UserSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [profile, setProfile] = useState<FriendProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [requested, setRequested] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setResults([]);
+      return;
+    }
+    setSearching(true);
+    const t = setTimeout(() => {
+      api
+        .searchUsers(q)
+        .then(setResults)
+        .catch(() => setResults([]))
+        .finally(() => setSearching(false));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  async function openProfile(username: string) {
+    setLoadingProfile(true);
+    try {
+      setProfile(await api.getFriendProfile(username));
+    } catch (e) {
+      Alert.alert("Error", describeError(e, "Couldn't load that profile."));
+    } finally {
+      setLoadingProfile(false);
+    }
+  }
+
+  async function requestJoin(fridgeId: string) {
+    setRequested((r) => ({ ...r, [fridgeId]: true }));
+    try {
+      await api.requestJoinFridge(fridgeId);
+      refresh();
+    } catch (e) {
+      setRequested((r) => ({ ...r, [fridgeId]: false }));
+      Alert.alert("Error", describeError(e, "Couldn't send that request."));
+    }
+  }
+
+  return (
+    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 10 }}>
+        <Pressable onPress={() => (profile ? setProfile(null) : router.back())} hitSlop={8}>
+          <Ionicons name="chevron-back" size={20} color={MUTED} />
+        </Pressable>
+        <PixelText style={{ fontSize: 14, color: INK }}>
+          {profile ? `@${profile.username}` : "Find a friend"}
+        </PixelText>
+      </View>
+
+      {profile ? (
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 60 }}>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: INK }}>{profile.name}</Text>
+          <Text style={{ fontSize: 12.5, color: FAINT, marginBottom: 20 }}>@{profile.username}</Text>
+
+          <Label>THEIR FRIDGES</Label>
+          {profile.fridges.length === 0 ? (
+            <Text style={{ fontSize: 12, color: FAINT, marginBottom: 20 }}>No shared fridges.</Text>
+          ) : (
+            <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
+              {profile.fridges.map((f, i) => {
+                const already = f.role != null;
+                const pending = f.requestStatus === "pending" || requested[f.id];
+                return (
+                  <View
+                    key={f.id}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: 13,
+                      borderBottomWidth: i === profile.fridges.length - 1 ? 0 : 1,
+                      borderBottomColor: HAIRLINE,
+                    }}
+                  >
+                    <MaterialCommunityIcons name="fridge-outline" size={18} color={BLUE} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13.5, fontWeight: "700", color: INK }}>{f.name}</Text>
+                      <Text style={{ fontSize: 11, color: FAINT }}>
+                        {f.memberCount} member{f.memberCount === 1 ? "" : "s"}
+                      </Text>
+                    </View>
+                    {already ? (
+                      <Text style={{ fontSize: 11.5, fontWeight: "700", color: GOOD }}>Joined</Text>
+                    ) : pending ? (
+                      <Text style={{ fontSize: 11.5, fontWeight: "700", color: FAINT }}>Requested</Text>
+                    ) : (
+                      <Pressable
+                        onPress={() => requestJoin(f.id)}
+                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, backgroundColor: SURFACE2 }}
+                      >
+                        <Text style={{ fontSize: 11.5, fontWeight: "700", color: BLUE }}>Request</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {profile.recipes.length > 0 && (
+            <>
+              <Label>THEIR RECIPES</Label>
+              <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden" }}>
+                {profile.recipes.map((r, i) => (
+                  <View
+                    key={r.id}
+                    style={{
+                      padding: 12,
+                      borderBottomWidth: i === profile.recipes.length - 1 ? 0 : 1,
+                      borderBottomColor: HAIRLINE,
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: INK }}>{r.name}</Text>
+                    <Text style={{ fontSize: 11, color: FAINT }}>{r.minutes} min</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
+        </ScrollView>
+      ) : (
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 60 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <TextInput
+            autoFocus
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search by username…"
+            placeholderTextColor={FAINT}
+            autoCapitalize="none"
+            style={{
+              borderWidth: 1,
+              borderColor: HAIRLINE,
+              backgroundColor: SURFACE,
+              borderRadius: 6,
+              paddingHorizontal: 16,
+              paddingVertical: 11,
+              fontSize: 14,
+              color: INK,
+              marginBottom: 18,
+            }}
+          />
+
+          {myInvites.length > 0 && (
+            <>
+              <Label>MY INVITES</Label>
+              <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
+                {myInvites.map((inv, i) => (
+                  <View
+                    key={inv.id}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: 13,
+                      borderBottomWidth: i === myInvites.length - 1 ? 0 : 1,
+                      borderBottomColor: HAIRLINE,
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: INK }}>{inv.fridgeName}</Text>
+                      <Text style={{ fontSize: 11, color: FAINT }}>from @{inv.inviterUsername}</Text>
+                    </View>
+                    <Pressable onPress={() => acceptInvite(inv.id)} hitSlop={6} style={{ padding: 4 }}>
+                      <MaterialCommunityIcons name="check" size={18} color={GOOD} />
+                    </Pressable>
+                    <Pressable onPress={() => declineInvite(inv.id)} hitSlop={6} style={{ padding: 4 }}>
+                      <MaterialCommunityIcons name="close" size={16} color={FAINT} />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
+
+          {searching || loadingProfile ? (
+            <ActivityIndicator color="#26c6da" style={{ marginTop: 20 }} />
+          ) : results.length > 0 ? (
+            <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden" }}>
+              {results.map((u, i) => (
+                <Pressable
+                  key={u.id}
+                  onPress={() => openProfile(u.username)}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: 13,
+                    borderBottomWidth: i === results.length - 1 ? 0 : 1,
+                    borderBottomColor: HAIRLINE,
+                  }}
+                >
+                  <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: SURFACE2 }}>
+                    <Text style={{ fontSize: 13, fontWeight: "800", color: INK }}>
+                      {u.name.slice(0, 1).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13.5, fontWeight: "700", color: INK }}>{u.name}</Text>
+                    <Text style={{ fontSize: 11, color: FAINT }}>@{u.username}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={FAINT} />
+                </Pressable>
+              ))}
+            </View>
+          ) : query.trim().length >= 2 ? (
+            <Text style={{ textAlign: "center", color: FAINT, fontSize: 13, marginTop: 30 }}>
+              No one matches “{query}”
+            </Text>
+          ) : null}
+        </ScrollView>
+      )}
+    </SafeAreaView>
+  );
+}
+
+function Label({ children }: { children: string }) {
+  return (
+    <Text style={{ fontSize: 12, fontWeight: "800", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
+      {children}
+    </Text>
+  );
+}

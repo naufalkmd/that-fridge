@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { describeError } from "@thatfridge/core";
 import { useAuth } from "@/lib/auth";
+import { Logo, PixelText } from "@/components/brand";
 
 type Mode = "login" | "signup";
 
@@ -86,9 +87,10 @@ export default function SignIn() {
           contentContainerClassName="grow justify-center px-6 py-10"
           keyboardShouldPersistTaps="handled"
         >
-          <View className="mb-8 items-center">
-            <Text className="text-2xl font-extrabold tracking-tight text-ink">ThatFridge</Text>
-            <Text className="mt-1.5 text-center text-[13px] text-muted">
+          <View className="mb-8 items-center gap-3">
+            <Logo size={52} />
+            <PixelText style={{ fontSize: 20, color: "#eaeaec" }}>ThatFridge</PixelText>
+            <Text className="text-center text-[13px] text-muted">
               Know what&apos;s inside before you open the door.
             </Text>
           </View>
@@ -167,7 +169,7 @@ export default function SignIn() {
               <Pressable
                 onPress={submit}
                 disabled={busy}
-                className="mt-1 items-center rounded-lg bg-warn py-3.5 active:opacity-80"
+                className="mt-1 items-center rounded-lg bg-accent py-3.5 active:opacity-80"
                 style={busy ? { opacity: 0.7 } : undefined}
               >
                 {busy ? (
@@ -217,7 +219,7 @@ function Field({ label, ...input }: FieldProps) {
       <Text className="mb-1.5 text-[12px] font-bold tracking-wide text-faint">{label}</Text>
       <TextInput
         {...input}
-        placeholderTextColor="#5f7285"
+        placeholderTextColor="rgba(234,234,236,0.34)"
         className="rounded-lg bg-canvas px-4 py-3 text-[14px] text-ink"
       />
     </View>
