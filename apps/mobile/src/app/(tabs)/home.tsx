@@ -35,6 +35,7 @@ import { useScope, scopeItems } from "@/lib/scope";
 import { useShopping } from "@/lib/shopping";
 import { useKitchenScore } from "@/lib/kitchenScore";
 import { useSocial } from "@/lib/social";
+import { useAgentInsight } from "@/lib/agentInsight";
 import { PixelText } from "@/components/brand";
 import { SectionHeader } from "@/components/ui";
 import { FridgeScopePicker } from "@/components/fridge-scope";
@@ -387,53 +388,59 @@ export default function Home() {
           <CrewScene pendingByKind={pendingByKind} scoreByKey={scoreByKey} />
         </View>
 
-        {/* crew tips */}
+        {/* crew tips — real one-shot agent insights, with a data fallback */}
         {guardian && !dismissed.guardian && (
-          <TipCard
+          <CrewTip
             eyebrow="Expiring soon"
             agent="Guardian"
+            items={scoped}
             onPress={() => router.push(`/item/${guardian.id}`)}
             onDismiss={() => setDismissed((d) => ({ ...d, guardian: true }))}
-          >
-            <Text style={{ fontSize: 13.5, color: INK }}>
-              <Text style={{ fontWeight: "700" }}>{guardian.name}</Text>
-              <Text style={{ color: MUTED }}> {daysLabel(guardian.days).toLowerCase()}</Text>
-            </Text>
-          </TipCard>
+            fallback={
+              <Text style={{ fontSize: 13.5, color: INK }}>
+                <Text style={{ fontWeight: "700" }}>{guardian.name}</Text>
+                <Text style={{ color: MUTED }}> {daysLabel(guardian.days).toLowerCase()}</Text>
+              </Text>
+            }
+          />
         )}
         {lowStock && !dismissed.lowStock && (
-          <TipCard
+          <CrewTip
             eyebrow="Low stock"
             agent="Shopkeeper"
+            items={scoped}
             onPress={() => router.push("/shopping")}
             onDismiss={() => setDismissed((d) => ({ ...d, lowStock: true }))}
-          >
-            <Text style={{ fontSize: 13.5, color: INK }}>
-              <Text style={{ fontWeight: "700" }}>{lowStock.name}</Text>
-              <Text style={{ color: MUTED }}> is running low — add it to the list</Text>
-            </Text>
-          </TipCard>
+            fallback={
+              <Text style={{ fontSize: 13.5, color: INK }}>
+                <Text style={{ fontWeight: "700" }}>{lowStock.name}</Text>
+                <Text style={{ color: MUTED }}> is running low — add it to the list</Text>
+              </Text>
+            }
+          />
         )}
         {!dismissed.chef && (
-          <TipCard
+          <CrewTip
             eyebrow="Chef's pick"
             agent="Chef"
+            items={scoped}
             onPress={() => router.navigate("/eat")}
             onDismiss={() => setDismissed((d) => ({ ...d, chef: true }))}
-          >
-            <Text style={{ fontSize: 13.5, color: INK }}>
-              {chefPick ? (
-                <>
-                  <Text style={{ fontWeight: "700" }}>{chefPick.name}</Text>
-                  <Text style={{ color: MUTED }}> — {chefPick.minutes} min with what you have</Text>
-                </>
-              ) : (
-                <Text style={{ color: MUTED }}>
-                  See what you can cook with what&apos;s fresh right now.
-                </Text>
-              )}
-            </Text>
-          </TipCard>
+            fallback={
+              <Text style={{ fontSize: 13.5, color: INK }}>
+                {chefPick ? (
+                  <>
+                    <Text style={{ fontWeight: "700" }}>{chefPick.name}</Text>
+                    <Text style={{ color: MUTED }}> — {chefPick.minutes} min with what you have</Text>
+                  </>
+                ) : (
+                  <Text style={{ color: MUTED }}>
+                    See what you can cook with what&apos;s fresh right now.
+                  </Text>
+                )}
+              </Text>
+            }
+          />
         )}
 
         {/* fridge notes */}
@@ -537,6 +544,35 @@ function StatCard({
       <Text style={{ fontSize: 18, fontWeight: "800", color: INK }}>{value}</Text>
       <Text style={{ fontSize: 10, color: FAINT, marginTop: 2 }}>{label}</Text>
     </Pressable>
+  );
+}
+
+function CrewTip({
+  eyebrow,
+  agent,
+  items,
+  onPress,
+  onDismiss,
+  fallback,
+}: {
+  eyebrow: string;
+  agent: keyof typeof AGENT_COLOR;
+  items: import("@thatfridge/core").FlatItem[];
+  onPress: () => void;
+  onDismiss: () => void;
+  fallback: React.ReactNode;
+}) {
+  const insight = useAgentInsight(agent, items, items.length > 0);
+  return (
+    <TipCard eyebrow={eyebrow} agent={agent} onPress={onPress} onDismiss={onDismiss}>
+      {insight.text ? (
+        <Text style={{ fontSize: 13.5, lineHeight: 19, color: INK }}>{insight.text}</Text>
+      ) : insight.loading ? (
+        <Text style={{ fontSize: 13, color: FAINT }}>{agent} is thinking…</Text>
+      ) : (
+        fallback
+      )}
+    </TipCard>
   );
 }
 
