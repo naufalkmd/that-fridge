@@ -11,6 +11,10 @@
       "ios": { "simulator": true },
       "env": { "EXPO_PUBLIC_API_URL": "http://127.0.0.1:8000/api" }
     },
+    "development-prod": {
+      "extends": "development",
+      "env": { "EXPO_PUBLIC_API_URL": "https://api.thatfridge.com/api" }
+    },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
