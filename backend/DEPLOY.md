@@ -91,7 +91,7 @@ Use a read-only **deploy key** (GitHub repo → Settings → Deploy keys) rather
 ```bash
 sudo mkdir -p /var/www && sudo chown deploy:deploy /var/www
 cd /var/www
-git clone git@github.com:YOURORG/ThatFridge.git thatfridge
+git clone git@github.com:naufalkmd/that-fridge.git thatfridge
 cd thatfridge/backend
 
 composer install --no-dev --optimize-autoloader
@@ -104,12 +104,12 @@ composer install --no-dev --optimize-autoloader
 ## 5. Production `.env`
 
 ```bash
-cp .env.example .env
+cp .env.production.example .env      # pre-filled template — see backend/.env.production.example
 php artisan key:generate
 nano .env
 ```
 
-Set at least:
+Fill every `CHANGE_ME`. The key settings:
 
 ```dotenv
 APP_NAME=ThatFridge
@@ -291,8 +291,8 @@ curl -sS -X POST https://api.thatfridge.com/api/login \
 Then in `apps/mobile/.env` (or the EAS build profile's env) set
 `EXPO_PUBLIC_API_URL=https://api.thatfridge.com/api` and rebuild.
 
-Optional: add `Route::get('/health', fn () => response()->json(['ok' => true]));` to
-`routes/api.php` for uptime monitoring.
+Laravel already exposes a health endpoint at **`https://api.thatfridge.com/up`** (configured in
+`bootstrap/app.php`) — point uptime monitoring there, no route to add.
 
 ---
 
@@ -319,16 +319,55 @@ to object storage) — a backup only on the same server isn't a backup.
 
 ## 12. Deploying an update later
 
+Run the deploy script as `deploy` on the server:
+
 ```bash
-cd /var/www/thatfridge && git pull
-cd backend
-composer install --no-dev --optimize-autoloader
-php artisan migrate --force
-php artisan config:cache route:cache view:cache event:cache
-sudo systemctl restart thatfridge-worker thatfridge-scheduler php8.3-fpm
+/var/www/thatfridge/backend/scripts/deploy.sh
 ```
 
-Wrap that in `backend/scripts/deploy.sh` once it's stable.
+It fetches `origin/main`, hard-resets, `composer install --no-dev`, migrates, rebuilds caches,
+gracefully restarts the worker (`queue:restart`) + scheduler, reloads PHP-FPM, and wraps the
+whole thing in `artisan down`/`up`. Idempotent — safe to re-run.
+
+`.env`, `storage/`, and `bootstrap/cache/` are git-ignored, so the hard reset never touches them.
+
+---
+
+## 12a. Continuous deployment (GitHub Actions)
+
+`.github/workflows/deploy-api.yml` runs on every push to `main` that touches `backend/**`:
+run the PHPUnit suite on a clean PHP 8.3 runner, then SSH in and run `scripts/deploy.sh`.
+`workflow_dispatch` lets you trigger it by hand from the Actions tab.
+
+**One-time server setup:**
+
+1. **Deploy SSH key for CI** — a dedicated keypair, separate from your personal one:
+
+   ```bash
+   # on your laptop
+   ssh-keygen -t ed25519 -f ~/.ssh/thatfridge_ci -N "" -C "github-actions-deploy"
+   ssh-copy-id -i ~/.ssh/thatfridge_ci.pub deploy@SERVER_IP
+   ```
+
+2. **The `deploy` user needs its own GitHub deploy key** so `git fetch` works non-interactively
+   (this is the read-only key from §4, living at `/home/deploy/.ssh/id_ed25519`). Verify:
+   `sudo -u deploy ssh -T git@github.com` → "successfully authenticated".
+
+3. **Passwordless sudo for the three deploy commands only** — `sudo visudo -f /etc/sudoers.d/thatfridge-deploy`:
+
+   ```
+   deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart thatfridge-scheduler, /usr/bin/systemctl reload php8.3-fpm, /usr/bin/systemctl restart thatfridge-worker
+   ```
+
+**GitHub repo → Settings → Secrets and variables → Actions:**
+
+| Secret | Value |
+| --- | --- |
+| `DEPLOY_HOST` | the droplet's public IP (or `api.thatfridge.com`) |
+| `DEPLOY_USER` | `deploy` |
+| `DEPLOY_SSH_KEY` | contents of `~/.ssh/thatfridge_ci` (the **private** key, full file) |
+
+First deploy is still manual (§1–§11). After that, merging to `main` ships the API.
 
 ---
 

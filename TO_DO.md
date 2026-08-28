@@ -59,7 +59,7 @@ All USD, approximate. "Recurring" = keep paying to keep the app live.
 | Apple Developer Program                 | $99 / yr     | Recurring | ✅ Paid  | Individual enrollment                                                        |
 | Domain —`thatfridge.com`             | ~$10.46 / yr | Recurring | ✅ Paid  | API host + privacy/terms/support pages                                       |
 | PixelMix commercial font licence        | $25          | One-time  | ✅ Paid  | via Sellfy 2026-08-28; embedding confirmation still pending (§1)            |
-| VPS — Laravel API + Postgres + Redis   | ~$12–18 / mo | Recurring | ⬜ Due   | **Singapore** region (MY+KR latency) — Vultr/DO/Linode 2 GB (§2, `backend/DEPLOY.md`) |
+| VPS — Laravel API + Postgres + Redis   | $21.60 / mo  | Recurring | 🟡 Live  | DigitalOcean **SGP1**, 2 vCPU / 2 GB ($18) + weekly backups ($3.60). IP `167.172.88.75`. Being provisioned per `backend/DEPLOY.md` §2. |
 | Privacy / terms / support pages hosting | $0           | —        | ⬜       | Cloudflare Pages / GitHub Pages free tier                                    |
 | Sentry (crash monitoring)               | $0           | —        | ⬜       | Free developer tier (§2)                                                    |
 | RevenueCat                              | $0           | —        | ✅       | Free under $2.5k tracked revenue / mo                                        |
@@ -67,9 +67,9 @@ All USD, approximate. "Recurring" = keep paying to keep the app live.
 | Devpost / Shipaton entry                | $0           | —        | —       | Free                                                                         |
 | Google Play Console                     | $25          | One-time  | ⬜ Later | Post-launch — Android deferred                                              |
 
-**Paid to date: ~$135** (Apple $99 + domain ~$10.46 + PixelMix $25). Still due before launch:
-**VPS (first month ~$12–18)** + possibly a transactional-email plan (most have a free tier).
-Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + ~$12–18/mo (VPS) ≈ **$255–325 / yr**.
+**Paid to date: ~$135** (Apple $99 + domain ~$10.46 + PixelMix $25), plus the VPS now running
+at **$21.60/mo**. Possibly still due: a transactional-email plan (most have a free tier).
+Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ **$370 / yr**.
 
 ---
 
