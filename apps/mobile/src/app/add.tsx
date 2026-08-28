@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,22 +17,27 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import {
+  FOOD_ICON_KEYS,
+  ICON_LABELS,
   NUTRITION_CATEGORIES,
   STORAGE_LOCATIONS,
   describeError,
   guessFoodIcon,
+  type GeneratedIcon,
   type NutritionCategory,
   type StorageLocation,
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { usePro } from "@/lib/pro";
+import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
 
 const AMBER = "#26c6da";
 const SURFACE = "#131316";
 const SURFACE2 = "#1a1a1f";
 const HAIRLINE = "rgba(255,255,255,0.09)";
+const STRONG_BORDER = "rgba(255,255,255,0.18)";
 const INK = "#eaeaec";
 const MUTED = "rgba(234,234,236,0.58)";
 const FAINT = "rgba(234,234,236,0.34)";
@@ -81,10 +86,13 @@ export default function Add() {
     location?: string;
     category?: string;
     shelfLife?: string;
+    method?: string;
   }>();
 
   // Jump straight to the manual form when prefilled from a barcode scan.
-  const [method, setMethod] = useState<Method | null>(params.name ? "manual" : null);
+  const [method, setMethod] = useState<Method | null>(
+    params.name ? "manual" : (params.method as Method) || null,
+  );
 
   const [name, setName] = useState(params.name ?? "");
   const [qty, setQty] = useState(1);
@@ -368,18 +376,40 @@ export default function Add() {
 }
 
 type Detected = {
+  id: string;
   name: string;
   icon: string;
+  iconUrl: string | null;
   qty: number;
   location: StorageLocation;
+  sectionId: string | null;
+  expiryDays: number | null;
+  condition: "vibrant" | "wilting" | "past_best" | null;
   checked: boolean;
 };
 
+const CONDITION_PHRASE: Record<string, string> = {
+  wilting: "wilting / past its best",
+  past_best: "past its best",
+};
+
 function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => void }) {
-  const { ensureSectionId, addManyItems } = useInventory();
+  const { ensureSectionId, addManyItems, fridges } = useInventory();
   const [status, setStatus] = useState<"idle" | "scanning" | "review">("idle");
   const [items, setItems] = useState<Detected[]>([]);
   const [saving, setSaving] = useState(false);
+  const [fillingAll, setFillingAll] = useState(false);
+  const [fillingId, setFillingId] = useState<string | null>(null);
+  const [scanningDateId, setScanningDateId] = useState<string | null>(null);
+  const [iconPickerId, setIconPickerId] = useState<string | null>(null);
+  const [genPrompt, setGenPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [library, setLibrary] = useState<GeneratedIcon[]>([]);
+
+  const sections = useMemo(() => fridges[0]?.sections ?? [], [fridges]);
+  const checkedCount = items.filter((i) => i.checked && i.name.trim()).length;
+  const set = (id: string, patch: Partial<Detected>) =>
+    setItems((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x)));
 
   async function pickAndScan() {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7 });
@@ -392,18 +422,95 @@ function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => v
         ? await api.scanReceipt(sectionId, image)
         : await api.scanFridgePhoto(sectionId, image);
       setItems(
-        scan.detected_items.map((d) => ({
+        scan.detected_items.map((d, i) => ({
+          id: `d${i}`,
           name: d.parsed_name,
-          icon: d.icon || "generic",
+          icon: d.icon || guessFoodIcon(d.parsed_name) || "generic",
+          iconUrl: null,
           qty: Math.max(1, d.parsed_quantity ?? 1),
           location: "fridge" as StorageLocation,
+          sectionId: null,
+          expiryDays: null,
+          condition: d.condition ?? null,
           checked: true,
         })),
       );
+      api.listGeneratedIcons().then(setLibrary).catch(() => {});
       setStatus("review");
     } catch (e) {
       setStatus("idle");
       Alert.alert("Scan failed", describeError(e, "Couldn't read that photo. Try a clearer shot."));
+    }
+  }
+
+  async function fillOne(d: Detected) {
+    if (!d.name.trim() || fillingId || fillingAll) return;
+    setFillingId(d.id);
+    try {
+      const s = await api.suggestItemDetails(d.name.trim());
+      set(d.id, {
+        ...(s.location ? { location: s.location } : {}),
+        ...(s.shelf_life_days ? { expiryDays: s.shelf_life_days } : {}),
+      });
+    } catch {
+      /* best effort */
+    } finally {
+      setFillingId(null);
+    }
+  }
+
+  async function fillAll() {
+    const todo = items.filter((i) => i.checked && i.name.trim());
+    if (!todo.length || fillingAll || fillingId) return;
+    setFillingAll(true);
+    await Promise.allSettled(
+      todo.map(async (d) => {
+        try {
+          const s = await api.suggestItemDetails(d.name.trim());
+          set(d.id, {
+            ...(s.location ? { location: s.location } : {}),
+            ...(s.shelf_life_days ? { expiryDays: s.shelf_life_days } : {}),
+          });
+        } catch {
+          /* skip */
+        }
+      }),
+    );
+    setFillingAll(false);
+  }
+
+  async function scanDate(d: Detected) {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) return Alert.alert("Camera needed", "Allow camera access to scan a date.");
+    const res = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.6 });
+    if (res.canceled || !res.assets[0]) return;
+    setScanningDateId(d.id);
+    try {
+      const sectionId = await ensureSectionId();
+      const image = { uri: res.assets[0].uri, name: "expiry.jpg", type: "image/jpeg" };
+      const r = await api.scanExpiryPhoto(sectionId, image);
+      if (r.found && r.date) set(d.id, { expiryDays: daysUntil(r.date) });
+      else Alert.alert("No date read", r.message || "Try a closer shot.");
+    } catch (e) {
+      Alert.alert("Error", describeError(e, "Couldn't scan that."));
+    } finally {
+      setScanningDateId(null);
+    }
+  }
+
+  async function generate(id: string) {
+    if (generating || !genPrompt.trim()) return;
+    setGenerating(true);
+    try {
+      const r = await api.generateIcon(genPrompt.trim());
+      set(id, { iconUrl: r.icon_url });
+      setGenPrompt("");
+      setIconPickerId(null);
+      api.listGeneratedIcons().then(setLibrary).catch(() => {});
+    } catch (e) {
+      Alert.alert("Error", describeError(e, "Couldn't generate that icon."));
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -413,7 +520,17 @@ function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => v
     setSaving(true);
     try {
       const n = await addManyItems(
-        toAdd.map((d) => ({ name: d.name.trim(), icon: d.icon, quantity: d.qty, location: d.location })),
+        toAdd.map((d) => ({
+          name: d.name.trim(),
+          icon: d.icon,
+          icon_url: d.iconUrl,
+          quantity: d.qty,
+          location: d.location,
+          sectionId: d.sectionId ?? undefined,
+          ...(d.expiryDays != null
+            ? { expiry_date: isoInDays(d.expiryDays), shelf_life_days: d.expiryDays }
+            : {}),
+        })),
       );
       onDone();
       setTimeout(() => Alert.alert("Added", `${n} item${n === 1 ? "" : "s"} added to your fridge.`), 300);
@@ -460,67 +577,181 @@ function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => v
   }
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 4, paddingBottom: 32 }}>
-      <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 10 }}>
-        FOUND {items.filter((i) => i.checked).length} ITEM{items.filter((i) => i.checked).length === 1 ? "" : "S"}
-      </Text>
+    <ScrollView
+      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT }}>
+          FOUND {checkedCount} ITEM{checkedCount === 1 ? "" : "S"} — set details or auto-fill
+        </Text>
+        {items.length > 1 && (
+          <Pressable
+            onPress={fillAll}
+            disabled={fillingAll}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, backgroundColor: "rgba(122,92,201,0.14)", opacity: fillingAll ? 0.5 : 1 }}
+          >
+            {fillingAll ? <ActivityIndicator color="#7a5cc9" size="small" /> : <MaterialCommunityIcons name="auto-fix" size={13} color="#7a5cc9" />}
+            <Text style={{ fontSize: 11, fontWeight: "700", color: "#7a5cc9" }}>Auto-fill all</Text>
+          </Pressable>
+        )}
+      </View>
+
       {items.length === 0 ? (
-        <Text style={{ fontSize: 13, color: FAINT, textAlign: "center", marginTop: 20 }}>
+        <Text style={{ fontSize: 13, color: FAINT, textAlign: "center", marginVertical: 20 }}>
           Nothing recognised. Try a clearer photo, or add manually.
         </Text>
       ) : (
-        <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
-          {items.map((it, i) => (
+        <View style={{ gap: 10, marginBottom: 14 }}>
+          {items.map((d) => (
             <View
-              key={i}
+              key={d.id}
               style={{
-                flexDirection: "row",
-                alignItems: "center",
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: HAIRLINE,
+                backgroundColor: SURFACE,
+                padding: 12,
                 gap: 10,
-                padding: 10,
-                borderBottomWidth: i === items.length - 1 ? 0 : 1,
-                borderBottomColor: HAIRLINE,
-                opacity: it.checked ? 1 : 0.45,
+                opacity: d.checked ? 1 : 0.5,
               }}
             >
-              <Pressable
-                onPress={() => setItems((p) => p.map((x, idx) => (idx === i ? { ...x, checked: !x.checked } : x)))}
-                hitSlop={6}
-              >
-                <MaterialCommunityIcons
-                  name={it.checked ? "checkbox-marked" : "checkbox-blank-outline"}
-                  size={20}
-                  color={it.checked ? AMBER : FAINT}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Pressable onPress={() => setIconPickerId(iconPickerId === d.id ? null : d.id)}>
+                  <FoodIcon icon={d.icon} iconUrl={d.iconUrl} name={d.name || "item"} size={30} />
+                </Pressable>
+                <TextInput
+                  value={d.name}
+                  onChangeText={(t) => set(d.id, { name: t })}
+                  placeholder="Item name"
+                  placeholderTextColor={FAINT}
+                  style={{ flex: 1, fontSize: 14, fontWeight: "600", color: INK, paddingVertical: 4 }}
                 />
-              </Pressable>
-              <TextInput
-                value={it.name}
-                onChangeText={(t) => setItems((p) => p.map((x, idx) => (idx === i ? { ...x, name: t } : x)))}
-                style={{ flex: 1, fontSize: 13.5, color: INK, paddingVertical: 6 }}
-              />
-              <Step icon="minus" onPress={() => setItems((p) => p.map((x, idx) => (idx === i ? { ...x, qty: Math.max(1, x.qty - 1) } : x)))} />
-              <Text style={{ minWidth: 16, textAlign: "center", fontSize: 12, fontWeight: "700", color: INK }}>{it.qty}</Text>
-              <Step icon="plus" onPress={() => setItems((p) => p.map((x, idx) => (idx === i ? { ...x, qty: x.qty + 1 } : x)))} />
+                <Pressable onPress={() => set(d.id, { checked: !d.checked })} hitSlop={6}>
+                  <MaterialCommunityIcons name={d.checked ? "checkbox-marked" : "checkbox-blank-outline"} size={20} color={d.checked ? AMBER : FAINT} />
+                </Pressable>
+                <Pressable onPress={() => setItems((p) => p.filter((x) => x.id !== d.id))} hitSlop={6}>
+                  <MaterialCommunityIcons name="close" size={16} color={FAINT} />
+                </Pressable>
+              </View>
+
+              {iconPickerId === d.id && (
+                <View style={{ backgroundColor: SURFACE2, borderRadius: 6, padding: 8, gap: 8, maxHeight: 260 }}>
+                  <View style={{ flexDirection: "row", gap: 6 }}>
+                    <TextInput
+                      value={genPrompt}
+                      onChangeText={setGenPrompt}
+                      placeholder="Describe an icon…"
+                      placeholderTextColor={FAINT}
+                      editable={!generating}
+                      style={{ flex: 1, borderWidth: 1, borderColor: HAIRLINE, borderRadius: 5, paddingHorizontal: 8, paddingVertical: 7, fontSize: 12, color: INK }}
+                    />
+                    <Pressable
+                      onPress={() => generate(d.id)}
+                      disabled={generating || !genPrompt.trim()}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 10, borderRadius: 5, backgroundColor: "rgba(122,92,201,0.2)", opacity: generating || !genPrompt.trim() ? 0.5 : 1 }}
+                    >
+                      {generating ? <ActivityIndicator color="#7a5cc9" size="small" /> : <MaterialCommunityIcons name="auto-fix" size={12} color="#7a5cc9" />}
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: "#7a5cc9" }}>Gen</Text>
+                    </Pressable>
+                  </View>
+                  <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="handled">
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                      {library.map((g) => (
+                        <Pressable key={g.id} onPress={() => { set(d.id, { iconUrl: g.image_url }); setIconPickerId(null); }} style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: SURFACE, alignItems: "center", justifyContent: "center" }}>
+                          <FoodIcon iconUrl={g.image_url} name={d.name} size={34} />
+                        </Pressable>
+                      ))}
+                      {FOOD_ICON_KEYS.map((key) => (
+                        <Pressable
+                          key={key}
+                          onPress={() => { set(d.id, { icon: key, iconUrl: null }); setIconPickerId(null); }}
+                          style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: SURFACE, alignItems: "center", justifyContent: "center", borderWidth: !d.iconUrl && d.icon === key ? 1.5 : 0, borderColor: AMBER }}
+                        >
+                          <FoodIcon icon={key} name={ICON_LABELS[key] ?? key} size={34} />
+                        </Pressable>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </View>
+              )}
+
+              {sections.length > 1 && (
+                <ChipRow
+                  options={sections.map((s) => ({ key: s.id, label: s.name }))}
+                  value={d.sectionId}
+                  onChange={(k) => set(d.id, { sectionId: k })}
+                />
+              )}
+
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <ChipRow
+                    options={STORAGE_LOCATIONS.map((l) => ({ key: l.key, label: l.label }))}
+                    value={d.location}
+                    onChange={(k) => set(d.id, { location: k as StorageLocation })}
+                  />
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Step icon="minus" onPress={() => set(d.id, { qty: Math.max(1, d.qty - 1) })} />
+                  <Text style={{ minWidth: 16, textAlign: "center", fontSize: 12, fontWeight: "700", color: INK }}>{d.qty}</Text>
+                  <Step icon="plus" onPress={() => set(d.id, { qty: d.qty + 1 })} />
+                </View>
+              </View>
+
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <View style={{ flex: 1, minWidth: 160 }}>
+                  <ChipRow
+                    options={BEST_BEFORE_PRESETS.map((p) => ({ key: String(p.days), label: p.label }))}
+                    value={d.expiryDays == null ? null : String(d.expiryDays)}
+                    onChange={(k) => set(d.id, { expiryDays: Number(k) })}
+                  />
+                </View>
+                <Pressable onPress={() => scanDate(d)} disabled={scanningDateId === d.id} hitSlop={4} style={{ padding: 6, borderRadius: 6, backgroundColor: "rgba(38,198,218,0.14)" }}>
+                  {scanningDateId === d.id ? <ActivityIndicator color={AMBER} size="small" /> : <MaterialCommunityIcons name="camera-outline" size={14} color={AMBER} />}
+                </Pressable>
+                <Pressable onPress={() => fillOne(d)} disabled={fillingId === d.id || fillingAll} hitSlop={4} style={{ padding: 6, borderRadius: 6, backgroundColor: "rgba(122,92,201,0.14)" }}>
+                  {fillingId === d.id ? <ActivityIndicator color="#7a5cc9" size="small" /> : <MaterialCommunityIcons name="auto-fix" size={14} color="#7a5cc9" />}
+                </Pressable>
+              </View>
+              {d.expiryDays != null && (
+                <Text style={{ fontSize: 10.5, color: FAINT }}>≈ {isoInDays(d.expiryDays)}</Text>
+              )}
+              {d.condition && d.condition !== "vibrant" && (
+                <Text style={{ fontSize: 10.5, fontWeight: "700", color: "#f5a623" }}>
+                  AI noticed this looks {CONDITION_PHRASE[d.condition] ?? d.condition} in the photo — auto-fill accounts for it.
+                </Text>
+              )}
             </View>
           ))}
+
+          {mode !== "receipt" || items.length > 0 ? (
+            <Pressable
+              onPress={() =>
+                setItems((p) => [
+                  ...p,
+                  { id: `d${Date.now()}`, name: "", icon: "generic", iconUrl: null, qty: 1, location: "fridge", sectionId: null, expiryDays: null, condition: null, checked: true },
+                ])
+              }
+              style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: 13, borderRadius: 8, borderWidth: 1.5, borderColor: STRONG_BORDER, borderStyle: "dashed" }}
+            >
+              <MaterialCommunityIcons name="plus" size={15} color={BLUE} />
+              <Text style={{ fontSize: 13, fontWeight: "700", color: BLUE }}>Add item the scan missed</Text>
+            </Pressable>
+          ) : null}
         </View>
       )}
+
       <Pressable
         onPress={confirm}
-        disabled={saving || items.filter((i) => i.checked).length === 0}
-        style={{
-          alignItems: "center",
-          paddingVertical: 14,
-          borderRadius: 8,
-          backgroundColor: AMBER,
-          opacity: saving || items.filter((i) => i.checked).length === 0 ? 0.5 : 1,
-        }}
+        disabled={saving || checkedCount === 0}
+        style={{ alignItems: "center", paddingVertical: 14, borderRadius: 8, backgroundColor: AMBER, opacity: saving || checkedCount === 0 ? 0.5 : 1 }}
       >
         {saving ? (
           <ActivityIndicator color="#0a0a0c" />
         ) : (
           <Text style={{ fontSize: 14, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
-            Add {items.filter((i) => i.checked).length} to fridge
+            Add {checkedCount} to fridge
           </Text>
         )}
       </Pressable>
