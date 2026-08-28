@@ -269,8 +269,10 @@ badge catalog, shopping recs, `getScoreTrend`, `routeChatAgent`, `suggestItemDet
   "Remaining" sets it.
 - **Voice input** in chat — needs a native STT module (no Expo one). **Blocked.**
 - ~~**AI icon generation**~~ ✅ done 2026-08-28 — `icon-picker` modal (prompt→fal.ai +
-  saved library + curated grid), reached from the item-detail edit form. The full ~165-PNG
-  pack is still web-only; mobile has curated grids + generation + initials fallback.
+  saved library + the full pack), reached from the item-detail edit form.
+- ~~**Full ~165-PNG icon pack**~~ ✅ done 2026-08-28 — all 164 pixel-art icons bundled in the
+  mobile app; `core.guessFoodIcon` resolves names → keys the same way the web does. Items now
+  show real icons instead of initials.
 - ~~**`MarkRecipeMadeSheet`**~~ ✅ done 2026-08-28 — `recipe/mark-made` modal, ingredient↔item
   reconciliation (Finished → logged+removed, Remaining → kept).
 - ~~**Recipe photo/video attachments**~~ ✅ done 2026-08-28 — upload in `recipe-form`,
