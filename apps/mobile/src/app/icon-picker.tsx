@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { FOOD_ICONS, describeError, type GeneratedIcon } from "@thatfridge/core";
+import { FOOD_ICON_KEYS, ICON_LABELS, describeError, type GeneratedIcon } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { FoodIcon } from "@/components/food-icon";
@@ -17,7 +17,7 @@ const INK = "#eaeaec";
 const FAINT = "rgba(234,234,236,0.34)";
 const MUTED = "rgba(234,234,236,0.58)";
 
-const CURATED = Object.keys(FOOD_ICONS);
+const CURATED = FOOD_ICON_KEYS;
 
 /**
  * Icon picker for an inventory item — curated pixel grid + AI generation + the user's saved
@@ -149,7 +149,7 @@ export default function IconPicker() {
 
         <View>
           <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
-            CURATED
+            ICON PACK
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {CURATED.map((key) => {
@@ -169,7 +169,7 @@ export default function IconPicker() {
                     borderColor: ACCENT,
                   }}
                 >
-                  <FoodIcon icon={key} name={key} size={44} />
+                  <FoodIcon icon={key} name={ICON_LABELS[key] ?? key} size={44} />
                 </Pressable>
               );
             })}
