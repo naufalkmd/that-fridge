@@ -68,6 +68,10 @@ export default function RootLayout() {
                 options={{ headerShown: false, presentation: "modal" }}
               />
               <Stack.Screen
+                name="icon-picker"
+                options={{ headerShown: false, presentation: "modal" }}
+              />
+              <Stack.Screen
                 name="scan"
                 options={{ headerShown: false, presentation: "fullScreenModal" }}
               />
@@ -83,6 +87,8 @@ export default function RootLayout() {
               <Stack.Screen name="notifications" options={{ headerShown: false }} />
               <Stack.Screen name="recipes" options={{ headerShown: false }} />
               <Stack.Screen name="recipe/[id]" options={{ headerShown: false, presentation: "modal" }} />
+              <Stack.Screen name="recipe/mark-made" options={{ headerShown: false, presentation: "modal" }} />
+              <Stack.Screen name="recipe/attachment" options={{ headerShown: false, presentation: "fullScreenModal", animation: "fade" }} />
               <Stack.Screen name="recipe-form" options={{ headerShown: false, presentation: "modal" }} />
               <Stack.Screen name="goals" options={{ headerShown: false }} />
               <Stack.Screen name="badges" options={{ headerShown: false }} />

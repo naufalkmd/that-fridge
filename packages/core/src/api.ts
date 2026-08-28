@@ -124,6 +124,7 @@ export interface CreateItemInput {
 export interface UpdateItemInput {
   name?: string;
   icon?: string;
+  icon_url?: string | null;
   nutrition_category?: NutritionCategory | null;
   section_id?: string;
   location?: StorageLocation;
@@ -214,6 +215,23 @@ export interface ScanResult {
   status: string;
   file_url: string;
   detected_items: ScanDetectedItem[];
+  message: string;
+}
+
+/** One saved AI-generated icon in the user's library (`/icons/generated`). */
+export interface GeneratedIcon {
+  id: string;
+  prompt: string;
+  image_url: string;
+}
+
+/** Result of `/items/expiry-scan` — the printed best-before date read off a package photo. */
+export interface ExpiryScanResult {
+  found: boolean;
+  /** "YYYY-MM-DD", only when found. */
+  date?: string;
+  raw_text?: string;
+  confidence?: number;
   message: string;
 }
 
@@ -373,6 +391,25 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.post<ScanResult>(`/sections/${sectionId}/items/photo/scan`, fd);
   }
 
+  /** Read the printed best-before date off a package photo. `found: false` when nothing legible. */
+  function scanExpiryPhoto(sectionId: string, image: unknown): Promise<ExpiryScanResult> {
+    const fd = new FormData();
+    fd.append("image", image as never);
+    return http.post<ExpiryScanResult>(`/sections/${sectionId}/items/expiry-scan`, fd);
+  }
+
+  /** AI icon generation (fal.ai, throttled 10/min) — the result is auto-saved to the library. */
+  function generateIcon(prompt: string): Promise<{ icon_url: string; generated_icon_id: string }> {
+    return http.post("/icons/generate", { prompt });
+  }
+  /** The current user's saved AI-generated icons, newest first. */
+  function listGeneratedIcons(): Promise<GeneratedIcon[]> {
+    return http.get<GeneratedIcon[]>("/icons/generated");
+  }
+  function deleteGeneratedIcon(id: string): Promise<void> {
+    return http.del(`/icons/generated/${id}`).then(() => undefined);
+  }
+
   /** AI "auto-fill" — suggest a shelf life + storage location from an item's name. */
   function suggestItemDetails(
     name: string,
@@ -461,6 +498,12 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   }
   function updateRecipe(id: string, data: Partial<RecipeInput>): Promise<Recipe> {
     return http.patch<Recipe>(`/recipes/${id}`, data);
+  }
+  /** Upload one recipe reference photo/video → its stored `{ type, url }`. */
+  function uploadRecipeAttachment(file: unknown): Promise<RecipeAttachment> {
+    const fd = new FormData();
+    fd.append("file", file as never);
+    return http.post<RecipeAttachment>("/recipes/attachments", fd);
   }
   function deleteRecipe(id: string): Promise<void> {
     return http.del(`/recipes/${id}`).then(() => undefined);
@@ -639,6 +682,10 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     scanBarcode,
     scanReceipt,
     scanFridgePhoto,
+    scanExpiryPhoto,
+    generateIcon,
+    listGeneratedIcons,
+    deleteGeneratedIcon,
     suggestItemDetails,
     listNotificationEvents,
     markNotification,
@@ -657,6 +704,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     listRecipes,
     createRecipe,
     updateRecipe,
+    uploadRecipeAttachment,
     deleteRecipe,
     favoriteRecipe,
     unfavoriteRecipe,

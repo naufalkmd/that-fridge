@@ -213,6 +213,17 @@ export default function ItemDetail() {
           <Field label="NAME">
             <TextInput value={name} onChangeText={setName} placeholderTextColor={FAINT} style={inputStyle} />
           </Field>
+          <Field label="ICON">
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <FoodIcon icon={item.icon} iconUrl={item.iconUrl} name={item.name} size={44} />
+              <Pressable
+                onPress={() => router.push({ pathname: "/icon-picker", params: { itemId: item.id } })}
+                style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, backgroundColor: SURFACE2 }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: "700", color: INK }}>Change icon</Text>
+              </Pressable>
+            </View>
+          </Field>
           <Field label="LOCATION">
             <ChipRow
               options={STORAGE_LOCATIONS.map((l) => ({ key: l.key, label: l.label }))}

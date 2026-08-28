@@ -10,10 +10,12 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { describeError, type RecipeCategory } from "@thatfridge/core";
+import { describeError, type RecipeAttachment, type RecipeCategory } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useRecipes } from "@/lib/recipes";
 import { SheetHeader } from "@/components/sheet";
@@ -41,9 +43,32 @@ export default function RecipeForm() {
     existing?.ingredients.map((i) => i.name) ?? [""],
   );
   const [steps, setSteps] = useState<string[]>(existing?.steps ?? [""]);
+  const [attachments, setAttachments] = useState<RecipeAttachment[]>(existing?.attachments ?? []);
   const [link, setLink] = useState("");
   const [importing, setImporting] = useState(false);
+  const [uploadingAtt, setUploadingAtt] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  async function addAttachment() {
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images", "videos"], quality: 0.7 });
+    if (res.canceled || !res.assets[0]) return;
+    const asset = res.assets[0];
+    setUploadingAtt(true);
+    try {
+      const isVideo = asset.type === "video";
+      const file = {
+        uri: asset.uri,
+        name: isVideo ? "attachment.mp4" : "attachment.jpg",
+        type: isVideo ? "video/mp4" : "image/jpeg",
+      };
+      const att = await api.uploadRecipeAttachment(file);
+      setAttachments((a) => [...a, att]);
+    } catch (e) {
+      Alert.alert("Error", describeError(e, "Couldn't upload that."));
+    } finally {
+      setUploadingAtt(false);
+    }
+  }
 
   async function importLink() {
     if (!link.trim()) return;
@@ -82,6 +107,7 @@ export default function RecipeForm() {
       category,
       ingredients: cleanIngredients.map((n) => ({ name: n, icon: "leftovers" })),
       steps: cleanSteps,
+      attachments,
     };
     try {
       if (existing) await update(existing.id, data);
@@ -193,6 +219,40 @@ export default function RecipeForm() {
               />
             ))}
             <AddRow label="Add step" onPress={() => setSteps([...steps, ""])} />
+          </View>
+        </Field>
+
+        <Field label="REFERENCE PHOTOS / VIDEOS">
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {attachments.map((att, i) => (
+              <View key={att.url} style={{ width: 64, height: 64, borderRadius: 6, overflow: "hidden", backgroundColor: "#000" }}>
+                {att.type === "image" ? (
+                  <Image source={{ uri: att.url }} style={{ flex: 1 }} contentFit="cover" />
+                ) : (
+                  <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                    <MaterialCommunityIcons name="play-circle" size={22} color={INK} />
+                  </View>
+                )}
+                <Pressable
+                  onPress={() => setAttachments((a) => a.filter((_, idx) => idx !== i))}
+                  hitSlop={6}
+                  style={{ position: "absolute", top: 2, right: 2, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 9 }}
+                >
+                  <MaterialCommunityIcons name="close" size={14} color="#fff" />
+                </Pressable>
+              </View>
+            ))}
+            <Pressable
+              onPress={addAttachment}
+              disabled={uploadingAtt}
+              style={{ width: 64, height: 64, borderRadius: 6, borderWidth: 1, borderColor: HAIRLINE, borderStyle: "dashed", alignItems: "center", justifyContent: "center", opacity: uploadingAtt ? 0.5 : 1 }}
+            >
+              {uploadingAtt ? (
+                <ActivityIndicator color={FAINT} size="small" />
+              ) : (
+                <MaterialCommunityIcons name="plus" size={20} color={FAINT} />
+              )}
+            </Pressable>
           </View>
         </Field>
 

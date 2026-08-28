@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -8,7 +7,6 @@ import { describeError } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { useShopping } from "@/lib/shopping";
-import { useKitchenScore } from "@/lib/kitchenScore";
 import { useRecipes } from "@/lib/recipes";
 import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
@@ -28,10 +26,8 @@ export default function RecipeDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { byId, toggleFavorite, remove } = useRecipes();
-  const { items, refresh: refreshInventory } = useInventory();
+  const { items } = useInventory();
   const { items: shoppingItems, add: addToShopping } = useShopping();
-  const { refresh: refreshScore } = useKitchenScore();
-  const [busy, setBusy] = useState(false);
 
   const recipe = byId(id);
   if (!recipe) {
@@ -54,18 +50,8 @@ export default function RecipeDetail() {
   }));
   const haveCount = ingredients.filter((i) => i.have).length;
 
-  async function markMade() {
-    setBusy(true);
-    try {
-      await api.markRecipeMade(recipe!.id);
-      await refreshInventory();
-      refreshScore();
-      Alert.alert("Nice", `"${recipe!.name}" logged. Inventory updated.`);
-    } catch (e) {
-      Alert.alert("Error", describeError(e, "Couldn't mark that made."));
-    } finally {
-      setBusy(false);
-    }
+  function markMade() {
+    router.push({ pathname: "/recipe/mark-made", params: { id: recipe!.id } });
   }
 
   function confirmDelete() {
@@ -196,7 +182,7 @@ export default function RecipeDetail() {
         </View>
 
         <Pressable
-          onPress={busy ? undefined : markMade}
+          onPress={markMade}
           style={{
             flexDirection: "row",
             alignItems: "center",
@@ -208,16 +194,10 @@ export default function RecipeDetail() {
             marginBottom: recipe.attachments.length ? 20 : 8,
           }}
         >
-          {busy ? (
-            <ActivityIndicator color="#0a0a0c" />
-          ) : (
-            <>
-              <MaterialCommunityIcons name="chef-hat" size={15} color="#0a0a0c" />
-              <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
-                Mark as made
-              </Text>
-            </>
-          )}
+          <MaterialCommunityIcons name="chef-hat" size={15} color="#0a0a0c" />
+          <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
+            Mark as made
+          </Text>
         </Pressable>
 
         {recipe.attachments.length > 0 && (
@@ -227,7 +207,14 @@ export default function RecipeDetail() {
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {recipe.attachments.map((att, i) => (
-                <Pressable key={i} onPress={() => Linking.openURL(att.url)}>
+                <Pressable
+                  key={i}
+                  onPress={() =>
+                    att.type === "image"
+                      ? router.push({ pathname: "/recipe/attachment", params: { url: att.url } })
+                      : Linking.openURL(att.url)
+                  }
+                >
                   <View style={{ width: 64, height: 64, borderRadius: 6, overflow: "hidden", backgroundColor: "#000" }}>
                     {att.type === "image" ? (
                       <Image source={{ uri: att.url }} style={{ flex: 1 }} contentFit="cover" />

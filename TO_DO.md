@@ -265,14 +265,17 @@ badge catalog, shopping recs, `getScoreTrend`, `routeChatAgent`, `suggestItemDet
 ### Still open vs. the web (post-launch, all JS-only OTA)
 
 - **§D "Opened it" item state** — mobile `/fridges` payload has no `opened` field; needs a
-  backend Item + resource change.
-- **Voice input** in chat — needs a native STT module (no Expo one).
-- **AI icon generation** — `GenerateIconRow` / `GeneratedIconLibrary` (`/icons/generate`); the
-  full ~165-PNG icon pack (mobile ships ~10 core pixel grids + initials fallback).
-- **`MarkRecipeMadeSheet`** — "which ingredients did you actually use" reconciliation (mobile
-  calls `mark-made` with none).
-- **Recipe photo/video attachments** (`/recipes/attachments`); `AttachmentLightbox`.
-- **Scan the printed expiry date** (`/items/expiry-scan`).
+  backend Item + resource change. **(Batch 3 — next)**
+- **Voice input** in chat — needs a native STT module (no Expo one). **Blocked.**
+- ~~**AI icon generation**~~ ✅ done 2026-08-28 — `icon-picker` modal (prompt→fal.ai +
+  saved library + curated grid), reached from the item-detail edit form. The full ~165-PNG
+  pack is still web-only; mobile has curated grids + generation + initials fallback.
+- ~~**`MarkRecipeMadeSheet`**~~ ✅ done 2026-08-28 — `recipe/mark-made` modal, ingredient↔item
+  reconciliation (Finished → logged+removed, Remaining → kept).
+- ~~**Recipe photo/video attachments**~~ ✅ done 2026-08-28 — upload in `recipe-form`,
+  full-screen image lightbox (`recipe/attachment`); video still opens in the system player.
+- ~~**Scan the printed expiry date**~~ ✅ done 2026-08-28 — "Scan date" in the add form
+  (`core.scanExpiryPhoto`).
 - ~~**AgentScoreCard extras**~~ ✅ done 2026-08-28 — Chef food-group icons, Organizer ring,
   Shopkeeper bar in the expanded Kitchen Score cards (`getFoodGroupCoverage` in core).
 - ~~**Score sparkline**~~ ✅ done 2026-08-28 (`getScoreSeries` in core; Waste Saver polyline).
