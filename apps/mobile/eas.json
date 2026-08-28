@@ -1,7 +1,7 @@
 {
   "cli": {
     "version": ">= 22.0.0",
-    "appVersionSource": "local"
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -28,6 +28,10 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "REPLACE_WITH_APP_STORE_CONNECT_APP_ID"
+      }
+    }
   }
 }

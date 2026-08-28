@@ -1,0 +1,52 @@
+name: TestFlight (iOS)
+
+# Build a production iOS binary on EAS and push it to TestFlight.
+# Trigger by pushing a tag like `v1.0.0`, or run manually from the Actions tab
+# (bump the build with the workflow input, or let EAS auto-increment).
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "What's in this build (shows in EAS)"
+        required: false
+        default: "Manual TestFlight build"
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+jobs:
+  build-and-submit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm version comes from package.json "packageManager"
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # Build on EAS, then submit the resulting artifact to App Store Connect / TestFlight.
+      # iOS signing + the App Store Connect API key both come from EAS-stored credentials
+      # (set up once with `eas credentials`), so the only secret CI needs is EXPO_TOKEN.
+      - name: Build + submit
+        run: eas build --platform ios --profile production --non-interactive --auto-submit --message "${{ github.event.inputs.message || github.ref_name }}"
