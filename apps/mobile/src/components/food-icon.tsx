@@ -24,7 +24,7 @@ export function FoodIcon({
 
   if (iconUrl) {
     return (
-      <View style={wrap} className="items-center justify-center rounded-lg bg-canvas">
+      <View style={wrap} className="items-center justify-center">
         <Image source={{ uri: iconUrl }} style={{ width: size * 0.78, height: size * 0.78 }} contentFit="contain" />
       </View>
     );
@@ -35,7 +35,7 @@ export function FoodIcon({
   const file = foodIconFile(icon) ?? foodIconFile(guessFoodIcon(name));
   if (file && FOOD_ICON_ASSETS[file]) {
     return (
-      <View style={wrap} className="items-center justify-center rounded-lg bg-canvas">
+      <View style={wrap} className="items-center justify-center">
         <Image source={FOOD_ICON_ASSETS[file]} style={{ width: size * 0.82, height: size * 0.82 }} contentFit="contain" />
       </View>
     );
@@ -45,7 +45,7 @@ export function FoodIcon({
   if (grid) {
     const cell = (size * 0.72) / grid.cols;
     return (
-      <View style={wrap} className="items-center justify-center rounded-lg bg-canvas">
+      <View style={wrap} className="items-center justify-center">
         <View style={{ width: cell * grid.cols, height: cell * grid.rows, flexDirection: "row", flexWrap: "wrap" }}>
           {grid.cells.map((hex, i) => (
             <View key={i} style={{ width: cell, height: cell, backgroundColor: hex ?? "transparent" }} />
@@ -56,7 +56,7 @@ export function FoodIcon({
   }
 
   return (
-    <View style={wrap} className="items-center justify-center rounded-lg bg-canvas">
+    <View style={wrap} className="items-center justify-center">
       <Text className="text-[13px] font-bold text-muted">{name.slice(0, 2).toUpperCase()}</Text>
     </View>
   );
