@@ -12,15 +12,16 @@ Static pages for the marketing/legal domain `thatfridge.com`:
 Folder-per-page layout so clean URLs (`/privacy/`) work on **any** static host with no redirect
 config. `style.css` is shared and served from the root.
 
-## Before it goes live — fill in the placeholders
+## Placeholders — filled 2026-08-28
 
-Search all files for `[` and replace:
+- Operator / privacy contact: **Muhammad Naufal Kamaruddin** (individual)
+- Governing law: **Malaysia**
+- Subprocessors: DigitalOcean (Singapore) + Cloudflare (DNS/site)
 
-- `[OPERATOR LEGAL NAME]` — the individual/entity on the Apple Developer account (privacy + terms)
-- `[JURISDICTION]` — governing-law country/state (terms §12). Operator is Malaysia-based →
-  Malaysian law is the natural choice.
-- `[NAME]` — the hosting/VPS provider, in the privacy subprocessor table (Singapore region)
-- `[PRIVACY CONTACT NAME]` — named privacy officer for the Korea PIPA / Malaysia PDPA section
+Verify the operator's name spelling matches the Apple Developer account exactly before submitting;
+it's a one-line edit in `privacy/index.html` + `terms/index.html` if it differs.
+
+## Still needed before it goes live
 
 Set up two addresses (real mailboxes or forwarding aliases):
 - **support@thatfridge.com** — on every page, the App Store support contact
