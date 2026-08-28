@@ -12,15 +12,28 @@ import {
   View,
 } from "react-native";
 
-import { describeError } from "@thatfridge/core";
+import { describeError, getShoppingRecommendations } from "@thatfridge/core";
 import { useShopping } from "@/lib/shopping";
+import { useInventory } from "@/lib/inventory";
+import { useRecipes } from "@/lib/recipes";
+import { useKitchenScore } from "@/lib/kitchenScore";
 import { useToast } from "@/lib/toast";
 import { SectionHeader } from "@/components/ui";
 
 export default function Shopping() {
   const { items, loading, error, refresh, add, toggle, remove, clearChecked } = useShopping();
+  const { items: fridgeItems } = useInventory();
+  const { recipes } = useRecipes();
+  const { usageHistory } = useKitchenScore();
   const toast = useToast();
   const [text, setText] = useState("");
+
+  const recommendations = getShoppingRecommendations({
+    items: fridgeItems,
+    recipes,
+    shoppingList: items,
+    usageHistory,
+  });
 
   function removeWithUndo(id: string, name: string) {
     remove(id);
@@ -98,10 +111,28 @@ export default function Shopping() {
           </Pressable>
         )}
 
-        {items.length === 0 && (
+        {items.length === 0 && recommendations.length === 0 && (
           <Text className="mt-10 text-center text-[13px] text-faint">
             Your shopping list is empty.
           </Text>
+        )}
+
+        {recommendations.length > 0 && (
+          <View className="mb-6">
+            <SectionHeader>Suggested</SectionHeader>
+            <View className="flex-row flex-wrap gap-2">
+              {recommendations.map((r) => (
+                <Pressable
+                  key={r.key}
+                  onPress={() => add(r.name)}
+                  className="flex-row items-center gap-1.5 rounded-lg border border-hairline bg-surface px-3 py-2 active:opacity-70"
+                >
+                  <Text className="text-[13px] font-semibold text-ink">{r.name}</Text>
+                  <Text className="text-[16px] leading-none text-accent">+</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
         )}
 
         {unchecked.length > 0 && (
