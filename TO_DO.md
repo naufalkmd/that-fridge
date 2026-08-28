@@ -133,7 +133,8 @@ multiple / shared fridges, advanced notification tuning.
   offline banners / sync-error toast.
 - [ ] Finish `apps/web/lib/thatfridge` → `packages/core` extraction; point `apps/web` at the
   package. (Most Home + score logic already moved.)
-- [ ] **Merge `mobile-app` → `main`** — additive, web app untouched. Don't let it drift further.
+- [X] **Merge `mobile-app` → `main`** — additive, web app untouched (merged 2026-08-28, commit
+  `ac0886a`; keep merging back periodically so it doesn't drift again).
 - [ ] EAS Update production channel wired.
 
 **Locked decisions — no re-litigation:** NativeWind · Expo Router · pnpm workspaces + turborepo ·
