@@ -259,34 +259,41 @@ recommendations) · Profile (+ Your fridges, links to Goals/Badges/AI-Data/About
 join requests / leave-delete) · fridge sticky notes · floating-pill tab bar (Home · Inventory ·
 ＋ · Chat · Crew) · skeleton loaders.
 
-`packages/core` gained ~47 API methods + `home.ts` / `progress.ts` (scoring, streak, goals,
-badge catalog, shopping recs, `getScoreTrend`, `routeChatAgent`, `suggestItemDetails`, …).
+`packages/core` gained ~55 API methods + `home.ts` / `progress.ts` / `food-icons.ts` (scoring,
+streak, goals, badge catalog, shopping recs, `getScoreTrend` / `getScoreSeries` /
+`getFoodGroupCoverage`, `routeChatAgent`, `suggestItemDetails`, `scanExpiryPhoto`,
+`generateIcon`, `guessFoodIcon`, …).
 
-### Still open vs. the web (post-launch, all JS-only OTA)
+### Done 2026-08-28 (parity pass, all JS-only OTA except the "opened" column)
 
-- ~~**§D "Opened it" item state**~~ ✅ done 2026-08-28 — persisted: `items.opened` column,
-  `ItemResource` caps effective days at 3 when opened; "Opened it" on item detail; Mark-as-made
-  "Remaining" sets it.
+Kitchen Score sparkline (`getScoreSeries`) · per-agent visuals — Chef food-group icons /
+Organizer ring / Shopkeeper bar (`getFoodGroupCoverage`) · grouped notification settings with
+agent GIF badges · `MarkRecipeMadeSheet` (`recipe/mark-made`, ingredient↔item reconcile) ·
+scan the printed expiry date (`core.scanExpiryPhoto`) · recipe photo/video attachments (upload
+in `recipe-form` + image lightbox `recipe/attachment`) · AI icon generation (`icon-picker`) ·
+the **full 164-icon pixel-art pack** + `core.guessFoodIcon` (items show real icons, not
+initials) · pre-scaled all pixel assets nearest-neighbor (no more upscale blur) · **"Opened
+it" item state** persisted (`items.opened` column, freshness capped when opened) · CategoryTag
+→ icon. Sheet-enter animation = n/a (native modal slide-up already; grab-to-dismiss is §4).
+
+### Still open vs. the web
+
+- **Receipt/photo scan review is thin.** Web lets you edit *each* detected item — icon (+
+  generate), expiry (+ scan), location, section, condition (photo), per-item or bulk auto-fill,
+  and add a blank row. Mobile `ScanFlow` only does: include-toggle, name, quantity, then bulk-adds
+  everything to one section. **Biggest remaining parity gap.** (post-launch OTA)
+- **Icon generation not wired into the Add flow** — web has `generateIconForManual` /
+  `generateIconForDetected`; mobile only reaches the icon picker from the item-detail edit form.
+- **Organizer move dismiss** — mobile applies/sweeps moves but has no per-move "dismiss"
+  (`dismissOrganizerMove` on web). Minor.
 - **Voice input** in chat — needs a native STT module (no Expo one). **Blocked.**
-- ~~**AI icon generation**~~ ✅ done 2026-08-28 — `icon-picker` modal (prompt→fal.ai +
-  saved library + the full pack), reached from the item-detail edit form.
-- ~~**Full ~165-PNG icon pack**~~ ✅ done 2026-08-28 — all 164 pixel-art icons bundled in the
-  mobile app; `core.guessFoodIcon` resolves names → keys the same way the web does. Items now
-  show real icons instead of initials.
-- ~~**`MarkRecipeMadeSheet`**~~ ✅ done 2026-08-28 — `recipe/mark-made` modal, ingredient↔item
-  reconciliation (Finished → logged+removed, Remaining → kept).
-- ~~**Recipe photo/video attachments**~~ ✅ done 2026-08-28 — upload in `recipe-form`,
-  full-screen image lightbox (`recipe/attachment`); video still opens in the system player.
-- ~~**Scan the printed expiry date**~~ ✅ done 2026-08-28 — "Scan date" in the add form
-  (`core.scanExpiryPhoto`).
-- ~~**AgentScoreCard extras**~~ ✅ done 2026-08-28 — Chef food-group icons, Organizer ring,
-  Shopkeeper bar in the expanded Kitchen Score cards (`getFoodGroupCoverage` in core).
-- ~~**Score sparkline**~~ ✅ done 2026-08-28 (`getScoreSeries` in core; Waste Saver polyline).
-  ~~**richer notification-settings**~~ ✅ done 2026-08-28 (grouped sections + agent GIF badges).
-- ~~**Sheet enter animations**~~ — n/a: modal routes already get the native iOS slide-up;
-  a custom "pop" would fight the native feel. (Grab-to-dismiss is the real gap — §4.)
 - **wide-viewport (≥900px) layouts** on Home / Inventory / Chat (bundled with web-deployment).
 - Server-driven **push** (APNs auth key + FCM + device-token endpoint + backend sends).
+
+Everything else audited at parity: all 21 web screens exist; fridge-notes CRUD, Customer
+Center (mobile is richer here), what-to-eat (shuffle/vibes/meal-type/food-focus/exact+similar),
+chat photo-attach + memory extract + add-to-recipe-book, shopping recommendations, hero
+carousel + swipe-dismiss agent insights, undo toasts, skeleton loaders — all present.
 - **Android:** `eas build -p android`; Play Console (register as an organization to skip the
   12-tester / 14-day closed-testing gate); Data Safety form; screenshots; submit.
 - **Web deployment** (universal codebase): `expo export -p web` → host the static build; add
