@@ -55,6 +55,7 @@ class ItemController extends Controller
             'quantity' => ['sometimes', 'integer', 'min:1'],
             'expiry_date' => ['sometimes', 'nullable', 'date'],
             'shelf_life_days' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'opened' => ['sometimes', 'boolean'],
             'note' => ['sometimes', 'nullable', 'string', 'max:255'],
             'source' => ['sometimes', 'nullable', 'string', 'in:manual,barcode,receipt,photo,voice'],
             'shop_url' => ['sometimes', 'nullable', 'string', 'max:2048', 'url'],

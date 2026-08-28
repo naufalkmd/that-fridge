@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'quantity',
     'expiry_date',
     'shelf_life_days',
+    'opened',
     'note',
     'source',
     'shop_url',
@@ -27,6 +28,7 @@ class Item extends Model
     {
         return [
             'expiry_date' => 'date',
+            'opened' => 'boolean',
         ];
     }
 
