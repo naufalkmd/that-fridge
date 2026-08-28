@@ -35,7 +35,7 @@ const config: ExpoConfig = {
     package: "app.thatfridge",
     adaptiveIcon: {
       foregroundImage: "./assets/images/android-icon-foreground.png",
-      backgroundColor: "#0a0a0c",
+      backgroundColor: "#1aa9bd",
     },
   },
   // Universal: the same screens render on the web via react-native-web. Live web
