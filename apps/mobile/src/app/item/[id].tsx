@@ -71,7 +71,6 @@ export default function ItemDetail() {
   const [location, setLocation] = useState<StorageLocation>("fridge");
   const [category, setCategory] = useState<NutritionCategory | null>(null);
   const [note, setNote] = useState("");
-  const [sectionId, setSectionId] = useState<string | null>(null);
   const [shopUrl, setShopUrl] = useState("");
   const [expiryDays, setExpiryDays] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -107,15 +106,11 @@ export default function ItemDetail() {
         ? `Plan to use ${item.name.toLowerCase()} within the next couple of days.`
         : `${item.name} is holding up well — no action needed.`;
 
-  const itemFridge = fridges.find((f) => f.id === item?.fridgeId);
-  const sections = itemFridge?.sections ?? [];
-
   function startEdit() {
     setName(item!.name);
     setLocation(item!.location ?? "fridge");
     setCategory(item!.nutritionCategory ?? null);
     setNote(item!.note ?? "");
-    setSectionId(item!.sectionId);
     setShopUrl(item!.shopUrl ?? "");
     setExpiryDays(null);
     setEditing(true);
@@ -133,7 +128,6 @@ export default function ItemDetail() {
         location,
         nutrition_category: category,
         note: note.trim(),
-        ...(sectionId && sectionId !== item!.sectionId ? { section_id: sectionId } : {}),
         shop_url: shopUrl.trim() || null,
         ...(expiryDays != null
           ? { expiry_date: isoInDays(expiryDays), shelf_life_days: expiryDays }
@@ -245,16 +239,6 @@ export default function ItemDetail() {
               onChange={(k) => setLocation(k as StorageLocation)}
             />
           </Field>
-          {sections.length > 1 && (
-            <Field label="SECTION">
-              <ChipRow
-                options={sections.map((s) => ({ key: s.id, label: s.name }))}
-                value={sectionId}
-                onChange={(k) => setSectionId(k)}
-              />
-            </Field>
-          )}
-
           <Field label="FOOD GROUP">
             <ChipRow
               options={NUTRITION_CATEGORIES.map((c) => ({ key: c.key, label: c.label }))}
@@ -365,7 +349,7 @@ export default function ItemDetail() {
           <CategoryTag category={item.nutritionCategory} />
         </View>
         <Text style={{ textAlign: "center", fontSize: 12.5, color: FAINT, marginBottom: 18 }}>
-          {item.fridgeName} · {item.sectionName}
+          {item.fridgeName}
         </Text>
 
         <View style={{ backgroundColor: SURFACE2, borderRadius: 8, padding: 16, marginBottom: 14 }}>
