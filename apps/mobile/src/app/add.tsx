@@ -66,9 +66,14 @@ const METHODS: {
   { key: "manual", title: "Add manually", desc: "Type in the item yourself", icon: "keyboard-outline" },
 ];
 
+function daysUntil(iso: string): number {
+  const target = new Date(`${iso}T00:00:00`);
+  return Math.round((target.getTime() - Date.now()) / 86400000);
+}
+
 export default function Add() {
   const router = useRouter();
-  const { addItem } = useInventory();
+  const { addItem, ensureSectionId } = useInventory();
   const { isPro } = usePro();
   const params = useLocalSearchParams<{
     name?: string;
@@ -93,6 +98,37 @@ export default function Add() {
   );
   const [saving, setSaving] = useState(false);
   const [autoFilling, setAutoFilling] = useState(false);
+  const [scanningDate, setScanningDate] = useState(false);
+
+  async function scanExpiryDate() {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("Camera needed", "Allow camera access to scan a printed date.");
+      return;
+    }
+    const res = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.6 });
+    if (res.canceled || !res.assets[0]) return;
+    setScanningDate(true);
+    try {
+      const sectionId = await ensureSectionId();
+      const image = { uri: res.assets[0].uri, name: "expiry.jpg", type: "image/jpeg" };
+      const result = await api.scanExpiryPhoto(sectionId, image);
+      if (result.found && result.date) {
+        const d = daysUntil(result.date);
+        setExpiryDays(d);
+        Alert.alert(
+          "Date found",
+          d >= 0 ? `Best before ${result.date} (~${d} days). Adjust below if needed.` : `That date (${result.date}) is already past — double-check the photo.`,
+        );
+      } else {
+        Alert.alert("No date read", result.message || "Couldn't read a date. Try a closer, well-lit shot.");
+      }
+    } catch (e) {
+      Alert.alert("Error", describeError(e, "Couldn't scan that photo."));
+    } finally {
+      setScanningDate(false);
+    }
+  }
 
   async function autoFill() {
     if (!name.trim()) return;
@@ -282,9 +318,32 @@ export default function Add() {
               value={expiryDays == null ? null : String(expiryDays)}
               onChange={(k) => setExpiryDays(Number(k))}
             />
-            {expiryDays != null && (
-              <Text style={{ marginTop: 6, fontSize: 11, color: FAINT }}>≈ {isoInDays(expiryDays)}</Text>
-            )}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 8 }}>
+              <Pressable
+                onPress={scanExpiryDate}
+                disabled={scanningDate}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 5,
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 6,
+                  backgroundColor: "rgba(38,198,218,0.14)",
+                  opacity: scanningDate ? 0.5 : 1,
+                }}
+              >
+                {scanningDate ? (
+                  <ActivityIndicator color={AMBER} size="small" />
+                ) : (
+                  <MaterialCommunityIcons name="camera-outline" size={14} color={AMBER} />
+                )}
+                <Text style={{ fontSize: 11.5, fontWeight: "700", color: AMBER }}>Scan date</Text>
+              </Pressable>
+              {expiryDays != null && (
+                <Text style={{ fontSize: 11, color: FAINT }}>≈ {isoInDays(expiryDays)}</Text>
+              )}
+            </View>
           </Labeled>
 
           <Pressable

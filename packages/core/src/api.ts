@@ -217,6 +217,16 @@ export interface ScanResult {
   message: string;
 }
 
+/** Result of `/items/expiry-scan` — the printed best-before date read off a package photo. */
+export interface ExpiryScanResult {
+  found: boolean;
+  /** "YYYY-MM-DD", only when found. */
+  date?: string;
+  raw_text?: string;
+  confidence?: number;
+  message: string;
+}
+
 export interface BarcodeSuggestion {
   name: string;
   icon: string;
@@ -371,6 +381,13 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     const fd = new FormData();
     fd.append("image", image as never);
     return http.post<ScanResult>(`/sections/${sectionId}/items/photo/scan`, fd);
+  }
+
+  /** Read the printed best-before date off a package photo. `found: false` when nothing legible. */
+  function scanExpiryPhoto(sectionId: string, image: unknown): Promise<ExpiryScanResult> {
+    const fd = new FormData();
+    fd.append("image", image as never);
+    return http.post<ExpiryScanResult>(`/sections/${sectionId}/items/expiry-scan`, fd);
   }
 
   /** AI "auto-fill" — suggest a shelf life + storage location from an item's name. */
@@ -639,6 +656,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     scanBarcode,
     scanReceipt,
     scanFridgePhoto,
+    scanExpiryPhoto,
     suggestItemDetails,
     listNotificationEvents,
     markNotification,
