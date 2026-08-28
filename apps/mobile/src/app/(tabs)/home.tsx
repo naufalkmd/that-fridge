@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import {
   daysLabel,
@@ -301,6 +302,22 @@ export default function Home() {
                         {fr.itemCount} items tracked
                       </Text>
                     </View>
+                    <Pressable
+                      onPress={() => router.push(`/fridge/${fr.id}`)}
+                      style={{
+                        position: "absolute",
+                        bottom: 12,
+                        right: 14,
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "rgba(19,19,22,0.85)",
+                      }}
+                    >
+                      <MaterialCommunityIcons name="palette-outline" size={16} color={INK} />
+                    </Pressable>
                   </View>
                 ))}
 
