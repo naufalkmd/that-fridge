@@ -6,6 +6,9 @@ Consolidates the old `APP_STORE_LAUNCH_PLAN.md` + `SHIPATON_2026.md`.
 React Native — no Capacitor, no WebView. This launch is also our **RevenueCat Shipaton 2026**
 entry.
 
+**Target markets:** Malaysia + South Korea. API hosted in Singapore; v1 app UI English-only,
+localized store listings + Korean UI fast-follow — see §4a.
+
 **Hard deadline: Sep 30, 2026, 11:45 pm PDT.** The app must be **fully published and live**
 (Apple review passed), not just submitted — review takes days, so submit ~2 weeks early.
 
@@ -23,16 +26,23 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
 Everything downstream is blocked on these. They take days to weeks. **Start today.**
 
 - [ ] **Apple Developer Program enrollment — Individual** (Organization needs a D-U-N-S number,
-      weeks). #1 schedule risk; if not cleared within a week, escalate to Apple support / check
-      if a teammate has an active account.
+  weeks). #1 schedule risk; if not cleared within a week, escalate to Apple support / check
+  if a teammate has an active account.
 - [ ] **App Store Connect: Paid Apps Agreement + banking + tax** — needs real tax info; until
-      active, IAPs can't be tested and the Shipaton requirement can't be met. Start the **same
-      day** as enrollment.
-- [ ] Domain for the API host + privacy-policy / terms pages.
-- [ ] **Buy the PixelMix commercial licence** ($25, andrewtyler.gumroad.com/l/pixelmix) —
-      required before a commercial App Store release. See `assets/fonts/PixelMix-NOTES.md`.
-- [ ] Confirm each team member's Shipaton eligibility: age of majority, not a sanctioned
-      country, not RevenueCat / sponsor staff.
+  active, IAPs can't be tested and the Shipaton requirement can't be met. Start the **same
+  day** as enrollment.
+- [ ] Domain for the API host + privacy-policy / terms pages. 🟡 `thatfridge.com` bought.
+  `/privacy` `/terms` `/support` pages **drafted** in `apps/legal/` (static site) — still need:
+  fill placeholders (`[OPERATOR LEGAL NAME]`, `[JURISDICTION]`, hosting provider name), set up a
+  `support@thatfridge.com` inbox, deploy (Cloudflare Pages), and DNS (`api` A-record → VPS IP;
+  apex + `www` → Pages). See `apps/legal/README.md`. App URLs in `paywall.tsx` → `thatfridge.com`.
+- [X] **Buy the PixelMix commercial licence** — bought via Sellfy ($25, 2026-08-28). EULA saved
+  at `apps/mobile/assets/fonts/PixelMix-EULA.docx`. **Two follow-ups** (see
+  `PixelMix-NOTES.md`): (a) the desktop EULA doesn't clearly grant app/web *embedding* — email
+  font@andrewtyler.net for written confirmation and keep it with the receipt; (b) drop the
+  unofficial `PixelMix-Bold.ttf` (unused; EULA forbids DIY weights).
+- [X] Confirm each team member's Shipaton eligibility: age of majority, not a sanctioned
+  country, not RevenueCat / sponsor staff.
 
 **Don't:** market ThatFridge as "launched" anywhere (public TestFlight link, ProductHunt,
 press) before the store listing is live — risks the Shipaton "brand-new app" disqualification.
@@ -40,18 +50,43 @@ Private TestFlight is fine.
 
 ---
 
+## 1a. Cost tracker
+
+All USD, approximate. "Recurring" = keep paying to keep the app live.
+
+| Item                                    | Cost         | Type      | Status   | Notes                                                                        |
+| --------------------------------------- | ------------ | --------- | -------- | ---------------------------------------------------------------------------- |
+| Apple Developer Program                 | $99 / yr     | Recurring | ✅ Paid  | Individual enrollment                                                        |
+| Domain —`thatfridge.com`             | ~$10.46 / yr | Recurring | ✅ Paid  | API host + privacy/terms/support pages                                       |
+| PixelMix commercial font licence        | $25          | One-time  | ✅ Paid  | via Sellfy 2026-08-28; embedding confirmation still pending (§1)            |
+| VPS — Laravel API + Postgres + Redis   | ~$12–18 / mo | Recurring | ⬜ Due   | **Singapore** region (MY+KR latency) — Vultr/DO/Linode 2 GB (§2, `backend/DEPLOY.md`) |
+| Privacy / terms / support pages hosting | $0           | —        | ⬜       | Cloudflare Pages / GitHub Pages free tier                                    |
+| Sentry (crash monitoring)               | $0           | —        | ⬜       | Free developer tier (§2)                                                    |
+| RevenueCat                              | $0           | —        | ✅       | Free under $2.5k tracked revenue / mo                                        |
+| Expo EAS builds                         | $0           | —        | ✅       | Free tier covers launch build cadence                                        |
+| Devpost / Shipaton entry                | $0           | —        | —       | Free                                                                         |
+| Google Play Console                     | $25          | One-time  | ⬜ Later | Post-launch — Android deferred                                              |
+
+**Paid to date: ~$135** (Apple $99 + domain ~$10.46 + PixelMix $25). Still due before launch:
+**VPS (first month ~$12–18)** + possibly a transactional-email plan (most have a free tier).
+Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + ~$12–18/mo (VPS) ≈ **$255–325 / yr**.
+
+---
+
 ## 2. Backend / infra (Member A)
 
-- [ ] Deploy Laravel to the VPS: Nginx, PHP 8.2+, `migrate --force`, `config:cache`,
-      `route:cache`, HTTPS on `api.thatfridge.<domain>`, `APP_DEBUG=false`, fresh `APP_KEY`,
-      rate-limit auth routes.
-- [ ] Hosted Postgres + Redis; daily backups; queue worker + scheduler under systemd (freshness
-      notifications depend on the scheduler).
+- [ ] Deploy Laravel to the VPS — **step-by-step runbook: `backend/DEPLOY.md`** (Nginx, PHP 8.3,
+  Postgres, Redis, Certbot on `api.thatfridge.com`, `APP_DEBUG=false`, fresh `APP_KEY`, queue +
+  scheduler systemd units, daily pg_dump + storage backup, reviewer demo seed).
+- [ ] Rate-limit `/api/login` + `/api/register` (throttle middleware).
+- [ ] Copy backups off-box (provider snapshots or rclone to object storage).
 - [ ] Seed a stable **reviewer demo account** on prod with realistic data (replace
-      `backend/scripts/seed-demo-fridge.sh`).
+  `backend/scripts/seed-demo-fridge.sh`).
 - [ ] Sentry on the Laravel app.
-- [ ] Privacy policy + Terms pages on `apps/web`, deployed, public URLs (content: Member D).
-- [x] `DELETE /api/me` endpoint + tests (hard-deletes user + tokens + owned fridges).
+- [ ] Privacy policy + Terms + Support pages: drafted in `apps/legal/` (static site, not
+  `apps/web`). Deploy to Cloudflare Pages on the `thatfridge.com` apex; fill the placeholders
+  first (see `apps/legal/README.md`).
+- [X] `DELETE /api/me` endpoint + tests (hard-deletes user + tokens + owned fridges).
 
 ---
 
@@ -77,10 +112,10 @@ multiple / shared fridges, advanced notification tuning.
 **Left (Member A, once the Apple account exists):**
 
 - [ ] App Store Connect: create `thatfridge_pro_monthly` + `thatfridge_pro_yearly` subscription
-      products (one group), each with a 7-day intro offer.
+  products (one group), each with a 7-day intro offer.
 - [ ] RevenueCat: add a real **App Store app** (`test.thatfridge.app`) alongside the test store;
-      App Store shared secret + App Store Connect API key; remap the offering's packages to the
-      real products.
+  App Store shared secret + App Store Connect API key; remap the offering's packages to the
+  real products.
 - [ ] Swap the test-store key for the real `appl_…` App Store key in `.env` / EAS env.
 - [ ] Verify a **sandbox purchase + restore** end-to-end; `thatfridge_pro` gate works both ways.
 
@@ -89,15 +124,15 @@ multiple / shared fridges, advanced notification tuning.
 ## 4. Mobile app (Members B / C / D)
 
 - [ ] **First `eas build --profile development`** (dev client) so barcode scan, local
-      notifications, and RevenueCat can actually be tested. Simulator builds need no paid Apple
-      account (`eas.json` dev profile has `ios.simulator: true`).
+  notifications, and RevenueCat can actually be tested. Simulator builds need no paid Apple
+  account (`eas.json` dev profile has `ios.simulator: true`).
 - [ ] Full **smoke-test on a real device / simulator** — nothing since the parity port has run.
 - [ ] Bottom-sheet **grab-to-dismiss** gesture on modal screens (needs
-      `react-native-gesture-handler` root wiring).
+  `react-native-gesture-handler` root wiring).
 - [ ] Native-feel pass: haptics, safe-area audit on every screen, keyboard-avoiding views,
-      offline banners / sync-error toast.
+  offline banners / sync-error toast.
 - [ ] Finish `apps/web/lib/thatfridge` → `packages/core` extraction; point `apps/web` at the
-      package. (Most Home + score logic already moved.)
+  package. (Most Home + score logic already moved.)
 - [ ] **Merge `mobile-app` → `main`** — additive, web app untouched. Don't let it drift further.
 - [ ] EAS Update production channel wired.
 
@@ -106,7 +141,37 @@ Node 20 · bundle id `test.thatfridge.app` · iOS target 15.1 · Apple enrollmen
 notifications local/on-device (server push is post-launch) · Android deferred entirely · one
 universal UI codebase (`react-native-web` renders `apps/mobile` in a browser; legacy `apps/web`
 retired once web output ships — post-launch) · signing keys + Apple assets in a shared password
-manager from day one.
+manager from day one · **v1 app UI is English-only** (see §4a).
+
+---
+
+## 4a. Localization & regional compliance — target markets 🇲🇾 🇰🇷
+
+**Markets:** Malaysia + South Korea. API hosted in **Singapore** (best latency for both — see
+`backend/DEPLOY.md`). Malaysians are comfortable in English; Korean users expect a Korean UI.
+
+**Decision (2026-08-28): English-only app UI for v1; localized store listings; Korean UI as a
+post-launch OTA fast-follow.**
+
+- [ ] **App Store Connect — localized metadata** for `en`, `ko`, `ms`: name/subtitle, description,
+  keywords, and **localized screenshots** (at minimum `ko`). Korean downloads depend on this.
+- [ ] Set App Store **availability** to include Malaysia + South Korea (and pick the wider
+  region set — no reason to geo-restrict).
+- [ ] **Pricing:** create the sub price points; App Store + RevenueCat auto-localize to MYR /
+  KRW. Confirm the KRW price reads as a clean number and is VAT-inclusive (Apple handles VAT).
+- [ ] **Korea PIPA:** provide a **Korean-language privacy policy** (`/privacy/ko/`), obtain
+  **separate consent for cross-border transfer** of personal data (chat text + photos →
+  OpenRouter / fal.ai in the US) at sign-up, and name a privacy contact. PIPA is strict and
+  Korean review does check the policy link.
+- [ ] **Malaysia PDPA (2010, amended 2024):** consent at sign-up, breach-notification process,
+  name a data-protection contact. Current policy mostly covers this — add the contact.
+- [ ] **Minimum sign-up age 14+** (state in Terms + the register screen) to avoid PIPA/'13'
+  parental-consent requirements for minors.
+- [ ] **Guideline 1.2 (UGC safety):** fridge sharing + username search + join-requests are
+  invite-only (low risk), but add a **"block user"** action on the friend-search / join-request
+  flow and a **report** path (email is acceptable) before submitting, as insurance.
+- [ ] Post-launch OTA: wire `react-i18next` + `expo-localization`, externalize strings, ship
+  `ko` (and optionally `ms`) translations. No rebuild needed if done as an EAS Update.
 
 ---
 
@@ -119,9 +184,9 @@ manager from day one.
 - [ ] Age rating.
 - [ ] App Review notes with demo credentials.
 - [ ] Guideline 4.2 rebuttal ready (native camera, notifications, haptics, native nav) in case
-      of a thin-wrapper rejection.
+  of a thin-wrapper rejection.
 - [ ] Decide Google Play account type (personal vs organization) — for the post-launch Android
-      submission.
+  submission.
 
 ---
 
@@ -130,7 +195,7 @@ manager from day one.
 - [ ] Devpost project page: feature description.
 - [ ] Demo video **≤ 2:00**, public on YouTube/Vimeo, **no copyrighted music/footage**.
 - [ ] #BuildInPublic: a public thread / dev log, updated 2–3×/week (the plan, the parity port,
-      the published paywall, clean git history are good posts).
+  the published paywall, clean git history are good posts).
 - [ ] Peace Prize: short impact statement (household food-waste → savings + environmental).
 - [ ] App Store URL on the submission.
 - [ ] **Submit on Devpost before Sep 30, 2026, 11:45 pm PDT.**
@@ -214,17 +279,17 @@ badge catalog, shopping recs, `getScoreTrend`, `routeChatAgent`, `suggestItemDet
 
 ## 9. QA matrix (Member A owns the process; whole team runs it)
 
-| Area | Checks |
-|---|---|
-| Devices | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device |
-| Auth | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session |
-| Core loop | add item, barcode scan (camera allow / deny / deny-then-enable), inventory edit/delete, mark recipe made decrements stock |
-| Notifications | local alert fires at the right time, taps route to the item, permission denied handled |
-| Paywall | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow |
-| Native chrome | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe |
-| Network | airplane mode on every screen, slow 3G, API 500s, retry paths |
-| Lifecycle | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly |
-| Compliance | account deletion from a clean install, privacy-policy link opens, demo account works fresh |
+| Area          | Checks                                                                                                                    |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Devices       | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device                                                                |
+| Auth          | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session                         |
+| Core loop     | add item, barcode scan (camera allow / deny / deny-then-enable), inventory edit/delete, mark recipe made decrements stock |
+| Notifications | local alert fires at the right time, taps route to the item, permission denied handled                                    |
+| Paywall       | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow                                            |
+| Native chrome | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe                                     |
+| Network       | airplane mode on every screen, slow 3G, API 500s, retry paths                                                             |
+| Lifecycle     | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly                                   |
+| Compliance    | account deletion from a clean install, privacy-policy link opens, demo account works fresh                                |
 
 ---
 

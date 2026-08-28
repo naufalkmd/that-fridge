@@ -111,6 +111,12 @@ curl http://127.0.0.1:8000/api/me \
   -H "Accept: application/json" -H "Authorization: Bearer <token from above>"
 ```
 
+## Deploying
+
+The production API deploy (VPS: Nginx + PHP 8.3 + Postgres + Redis + queue/scheduler + HTTPS on
+`api.thatfridge.com`) has a step-by-step runbook: [`backend/DEPLOY.md`](backend/DEPLOY.md). The
+public `thatfridge.com` pages (privacy / terms / support) live in [`apps/legal/`](apps/legal/).
+
 ## Testing
 
 ```bash
