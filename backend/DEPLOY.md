@@ -91,7 +91,7 @@ Use a read-only **deploy key** (GitHub repo → Settings → Deploy keys) rather
 ```bash
 sudo mkdir -p /var/www && sudo chown deploy:deploy /var/www
 cd /var/www
-git clone git@github.com:YOURORG/ThatFridge.git thatfridge
+git clone git@github.com:naufalkmd/that-fridge.git thatfridge
 cd thatfridge/backend
 
 composer install --no-dev --optimize-autoloader
