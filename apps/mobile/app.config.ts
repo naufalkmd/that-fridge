@@ -51,7 +51,7 @@ const config: ExpoConfig = {
     [
       "expo-font",
       {
-        fonts: ["./assets/fonts/PixelMix.ttf", "./assets/fonts/PixelMix-Bold.ttf"],
+        fonts: ["./assets/fonts/PixelMix.ttf"],
       },
     ],
     [

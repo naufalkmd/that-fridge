@@ -22,3 +22,7 @@ apps/mobile/*.log
 
 # packages
 packages/*/dist/
+
+# raw font-licence download — keep the receipt + EULA in the password manager, not git
+# (the EULA is checked in under apps/*/assets/fonts/)
+PixelMix_sellfy/

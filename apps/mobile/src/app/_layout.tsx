@@ -25,7 +25,6 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     PixelMix: require("../../assets/fonts/PixelMix.ttf"),
-    "PixelMix-Bold": require("../../assets/fonts/PixelMix-Bold.ttf"),
   });
 
   useEffect(() => {
