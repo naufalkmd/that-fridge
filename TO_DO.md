@@ -119,13 +119,30 @@ auto-renew terms).
 so no promo codes). Pro unlocks: unlimited AI chat / what-to-eat, receipt & photo bulk-add,
 multiple / shared fridges, advanced notification tuning.
 
-**Left (Member A, once the Apple account exists):**
+**Left (Member A — Apple account is now approved, Team ID issued 2026-08-28):**
 
-- [ ] App Store Connect: create `thatfridge_pro_monthly` + `thatfridge_pro_yearly` subscription
-  products (one group), each with a 7-day intro offer.
+- [ ] **App Store Connect → Subscriptions.** One group ("ThatFridge Pro"). Two products,
+  **permanent IDs** (never reusable — don't typo):
+  - `thatfridge_pro_monthly` — 1 month
+  - `thatfridge_pro_yearly` — 1 year
+  - **Price (USD base):** monthly **$2.99**, yearly **$19.99** (≈ $1.67/mo, "save 44%" — the
+    annual is the hero plan). Rationale: category norm ($2–5/mo), low enough for post-trial
+    impulse, can raise later (existing subs grandfathered), don't go < $1.99.
+  - **7-day free trial** (introductory offer) on each — doubles as Shipaton judge access.
+  - **Per-storefront price points** (set after the base; Apple shows VAT/SST-inclusive and
+    remits it): Malaysia `RM12.90` / `RM89`; South Korea `₩3,900` / `₩25,000` (round the ugly
+    auto-conversions).
+  - **Localizations:** English name `ThatFridge Pro` + 1-line description required now. Korean
+    + Malay skippable for v1 — add later as a metadata update, no rebuild (see §4a).
+  - **Review Information screenshot:** the paywall screen. Placeholder image OK to save now;
+    swap the real in-app screenshot (or a RevenueCat paywall-preview screenshot) before the
+    app goes to review.
 - [ ] RevenueCat: add a real **App Store app** (`test.thatfridge.app`) alongside the test store;
-  App Store shared secret + App Store Connect API key; remap the offering's packages to the
-  real products.
+  App Store shared secret + App Store Connect API key; remap the offering's `$rc_monthly` /
+  `$rc_annual` packages to `thatfridge_pro_monthly` / `thatfridge_pro_yearly`. Prices then flow
+  from App Store Connect automatically — RC does not set prices.
+- [ ] In the RC paywall editor, confirm price text uses **variables** (`{{ price }}`,
+  `{{ sub_price_per_month }}`), not a hardcoded "$4.99".
 - [ ] Swap the test-store key for the real `appl_…` App Store key in `.env` / EAS env.
 - [ ] Verify a **sandbox purchase + restore** end-to-end; `thatfridge_pro` gate works both ways.
 
