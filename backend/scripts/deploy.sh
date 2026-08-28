@@ -10,7 +10,7 @@ set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/thatfridge}"
 BRANCH="${DEPLOY_BRANCH:-main}"
-PHP_FPM="${PHP_FPM:-php8.3-fpm}"
+PHP_FPM="${PHP_FPM:-php8.5-fpm}"
 
 cd "$APP_DIR"
 echo "==> git fetch + reset to origin/$BRANCH"

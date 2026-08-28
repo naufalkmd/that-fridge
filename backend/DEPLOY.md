@@ -53,20 +53,28 @@ Reconnect as `deploy` for everything below (`ssh deploy@SERVER_IP`). Use `sudo` 
 
 ## 2. Install the stack
 
+The app's `composer.lock` resolves to Symfony 8 components that need **PHP ≥ 8.4**, and local
+dev runs 8.5 — so install **PHP 8.5** from the ondrej PPA (Ubuntu 24.04 ships only 8.3):
+
 ```bash
+sudo apt -y install software-properties-common
+sudo add-apt-repository -y ppa:ondrej/php
+sudo apt update
+
 sudo apt -y install nginx redis-server postgresql postgresql-contrib \
   git unzip curl acl \
-  php8.3-fpm php8.3-cli php8.3-pgsql php8.3-redis php8.3-mbstring \
-  php8.3-xml php8.3-curl php8.3-zip php8.3-bcmath php8.3-intl php8.3-gd
+  php8.5-fpm php8.5-cli php8.5-pgsql php8.5-redis php8.5-mbstring \
+  php8.5-xml php8.5-curl php8.5-zip php8.5-bcmath php8.5-intl php8.5-gd
+sudo update-alternatives --set php /usr/bin/php8.5
 
 # Composer
 curl -sS https://getcomposer.org/installer | php
 sudo mv composer.phar /usr/local/bin/composer
 
-sudo systemctl enable --now redis-server postgresql php8.3-fpm nginx
+sudo systemctl enable --now redis-server postgresql php8.5-fpm nginx
 ```
 
-Confirm PHP version: `php -v` → 8.3.x (the app requires `^8.3`).
+Confirm PHP version: `php -v` → 8.5.x (the app requires `^8.4`).
 
 ---
 
@@ -162,11 +170,14 @@ FAL_KEY=...
 
 ```bash
 php artisan migrate --force
-php artisan db:seed --force                       # 4 test users (all password123)
-EMAIL=keira@thatfridge.test sh scripts/seed-demo-fridge.sh   # realistic data for App Review
+php artisan db:seed --force                       # 4 test users (all password123) + curated recipes
+API=http://127.0.0.1/api EMAIL=keira@thatfridge.test sh scripts/seed-demo-fridge.sh   # App Review data
 
 php artisan storage:link
-php artisan config:cache route:cache view:cache event:cache
+php artisan config:cache      # each on its own line — artisan rejects them chained
+php artisan route:cache
+php artisan view:cache
+php artisan event:cache
 ```
 
 > Change the seeded reviewer password from the default before submitting, and put the real
@@ -208,7 +219,7 @@ server {
 
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_pass unix:/run/php/php8.5-fpm.sock;
     }
 
     location ~ /\.(?!well-known).* { deny all; }
@@ -356,7 +367,7 @@ run the PHPUnit suite on a clean PHP 8.3 runner, then SSH in and run `scripts/de
 3. **Passwordless sudo for the three deploy commands only** — `sudo visudo -f /etc/sudoers.d/thatfridge-deploy`:
 
    ```
-   deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart thatfridge-scheduler, /usr/bin/systemctl reload php8.3-fpm, /usr/bin/systemctl restart thatfridge-worker
+   deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart thatfridge-scheduler, /usr/bin/systemctl reload php8.5-fpm, /usr/bin/systemctl restart thatfridge-worker
    ```
 
 **GitHub repo → Settings → Secrets and variables → Actions:**
