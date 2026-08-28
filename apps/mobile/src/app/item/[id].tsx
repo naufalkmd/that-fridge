@@ -160,6 +160,10 @@ export default function ItemDetail() {
           category: snap.nutritionCategory ?? null,
         })
         .catch(() => {});
+      // "Rescued" — used up while still in date, with little time to spare.
+      if (snap.days >= 0 && snap.days <= 3) {
+        api.postBadgeProgress("rescued_10", 1).catch(() => {});
+      }
       await removeItem(snap.id);
       refreshScore();
       router.back();

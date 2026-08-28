@@ -1,6 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import type { OrganizerTally, ScoreSnapshot, UsageHistoryEntry } from "@thatfridge/core";
+import {
+  hasFullFoodGroupVariety,
+  type OrganizerTally,
+  type ScoreSnapshot,
+  type UsageHistoryEntry,
+} from "@thatfridge/core";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -23,13 +28,22 @@ export function KitchenScoreProvider({ children }: { children: React.ReactNode }
   const [organizerTally, setOrganizerTally] = useState<OrganizerTally | null>(null);
   const [scoreSnapshots, setScoreSnapshots] = useState<ScoreSnapshot[]>([]);
 
+  const varietyAwarded = useRef(false);
+
   const refresh = useCallback(async () => {
     const [u, t, s] = await Promise.allSettled([
       api.getUsageHistory(),
       api.getOrganizerTally(),
       api.getScoreSnapshots(),
     ]);
-    if (u.status === "fulfilled") setUsageHistory(u.value);
+    if (u.status === "fulfilled") {
+      setUsageHistory(u.value);
+      // "Balanced Plate" badge — every food group used at least once this month.
+      if (!varietyAwarded.current && hasFullFoodGroupVariety(u.value)) {
+        varietyAwarded.current = true;
+        api.postBadgeProgress("full_week_variety", 1).catch(() => {});
+      }
+    }
     if (t.status === "fulfilled") setOrganizerTally(t.value);
     if (s.status === "fulfilled") setScoreSnapshots(s.value);
   }, []);

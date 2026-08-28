@@ -52,7 +52,7 @@ const ZONES: {
     scoreKey: "organizer",
     color: "#3d6fe0",
     notifKind: null,
-    route: "/inventory",
+    route: "/organizer",
     path: [
       { x: 59.07, y: 29.89 }, { x: 71.33, y: 29.89 }, { x: 74.27, y: 31.38 }, { x: 87.33, y: 31.38 },
       { x: 87.6, y: 40.32 }, { x: 77.73, y: 40.69 }, { x: 77.47, y: 33.62 },

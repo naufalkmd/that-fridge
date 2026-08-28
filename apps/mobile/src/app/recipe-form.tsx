@@ -57,6 +57,7 @@ export default function RecipeForm() {
         setIngredients(res.recipe.ingredients.map((i) => i.name));
         setSteps(res.recipe.steps);
         setLink("");
+        api.postBadgeProgress("first_link_recipe", 1).catch(() => {});
       } else {
         Alert.alert("Nothing found", res.reason ?? "Couldn't read a recipe from that link.");
       }

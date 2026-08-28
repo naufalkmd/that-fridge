@@ -373,6 +373,14 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.post<ScanResult>(`/sections/${sectionId}/items/photo/scan`, fd);
   }
 
+  /** AI "auto-fill" — suggest a shelf life + storage location from an item's name. */
+  function suggestItemDetails(
+    name: string,
+    icon?: string,
+  ): Promise<{ shelf_life_days: number; location: StorageLocation }> {
+    return http.post("/items/suggest-details", { name, icon });
+  }
+
   function listNotificationEvents(): Promise<NotificationEvent[]> {
     return http.get<NotificationEvent[]>("/notification-events");
   }
@@ -622,6 +630,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     scanBarcode,
     scanReceipt,
     scanFridgePhoto,
+    suggestItemDetails,
     listNotificationEvents,
     markNotification,
     getNotificationPrefs,

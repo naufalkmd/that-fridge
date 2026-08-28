@@ -92,6 +92,21 @@ export default function Add() {
     params.shelfLife ? Number(params.shelfLife) : 7,
   );
   const [saving, setSaving] = useState(false);
+  const [autoFilling, setAutoFilling] = useState(false);
+
+  async function autoFill() {
+    if (!name.trim()) return;
+    setAutoFilling(true);
+    try {
+      const s = await api.suggestItemDetails(name.trim());
+      if (s.location) setLocation(s.location);
+      if (s.shelf_life_days) setExpiryDays(s.shelf_life_days);
+    } catch {
+      /* best effort */
+    } finally {
+      setAutoFilling(false);
+    }
+  }
 
   function chooseMethod(m: Method) {
     if (m === "barcode") {
@@ -203,14 +218,36 @@ export default function Add() {
           keyboardShouldPersistTaps="handled"
         >
           <Labeled label="NAME">
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              autoFocus={!params.name}
-              placeholder="Milk"
-              placeholderTextColor={FAINT}
-              style={field}
-            />
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                autoFocus={!params.name}
+                placeholder="Milk"
+                placeholderTextColor={FAINT}
+                style={[field, { flex: 1 }]}
+              />
+              <Pressable
+                onPress={autoFill}
+                disabled={!name.trim() || autoFilling}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                  paddingHorizontal: 12,
+                  borderRadius: 6,
+                  backgroundColor: "rgba(122,92,201,0.14)",
+                  opacity: !name.trim() || autoFilling ? 0.5 : 1,
+                }}
+              >
+                {autoFilling ? (
+                  <ActivityIndicator color="#7a5cc9" size="small" />
+                ) : (
+                  <MaterialCommunityIcons name="auto-fix" size={14} color="#7a5cc9" />
+                )}
+                <Text style={{ fontSize: 11.5, fontWeight: "700", color: "#7a5cc9" }}>Auto-fill</Text>
+              </Pressable>
+            </View>
           </Labeled>
 
           <Labeled label="QUANTITY">
