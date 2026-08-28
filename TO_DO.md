@@ -273,12 +273,13 @@ badge catalog, shopping recs, `getScoreTrend`, `routeChatAgent`, `suggestItemDet
   calls `mark-made` with none).
 - **Recipe photo/video attachments** (`/recipes/attachments`); `AttachmentLightbox`.
 - **Scan the printed expiry date** (`/items/expiry-scan`).
-- **AgentScoreCard extras** — Chef 5-food-group coverage icons, Organizer completion ring,
-  Shopkeeper receipt bar (mobile shows a plainer per-agent row).
-- **Score sparkline** (`getScoreSeries`); **richer notification-settings** (agent GIF icons +
-  grouped sections).
-- **Sheet enter animations** (`pop` / slide-up) · **wide-viewport (≥900px) layouts** on
-  Home / Inventory / Chat (bundled with the web-deployment work below).
+- ~~**AgentScoreCard extras**~~ ✅ done 2026-08-28 — Chef food-group icons, Organizer ring,
+  Shopkeeper bar in the expanded Kitchen Score cards (`getFoodGroupCoverage` in core).
+- ~~**Score sparkline**~~ ✅ done 2026-08-28 (`getScoreSeries` in core; Waste Saver polyline).
+  ~~**richer notification-settings**~~ ✅ done 2026-08-28 (grouped sections + agent GIF badges).
+- ~~**Sheet enter animations**~~ — n/a: modal routes already get the native iOS slide-up;
+  a custom "pop" would fight the native feel. (Grab-to-dismiss is the real gap — §4.)
+- **wide-viewport (≥900px) layouts** on Home / Inventory / Chat (bundled with web-deployment).
 - Server-driven **push** (APNs auth key + FCM + device-token endpoint + backend sends).
 - **Android:** `eas build -p android`; Play Console (register as an organization to skip the
   12-tester / 14-day closed-testing gate); Data Safety form; screenshots; submit.
