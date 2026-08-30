@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { describeError, type ShoppingItem } from "@thatfridge/core";
 
 import { api } from "@/lib/api";
@@ -10,7 +17,7 @@ interface ShoppingContextValue {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  add: (name: string) => Promise<void>;
+  add: (name: string, shopUrl?: string | null) => Promise<void>;
   toggle: (id: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
   clearChecked: () => Promise<void>;
@@ -47,11 +54,11 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
   }, [status, load]);
 
   const add = useCallback(
-    async (name: string) => {
+    async (name: string, shopUrl?: string | null) => {
       const trimmed = name.trim();
       if (!trimmed) return;
       const fridgeId = await ensureFridgeId();
-      const created = await api.addShoppingItem(fridgeId, trimmed);
+      const created = await api.addShoppingItem(fridgeId, trimmed, shopUrl);
       setItems((prev) => [created, ...prev]);
     },
     [ensureFridgeId],
@@ -62,11 +69,15 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
       const cur = items.find((i) => i.id === id);
       if (!cur) return;
       const next = !cur.checked;
-      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, checked: next } : i)));
+      setItems((prev) =>
+        prev.map((i) => (i.id === id ? { ...i, checked: next } : i)),
+      );
       try {
         await api.updateShoppingItem(id, { checked: next });
       } catch {
-        setItems((prev) => prev.map((i) => (i.id === id ? { ...i, checked: !next } : i)));
+        setItems((prev) =>
+          prev.map((i) => (i.id === id ? { ...i, checked: !next } : i)),
+        );
       }
     },
     [items],
@@ -92,15 +103,29 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
   }, [items]);
 
   const value = useMemo(
-    () => ({ items, loading, error, refresh: load, add, toggle, remove, clearChecked }),
+    () => ({
+      items,
+      loading,
+      error,
+      refresh: load,
+      add,
+      toggle,
+      remove,
+      clearChecked,
+    }),
     [items, loading, error, load, add, toggle, remove, clearChecked],
   );
 
-  return <ShoppingContext.Provider value={value}>{children}</ShoppingContext.Provider>;
+  return (
+    <ShoppingContext.Provider value={value}>
+      {children}
+    </ShoppingContext.Provider>
+  );
 }
 
 export function useShopping(): ShoppingContextValue {
   const ctx = useContext(ShoppingContext);
-  if (!ctx) throw new Error("useShopping must be used within <ShoppingProvider>");
+  if (!ctx)
+    throw new Error("useShopping must be used within <ShoppingProvider>");
   return ctx;
 }

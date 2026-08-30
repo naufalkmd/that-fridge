@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
+  Linking,
   Pressable,
   ScrollView,
   Switch,
@@ -1273,6 +1274,23 @@ function ShoppingPanel({
                 >
                   {it.name}
                 </Text>
+                {!!it.shopUrl && (
+                  <Pressable
+                    onPress={() => Linking.openURL(it.shopUrl!).catch(() => {})}
+                    hitSlop={6}
+                    style={{
+                      padding: 4,
+                      borderRadius: 6,
+                      backgroundColor: SURFACE2,
+                    }}
+                  >
+                    <MaterialCommunityIcons
+                      name="open-in-new"
+                      size={13}
+                      color={BLUE}
+                    />
+                  </Pressable>
+                )}
                 <Pressable onPress={() => remove(it.id)} hitSlop={6}>
                   <MaterialCommunityIcons
                     name="close"

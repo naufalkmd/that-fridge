@@ -552,7 +552,9 @@ export default function ItemDetail() {
 
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
           <Pressable
-            onPress={() => !onShoppingList && addToShopping(item.name)}
+            onPress={() =>
+              !onShoppingList && addToShopping(item.name, item.shopUrl)
+            }
             style={{
               flex: 1,
               flexDirection: "row",
