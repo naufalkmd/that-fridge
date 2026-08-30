@@ -38,25 +38,31 @@ PIPA compliance:
   separate consent for cross-border transfer** (chat/photos → OpenRouter + fal.ai in the US).
   That's an app change, tracked in `TO_DO.md` §4a — not something these pages can do alone.
 
-## Deploy (pick one)
+## Deploy
 
-**Cloudflare Pages** (recommended — free, auto-HTTPS, same account as DNS):
-1. Push this repo; in Cloudflare Pages, create a project from it.
-2. Build command: _none_. Build output directory: `apps/legal`.
-3. Add custom domains `thatfridge.com` and `www.thatfridge.com`.
-4. DNS: Pages adds the `CNAME`/`A` for the apex automatically when the zone is on Cloudflare.
+Automated: **`.github/workflows/deploy-legal.yml`** ships this folder to Cloudflare Workers on
+every merge to `main` that touches `apps/legal/**`. No build step — the files are served as-is.
+Target + custom domains are declared in **`wrangler.jsonc`**.
 
-**Netlify:** drag-and-drop the `apps/legal` folder, or connect the repo with publish dir
-`apps/legal`. Add the custom domain.
+**One-time setup:**
 
-**GitHub Pages:** push `apps/legal`'s contents to a `gh-pages` branch or a `/docs` folder,
-enable Pages, set the custom domain to `thatfridge.com` (add a `CNAME` file with `thatfridge.com`).
+1. In Cloudflare, create an API token with **Edit Cloudflare Workers** on the account that owns
+   the `thatfridge.com` zone. Add it + the account id as repo secrets `CLOUDFLARE_API_TOKEN` and
+   `CLOUDFLARE_ACCOUNT_ID` (Settings → Secrets and variables → Actions).
+2. **Disconnect any Cloudflare Git integration** for this repo (dashboard → the project →
+   Settings → Builds → disconnect) so it stops auto-building every branch/PR. The workflow is
+   now the only thing that deploys.
+3. First run creates the Worker and attaches `thatfridge.com` + `www` (from `wrangler.jsonc`
+   `routes`). If the domains aren't ready, comment out `routes` and add them from the dashboard
+   later.
+
+Deploy by hand from this folder: `npx wrangler deploy`.
 
 ## DNS summary for `thatfridge.com`
 
 | Record | Name | Target |
 | --- | --- | --- |
-| A / CNAME | `@` and `www` | the page host above |
+| — | `@` and `www` | the Worker route is attached automatically by `wrangler deploy` |
 | A | `api` | the VPS running the Laravel API (`api.thatfridge.com`) |
 
 ## Keep in sync
