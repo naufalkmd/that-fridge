@@ -22,10 +22,10 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: "#0a0a0c" },
-        // Keep tab switches responsive: don't re-render backgrounded tabs, and use a
-        // light native shift transition instead of a hard cut.
+        // Snappy tab switches: instant swap (no transition to jank while a heavy screen
+        // mounts) + don't re-render backgrounded tabs.
         freezeOnBlur: true,
-        animation: "shift",
+        animation: "none",
       }}
     >
       {/* Order here drives FloatingTabBar: home · inventory · [＋] · chat · eat */}
