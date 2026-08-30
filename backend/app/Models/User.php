@@ -64,6 +64,11 @@ class User extends Authenticatable
         return $this->hasMany(ShoppingItem::class);
     }
 
+    public function categories(): HasMany
+    {
+        return $this->hasMany(Category::class);
+    }
+
     public function notificationPref(): HasOne
     {
         return $this->hasOne(NotificationPref::class);
