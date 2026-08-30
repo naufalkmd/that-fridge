@@ -17,9 +17,10 @@ localized store listings + Korean UI fast-follow — see §4a.
 offering, and a published AI-designed paywall are done. **Backend infra is done:** the API is
 live at `https://api.thatfridge.com` with GitHub Actions CD (test → auto-deploy), TLS, backups,
 queue + scheduler; the legal site is live at `https://thatfridge.com`; email routing works.
-`mobile-app` is merged to `main` and kept in sync. **Apple Developer enrollment is approved
-(Team ID issued 2026-08-28).** Next: confirm the Paid Apps agreement goes Active, then App
-Store Connect setup (app record + subscription products) + first EAS build + smoke test.
+**`main` is the only working branch** (the `mobile-app` feature branch was retired 2026-08-30).
+**Apple Developer enrollment approved, first TestFlight build (v1.0.0) submitted.** CD:
+merge to `main` → OTA `eas update` to the `production` channel (JS); `git tag v1.0.x` →
+`eas build` + TestFlight submit (native). See `apps/mobile/CONTRIBUTING.md`.
 
 Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external setup
 
@@ -161,12 +162,16 @@ multiple / shared fridges, advanced notification tuning.
   offline banners / sync-error toast.
 - [ ] Finish `apps/web/lib/thatfridge` → `packages/core` extraction; point `apps/web` at the
   package. (Most Home + score logic already moved.)
-- [X] **Merge `mobile-app` → `main`** — additive, web app untouched (merged 2026-08-28, commit
-  `ac0886a`; keep merging back periodically so it doesn't drift again).
-- [X] EAS Update production channel wired (`channel: production` in `eas.json`; `eas update
-  --branch production` for OTA JS ships). **TestFlight CI:** `.github/workflows/testflight.yml`
-  (tag `v*` or manual → `eas build -p ios --profile production --auto-submit`). One-time setup
-  in `apps/mobile/RELEASE.md` (ASC API key → `eas credentials`, `EXPO_TOKEN` secret, `ascAppId`).
+- [X] **`mobile-app` → `main`** merged 2026-08-28; feature branch retired 2026-08-30 —
+  `main` is now the working branch (see `apps/mobile/CONTRIBUTING.md`).
+- [X] **Mobile CD, two lanes:**
+  - `.github/workflows/eas-update.yml` — merge to `main` touching `apps/mobile/**` /
+    `packages/**` → typecheck → `eas update --branch production` (OTA, testers get it on
+    next launch).
+  - `.github/workflows/testflight.yml` — `git tag v*` or manual → `eas build -p ios
+    --profile production --auto-submit` to TestFlight.
+  - One-time setup in `apps/mobile/RELEASE.md` (ASC API key → `eas credentials`, `EXPO_TOKEN`
+    secret, `ascAppId` — **done**). Workflow: `apps/mobile/CONTRIBUTING.md`.
 
 **Locked decisions — no re-litigation:** NativeWind · Expo Router · pnpm workspaces + turborepo ·
 Node 20 · bundle id `test.thatfridge.app` · iOS target 15.1 · Apple enrollment Individual · v1

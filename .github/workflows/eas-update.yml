@@ -1,0 +1,57 @@
+name: EAS Update (OTA)
+
+# Every merge to main that touches the app's JS ships an over-the-air update to the
+# production channel. Installed TestFlight / App Store builds pick it up on next launch —
+# no rebuild, no Apple review. Native changes (icon, permissions, native modules) still
+# need a tagged build — see .github/workflows/testflight.yml and apps/mobile/CONTRIBUTING.md.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Update message (shown in EAS)"
+        required: false
+
+concurrency:
+  group: eas-update-production
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Typecheck (core + mobile)
+        run: |
+          (cd packages/core && npx tsc --noEmit)
+          (cd apps/mobile && npx tsc --noEmit)
+        working-directory: .
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Publish update
+        run: eas update --branch production --non-interactive --message "${{ github.event.inputs.message || github.event.head_commit.message }}"
