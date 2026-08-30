@@ -25,6 +25,8 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: false,
     bundleIdentifier: "test.thatfridge.app",
+    // Ignored: eas.json cli.appVersionSource is "remote", so EAS auto-increments the real
+    // build number on every production build. Bump `version` above by hand instead — see RELEASE.md.
     buildNumber: "1",
     infoPlist: {
       // No custom/proprietary encryption — lets App Store Connect skip the export-compliance prompt.
