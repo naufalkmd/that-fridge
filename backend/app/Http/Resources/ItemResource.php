@@ -36,6 +36,7 @@ class ItemResource extends JsonResource
             'icon' => $this->icon,
             'icon_url' => $this->icon_url,
             'nutrition_category' => $this->nutrition_category,
+            'category_id' => $this->category_id ? (string) $this->category_id : null,
             'freshness' => $freshness,
             'days' => $days,
             'opened' => (bool) $this->opened,

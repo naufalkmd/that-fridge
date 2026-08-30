@@ -4,6 +4,7 @@ use App\Http\Controllers\AgentController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\BarcodeController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ExpiryScanController;
 use App\Http\Controllers\FridgeController;
 use App\Http\Controllers\FridgeJoinRequestController;
@@ -99,7 +100,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/sections/{section}', [SectionController::class, 'update']);
     Route::delete('/sections/{section}', [SectionController::class, 'destroy']);
 
+    // User-defined categories for the Inventory filter bar. Separate from nutrition_category.
+    Route::get('/categories', [CategoryController::class, 'index']);
+    Route::post('/categories', [CategoryController::class, 'store']);
+    Route::patch('/categories/{category}', [CategoryController::class, 'update']);
+    Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+
     Route::post('/sections/{section}/items', [ItemController::class, 'store']);
+    // Must precede /items/{item} — "bulk-category" is not a route-model-bindable id.
+    Route::patch('/items/bulk-category', [ItemController::class, 'bulkCategory']);
     Route::patch('/items/{item}', [ItemController::class, 'update']);
     Route::delete('/items/{item}', [ItemController::class, 'destroy']);
 
