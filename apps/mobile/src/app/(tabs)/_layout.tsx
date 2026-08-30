@@ -19,7 +19,14 @@ export default function TabsLayout() {
   return (
     <Tabs
       tabBar={(props) => <FloatingTabBar {...props} />}
-      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: "#0a0a0c" } }}
+      screenOptions={{
+        headerShown: false,
+        sceneStyle: { backgroundColor: "#0a0a0c" },
+        // Keep tab switches responsive: don't re-render backgrounded tabs, and use a
+        // light native shift transition instead of a hard cut.
+        freezeOnBlur: true,
+        animation: "shift",
+      }}
     >
       {/* Order here drives FloatingTabBar: home · inventory · [＋] · chat · eat */}
       <Tabs.Screen name="home" options={{ title: "Home" }} />

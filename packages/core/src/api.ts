@@ -149,6 +149,8 @@ export interface RecipeSuggestionBlock {
   name: string;
   description: string;
   minutes: number;
+  /** Meal-type tag from the agent — drives the suggestion card's colour + badge. */
+  category: RecipeCategory | null;
   ingredients: { name: string }[];
   steps: string[];
 }

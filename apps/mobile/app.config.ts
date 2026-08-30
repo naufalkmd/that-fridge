@@ -5,7 +5,7 @@ import type { ExpoConfig } from "expo/config";
 const config: ExpoConfig = {
   name: "ThatFridge",
   slug: "thatfridge",
-  version: "1.0.0",
+  version: "1.1.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "thatfridge",
@@ -25,6 +25,8 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: false,
     bundleIdentifier: "test.thatfridge.app",
+    // Ignored: eas.json cli.appVersionSource is "remote", so EAS auto-increments the real
+    // build number on every production build. Bump `version` above by hand instead — see RELEASE.md.
     buildNumber: "1",
     infoPlist: {
       // No custom/proprietary encryption — lets App Store Connect skip the export-compliance prompt.
@@ -48,6 +50,7 @@ const config: ExpoConfig = {
   plugins: [
     "expo-router",
     "expo-secure-store",
+    "@react-native-community/datetimepicker",
     [
       "expo-font",
       {

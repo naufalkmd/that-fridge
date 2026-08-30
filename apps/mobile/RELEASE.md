@@ -1,14 +1,32 @@
 # Shipping the mobile app
 
+## Versioning
+
+Builds are labelled `<version> (<buildNumber>)`, e.g. `1.1.0 (3)`.
+
+- **`<version>`** — the marketing version, from `app.config.ts` `version`. The **only** number
+  you edit by hand.
+- **`(<buildNumber>)`** — auto-incremented by EAS on every production build
+  (`cli.appVersionSource: "remote"` + `build.production.autoIncrement` in `eas.json`). Never
+  appears in a diff. The `ios.buildNumber` in `app.config.ts` is an ignored placeholder — leave
+  it alone.
+
+**Rule: bump `version` (minor or patch) whenever the binary has a native change** — a
+new/updated native module, an icon / permission / config-plugin change, an Expo SDK bump.
+Because `runtimeVersion.policy` is `appVersion`, the bump also scopes OTA updates: a merge to
+`main` ships an OTA only to installs on the *same* `version`, so bumping keeps older installs on
+their last-good bundle instead of feeding them JS that calls native code they don't have.
+
+Pure JS / asset changes keep the current `version` and ship over the air (see below) — no bump.
+
+Example: bump `1.0.0` → `1.1.0`, tag `v1.1.0`; EAS builds `1.1.0 (3)`. A rebuild at the same
+version (e.g. a failed submit) would be `1.1.0 (4)`.
+
 ## TestFlight (automated)
 
 `.github/workflows/testflight.yml` builds a production iOS binary on EAS and pushes it to
-TestFlight. Trigger it by **pushing a tag** (`git tag v1.0.0 && git push --tags`) or from the
+TestFlight. Trigger it by **pushing a tag** (`git tag v1.1.0 && git push --tags`) or from the
 **Actions tab → TestFlight (iOS) → Run workflow**.
-
-Build numbers are managed by EAS (`cli.appVersionSource: "remote"` in `eas.json`) — no version
-bumps land in the repo. The marketing version comes from `app.config.ts` `version`; bump that by
-hand for a new App Store version.
 
 ### One-time setup
 
