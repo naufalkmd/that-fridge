@@ -252,9 +252,6 @@ export default function Home() {
           </View>
         </View>
 
-        {/* your kitchen this week */}
-        <KitchenScore input={scoreInput} snapshots={scoreSnapshots} />
-
         {/* fridge hero carousel */}
         <View>
           <View
@@ -448,6 +445,9 @@ export default function Home() {
             ))}
           </View>
         </View>
+
+        {/* your kitchen this week */}
+        <KitchenScore input={scoreInput} snapshots={scoreSnapshots} />
 
         {/* meet your crew */}
         <View>
