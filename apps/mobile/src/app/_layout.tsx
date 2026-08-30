@@ -19,6 +19,7 @@ import { SocialProvider } from "@/lib/social";
 import { NotesProvider } from "@/lib/notes";
 import { ToastProvider } from "@/lib/toast";
 import { ExpiryReminderSync } from "@/lib/ExpiryReminderSync";
+import { UpdateBanner } from "@/components/update-banner";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -105,6 +106,7 @@ export default function RootLayout() {
                 options={{ headerShown: false, presentation: "modal" }}
               />
             </Stack>
+            <UpdateBanner />
             </NotesProvider>
             </RecipesProvider>
             </KitchenScoreProvider>
