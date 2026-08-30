@@ -11,6 +11,7 @@ on:
       - "apps/mobile/**"
       - "packages/**"
       - "pnpm-lock.yaml"
+      - ".github/workflows/eas-update.yml"
   workflow_dispatch:
     inputs:
       message:
@@ -34,7 +35,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -44,14 +45,20 @@ jobs:
 
       - name: Typecheck (core + mobile)
         run: |
-          (cd packages/core && npx tsc --noEmit)
-          (cd apps/mobile && npx tsc --noEmit)
+          (cd packages/core && node ../../node_modules/.bin/tsc --noEmit)
+          (cd apps/mobile && node ../../node_modules/.bin/tsc --noEmit)
         working-directory: .
 
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+          packager: pnpm
 
       - name: Publish update
-        run: eas update --branch production --non-interactive --message "${{ github.event.inputs.message || github.event.head_commit.message }}"
+        env:
+          # Full commit message can be multi-line — pass via env and take the first line.
+          RAW_MSG: ${{ github.event.inputs.message || github.event.head_commit.message }}
+        run: |
+          MSG="$(printf '%s' "$RAW_MSG" | head -1)"
+          eas update --branch production --non-interactive --message "$MSG"
