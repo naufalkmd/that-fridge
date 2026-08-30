@@ -8,7 +8,6 @@ import {
   RefreshControl,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -38,13 +37,13 @@ import { useKitchenScore } from "@/lib/kitchenScore";
 import { useSocial } from "@/lib/social";
 import { useAgentInsight } from "@/lib/agentInsight";
 import { PixelText } from "@/components/brand";
+import { MarkdownText } from "@/components/markdown-text";
 import { SectionHeader } from "@/components/ui";
 import { FridgeScopePicker } from "@/components/fridge-scope";
 import { KitchenScore } from "@/components/home/KitchenScore";
 import { CrewScene } from "@/components/home/CrewScene";
 import { FridgeNotes } from "@/components/home/FridgeNotes";
 
-const ACCENT = "#26c6da";
 const BLUE = "#5b8dee";
 const GOOD = "#39e07f";
 const BAD = "#ff5567";
@@ -76,7 +75,7 @@ export default function Home() {
   const { items, fridges, loading, refresh } = useInventory();
   const { events, unread } = useNotifications();
   const { items: shoppingItems } = useShopping();
-  const { scope } = useScope();
+  const { scope, setScope } = useScope();
   const { usageHistory, organizerTally, scoreSnapshots } = useKitchenScore();
   const { pendingCount } = useSocial();
 
@@ -85,7 +84,6 @@ export default function Home() {
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
   const [heroWidth, setHeroWidth] = useState(0);
   const [heroSlide, setHeroSlide] = useState(0);
-  const [newFridge, setNewFridge] = useState("");
   const heroRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -105,7 +103,10 @@ export default function Home() {
   const heroViews = useMemo(() => fridgeHeroViews(fridges), [fridges]);
 
   const guardian = useMemo(() => guardianItem(scoped), [scoped]);
-  const lowStock = useMemo(() => lowStockItem(scoped, guardian?.id), [scoped, guardian]);
+  const lowStock = useMemo(
+    () => lowStockItem(scoped, guardian?.id),
+    [scoped, guardian],
+  );
   const chefPick = suggestions?.[0] ?? null;
 
   const scoreInput = useMemo(
@@ -141,22 +142,26 @@ export default function Home() {
     setRefreshing(false);
   }
 
-  async function addFridge() {
-    const name = newFridge.trim();
-    if (!name) return;
-    setNewFridge("");
-    try {
-      await api.createFridge(name);
-      await refresh();
-    } catch {
-      /* ignore — surfaced on next load */
-    }
-  }
-
   function onHeroScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     if (!heroWidth) return;
-    setHeroSlide(Math.round(e.nativeEvent.contentOffset.x / heroWidth));
+    const idx = Math.round(e.nativeEvent.contentOffset.x / heroWidth);
+    setHeroSlide(idx);
+    // Swiping to a fridge makes it the active scope (the "add fridge" slide is last → no match).
+    const fr = heroViews[idx];
+    if (fr && fr.id !== scope) setScope(fr.id);
   }
+
+  // Keep the carousel in sync when scope changes elsewhere (the picker) or on first layout.
+  useEffect(() => {
+    if (!heroWidth) return;
+    const idx = heroViews.findIndex((f) => f.id === scope);
+    if (idx >= 0 && idx !== heroSlide) {
+      heroRef.current?.scrollTo({ x: idx * heroWidth, animated: true });
+      setHeroSlide(idx);
+    }
+    // heroSlide intentionally omitted — it's the value we're reconciling, not a trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope, heroWidth, heroViews]);
 
   const slideCount = heroViews.length + 1;
 
@@ -166,11 +171,21 @@ export default function Home() {
         contentContainerClassName="px-6 pt-4 pb-36"
         contentContainerStyle={{ gap: 22 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8a8a90" />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#8a8a90"
+          />
         }
       >
         {/* header */}
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <Pressable onPress={() => router.push("/profile")} hitSlop={8}>
             <View
               style={{
@@ -189,9 +204,15 @@ export default function Home() {
               </Text>
             </View>
           </Pressable>
-          <PixelText style={{ fontSize: 20, letterSpacing: 0.5, color: INK }}>ThatFridge</PixelText>
+          <PixelText style={{ fontSize: 20, letterSpacing: 0.5, color: INK }}>
+            ThatFridge
+          </PixelText>
           <View style={{ flexDirection: "row", gap: 8 }}>
-            <HeaderIcon icon="person-add-outline" dot={pendingCount > 0} onPress={() => router.push("/find-friend")} />
+            <HeaderIcon
+              icon="person-add-outline"
+              dot={pendingCount > 0}
+              onPress={() => router.push("/find-friend")}
+            />
             <HeaderIcon
               icon="notifications-outline"
               dot={unread > 0}
@@ -237,7 +258,9 @@ export default function Home() {
         {/* fridge hero carousel */}
         <View>
           <View
-            onLayout={(e: LayoutChangeEvent) => setHeroWidth(e.nativeEvent.layout.width)}
+            onLayout={(e: LayoutChangeEvent) =>
+              setHeroWidth(e.nativeEvent.layout.width)
+            }
             style={{ borderRadius: 14, overflow: "hidden" }}
           >
             {heroWidth > 0 && (
@@ -249,17 +272,29 @@ export default function Home() {
                 onMomentumScrollEnd={onHeroScroll}
               >
                 {heroViews.map((fr) => (
-                  <View key={fr.id} style={{ width: heroWidth, height: 236 }}>
+                  <Pressable
+                    key={fr.id}
+                    onPress={() => {
+                      setScope(fr.id);
+                      router.navigate("/inventory");
+                    }}
+                    style={{ width: heroWidth, height: 236 }}
+                  >
                     <Image
                       source={
                         fr.isCustom && fr.photoUrl
                           ? { uri: fr.photoUrl }
-                          : FRIDGE_PHOTOS[(fr.style === "custom" ? "photo" : fr.style) as Exclude<
-                              FridgeStyleKey,
-                              "custom"
-                            >] ?? FRIDGE_PHOTOS.photo
+                          : (FRIDGE_PHOTOS[
+                              (fr.style === "custom"
+                                ? "photo"
+                                : fr.style) as Exclude<FridgeStyleKey, "custom">
+                            ] ?? FRIDGE_PHOTOS.photo)
                       }
-                      style={{ position: "absolute", inset: 0, backgroundColor: fr.bg }}
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        backgroundColor: fr.bg,
+                      }}
                       contentFit="cover"
                       contentPosition="center"
                     />
@@ -274,7 +309,15 @@ export default function Home() {
                       }}
                     >
                       <View style={heroBadge}>
-                        <Text style={{ fontSize: 12, fontWeight: "800", color: INK }}>{fr.name}</Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: "800",
+                            color: INK,
+                          }}
+                        >
+                          {fr.name}
+                        </Text>
                       </View>
                       {fr.isShared && (
                         <View style={[heroBadge, { paddingHorizontal: 7 }]}>
@@ -282,8 +325,19 @@ export default function Home() {
                         </View>
                       )}
                     </View>
-                    <View style={[heroBadge, { position: "absolute", top: 14, right: 14 }]}>
-                      <Text style={{ fontSize: 12, fontWeight: "800", color: fr.color }}>
+                    <View
+                      style={[
+                        heroBadge,
+                        { position: "absolute", top: 14, right: 14 },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: "800",
+                          color: fr.color,
+                        }}
+                      >
                         {fr.freshness}% fresh
                       </Text>
                     </View>
@@ -298,7 +352,9 @@ export default function Home() {
                         borderRadius: 20,
                       }}
                     >
-                      <Text style={{ fontSize: 11, fontWeight: "600", color: INK }}>
+                      <Text
+                        style={{ fontSize: 11, fontWeight: "600", color: INK }}
+                      >
                         {fr.itemCount} items tracked
                       </Text>
                     </View>
@@ -316,13 +372,20 @@ export default function Home() {
                         backgroundColor: "rgba(19,19,22,0.85)",
                       }}
                     >
-                      <MaterialCommunityIcons name="palette-outline" size={16} color={INK} />
+                      <MaterialCommunityIcons
+                        name="palette-outline"
+                        size={16}
+                        color={INK}
+                      />
                     </Pressable>
-                  </View>
+                  </Pressable>
                 ))}
 
-                {/* add another fridge */}
-                <View style={{ width: heroWidth, height: 236, padding: 4 }}>
+                {/* add / manage fridges */}
+                <Pressable
+                  onPress={() => router.push("/fridges")}
+                  style={{ width: heroWidth, height: 236, padding: 4 }}
+                >
                   <View
                     style={{
                       flex: 1,
@@ -334,60 +397,47 @@ export default function Home() {
                       alignItems: "center",
                       justifyContent: "center",
                       gap: 12,
-                      paddingHorizontal: 30,
                     }}
                   >
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: INK }}>
-                      Add another fridge
-                    </Text>
-                    <TextInput
-                      value={newFridge}
-                      onChangeText={setNewFridge}
-                      placeholder="e.g. Garage, Office…"
-                      placeholderTextColor={FAINT}
+                    <View
                       style={{
-                        alignSelf: "stretch",
+                        width: 46,
+                        height: 46,
+                        borderRadius: 23,
                         backgroundColor: SURFACE2,
-                        borderRadius: 6,
-                        paddingVertical: 10,
-                        paddingHorizontal: 14,
-                        fontSize: 13,
-                        color: INK,
-                      }}
-                    />
-                    <Pressable
-                      onPress={addFridge}
-                      style={{
-                        backgroundColor: ACCENT,
-                        paddingVertical: 9,
-                        paddingHorizontal: 18,
-                        borderRadius: 6,
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
-                      <Text
-                        style={{
-                          fontSize: 13,
-                          fontWeight: "700",
-                          letterSpacing: 0.5,
-                          textTransform: "uppercase",
-                          color: "#0a0a0c",
-                        }}
-                      >
-                        Add fridge
-                      </Text>
-                    </Pressable>
+                      <Ionicons name="add" size={24} color={INK} />
+                    </View>
+                    <Text
+                      style={{ fontSize: 14, fontWeight: "700", color: INK }}
+                    >
+                      Add or manage fridges
+                    </Text>
                   </View>
-                </View>
+                </Pressable>
               </ScrollView>
             )}
           </View>
           <View
-            style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 10 }}
+            style={{
+              flexDirection: "row",
+              justifyContent: "center",
+              gap: 6,
+              marginTop: 10,
+            }}
           >
             {Array.from({ length: slideCount }).map((_, i) => (
               <Pressable
                 key={i}
-                onPress={() => heroRef.current?.scrollTo({ x: i * heroWidth, animated: true })}
+                onPress={() =>
+                  heroRef.current?.scrollTo({
+                    x: i * heroWidth,
+                    animated: true,
+                  })
+                }
                 style={{
                   width: 7,
                   height: 7,
@@ -416,7 +466,10 @@ export default function Home() {
             fallback={
               <Text style={{ fontSize: 13.5, color: INK }}>
                 <Text style={{ fontWeight: "700" }}>{guardian.name}</Text>
-                <Text style={{ color: MUTED }}> {daysLabel(guardian.days).toLowerCase()}</Text>
+                <Text style={{ color: MUTED }}>
+                  {" "}
+                  {daysLabel(guardian.days).toLowerCase()}
+                </Text>
               </Text>
             }
           />
@@ -431,7 +484,10 @@ export default function Home() {
             fallback={
               <Text style={{ fontSize: 13.5, color: INK }}>
                 <Text style={{ fontWeight: "700" }}>{lowStock.name}</Text>
-                <Text style={{ color: MUTED }}> is running low — add it to the list</Text>
+                <Text style={{ color: MUTED }}>
+                  {" "}
+                  is running low — add it to the list
+                </Text>
               </Text>
             }
           />
@@ -448,7 +504,10 @@ export default function Home() {
                 {chefPick ? (
                   <>
                     <Text style={{ fontWeight: "700" }}>{chefPick.name}</Text>
-                    <Text style={{ color: MUTED }}> — {chefPick.minutes} min with what you have</Text>
+                    <Text style={{ color: MUTED }}>
+                      {" "}
+                      — {chefPick.minutes} min with what you have
+                    </Text>
                   </>
                 ) : (
                   <Text style={{ color: MUTED }}>
@@ -558,7 +617,9 @@ function StatCard({
       >
         <Ionicons name={icon} size={14} color={tint} />
       </View>
-      <Text style={{ fontSize: 18, fontWeight: "800", color: INK }}>{value}</Text>
+      <Text style={{ fontSize: 18, fontWeight: "800", color: INK }}>
+        {value}
+      </Text>
       <Text style={{ fontSize: 10, color: FAINT, marginTop: 2 }}>{label}</Text>
     </Pressable>
   );
@@ -581,9 +642,14 @@ function CrewTip({
 }) {
   const insight = useAgentInsight(agent, items, items.length > 0);
   return (
-    <TipCard eyebrow={eyebrow} agent={agent} onPress={onPress} onDismiss={onDismiss}>
+    <TipCard
+      eyebrow={eyebrow}
+      agent={agent}
+      onPress={onPress}
+      onDismiss={onDismiss}
+    >
       {insight.text ? (
-        <Text style={{ fontSize: 13.5, lineHeight: 19, color: INK }}>{insight.text}</Text>
+        <MarkdownText text={insight.text} size={13.5} />
       ) : insight.loading ? (
         <Text style={{ fontSize: 13, color: FAINT }}>{agent} is thinking…</Text>
       ) : (
@@ -640,7 +706,12 @@ function TipCard({
         </Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <View
-            style={{ backgroundColor: `${color}1a`, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 }}
+            style={{
+              backgroundColor: `${color}1a`,
+              paddingHorizontal: 7,
+              paddingVertical: 2,
+              borderRadius: 6,
+            }}
           >
             <Text
               style={{
