@@ -240,6 +240,7 @@ Always created/modified under a parent section. **This is the contract Track B's
 | `name` | yes | |
 | `icon` | yes | free string, matches frontend icon key |
 | `nutrition_category` | no | one of `protein`, `vegetables`, `fruit`, `grains`, `dairy`, `other_extras` — a lightweight food-group tag (not macro/nutrient tracking), auto-guessed from `icon` client-side but user-editable. Feeds the Food Balance goal metric's variety calculation; `other_extras` (sauces/snacks/condiments/drinks/desserts) is deliberately excluded from that calculation so it can't inflate the score |
+| `category_id` | no | id of one of the caller's [categories](#categories) (or `null`). A free user-defined organisational label for the Inventory filter bar — **unrelated** to `nutrition_category` and the scores it feeds |
 | `location` | no | `fridge` \| `freezer` \| `pantry` |
 | `quantity` | no | default `1` |
 | `expiry_date` | no | `YYYY-MM-DD` |
@@ -258,6 +259,42 @@ Always created/modified under a parent section. **This is the contract Track B's
 ### `DELETE /items/{item}` 🔒
 
 **204**
+
+### `PATCH /items/bulk-category` 🔒
+
+Assign one category (or `null` to clear) to many items at once — the Inventory multi-select
+"Move to…" action. Items the caller isn't a member of the fridge for are silently skipped.
+
+**Body**: `item_ids` (array of ids, required), `category_id` (id of a caller's category, or `null`).
+
+**200** — `{ "updated": <count> }`
+
+---
+
+## Categories
+
+User-defined organisational labels for the Inventory filter/grouping bar. Private per user,
+independent of `items.nutrition_category` and the scores/badge that field feeds.
+
+### `GET /categories` 🔒
+
+**200** — `{ "data": [ { "id", "name", "color", "position" }, … ] }`, ordered by `position` then `id`.
+
+### `POST /categories` 🔒
+
+**Body**: `name` (required, ≤40 chars, unique per user), `color` (optional string).
+
+**201** — the category object. `position` is set to max + 1.
+
+### `PATCH /categories/{category}` 🔒
+
+**Body** — any subset of `name`, `color`, `position`.
+
+**200** — updated category.
+
+### `DELETE /categories/{category}` 🔒
+
+**204**. Items pointing at it fall back to "Uncategorized" (`category_id` → `null`).
 
 ---
 

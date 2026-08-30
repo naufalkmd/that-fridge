@@ -24,6 +24,7 @@ class ItemController extends Controller
             'icon' => ['required', 'string', 'max:255'],
             'icon_url' => ['nullable', 'string', 'max:2048', 'url'],
             'nutrition_category' => ['nullable', 'string', Rule::in(self::NUTRITION_CATEGORIES)],
+            'category_id' => ['nullable', Rule::exists('categories', 'id')->where('user_id', $request->user()->id)],
             'location' => ['nullable', 'string', 'in:fridge,freezer,pantry'],
             'quantity' => ['sometimes', 'integer', 'min:1'],
             'expiry_date' => ['nullable', 'date'],
@@ -51,6 +52,7 @@ class ItemController extends Controller
             'icon' => ['sometimes', 'string', 'max:255'],
             'icon_url' => ['sometimes', 'nullable', 'string', 'max:2048', 'url'],
             'nutrition_category' => ['sometimes', 'nullable', 'string', Rule::in(self::NUTRITION_CATEGORIES)],
+            'category_id' => ['sometimes', 'nullable', Rule::exists('categories', 'id')->where('user_id', $request->user()->id)],
             'location' => ['sometimes', 'nullable', 'string', 'in:fridge,freezer,pantry'],
             'quantity' => ['sometimes', 'integer', 'min:1'],
             'expiry_date' => ['sometimes', 'nullable', 'date'],
@@ -73,5 +75,31 @@ class ItemController extends Controller
         $item->delete();
 
         return response()->noContent();
+    }
+
+    /**
+     * Assign a user-defined category (or null to clear) to many items at once — backs the
+     * Inventory multi-select "Move to…" action. Each item is authorized individually against
+     * ItemPolicy; ones the caller can't touch are silently skipped.
+     */
+    public function bulkCategory(Request $request)
+    {
+        $data = $request->validate([
+            'item_ids' => ['required', 'array', 'min:1'],
+            'item_ids.*' => ['integer'],
+            'category_id' => ['nullable', Rule::exists('categories', 'id')->where('user_id', $request->user()->id)],
+        ]);
+
+        $items = Item::with('section.fridge')->whereIn('id', $data['item_ids'])->get();
+
+        $updated = 0;
+        foreach ($items as $item) {
+            if ($request->user()->can('update', $item)) {
+                $item->update(['category_id' => $data['category_id'] ?? null]);
+                $updated++;
+            }
+        }
+
+        return response()->json(['updated' => $updated]);
     }
 }
