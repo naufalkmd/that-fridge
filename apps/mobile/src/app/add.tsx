@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -12,9 +13,13 @@ import {
 } from "react-native";
 import Constants from "expo-constants";
 import * as ImagePicker from "expo-image-picker";
+import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 
 import {
   FOOD_ICON_KEYS,
@@ -42,19 +47,7 @@ const INK = "#eaeaec";
 const MUTED = "rgba(234,234,236,0.58)";
 const FAINT = "rgba(234,234,236,0.34)";
 const BLUE = "#5b8dee";
-
-const BEST_BEFORE_PRESETS = [
-  { label: "2 days", days: 2 },
-  { label: "1 week", days: 7 },
-  { label: "2 weeks", days: 14 },
-  { label: "1 month", days: 30 },
-];
-
-function isoInDays(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
+const AUTOFILL = "#7a5cc9";
 
 const isExpoGo = Constants.appOwnership === "expo";
 
@@ -66,20 +59,236 @@ const METHODS: {
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   pro?: boolean;
 }[] = [
-  { key: "receipt", title: "Scan receipt", desc: "Snap your grocery receipt", icon: "receipt", pro: true },
-  { key: "barcode", title: "Scan barcode", desc: "Point your camera at a product barcode", icon: "barcode-scan" },
-  { key: "photo", title: "Photo of fridge", desc: "Let AI spot what changed", icon: "camera-outline", pro: true },
-  { key: "manual", title: "Add manually", desc: "Type in the item yourself", icon: "keyboard-outline" },
+  {
+    key: "receipt",
+    title: "Scan receipt",
+    desc: "Snap your grocery receipt",
+    icon: "receipt",
+    pro: true,
+  },
+  {
+    key: "barcode",
+    title: "Scan barcode",
+    desc: "Point your camera at a product barcode",
+    icon: "barcode-scan",
+  },
+  {
+    key: "photo",
+    title: "Photo of fridge",
+    desc: "Let AI spot what changed",
+    icon: "camera-outline",
+    pro: true,
+  },
+  {
+    key: "manual",
+    title: "Add manually",
+    desc: "Type in the item yourself",
+    icon: "keyboard-outline",
+  },
 ];
 
+// ---- date helpers ----------------------------------------------------------
+
+/** Local calendar date as ISO yyyy-mm-dd (no UTC shift). */
+function toISODate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function isoInDays(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return toISODate(d);
+}
 function daysUntil(iso: string): number {
   const target = new Date(`${iso}T00:00:00`);
   return Math.round((target.getTime() - Date.now()) / 86400000);
 }
+function fmtDMY(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+// ---- unified draft item --------------------------------------------------
+
+type Draft = {
+  id: string;
+  name: string;
+  icon: string;
+  iconUrl: string | null;
+  qty: number;
+  location: StorageLocation;
+  category: NutritionCategory | null;
+  expiryDate: string | null;
+  condition: "vibrant" | "wilting" | "past_best" | null;
+  checked: boolean;
+};
+
+const blankDraft = (over: Partial<Draft> = {}): Draft => ({
+  id: `d${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
+  name: "",
+  icon: "generic",
+  iconUrl: null,
+  qty: 1,
+  location: "fridge",
+  category: null,
+  expiryDate: null,
+  condition: null,
+  checked: true,
+  ...over,
+});
+
+const CONDITION_PHRASE: Record<string, string> = {
+  wilting: "starting to wilt",
+  past_best: "past its best",
+};
+
+const toCreatePayload = (d: Draft) => ({
+  name: d.name.trim(),
+  icon:
+    d.icon !== "generic" ? d.icon : (guessFoodIcon(d.name.trim()) ?? "generic"),
+  icon_url: d.iconUrl,
+  quantity: d.qty,
+  location: d.location,
+  nutrition_category: d.category,
+  ...(d.expiryDate
+    ? { expiry_date: d.expiryDate, shelf_life_days: daysUntil(d.expiryDate) }
+    : {}),
+});
+
+// ---- draft-list state + shared AI actions -------------------------------
+
+function useDraftItems(initial: () => Draft[]) {
+  const { ensureSectionId } = useInventory();
+  const [items, setItems] = useState<Draft[]>(initial);
+  const [library, setLibrary] = useState<GeneratedIcon[]>([]);
+  const [fillingAll, setFillingAll] = useState(false);
+  const [fillingId, setFillingId] = useState<string | null>(null);
+  const [scanningDateId, setScanningDateId] = useState<string | null>(null);
+
+  const refetchLibrary = useCallback(
+    () =>
+      api
+        .listGeneratedIcons()
+        .then(setLibrary)
+        .catch(() => {}),
+    [],
+  );
+  const set = useCallback(
+    (id: string, p: Partial<Draft>) =>
+      setItems((prev) => prev.map((x) => (x.id === id ? { ...x, ...p } : x))),
+    [],
+  );
+  const remove = useCallback(
+    (id: string) => setItems((prev) => prev.filter((x) => x.id !== id)),
+    [],
+  );
+  const append = useCallback(
+    (d: Draft = blankDraft()) => setItems((prev) => [...prev, d]),
+    [],
+  );
+
+  const suggest = useCallback(async (d: Draft) => {
+    const s = await api.suggestItemDetails(d.name.trim(), d.icon);
+    return {
+      ...(s.location ? { location: s.location } : {}),
+      ...(s.shelf_life_days
+        ? { expiryDate: isoInDays(s.shelf_life_days) }
+        : {}),
+    } satisfies Partial<Draft>;
+  }, []);
+
+  const fillOne = useCallback(
+    async (d: Draft) => {
+      if (!d.name.trim() || fillingId || fillingAll) return;
+      setFillingId(d.id);
+      try {
+        set(d.id, await suggest(d));
+      } catch {
+        /* best effort */
+      } finally {
+        setFillingId(null);
+      }
+    },
+    [fillingId, fillingAll, set, suggest],
+  );
+
+  const fillAll = useCallback(async () => {
+    if (fillingAll || fillingId) return;
+    const todo = items.filter((i) => i.checked && i.name.trim());
+    if (!todo.length) return;
+    setFillingAll(true);
+    await Promise.allSettled(
+      todo.map(async (d) => {
+        try {
+          set(d.id, await suggest(d));
+        } catch {
+          /* skip */
+        }
+      }),
+    );
+    setFillingAll(false);
+  }, [items, fillingAll, fillingId, set, suggest]);
+
+  const scanDate = useCallback(
+    async (d: Draft) => {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted)
+        return Alert.alert(
+          "Camera needed",
+          "Allow camera access to scan a date.",
+        );
+      const res = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        quality: 0.6,
+      });
+      if (res.canceled || !res.assets[0]) return;
+      setScanningDateId(d.id);
+      try {
+        const sectionId = await ensureSectionId();
+        const image = {
+          uri: res.assets[0].uri,
+          name: "expiry.jpg",
+          type: "image/jpeg",
+        };
+        const r = await api.scanExpiryPhoto(sectionId, image);
+        if (r.found && r.date) set(d.id, { expiryDate: r.date });
+        else
+          Alert.alert(
+            "No date read",
+            r.message || "Try a closer, well-lit shot.",
+          );
+      } catch (e) {
+        Alert.alert("Error", describeError(e, "Couldn't scan that photo."));
+      } finally {
+        setScanningDateId(null);
+      }
+    },
+    [ensureSectionId, set],
+  );
+
+  return {
+    items,
+    setItems,
+    set,
+    remove,
+    append,
+    library,
+    refetchLibrary,
+    fillOne,
+    fillAll,
+    fillingId,
+    fillingAll,
+    scanDate,
+    scanningDateId,
+  };
+}
+
+type DraftStore = ReturnType<typeof useDraftItems>;
+
+// ---- screen -------------------------------------------------------------
 
 export default function Add() {
   const router = useRouter();
-  const { addItem, ensureSectionId } = useInventory();
+  const { addItem, addManyItems } = useInventory();
   const { isPro } = usePro();
   const params = useLocalSearchParams<{
     name?: string;
@@ -89,67 +298,48 @@ export default function Add() {
     method?: string;
   }>();
 
-  // Jump straight to the manual form when prefilled from a barcode scan.
+  // Jump straight to the manual card when prefilled from a barcode scan.
   const [method, setMethod] = useState<Method | null>(
     params.name ? "manual" : (params.method as Method) || null,
   );
 
-  const [name, setName] = useState(params.name ?? "");
-  const [qty, setQty] = useState(1);
-  const [location, setLocation] = useState<StorageLocation>(
-    (params.location as StorageLocation) ?? "fridge",
-  );
-  const [category, setCategory] = useState<NutritionCategory | null>(
-    (params.category as NutritionCategory) ?? null,
-  );
-  const [expiryDays, setExpiryDays] = useState<number | null>(
-    params.shelfLife ? Number(params.shelfLife) : 7,
-  );
+  const drafts = useDraftItems(() => [
+    blankDraft({
+      name: params.name ?? "",
+      icon: params.name ? (guessFoodIcon(params.name) ?? "generic") : "generic",
+      location: (params.location as StorageLocation) ?? "fridge",
+      category: (params.category as NutritionCategory) ?? null,
+      expiryDate: params.shelfLife ? isoInDays(Number(params.shelfLife)) : null,
+    }),
+  ]);
   const [saving, setSaving] = useState(false);
-  const [autoFilling, setAutoFilling] = useState(false);
-  const [scanningDate, setScanningDate] = useState(false);
 
-  async function scanExpiryDate() {
-    const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert("Camera needed", "Allow camera access to scan a printed date.");
+  async function submitManual() {
+    const toAdd = drafts.items.filter((d) => d.name.trim());
+    if (!toAdd.length) {
+      Alert.alert("Name required", "What are you adding?");
       return;
     }
-    const res = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.6 });
-    if (res.canceled || !res.assets[0]) return;
-    setScanningDate(true);
+    setSaving(true);
     try {
-      const sectionId = await ensureSectionId();
-      const image = { uri: res.assets[0].uri, name: "expiry.jpg", type: "image/jpeg" };
-      const result = await api.scanExpiryPhoto(sectionId, image);
-      if (result.found && result.date) {
-        const d = daysUntil(result.date);
-        setExpiryDays(d);
-        Alert.alert(
-          "Date found",
-          d >= 0 ? `Best before ${result.date} (~${d} days). Adjust below if needed.` : `That date (${result.date}) is already past — double-check the photo.`,
-        );
+      if (toAdd.length === 1) {
+        await addItem(toCreatePayload(toAdd[0]));
       } else {
-        Alert.alert("No date read", result.message || "Couldn't read a date. Try a closer, well-lit shot.");
+        await addManyItems(toAdd.map(toCreatePayload));
+      }
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+      if (toAdd.length > 1) {
+        setTimeout(
+          () =>
+            Alert.alert("Added", `${toAdd.length} items added to your fridge.`),
+          300,
+        );
       }
     } catch (e) {
-      Alert.alert("Error", describeError(e, "Couldn't scan that photo."));
+      Alert.alert("Error", describeError(e, "Couldn't add that."));
     } finally {
-      setScanningDate(false);
-    }
-  }
-
-  async function autoFill() {
-    if (!name.trim()) return;
-    setAutoFilling(true);
-    try {
-      const s = await api.suggestItemDetails(name.trim());
-      if (s.location) setLocation(s.location);
-      if (s.shelf_life_days) setExpiryDays(s.shelf_life_days);
-    } catch {
-      /* best effort */
-    } finally {
-      setAutoFilling(false);
+      setSaving(false);
     }
   }
 
@@ -172,43 +362,25 @@ export default function Add() {
     setMethod(m);
   }
 
-  async function submit() {
-    if (!name.trim()) {
-      Alert.alert("Name required", "What are you adding?");
-      return;
-    }
-    setSaving(true);
-    try {
-      await addItem({
-        name: name.trim(),
-        icon: guessFoodIcon(name.trim()) ?? "generic",
-        quantity: qty,
-        location,
-        nutrition_category: category,
-        ...(expiryDays != null
-          ? { expiry_date: isoInDays(expiryDays), shelf_life_days: expiryDays }
-          : {}),
-      });
-      router.back();
-    } catch (e) {
-      Alert.alert("Error", describeError(e, "Couldn't add that item."));
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-canvas"
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <SheetHeader
-        title={method === "manual" ? "Add item" : "Add to fridge"}
+        title="Add to fridge"
         onBack={method && !params.name ? () => setMethod(null) : undefined}
       />
 
       {method === null ? (
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 4, paddingBottom: 32, gap: 12 }}>
+        <ScrollView
+          contentContainerStyle={{
+            paddingHorizontal: 24,
+            paddingTop: 4,
+            paddingBottom: 32,
+            gap: 12,
+          }}
+        >
           <Text style={{ fontSize: 13, color: MUTED, marginBottom: 4 }}>
             Choose how you&apos;d like to add items
           </Text>
@@ -240,17 +412,39 @@ export default function Add() {
                 <MaterialCommunityIcons name={m.icon} size={19} color={BLUE} />
               </View>
               <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Text style={{ fontSize: 14.5, fontWeight: "700", color: INK }}>{m.title}</Text>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                >
+                  <Text
+                    style={{ fontSize: 14.5, fontWeight: "700", color: INK }}
+                  >
+                    {m.title}
+                  </Text>
                   {m.pro && !isPro && (
-                    <View style={{ backgroundColor: `${AMBER}1a`, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 5 }}>
-                      <Text style={{ fontSize: 9, fontWeight: "800", letterSpacing: 0.3, color: AMBER }}>
+                    <View
+                      style={{
+                        backgroundColor: `${AMBER}1a`,
+                        paddingHorizontal: 6,
+                        paddingVertical: 1,
+                        borderRadius: 5,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 9,
+                          fontWeight: "800",
+                          letterSpacing: 0.3,
+                          color: AMBER,
+                        }}
+                      >
                         PRO
                       </Text>
                     </View>
                   )}
                 </View>
-                <Text style={{ fontSize: 12, color: FAINT, marginTop: 2 }}>{m.desc}</Text>
+                <Text style={{ fontSize: 12, color: FAINT, marginTop: 2 }}>
+                  {m.desc}
+                </Text>
               </View>
               <Ionicons name="chevron-forward" size={17} color={FAINT} />
             </Pressable>
@@ -259,277 +453,94 @@ export default function Add() {
       ) : method === "receipt" || method === "photo" ? (
         <ScanFlow mode={method} onDone={() => router.back()} />
       ) : (
-        <ScrollView
-          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 4, paddingBottom: 32, gap: 18 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Labeled label="NAME">
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                autoFocus={!params.name}
-                placeholder="Milk"
-                placeholderTextColor={FAINT}
-                style={[field, { flex: 1 }]}
-              />
-              <Pressable
-                onPress={autoFill}
-                disabled={!name.trim() || autoFilling}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 4,
-                  paddingHorizontal: 12,
-                  borderRadius: 6,
-                  backgroundColor: "rgba(122,92,201,0.14)",
-                  opacity: !name.trim() || autoFilling ? 0.5 : 1,
-                }}
-              >
-                {autoFilling ? (
-                  <ActivityIndicator color="#7a5cc9" size="small" />
-                ) : (
-                  <MaterialCommunityIcons name="auto-fix" size={14} color="#7a5cc9" />
-                )}
-                <Text style={{ fontSize: 11.5, fontWeight: "700", color: "#7a5cc9" }}>Auto-fill</Text>
-              </Pressable>
-            </View>
-          </Labeled>
-
-          <Labeled label="QUANTITY">
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
-              <Step icon="minus" onPress={() => setQty((q) => Math.max(1, q - 1))} />
-              <Text style={{ minWidth: 24, textAlign: "center", fontSize: 16, fontWeight: "700", color: INK }}>
-                {qty}
-              </Text>
-              <Step icon="plus" onPress={() => setQty((q) => q + 1)} />
-            </View>
-          </Labeled>
-
-          <Labeled label="LOCATION">
-            <ChipRow
-              options={STORAGE_LOCATIONS.map((l) => ({ key: l.key, label: l.label }))}
-              value={location}
-              onChange={(k) => setLocation(k as StorageLocation)}
-            />
-          </Labeled>
-
-          <Labeled label="FOOD GROUP">
-            <ChipRow
-              options={NUTRITION_CATEGORIES.map((c) => ({ key: c.key, label: c.label }))}
-              value={category}
-              onChange={(k) => setCategory(category === k ? null : (k as NutritionCategory))}
-            />
-          </Labeled>
-
-          <Labeled label="BEST BEFORE">
-            <ChipRow
-              options={BEST_BEFORE_PRESETS.map((p) => ({ key: String(p.days), label: p.label }))}
-              value={expiryDays == null ? null : String(expiryDays)}
-              onChange={(k) => setExpiryDays(Number(k))}
-            />
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 8 }}>
-              <Pressable
-                onPress={scanExpiryDate}
-                disabled={scanningDate}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 5,
-                  paddingHorizontal: 12,
-                  paddingVertical: 7,
-                  borderRadius: 6,
-                  backgroundColor: "rgba(38,198,218,0.14)",
-                  opacity: scanningDate ? 0.5 : 1,
-                }}
-              >
-                {scanningDate ? (
-                  <ActivityIndicator color={AMBER} size="small" />
-                ) : (
-                  <MaterialCommunityIcons name="camera-outline" size={14} color={AMBER} />
-                )}
-                <Text style={{ fontSize: 11.5, fontWeight: "700", color: AMBER }}>Scan date</Text>
-              </Pressable>
-              {expiryDays != null && (
-                <Text style={{ fontSize: 11, color: FAINT }}>≈ {isoInDays(expiryDays)}</Text>
-              )}
-            </View>
-          </Labeled>
-
-          <Pressable
-            onPress={submit}
-            disabled={saving}
-            style={{ marginTop: 4, alignItems: "center", borderRadius: 8, backgroundColor: AMBER, paddingVertical: 14 }}
-          >
-            {saving ? (
-              <ActivityIndicator color="#0a0a0c" />
-            ) : (
-              <Text style={{ fontSize: 14, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
-                Add to fridge
-              </Text>
-            )}
-          </Pressable>
-        </ScrollView>
+        <DraftList
+          drafts={drafts}
+          scanMode={false}
+          intro={
+            <Text style={{ fontSize: 13, color: MUTED }}>
+              Fill in what you can — the crew can guess the rest. Add as many
+              items as you like.
+            </Text>
+          }
+          addLabel="Add another item"
+          submitLabel={(n) => (n <= 1 ? "Add to fridge" : `Add ${n} items`)}
+          submitting={saving}
+          onSubmit={submitManual}
+        />
       )}
     </KeyboardAvoidingView>
   );
 }
 
-type Detected = {
-  id: string;
-  name: string;
-  icon: string;
-  iconUrl: string | null;
-  qty: number;
-  location: StorageLocation;
-  expiryDays: number | null;
-  condition: "vibrant" | "wilting" | "past_best" | null;
-  checked: boolean;
-};
+// ---- scan flow (receipt / fridge photo) ---------------------------------
 
-const CONDITION_PHRASE: Record<string, string> = {
-  wilting: "wilting / past its best",
-  past_best: "past its best",
-};
-
-function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => void }) {
+function ScanFlow({
+  mode,
+  onDone,
+}: {
+  mode: "receipt" | "photo";
+  onDone: () => void;
+}) {
   const { ensureSectionId, addManyItems } = useInventory();
   const [status, setStatus] = useState<"idle" | "scanning" | "review">("idle");
-  const [items, setItems] = useState<Detected[]>([]);
   const [saving, setSaving] = useState(false);
-  const [fillingAll, setFillingAll] = useState(false);
-  const [fillingId, setFillingId] = useState<string | null>(null);
-  const [scanningDateId, setScanningDateId] = useState<string | null>(null);
-  const [iconPickerId, setIconPickerId] = useState<string | null>(null);
-  const [genPrompt, setGenPrompt] = useState("");
-  const [generating, setGenerating] = useState(false);
-  const [library, setLibrary] = useState<GeneratedIcon[]>([]);
-
-  const checkedCount = items.filter((i) => i.checked && i.name.trim()).length;
-  const set = (id: string, patch: Partial<Detected>) =>
-    setItems((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+  const drafts = useDraftItems(() => []);
 
   async function pickAndScan() {
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7 });
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.7,
+    });
     if (res.canceled || !res.assets[0]) return;
     setStatus("scanning");
     try {
       const sectionId = await ensureSectionId();
-      const image = { uri: res.assets[0].uri, name: "scan.jpg", type: "image/jpeg" };
-      const scan = mode === "receipt"
-        ? await api.scanReceipt(sectionId, image)
-        : await api.scanFridgePhoto(sectionId, image);
-      setItems(
-        scan.detected_items.map((d, i) => ({
-          id: `d${i}`,
-          name: d.parsed_name,
-          icon: d.icon || guessFoodIcon(d.parsed_name) || "generic",
-          iconUrl: null,
-          qty: Math.max(1, d.parsed_quantity ?? 1),
-          location: "fridge" as StorageLocation,
-          expiryDays: null,
-          condition: d.condition ?? null,
-          checked: true,
-        })),
+      const image = {
+        uri: res.assets[0].uri,
+        name: "scan.jpg",
+        type: "image/jpeg",
+      };
+      const scan =
+        mode === "receipt"
+          ? await api.scanReceipt(sectionId, image)
+          : await api.scanFridgePhoto(sectionId, image);
+      drafts.setItems(
+        scan.detected_items.map((d) =>
+          blankDraft({
+            name: d.parsed_name,
+            icon: d.icon || guessFoodIcon(d.parsed_name) || "generic",
+            qty: Math.max(1, d.parsed_quantity ?? 1),
+            condition: d.condition ?? null,
+          }),
+        ),
       );
-      api.listGeneratedIcons().then(setLibrary).catch(() => {});
+      drafts.refetchLibrary();
       setStatus("review");
     } catch (e) {
       setStatus("idle");
-      Alert.alert("Scan failed", describeError(e, "Couldn't read that photo. Try a clearer shot."));
-    }
-  }
-
-  async function fillOne(d: Detected) {
-    if (!d.name.trim() || fillingId || fillingAll) return;
-    setFillingId(d.id);
-    try {
-      const s = await api.suggestItemDetails(d.name.trim());
-      set(d.id, {
-        ...(s.location ? { location: s.location } : {}),
-        ...(s.shelf_life_days ? { expiryDays: s.shelf_life_days } : {}),
-      });
-    } catch {
-      /* best effort */
-    } finally {
-      setFillingId(null);
-    }
-  }
-
-  async function fillAll() {
-    const todo = items.filter((i) => i.checked && i.name.trim());
-    if (!todo.length || fillingAll || fillingId) return;
-    setFillingAll(true);
-    await Promise.allSettled(
-      todo.map(async (d) => {
-        try {
-          const s = await api.suggestItemDetails(d.name.trim());
-          set(d.id, {
-            ...(s.location ? { location: s.location } : {}),
-            ...(s.shelf_life_days ? { expiryDays: s.shelf_life_days } : {}),
-          });
-        } catch {
-          /* skip */
-        }
-      }),
-    );
-    setFillingAll(false);
-  }
-
-  async function scanDate(d: Detected) {
-    const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) return Alert.alert("Camera needed", "Allow camera access to scan a date.");
-    const res = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.6 });
-    if (res.canceled || !res.assets[0]) return;
-    setScanningDateId(d.id);
-    try {
-      const sectionId = await ensureSectionId();
-      const image = { uri: res.assets[0].uri, name: "expiry.jpg", type: "image/jpeg" };
-      const r = await api.scanExpiryPhoto(sectionId, image);
-      if (r.found && r.date) set(d.id, { expiryDays: daysUntil(r.date) });
-      else Alert.alert("No date read", r.message || "Try a closer shot.");
-    } catch (e) {
-      Alert.alert("Error", describeError(e, "Couldn't scan that."));
-    } finally {
-      setScanningDateId(null);
-    }
-  }
-
-  async function generate(id: string) {
-    if (generating || !genPrompt.trim()) return;
-    setGenerating(true);
-    try {
-      const r = await api.generateIcon(genPrompt.trim());
-      set(id, { iconUrl: r.icon_url });
-      setGenPrompt("");
-      setIconPickerId(null);
-      api.listGeneratedIcons().then(setLibrary).catch(() => {});
-    } catch (e) {
-      Alert.alert("Error", describeError(e, "Couldn't generate that icon."));
-    } finally {
-      setGenerating(false);
+      Alert.alert(
+        "Scan failed",
+        describeError(e, "Couldn't read that photo. Try a clearer shot."),
+      );
     }
   }
 
   async function confirm() {
-    const toAdd = items.filter((i) => i.checked && i.name.trim());
+    const toAdd = drafts.items.filter((i) => i.checked && i.name.trim());
     if (toAdd.length === 0) return;
     setSaving(true);
     try {
-      const n = await addManyItems(
-        toAdd.map((d) => ({
-          name: d.name.trim(),
-          icon: d.icon,
-          icon_url: d.iconUrl,
-          quantity: d.qty,
-          location: d.location,
-          ...(d.expiryDays != null
-            ? { expiry_date: isoInDays(d.expiryDays), shelf_life_days: d.expiryDays }
-            : {}),
-        })),
-      );
+      const n = await addManyItems(toAdd.map(toCreatePayload));
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onDone();
-      setTimeout(() => Alert.alert("Added", `${n} item${n === 1 ? "" : "s"} added to your fridge.`), 300);
+      setTimeout(
+        () =>
+          Alert.alert(
+            "Added",
+            `${n} item${n === 1 ? "" : "s"} added to your fridge.`,
+          ),
+        300,
+      );
     } catch (e) {
       setSaving(false);
       Alert.alert("Error", describeError(e, "Couldn't add those items."));
@@ -538,22 +549,50 @@ function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => v
 
   if (status === "idle") {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, gap: 16 }}>
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 32,
+          gap: 16,
+        }}
+      >
         <MaterialCommunityIcons
           name={mode === "receipt" ? "receipt" : "fridge-outline"}
           size={40}
           color={FAINT}
         />
-        <Text style={{ fontSize: 13, color: MUTED, textAlign: "center", lineHeight: 19 }}>
+        <Text
+          style={{
+            fontSize: 13,
+            color: MUTED,
+            textAlign: "center",
+            lineHeight: 19,
+          }}
+        >
           {mode === "receipt"
             ? "Snap a photo of your grocery receipt and we'll pull out the items."
             : "Take a photo inside your fridge and the crew will spot what changed."}
         </Text>
         <Pressable
           onPress={pickAndScan}
-          style={{ backgroundColor: AMBER, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 }}
+          style={{
+            backgroundColor: AMBER,
+            paddingVertical: 12,
+            paddingHorizontal: 24,
+            borderRadius: 8,
+          }}
         >
-          <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
+          <Text
+            style={{
+              fontSize: 13.5,
+              fontWeight: "700",
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
+              color: "#0a0a0c",
+            }}
+          >
             Choose a photo
           </Text>
         </Pressable>
@@ -563,7 +602,14 @@ function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => v
 
   if (status === "scanning") {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 14 }}>
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 14,
+        }}
+      >
         <ActivityIndicator color={AMBER} size="large" />
         <Text style={{ fontSize: 13, color: MUTED }}>
           {mode === "receipt" ? "Reading receipt…" : "Scanning fridge photo…"}
@@ -573,265 +619,743 @@ function ScanFlow({ mode, onDone }: { mode: "receipt" | "photo"; onDone: () => v
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 32 }}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT }}>
-          FOUND {checkedCount} ITEM{checkedCount === 1 ? "" : "S"} — set details or auto-fill
+    <DraftList
+      drafts={drafts}
+      scanMode
+      intro={
+        <Text style={{ fontSize: 12.5, color: MUTED, lineHeight: 17 }}>
+          Found {drafts.items.length} item{drafts.items.length === 1 ? "" : "s"}{" "}
+          — the scan can&apos;t tell expiry or storage, so set them below or tap
+          Auto-fill
         </Text>
-        {items.length > 1 && (
-          <Pressable
-            onPress={fillAll}
-            disabled={fillingAll}
-            style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, backgroundColor: "rgba(122,92,201,0.14)", opacity: fillingAll ? 0.5 : 1 }}
+      }
+      emptyText="Nothing recognised. Try a clearer photo, or add manually."
+      addLabel="Add item the scan missed"
+      submitLabel={(n) => `Add ${n} item${n === 1 ? "" : "s"}`}
+      submitting={saving}
+      onSubmit={confirm}
+    />
+  );
+}
+
+// ---- the shared list: cards + add-row + sticky submit -------------------
+
+function DraftList({
+  drafts,
+  scanMode,
+  intro,
+  emptyText,
+  addLabel,
+  submitLabel,
+  submitting,
+  onSubmit,
+}: {
+  drafts: DraftStore;
+  scanMode: boolean;
+  intro: React.ReactNode;
+  emptyText?: string;
+  addLabel: string;
+  submitLabel: (count: number) => string;
+  submitting: boolean;
+  onSubmit: () => void;
+}) {
+  const count = scanMode
+    ? drafts.items.filter((d) => d.checked && d.name.trim()).length
+    : drafts.items.filter((d) => d.name.trim()).length;
+
+  return (
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 4,
+          paddingBottom: 24,
+        }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 10,
+            marginBottom: 14,
+          }}
+        >
+          <View style={{ flex: 1 }}>{intro}</View>
+          {drafts.items.length > 1 && (
+            <AutoFillButton
+              label="Auto-fill all"
+              onPress={drafts.fillAll}
+              loading={drafts.fillingAll}
+            />
+          )}
+        </View>
+
+        {drafts.items.length === 0 && emptyText ? (
+          <Text
+            style={{
+              fontSize: 13,
+              color: FAINT,
+              textAlign: "center",
+              marginVertical: 20,
+            }}
           >
-            {fillingAll ? <ActivityIndicator color="#7a5cc9" size="small" /> : <MaterialCommunityIcons name="auto-fix" size={13} color="#7a5cc9" />}
-            <Text style={{ fontSize: 11, fontWeight: "700", color: "#7a5cc9" }}>Auto-fill all</Text>
+            {emptyText}
+          </Text>
+        ) : (
+          <View style={{ gap: 12 }}>
+            {drafts.items.map((d, i) => (
+              <ItemCard
+                key={d.id}
+                item={d}
+                autoFocus={!d.name && i === drafts.items.length - 1}
+                onChange={(p) => drafts.set(d.id, p)}
+                onToggle={
+                  scanMode
+                    ? () => drafts.set(d.id, { checked: !d.checked })
+                    : undefined
+                }
+                onRemove={
+                  scanMode || drafts.items.length > 1
+                    ? () => drafts.remove(d.id)
+                    : undefined
+                }
+                onAutoFill={() => drafts.fillOne(d)}
+                autoFilling={drafts.fillingId === d.id || drafts.fillingAll}
+                onScanDate={() => drafts.scanDate(d)}
+                scanningDate={drafts.scanningDateId === d.id}
+                library={drafts.library}
+                refetchLibrary={drafts.refetchLibrary}
+              />
+            ))}
+
+            <Pressable
+              onPress={() => drafts.append()}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                padding: 14,
+                borderRadius: 8,
+                borderWidth: 1.5,
+                borderColor: STRONG_BORDER,
+                borderStyle: "dashed",
+              }}
+            >
+              <MaterialCommunityIcons name="plus" size={15} color={BLUE} />
+              <Text style={{ fontSize: 13, fontWeight: "700", color: BLUE }}>
+                {addLabel}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+      </ScrollView>
+
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingTop: 10,
+          paddingBottom: 28,
+          borderTopWidth: 1,
+          borderTopColor: HAIRLINE,
+          backgroundColor: SURFACE,
+        }}
+      >
+        <Pressable
+          onPress={onSubmit}
+          disabled={submitting || count === 0}
+          style={{
+            alignItems: "center",
+            paddingVertical: 15,
+            borderRadius: 8,
+            backgroundColor: AMBER,
+            opacity: submitting || count === 0 ? 0.5 : 1,
+          }}
+        >
+          {submitting ? (
+            <ActivityIndicator color="#0a0a0c" />
+          ) : (
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: "700",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+                color: "#0a0a0c",
+              }}
+            >
+              {submitLabel(count)}
+            </Text>
+          )}
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+// ---- the shared item card ----------------------------------------------
+
+function ItemCard({
+  item,
+  autoFocus,
+  onChange,
+  onToggle,
+  onRemove,
+  onAutoFill,
+  autoFilling,
+  onScanDate,
+  scanningDate,
+  library,
+  refetchLibrary,
+}: {
+  item: Draft;
+  autoFocus?: boolean;
+  onChange: (patch: Partial<Draft>) => void;
+  onToggle?: () => void;
+  onRemove?: () => void;
+  onAutoFill: () => void;
+  autoFilling: boolean;
+  onScanDate: () => void;
+  scanningDate: boolean;
+  library: GeneratedIcon[];
+  refetchLibrary: () => void;
+}) {
+  const [iconOpen, setIconOpen] = useState(false);
+  const [catOpen, setCatOpen] = useState(false);
+  const [genPrompt, setGenPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
+
+  async function generate() {
+    if (generating || !genPrompt.trim()) return;
+    setGenerating(true);
+    try {
+      const r = await api.generateIcon(genPrompt.trim());
+      onChange({ iconUrl: r.icon_url });
+      setGenPrompt("");
+      setIconOpen(false);
+      refetchLibrary();
+    } catch (e) {
+      Alert.alert("Error", describeError(e, "Couldn't generate that icon."));
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  return (
+    <View
+      style={{
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: HAIRLINE,
+        backgroundColor: SURFACE,
+        padding: 14,
+        gap: 12,
+        opacity: onToggle && !item.checked ? 0.45 : 1,
+      }}
+    >
+      {/* name row */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <Pressable onPress={() => setIconOpen((v) => !v)} hitSlop={4}>
+          <FoodIcon
+            icon={item.icon}
+            iconUrl={item.iconUrl}
+            name={item.name || "item"}
+            size={30}
+          />
+        </Pressable>
+        <TextInput
+          value={item.name}
+          onChangeText={(t) => onChange({ name: t })}
+          placeholder="Item name"
+          placeholderTextColor={FAINT}
+          autoFocus={autoFocus}
+          style={{
+            flex: 1,
+            fontSize: 14.5,
+            fontWeight: "600",
+            color: INK,
+            paddingVertical: 2,
+          }}
+        />
+        {onToggle && (
+          <Pressable
+            onPress={onToggle}
+            hitSlop={6}
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: 7,
+              borderWidth: 1.5,
+              borderColor: item.checked ? BLUE : STRONG_BORDER,
+              backgroundColor: item.checked ? BLUE : "transparent",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {item.checked && (
+              <MaterialCommunityIcons name="check" size={14} color="#fff" />
+            )}
+          </Pressable>
+        )}
+        {onRemove && (
+          <Pressable onPress={onRemove} hitSlop={6}>
+            <MaterialCommunityIcons name="close" size={15} color={FAINT} />
           </Pressable>
         )}
       </View>
 
-      {items.length === 0 ? (
-        <Text style={{ fontSize: 13, color: FAINT, textAlign: "center", marginVertical: 20 }}>
-          Nothing recognised. Try a clearer photo, or add manually.
-        </Text>
-      ) : (
-        <View style={{ gap: 10, marginBottom: 14 }}>
-          {items.map((d) => (
-            <View
-              key={d.id}
+      {iconOpen && (
+        <View
+          style={{
+            backgroundColor: SURFACE2,
+            borderRadius: 8,
+            padding: 10,
+            gap: 8,
+          }}
+        >
+          <View style={{ flexDirection: "row", gap: 6 }}>
+            <TextInput
+              value={genPrompt}
+              onChangeText={setGenPrompt}
+              placeholder="Describe an icon…"
+              placeholderTextColor={FAINT}
+              editable={!generating}
               style={{
-                borderRadius: 8,
+                flex: 1,
                 borderWidth: 1,
                 borderColor: HAIRLINE,
-                backgroundColor: SURFACE,
-                padding: 12,
-                gap: 10,
-                opacity: d.checked ? 1 : 0.5,
+                borderRadius: 6,
+                paddingHorizontal: 10,
+                paddingVertical: 8,
+                fontSize: 12,
+                color: INK,
+              }}
+            />
+            <Pressable
+              onPress={generate}
+              disabled={generating || !genPrompt.trim()}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 3,
+                paddingHorizontal: 12,
+                borderRadius: 6,
+                backgroundColor: `${AUTOFILL}33`,
+                opacity: generating || !genPrompt.trim() ? 0.5 : 1,
               }}
             >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Pressable onPress={() => setIconPickerId(iconPickerId === d.id ? null : d.id)}>
-                  <FoodIcon icon={d.icon} iconUrl={d.iconUrl} name={d.name || "item"} size={30} />
-                </Pressable>
-                <TextInput
-                  value={d.name}
-                  onChangeText={(t) => set(d.id, { name: t })}
-                  placeholder="Item name"
-                  placeholderTextColor={FAINT}
-                  style={{ flex: 1, fontSize: 14, fontWeight: "600", color: INK, paddingVertical: 4 }}
+              {generating ? (
+                <ActivityIndicator color={AUTOFILL} size="small" />
+              ) : (
+                <MaterialCommunityIcons
+                  name="auto-fix"
+                  size={13}
+                  color={AUTOFILL}
                 />
-                <Pressable onPress={() => set(d.id, { checked: !d.checked })} hitSlop={6}>
-                  <MaterialCommunityIcons name={d.checked ? "checkbox-marked" : "checkbox-blank-outline"} size={20} color={d.checked ? AMBER : FAINT} />
-                </Pressable>
-                <Pressable onPress={() => setItems((p) => p.filter((x) => x.id !== d.id))} hitSlop={6}>
-                  <MaterialCommunityIcons name="close" size={16} color={FAINT} />
-                </Pressable>
-              </View>
-
-              {iconPickerId === d.id && (
-                <View style={{ backgroundColor: SURFACE2, borderRadius: 6, padding: 8, gap: 8, maxHeight: 260 }}>
-                  <View style={{ flexDirection: "row", gap: 6 }}>
-                    <TextInput
-                      value={genPrompt}
-                      onChangeText={setGenPrompt}
-                      placeholder="Describe an icon…"
-                      placeholderTextColor={FAINT}
-                      editable={!generating}
-                      style={{ flex: 1, borderWidth: 1, borderColor: HAIRLINE, borderRadius: 5, paddingHorizontal: 8, paddingVertical: 7, fontSize: 12, color: INK }}
-                    />
-                    <Pressable
-                      onPress={() => generate(d.id)}
-                      disabled={generating || !genPrompt.trim()}
-                      style={{ flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 10, borderRadius: 5, backgroundColor: "rgba(122,92,201,0.2)", opacity: generating || !genPrompt.trim() ? 0.5 : 1 }}
-                    >
-                      {generating ? <ActivityIndicator color="#7a5cc9" size="small" /> : <MaterialCommunityIcons name="auto-fix" size={12} color="#7a5cc9" />}
-                      <Text style={{ fontSize: 11, fontWeight: "700", color: "#7a5cc9" }}>Gen</Text>
-                    </Pressable>
-                  </View>
-                  <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="handled">
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-                      {library.map((g) => (
-                        <Pressable key={g.id} onPress={() => { set(d.id, { iconUrl: g.image_url }); setIconPickerId(null); }} style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: SURFACE, alignItems: "center", justifyContent: "center" }}>
-                          <FoodIcon iconUrl={g.image_url} name={d.name} size={34} />
-                        </Pressable>
-                      ))}
-                      {FOOD_ICON_KEYS.map((key) => (
-                        <Pressable
-                          key={key}
-                          onPress={() => { set(d.id, { icon: key, iconUrl: null }); setIconPickerId(null); }}
-                          style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: SURFACE, alignItems: "center", justifyContent: "center", borderWidth: !d.iconUrl && d.icon === key ? 1.5 : 0, borderColor: AMBER }}
-                        >
-                          <FoodIcon icon={key} name={ICON_LABELS[key] ?? key} size={34} />
-                        </Pressable>
-                      ))}
-                    </View>
-                  </ScrollView>
-                </View>
               )}
-
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                <View style={{ flexDirection: "row", gap: 6 }}>
-                  {STORAGE_LOCATIONS.map((l) => {
-                    const on = d.location === l.key;
-                    return (
-                      <Pressable
-                        key={l.key}
-                        onPress={() => set(d.id, { location: l.key })}
-                        style={{ width: 30, height: 30, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: on ? AMBER : SURFACE2 }}
-                      >
-                        <MaterialCommunityIcons
-                          name={l.key === "freezer" ? "snowflake" : l.key === "pantry" ? "archive-outline" : "fridge-outline"}
-                          size={15}
-                          color={on ? "#0a0a0c" : MUTED}
-                        />
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <Step icon="minus" onPress={() => set(d.id, { qty: Math.max(1, d.qty - 1) })} />
-                  <Text style={{ minWidth: 16, textAlign: "center", fontSize: 12, fontWeight: "700", color: INK }}>{d.qty}</Text>
-                  <Step icon="plus" onPress={() => set(d.id, { qty: d.qty + 1 })} />
-                </View>
-              </View>
-
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }} style={{ flex: 1 }}>
-                  {BEST_BEFORE_PRESETS.map((p) => {
-                    const on = d.expiryDays === p.days;
-                    return (
-                      <Pressable key={p.days} onPress={() => set(d.id, { expiryDays: p.days })} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: on ? AMBER : SURFACE2 }}>
-                        <Text style={{ fontSize: 11, fontWeight: "700", color: on ? "#0a0a0c" : INK }}>{p.label}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-                <Pressable onPress={() => scanDate(d)} disabled={scanningDateId === d.id} hitSlop={4} style={{ padding: 6, borderRadius: 6, backgroundColor: "rgba(38,198,218,0.14)" }}>
-                  {scanningDateId === d.id ? <ActivityIndicator color={AMBER} size="small" /> : <MaterialCommunityIcons name="camera-outline" size={14} color={AMBER} />}
-                </Pressable>
-                <Pressable onPress={() => fillOne(d)} disabled={fillingId === d.id || fillingAll} hitSlop={4} style={{ padding: 6, borderRadius: 6, backgroundColor: "rgba(122,92,201,0.14)" }}>
-                  {fillingId === d.id ? <ActivityIndicator color="#7a5cc9" size="small" /> : <MaterialCommunityIcons name="auto-fix" size={14} color="#7a5cc9" />}
-                </Pressable>
-              </View>
-              {d.expiryDays != null && (
-                <Text style={{ fontSize: 10.5, color: FAINT }}>≈ {isoInDays(d.expiryDays)}</Text>
-              )}
-              {d.condition && d.condition !== "vibrant" && (
-                <Text style={{ fontSize: 10.5, fontWeight: "700", color: "#f5a623" }}>
-                  AI noticed this looks {CONDITION_PHRASE[d.condition] ?? d.condition} in the photo — auto-fill accounts for it.
-                </Text>
-              )}
-            </View>
-          ))}
-
-          {mode !== "receipt" || items.length > 0 ? (
-            <Pressable
-              onPress={() =>
-                setItems((p) => [
-                  ...p,
-                  { id: `d${Date.now()}`, name: "", icon: "generic", iconUrl: null, qty: 1, location: "fridge", expiryDays: null, condition: null, checked: true },
-                ])
-              }
-              style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: 13, borderRadius: 8, borderWidth: 1.5, borderColor: STRONG_BORDER, borderStyle: "dashed" }}
-            >
-              <MaterialCommunityIcons name="plus" size={15} color={BLUE} />
-              <Text style={{ fontSize: 13, fontWeight: "700", color: BLUE }}>Add item the scan missed</Text>
+              <Text
+                style={{ fontSize: 11, fontWeight: "700", color: AUTOFILL }}
+              >
+                Gen
+              </Text>
             </Pressable>
-          ) : null}
+          </View>
+          <ScrollView
+            style={{ maxHeight: 200 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              {library.map((g) => (
+                <Pressable
+                  key={g.id}
+                  onPress={() => {
+                    onChange({ iconUrl: g.image_url });
+                    setIconOpen(false);
+                  }}
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 6,
+                    backgroundColor: SURFACE,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <FoodIcon iconUrl={g.image_url} name={item.name} size={34} />
+                </Pressable>
+              ))}
+              {FOOD_ICON_KEYS.map((key) => (
+                <Pressable
+                  key={key}
+                  onPress={() => {
+                    onChange({ icon: key, iconUrl: null });
+                    setIconOpen(false);
+                  }}
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 6,
+                    backgroundColor: SURFACE,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: !item.iconUrl && item.icon === key ? 1.5 : 0,
+                    borderColor: BLUE,
+                  }}
+                >
+                  <FoodIcon
+                    icon={key}
+                    name={ICON_LABELS[key] ?? key}
+                    size={34}
+                  />
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
         </View>
       )}
 
-      <Pressable
-        onPress={confirm}
-        disabled={saving || checkedCount === 0}
-        style={{ alignItems: "center", paddingVertical: 14, borderRadius: 8, backgroundColor: AMBER, opacity: saving || checkedCount === 0 ? 0.5 : 1 }}
-      >
-        {saving ? (
-          <ActivityIndicator color="#0a0a0c" />
-        ) : (
-          <Text style={{ fontSize: 14, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
-            Add {checkedCount} to fridge
+      {/* food group + quantity */}
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <Pressable
+          onPress={() => setCatOpen((v) => !v)}
+          style={{
+            flex: 1,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: SURFACE2,
+            borderRadius: 6,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+          }}
+        >
+          <Text style={{ fontSize: 13, color: item.category ? INK : FAINT }}>
+            {NUTRITION_CATEGORIES.find((c) => c.key === item.category)?.label ??
+              "Food group"}
           </Text>
-        )}
-      </Pressable>
-    </ScrollView>
-  );
-}
+          <MaterialCommunityIcons
+            name={catOpen ? "chevron-up" : "chevron-down"}
+            size={16}
+            color={FAINT}
+          />
+        </Pressable>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+            backgroundColor: SURFACE2,
+            borderRadius: 6,
+            paddingHorizontal: 4,
+          }}
+        >
+          <Pressable
+            onPress={() => onChange({ qty: Math.max(1, item.qty - 1) })}
+            hitSlop={6}
+            style={{ padding: 7 }}
+          >
+            <MaterialCommunityIcons name="minus" size={14} color={INK} />
+          </Pressable>
+          <Text
+            style={{
+              minWidth: 16,
+              textAlign: "center",
+              fontSize: 13,
+              fontWeight: "700",
+              color: INK,
+            }}
+          >
+            {item.qty}
+          </Text>
+          <Pressable
+            onPress={() => onChange({ qty: item.qty + 1 })}
+            hitSlop={6}
+            style={{ padding: 7 }}
+          >
+            <MaterialCommunityIcons name="plus" size={14} color={INK} />
+          </Pressable>
+        </View>
+      </View>
 
-const field = {
-  borderWidth: 1,
-  borderColor: HAIRLINE,
-  backgroundColor: SURFACE2,
-  borderRadius: 6,
-  paddingHorizontal: 14,
-  paddingVertical: 12,
-  fontSize: 13.5,
-  color: INK,
-} as const;
+      {catOpen && (
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: 6,
+            backgroundColor: SURFACE2,
+            borderRadius: 6,
+            padding: 8,
+          }}
+        >
+          {NUTRITION_CATEGORIES.map((c) => {
+            const on = item.category === c.key;
+            return (
+              <Pressable
+                key={c.key}
+                onPress={() => {
+                  onChange({ category: on ? null : c.key });
+                  setCatOpen(false);
+                }}
+                style={{
+                  paddingHorizontal: 11,
+                  paddingVertical: 6,
+                  borderRadius: 6,
+                  backgroundColor: on ? AMBER : SURFACE,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: "700",
+                    color: on ? "#0a0a0c" : INK,
+                  }}
+                >
+                  {c.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
-function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <View>
-      <Text style={{ marginBottom: 6, fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT }}>
-        {label}
-      </Text>
-      {children}
+      {/* date + camera + auto-fill */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <DateField
+          value={item.expiryDate}
+          onChange={(iso) => onChange({ expiryDate: iso })}
+        />
+        <Pressable
+          onPress={onScanDate}
+          disabled={scanningDate}
+          style={{
+            width: 34,
+            height: 38,
+            borderRadius: 6,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: `${AMBER}24`,
+          }}
+        >
+          {scanningDate ? (
+            <ActivityIndicator color={AMBER} size="small" />
+          ) : (
+            <MaterialCommunityIcons
+              name="camera-outline"
+              size={15}
+              color={AMBER}
+            />
+          )}
+        </Pressable>
+        <AutoFillButton onPress={onAutoFill} loading={autoFilling} />
+      </View>
+
+      {/* location */}
+      <View style={{ flexDirection: "row", gap: 6 }}>
+        {STORAGE_LOCATIONS.map((l) => {
+          const on = item.location === l.key;
+          return (
+            <Pressable
+              key={l.key}
+              onPress={() => onChange({ location: l.key })}
+              style={{
+                flex: 1,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 5,
+                height: 34,
+                borderRadius: 6,
+                backgroundColor: on ? l.color : SURFACE2,
+              }}
+            >
+              <MaterialCommunityIcons
+                name={
+                  l.key === "freezer"
+                    ? "snowflake"
+                    : l.key === "pantry"
+                      ? "archive-outline"
+                      : "fridge-outline"
+                }
+                size={14}
+                color={on ? "#fff" : FAINT}
+              />
+              <Text
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: "700",
+                  color: on ? "#fff" : MUTED,
+                }}
+              >
+                {l.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {item.condition && item.condition !== "vibrant" && (
+        <Text
+          style={{
+            fontSize: 11,
+            fontWeight: "700",
+            color: "#f5a623",
+            lineHeight: 15,
+          }}
+        >
+          AI noticed this is{" "}
+          {CONDITION_PHRASE[item.condition] ?? item.condition} in the photo —
+          Auto-fill accounts for it
+        </Text>
+      )}
     </View>
   );
 }
 
-function ChipRow({
-  options,
+// ---- small building blocks --------------------------------------------
+
+function AutoFillButton({
+  onPress,
+  loading,
+  label = "Auto-fill",
+}: {
+  onPress: () => void;
+  loading?: boolean;
+  label?: string;
+}) {
+  return (
+    <Pressable
+      onPress={loading ? undefined : onPress}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        paddingHorizontal: 12,
+        height: 38,
+        borderRadius: 6,
+        backgroundColor: `${AUTOFILL}26`,
+        opacity: loading ? 0.6 : 1,
+      }}
+    >
+      {loading ? (
+        <ActivityIndicator color={AUTOFILL} size="small" />
+      ) : (
+        <MaterialCommunityIcons name="auto-fix" size={14} color={AUTOFILL} />
+      )}
+      <Text style={{ fontSize: 11.5, fontWeight: "700", color: AUTOFILL }}>
+        {loading ? "Thinking…" : label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function DateField({
   value,
   onChange,
 }: {
-  options: { key: string; label: string }[];
   value: string | null;
-  onChange: (key: string) => void;
+  onChange: (iso: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const current = value ? new Date(`${value}T00:00:00`) : new Date();
+
+  const onAndroidChange = (e: DateTimePickerEvent, d?: Date) => {
+    setOpen(false);
+    if (e.type === "set" && d) onChange(toISODate(d));
+  };
+
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-      {options.map((o) => {
-        const active = value === o.key;
-        return (
+    <View style={{ flex: 1 }}>
+      <Pressable
+        onPress={() => setOpen(true)}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          backgroundColor: SURFACE2,
+          borderRadius: 6,
+          paddingHorizontal: 12,
+          height: 38,
+        }}
+      >
+        <Text style={{ fontSize: 13, color: value ? INK : FAINT }}>
+          {value ? fmtDMY(value) : "dd/mm/yyyy"}
+        </Text>
+        <MaterialCommunityIcons
+          name="calendar-blank-outline"
+          size={15}
+          color={FAINT}
+        />
+      </Pressable>
+
+      {open && Platform.OS === "android" && (
+        <DateTimePicker
+          value={current}
+          mode="date"
+          onChange={onAndroidChange}
+        />
+      )}
+
+      {Platform.OS === "ios" && (
+        <Modal
+          transparent
+          visible={open}
+          animationType="fade"
+          onRequestClose={() => setOpen(false)}
+        >
           <Pressable
-            key={o.key}
-            onPress={() => onChange(o.key)}
+            onPress={() => setOpen(false)}
             style={{
-              paddingHorizontal: 14,
-              paddingVertical: 7,
-              borderRadius: 6,
-              backgroundColor: active ? AMBER : SURFACE2,
+              flex: 1,
+              justifyContent: "flex-end",
+              backgroundColor: "rgba(0,0,0,0.55)",
             }}
           >
-            <Text style={{ fontSize: 12.5, fontWeight: "700", color: active ? "#0a0a0c" : INK }}>
-              {o.label}
-            </Text>
+            <Pressable
+              onPress={() => {}}
+              style={{
+                backgroundColor: SURFACE,
+                borderTopLeftRadius: 18,
+                borderTopRightRadius: 18,
+                paddingHorizontal: 16,
+                paddingTop: 8,
+                paddingBottom: 34,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingVertical: 6,
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: "700", color: FAINT }}>
+                  Best before
+                </Text>
+                <Pressable onPress={() => setOpen(false)} hitSlop={8}>
+                  <Text
+                    style={{ fontSize: 15, fontWeight: "700", color: AMBER }}
+                  >
+                    Done
+                  </Text>
+                </Pressable>
+              </View>
+              <DateTimePicker
+                value={current}
+                mode="date"
+                display="inline"
+                themeVariant="dark"
+                accentColor={AMBER}
+                onChange={(_e, d) => d && onChange(toISODate(d))}
+                style={{ alignSelf: "stretch" }}
+              />
+            </Pressable>
           </Pressable>
-        );
-      })}
+        </Modal>
+      )}
     </View>
-  );
-}
-
-function Step({ icon, onPress }: { icon: "minus" | "plus"; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={8}
-      style={{
-        height: 32,
-        width: 32,
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: 16,
-        backgroundColor: SURFACE2,
-      }}
-    >
-      <MaterialCommunityIcons name={icon} size={16} color={INK} />
-    </Pressable>
   );
 }

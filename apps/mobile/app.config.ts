@@ -5,7 +5,7 @@ import type { ExpoConfig } from "expo/config";
 const config: ExpoConfig = {
   name: "ThatFridge",
   slug: "thatfridge",
-  version: "1.0.0",
+  version: "1.1.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "thatfridge",
@@ -48,6 +48,7 @@ const config: ExpoConfig = {
   plugins: [
     "expo-router",
     "expo-secure-store",
+    "@react-native-community/datetimepicker",
     [
       "expo-font",
       {

@@ -6,6 +6,7 @@ import {
   type CreateItemInput,
   type FlatItem,
   type Fridge,
+  type NutritionCategory,
   type UpdateItemInput,
 } from "@thatfridge/core";
 
@@ -27,6 +28,7 @@ interface InventoryContextValue {
       location?: "fridge" | "freezer" | "pantry";
       quantity?: number;
       sectionId?: string;
+      nutrition_category?: NutritionCategory | null;
       expiry_date?: string;
       shelf_life_days?: number;
     }[],
@@ -141,6 +143,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
             ...(d.icon_url ? { icon_url: d.icon_url } : {}),
             location: d.location ?? "fridge",
             quantity: d.quantity ?? 1,
+            ...(d.nutrition_category ? { nutrition_category: d.nutrition_category } : {}),
             ...(d.expiry_date ? { expiry_date: d.expiry_date, shelf_life_days: d.shelf_life_days } : {}),
             note: "Just added",
           }),
