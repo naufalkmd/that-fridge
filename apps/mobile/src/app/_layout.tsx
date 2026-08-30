@@ -201,6 +201,13 @@ export default function RootLayout() {
                                   }}
                                 />
                                 <Stack.Screen
+                                  name="fridges"
+                                  options={{
+                                    headerShown: false,
+                                    presentation: "modal",
+                                  }}
+                                />
+                                <Stack.Screen
                                   name="profile"
                                   options={{ title: "Profile" }}
                                 />
