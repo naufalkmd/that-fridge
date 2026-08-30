@@ -12,7 +12,10 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -26,9 +29,14 @@ import {
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { usePro } from "@/lib/pro";
-import { FREE_CHATS_PER_WEEK, bumpChatUsed, getChatUsed } from "@/lib/chatQuota";
+import {
+  FREE_CHATS_PER_WEEK,
+  bumpChatUsed,
+  getChatUsed,
+} from "@/lib/chatQuota";
 import { useRecipes } from "@/lib/recipes";
 import { MarkdownText } from "@/components/markdown-text";
+import { RecipeSuggestionCard } from "@/components/recipe-suggestion-card";
 
 const WALLPAPER = require("../../../assets/images/thatfridge/chat-wallpaper.png");
 
@@ -40,7 +48,10 @@ const INK = "#eaeaec";
 const MUTED = "rgba(234,234,236,0.58)";
 const FAINT = "rgba(234,234,236,0.34)";
 
-const GREETING: Msg = { role: "agent", text: "Hi! Ask me anything about what's in your fridge." };
+const GREETING: Msg = {
+  role: "agent",
+  text: "Hi! Ask me anything about what's in your fridge.",
+};
 const QUICK_ASKS = [
   "What's expiring soon?",
   "What can I cook tonight?",
@@ -74,7 +85,11 @@ export default function Chat() {
   const remaining = Math.max(0, FREE_CHATS_PER_WEEK - used);
 
   const inventorySummary = useMemo(
-    () => items.slice(0, 40).map((i) => `${i.name} (${daysLabel(i.days)})`).join(", "),
+    () =>
+      items
+        .slice(0, 40)
+        .map((i) => `${i.name} (${daysLabel(i.days)})`)
+        .join(", "),
     [items],
   );
 
@@ -87,9 +102,15 @@ export default function Chat() {
           : await api.getChatHistory();
         setSessionId(h.session_id);
         const restored = h.messages.flatMap((row) => {
-          const out: Msg[] = [{ role: "user" as const, text: row.user_message }];
+          const out: Msg[] = [
+            { role: "user" as const, text: row.user_message },
+          ];
           if (row.agent_response)
-            out.push({ role: "agent", text: row.agent_response, recipe: row.recipe_suggestion });
+            out.push({
+              role: "agent",
+              text: row.agent_response,
+              recipe: row.recipe_suggestion,
+            });
           return out;
         });
         setMessages(restored.length ? restored : [GREETING]);
@@ -123,20 +144,34 @@ export default function Chat() {
     const img = attachment;
     if (!preset) setText("");
     setAttachment(null);
-    setMessages((m) => [...m, { role: "user", text: msg, attachmentUri: img ?? undefined }]);
+    setMessages((m) => [
+      ...m,
+      { role: "user", text: msg, attachmentUri: img ?? undefined },
+    ]);
     setSending(true);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     const messageForApi = msg || "What do you see in this photo?";
     try {
-      const res = await api.sendChat(messageForApi, routeChatAgent(messageForApi), {
-        inventory: inventorySummary,
-        sessionId,
-        image: img ? { uri: img, name: "photo.jpg", type: "image/jpeg" } : undefined,
-      });
+      const res = await api.sendChat(
+        messageForApi,
+        routeChatAgent(messageForApi),
+        {
+          inventory: inventorySummary,
+          sessionId,
+          image: img
+            ? { uri: img, name: "photo.jpg", type: "image/jpeg" }
+            : undefined,
+        },
+      );
       if (res.session_id) setSessionId(res.session_id);
       setMessages((m) => [
         ...m,
-        { role: "agent", text: res.agent_response, recipe: res.recipe_suggestion, mocked: res.mocked },
+        {
+          role: "agent",
+          text: res.agent_response,
+          recipe: res.recipe_suggestion,
+          mocked: res.mocked,
+        },
       ]);
       // Fire-and-forget: let the crew update what it remembers from this exchange.
       api.extractMemory(messageForApi, res.agent_response).catch(() => {});
@@ -147,7 +182,10 @@ export default function Chat() {
     } catch (e) {
       setMessages((m) => [
         ...m,
-        { role: "agent", text: describeError(e, "Something went wrong. Try again.") },
+        {
+          role: "agent",
+          text: describeError(e, "Something went wrong. Try again."),
+        },
       ]);
     } finally {
       setSending(false);
@@ -158,7 +196,11 @@ export default function Chat() {
   const showQuickAsks = !loading && messages.length <= 3;
 
   return (
-    <ImageBackground source={WALLPAPER} resizeMode="repeat" style={{ flex: 1, backgroundColor: "#0a0a0c" }}>
+    <ImageBackground
+      source={WALLPAPER}
+      resizeMode="repeat"
+      style={{ flex: 1, backgroundColor: "#0a0a0c" }}
+    >
       <SafeAreaView className="flex-1" edges={["top"]}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -179,10 +221,17 @@ export default function Chat() {
             }}
           >
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15.5, fontWeight: "800", color: INK }}>Quick Chat</Text>
-              <Text style={{ fontSize: 11.5, color: FAINT }}>Quick answers about your fridge</Text>
+              <Text style={{ fontSize: 15.5, fontWeight: "800", color: INK }}>
+                Quick Chat
+              </Text>
+              <Text style={{ fontSize: 11.5, color: FAINT }}>
+                Quick answers about your fridge
+              </Text>
             </View>
-            <HeaderBtn icon="time-outline" onPress={() => router.push("/chat-history")} />
+            <HeaderBtn
+              icon="time-outline"
+              onPress={() => router.push("/chat-history")}
+            />
             <HeaderBtn
               icon="create-outline"
               onPress={() => {
@@ -214,7 +263,9 @@ export default function Chat() {
                   ? `${remaining} free message${remaining === 1 ? "" : "s"} left this week`
                   : "Weekly free messages used up"}
               </Text>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: AMBER }}>Go Pro</Text>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: AMBER }}>
+                Go Pro
+              </Text>
             </Pressable>
           )}
 
@@ -222,7 +273,9 @@ export default function Chat() {
             ref={scrollRef}
             style={{ flex: 1 }}
             contentContainerStyle={{ padding: 16, gap: 12 }}
-            onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
+            onContentSizeChange={() =>
+              scrollRef.current?.scrollToEnd({ animated: false })
+            }
             keyboardShouldPersistTaps="handled"
           >
             {loading ? (
@@ -238,7 +291,11 @@ export default function Chat() {
               horizontal
               showsHorizontalScrollIndicator={false}
               style={{ flexGrow: 0 }}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 10, gap: 8 }}
+              contentContainerStyle={{
+                paddingHorizontal: 16,
+                paddingBottom: 10,
+                gap: 8,
+              }}
               keyboardShouldPersistTaps="handled"
             >
               {QUICK_ASKS.map((label) => (
@@ -254,7 +311,9 @@ export default function Chat() {
                     paddingHorizontal: 13,
                   }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: INK }}>{label}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: INK }}>
+                    {label}
+                  </Text>
                 </Pressable>
               ))}
             </ScrollView>
@@ -273,7 +332,11 @@ export default function Chat() {
           >
             {attachment && (
               <View style={{ marginBottom: 8, width: 56, height: 56 }}>
-                <Image source={{ uri: attachment }} style={{ flex: 1, borderRadius: 6 }} contentFit="cover" />
+                <Image
+                  source={{ uri: attachment }}
+                  style={{ flex: 1, borderRadius: 6 }}
+                  contentFit="cover"
+                />
                 <Pressable
                   onPress={() => setAttachment(null)}
                   style={{
@@ -294,10 +357,19 @@ export default function Chat() {
                 </Pressable>
               </View>
             )}
-            <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}
+            >
               <Pressable
                 onPress={pickImage}
-                style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: SURFACE2, alignItems: "center", justifyContent: "center" }}
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  backgroundColor: SURFACE2,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
                 <Ionicons name="image-outline" size={17} color={INK} />
               </Pressable>
@@ -341,7 +413,13 @@ export default function Chat() {
   );
 }
 
-function HeaderBtn({ icon, onPress }: { icon: keyof typeof Ionicons.glyphMap; onPress: () => void }) {
+function HeaderBtn({
+  icon,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -368,8 +446,16 @@ function Dot({ delay }: { delay: number }) {
     const loop = Animated.loop(
       Animated.sequence([
         Animated.delay(delay),
-        Animated.timing(v, { toValue: 1, duration: 350, useNativeDriver: true }),
-        Animated.timing(v, { toValue: 0, duration: 350, useNativeDriver: true }),
+        Animated.timing(v, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.timing(v, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: true,
+        }),
         Animated.delay(700 - delay),
       ]),
     );
@@ -384,7 +470,14 @@ function Dot({ delay }: { delay: number }) {
         borderRadius: 3,
         backgroundColor: FAINT,
         opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
-        transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) }],
+        transform: [
+          {
+            translateY: v.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, -3],
+            }),
+          },
+        ],
       }}
     />
   );
@@ -420,22 +513,34 @@ function Bubble({ msg }: { msg: Msg }) {
   const isUser = msg.role === "user";
   const { recipes, create } = useRecipes();
   const [added, setAdded] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const alreadyInBook =
-    !!msg.recipe && recipes.some((r) => r.name.trim().toLowerCase() === msg.recipe!.name.trim().toLowerCase());
+    !!msg.recipe &&
+    recipes.some(
+      (r) =>
+        r.name.trim().toLowerCase() === msg.recipe!.name.trim().toLowerCase(),
+    );
 
   async function addToBook() {
-    if (!msg.recipe) return;
-    setAdded(true);
+    if (!msg.recipe || adding) return;
+    setAdding(true);
     try {
       await create({
         name: msg.recipe.name,
         minutes: msg.recipe.minutes || 20,
-        category: null,
-        ingredients: msg.recipe.ingredients.map((i) => ({ name: i.name, icon: "leftovers" })),
+        category: msg.recipe.category ?? null,
+        ingredients: msg.recipe.ingredients.map((i) => ({
+          name: i.name,
+          icon: "leftovers",
+        })),
         steps: msg.recipe.steps,
       });
+      setAdded(true);
     } catch {
-      setAdded(false);
+      /* leave the button actionable */
+    } finally {
+      setAdding(false);
     }
   }
 
@@ -459,13 +564,26 @@ function Bubble({ msg }: { msg: Msg }) {
         {msg.attachmentUri && (
           <Image
             source={{ uri: msg.attachmentUri }}
-            style={{ width: 180, height: 180, borderRadius: 10, marginBottom: msg.text ? 6 : 0 }}
+            style={{
+              width: 180,
+              height: 180,
+              borderRadius: 10,
+              marginBottom: msg.text ? 6 : 0,
+            }}
             contentFit="cover"
           />
         )}
         {isUser ? (
           !!msg.text && (
-            <Text style={{ fontSize: 13.5, lineHeight: 20, color: "#0a0a0c", paddingHorizontal: msg.attachmentUri ? 8 : 0, paddingBottom: msg.attachmentUri ? 4 : 0 }}>
+            <Text
+              style={{
+                fontSize: 13.5,
+                lineHeight: 20,
+                color: "#0a0a0c",
+                paddingHorizontal: msg.attachmentUri ? 8 : 0,
+                paddingBottom: msg.attachmentUri ? 4 : 0,
+              }}
+            >
               {msg.text}
             </Text>
           )
@@ -489,41 +607,14 @@ function Bubble({ msg }: { msg: Msg }) {
           </>
         )}
       </View>
-      {msg.recipe && (
-        <View
-          style={{
-            marginTop: 8,
-            maxWidth: "85%",
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: AMBER,
-            backgroundColor: SURFACE,
-            padding: 12,
-          }}
-        >
-          <Text style={{ fontSize: 14, fontWeight: "700", color: INK }}>{msg.recipe.name}</Text>
-          <Text style={{ fontSize: 11, color: FAINT, marginBottom: 4 }}>{msg.recipe.minutes} min</Text>
-          <Text style={{ fontSize: 12.5, lineHeight: 19, color: MUTED }}>{msg.recipe.description}</Text>
-          {msg.recipe.steps.map((s, i) => (
-            <Text key={i} style={{ marginTop: 4, fontSize: 12.5, lineHeight: 19, color: INK }}>
-              {i + 1}. {s}
-            </Text>
-          ))}
-          {added || alreadyInBook ? (
-            <Text style={{ marginTop: 10, fontSize: 12, fontWeight: "700", color: "#39e07f" }}>
-              ✓ In your recipe book
-            </Text>
-          ) : (
-            <Pressable
-              onPress={addToBook}
-              style={{ marginTop: 10, alignItems: "center", paddingVertical: 9, borderRadius: 6, backgroundColor: AMBER }}
-            >
-              <Text style={{ fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
-                Add to recipe book
-              </Text>
-            </Pressable>
-          )}
-        </View>
+      {msg.recipe && !dismissed && (
+        <RecipeSuggestionCard
+          suggestion={msg.recipe}
+          added={added || alreadyInBook}
+          adding={adding}
+          onAdd={addToBook}
+          onDismiss={() => setDismissed(true)}
+        />
       )}
     </View>
   );
