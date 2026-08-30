@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   RefreshControl,
@@ -11,6 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { describeError, getShoppingRecommendations } from "@thatfridge/core";
 import { useShopping } from "@/lib/shopping";
@@ -21,7 +23,8 @@ import { useToast } from "@/lib/toast";
 import { SectionHeader } from "@/components/ui";
 
 export default function Shopping() {
-  const { items, loading, error, refresh, add, toggle, remove, clearChecked } = useShopping();
+  const { items, loading, error, refresh, add, toggle, remove, clearChecked } =
+    useShopping();
   const { items: fridgeItems } = useInventory();
   const { recipes } = useRecipes();
   const { usageHistory } = useKitchenScore();
@@ -37,7 +40,10 @@ export default function Shopping() {
 
   function removeWithUndo(id: string, name: string) {
     remove(id);
-    toast.show(`Removed ${name}`, { actionLabel: "Undo", onAction: () => add(name) });
+    toast.show(`Removed ${name}`, {
+      actionLabel: "Undo",
+      onAction: () => add(name),
+    });
   }
 
   const [refreshing, setRefreshing] = useState(false);
@@ -106,7 +112,10 @@ export default function Shopping() {
         </View>
 
         {error && (
-          <Pressable onPress={refresh} className="mb-4 rounded-xl border border-bad bg-surface p-3">
+          <Pressable
+            onPress={refresh}
+            className="mb-4 rounded-xl border border-bad bg-surface p-3"
+          >
             <Text className="font-semibold text-bad">{error}</Text>
           </Pressable>
         )}
@@ -127,8 +136,12 @@ export default function Shopping() {
                   onPress={() => add(r.name)}
                   className="flex-row items-center gap-1.5 rounded-lg border border-hairline bg-surface px-3 py-2 active:opacity-70"
                 >
-                  <Text className="text-[13px] font-semibold text-ink">{r.name}</Text>
-                  <Text className="text-[16px] leading-none text-accent">+</Text>
+                  <Text className="text-[13px] font-semibold text-ink">
+                    {r.name}
+                  </Text>
+                  <Text className="text-[16px] leading-none text-accent">
+                    +
+                  </Text>
                 </Pressable>
               ))}
             </View>
@@ -145,6 +158,7 @@ export default function Shopping() {
                   name={item.name}
                   checked={false}
                   last={i === unchecked.length - 1}
+                  shopUrl={item.shopUrl}
                   onToggle={() => toggle(item.id)}
                   onRemove={() => removeWithUndo(item.id, item.name)}
                 />
@@ -158,7 +172,9 @@ export default function Shopping() {
             <View className="mb-2 flex-row items-center justify-between">
               <SectionHeader>{`In the cart (${checked.length})`}</SectionHeader>
               <Pressable onPress={clearChecked} hitSlop={8} className="mb-2">
-                <Text className="text-[12px] font-semibold text-accent">Clear</Text>
+                <Text className="text-[12px] font-semibold text-accent">
+                  Clear
+                </Text>
               </Pressable>
             </View>
             <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
@@ -168,6 +184,7 @@ export default function Shopping() {
                   name={item.name}
                   checked
                   last={i === checked.length - 1}
+                  shopUrl={item.shopUrl}
                   onToggle={() => toggle(item.id)}
                   onRemove={() => removeWithUndo(item.id, item.name)}
                 />
@@ -184,12 +201,14 @@ function Row({
   name,
   checked,
   last,
+  shopUrl,
   onToggle,
   onRemove,
 }: {
   name: string;
   checked: boolean;
   last: boolean;
+  shopUrl: string | null;
   onToggle: () => void;
   onRemove: () => void;
 }) {
@@ -199,13 +218,19 @@ function Row({
         last ? "" : "border-b border-hairline"
       }`}
     >
-      <Pressable onPress={onToggle} hitSlop={8} className="flex-1 flex-row items-center gap-3">
+      <Pressable
+        onPress={onToggle}
+        hitSlop={8}
+        className="flex-1 flex-row items-center gap-3"
+      >
         <View
           className={`h-5 w-5 items-center justify-center rounded-full border ${
             checked ? "border-good bg-good" : "border-faint"
           }`}
         >
-          {checked && <Text className="text-[11px] font-bold text-canvas">✓</Text>}
+          {checked && (
+            <Text className="text-[11px] font-bold text-canvas">✓</Text>
+          )}
         </View>
         <Text
           className={`text-[14px] ${checked ? "text-faint line-through" : "text-ink"}`}
@@ -213,6 +238,19 @@ function Row({
           {name}
         </Text>
       </Pressable>
+      {!!shopUrl && (
+        <Pressable
+          onPress={() => Linking.openURL(shopUrl).catch(() => {})}
+          hitSlop={8}
+          className="rounded-md bg-[#1a1a1f] p-1.5"
+        >
+          <MaterialCommunityIcons
+            name="open-in-new"
+            size={14}
+            color="#5b8dee"
+          />
+        </Pressable>
+      )}
       <Pressable onPress={onRemove} hitSlop={8}>
         <Text className="text-[16px] text-faint">×</Text>
       </Pressable>

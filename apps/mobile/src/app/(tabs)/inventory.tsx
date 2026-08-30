@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -7,19 +8,22 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import {
-  NUTRITION_CATEGORIES,
   daysLabel,
   freshColor,
-  guessNutritionCategory,
+  type Category,
   type FlatItem,
-  type NutritionCategory,
 } from "@thatfridge/core";
 import { useInventory } from "@/lib/inventory";
+import { useCategories } from "@/lib/categories";
 import { useScope, scopeItems } from "@/lib/scope";
 import { PixelText } from "@/components/brand";
 import { FridgeScopePicker } from "@/components/fridge-scope";
@@ -34,6 +38,9 @@ const HAIRLINE = "rgba(255,255,255,0.09)";
 const INK = "#eaeaec";
 const BLUE = "#5b8dee";
 const FAINT = "rgba(234,234,236,0.34)";
+const MUTED = "rgba(234,234,236,0.58)";
+
+const UNCATEGORIZED = "__uncat__";
 
 type Sort = "category" | "expiry" | "name";
 const SORT_OPTIONS: { key: Sort; label: string }[] = [
@@ -42,42 +49,43 @@ const SORT_OPTIONS: { key: Sort; label: string }[] = [
   { key: "name", label: "Name" },
 ];
 
-const resolveCategory = (item: FlatItem): NutritionCategory =>
-  item.nutritionCategory ?? guessNutritionCategory(item.icon) ?? "other_extras";
-
 export default function Inventory() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { items, loading, error, refresh } = useInventory();
+  const { categories, assign } = useCategories();
   const { scope } = useScope();
 
   const [sort, setSort] = useState<Sort>("expiry");
   const [sortMenu, setSortMenu] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState<
-    NutritionCategory | "all"
-  >("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [refreshing, setRefreshing] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [moveOpen, setMoveOpen] = useState(false);
+  const selecting = selected.size > 0;
 
   const showFridgeTags = scope === "all";
   const allItems = useMemo(() => scopeItems(items, scope), [items, scope]);
 
-  const categories = useMemo(() => {
-    const present = new Set(allItems.map(resolveCategory));
-    return [
-      { id: "all" as const, name: "All" },
-      ...NUTRITION_CATEGORIES.filter((c) => present.has(c.key)).map((c) => ({
-        id: c.key,
-        name: c.label,
-      })),
-    ];
-  }, [allItems]);
-
-  const filtered = useMemo(
-    () =>
-      categoryFilter === "all"
-        ? allItems
-        : allItems.filter((i) => resolveCategory(i) === categoryFilter),
-    [allItems, categoryFilter],
+  const hasUncat = useMemo(
+    () => allItems.some((i) => !i.categoryId),
+    [allItems],
   );
+  const chips = useMemo(
+    () => [
+      { id: "all", name: "All" },
+      ...categories.map((c) => ({ id: c.id, name: c.name })),
+      ...(hasUncat ? [{ id: UNCATEGORIZED, name: "Uncategorized" }] : []),
+    ],
+    [categories, hasUncat],
+  );
+
+  const filtered = useMemo(() => {
+    if (categoryFilter === "all") return allItems;
+    if (categoryFilter === UNCATEGORIZED)
+      return allItems.filter((i) => !i.categoryId);
+    return allItems.filter((i) => i.categoryId === categoryFilter);
+  }, [allItems, categoryFilter]);
 
   const sorted = useMemo(() => {
     if (sort === "expiry")
@@ -89,19 +97,49 @@ export default function Inventory() {
 
   const grouped = useMemo(() => {
     if (sort !== "category") return null;
-    return NUTRITION_CATEGORIES.map((c) => ({
-      id: c.key,
-      name: c.label,
-      items: filtered
-        .filter((i) => resolveCategory(i) === c.key)
-        .sort((a, b) => a.freshness - b.freshness),
-    })).filter((g) => g.items.length > 0);
-  }, [filtered, sort]);
+    const byExpiry = (a: FlatItem, b: FlatItem) => a.freshness - b.freshness;
+    return [
+      ...categories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        items: filtered.filter((i) => i.categoryId === c.id).sort(byExpiry),
+      })),
+      {
+        id: UNCATEGORIZED,
+        name: "Uncategorized",
+        items: filtered.filter((i) => !i.categoryId).sort(byExpiry),
+      },
+    ].filter((g) => g.items.length > 0);
+  }, [filtered, sort, categories]);
 
   async function onRefresh() {
     setRefreshing(true);
     await refresh();
     setRefreshing(false);
+  }
+
+  const toggleSelect = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const startSelect = (id: string) => {
+    void Haptics.selectionAsync();
+    setSelected(new Set([id]));
+  };
+
+  async function moveTo(categoryId: string | null) {
+    const ids = [...selected];
+    setMoveOpen(false);
+    setSelected(new Set());
+    try {
+      await assign(ids, categoryId);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      /* assign() rolls nothing back locally; refresh on next load */
+    }
   }
 
   return (
@@ -130,36 +168,8 @@ export default function Inventory() {
             Inventory
           </PixelText>
           <View style={{ flexDirection: "row", gap: 8 }}>
-            <Pressable onPress={() => router.push("/search")} hitSlop={8}>
-              <View
-                style={{
-                  height: 34,
-                  width: 34,
-                  borderRadius: 17,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: SURFACE,
-                  borderWidth: 1,
-                  borderColor: HAIRLINE,
-                }}
-              >
-                <Ionicons name="search" size={16} color={INK} />
-              </View>
-            </Pressable>
-            <Pressable onPress={() => router.push("/add")} hitSlop={8}>
-              <View
-                style={{
-                  height: 34,
-                  width: 34,
-                  borderRadius: 17,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: ACCENT,
-                }}
-              >
-                <Ionicons name="add" size={20} color="#0a0a0c" />
-              </View>
-            </Pressable>
+            <HeaderBtn icon="search" onPress={() => router.push("/search")} />
+            <HeaderBtn icon="add" accent onPress={() => router.push("/add")} />
           </View>
         </View>
 
@@ -180,13 +190,7 @@ export default function Inventory() {
             }}
           >
             <Text style={{ fontWeight: "600", color: "#ff5567" }}>{error}</Text>
-            <Text
-              style={{
-                marginTop: 2,
-                fontSize: 12,
-                color: "rgba(234,234,236,0.58)",
-              }}
-            >
+            <Text style={{ marginTop: 2, fontSize: 12, color: MUTED }}>
               Tap to retry.
             </Text>
           </Pressable>
@@ -198,7 +202,6 @@ export default function Inventory() {
           </View>
         ) : (
           <>
-            {/* all items + sort */}
             <View
               style={{
                 flexDirection: "row",
@@ -209,152 +212,161 @@ export default function Inventory() {
               }}
             >
               <Text style={{ fontSize: 15, fontWeight: "700", color: INK }}>
-                All items
+                {selecting ? `${selected.size} selected` : "All items"}
               </Text>
-              <View>
-                <Pressable
-                  onPress={() => setSortMenu((v) => !v)}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 5,
-                    paddingVertical: 6,
-                    paddingHorizontal: 10,
-                    borderRadius: 6,
-                    backgroundColor: SURFACE,
-                    borderWidth: 1,
-                    borderColor: HAIRLINE,
-                  }}
-                >
-                  <MaterialCommunityIcons
-                    name="filter-variant"
-                    size={13}
-                    color={INK}
-                  />
+              {selecting ? (
+                <Pressable onPress={() => setSelected(new Set())} hitSlop={8}>
                   <Text
-                    style={{ fontSize: 11.5, fontWeight: "700", color: INK }}
+                    style={{ fontSize: 12.5, fontWeight: "700", color: BLUE }}
                   >
-                    {SORT_OPTIONS.find((o) => o.key === sort)?.label}
+                    Cancel
                   </Text>
                 </Pressable>
-                {sortMenu && (
-                  <View
-                    style={{
-                      position: "absolute",
-                      right: 0,
-                      top: 38,
-                      minWidth: 120,
-                      backgroundColor: SURFACE,
-                      borderRadius: 6,
-                      borderWidth: 1,
-                      borderColor: HAIRLINE,
-                      padding: 6,
-                    }}
-                  >
-                    {SORT_OPTIONS.map((opt) => (
-                      <Pressable
-                        key={opt.key}
-                        onPress={() => {
-                          setSort(opt.key);
-                          setSortMenu(false);
-                        }}
-                        style={{
-                          paddingVertical: 8,
-                          paddingHorizontal: 10,
-                          borderRadius: 6,
-                          backgroundColor:
-                            sort === opt.key ? SURFACE2 : "transparent",
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 12.5,
-                            fontWeight: "600",
-                            color: sort === opt.key ? BLUE : INK,
-                          }}
-                        >
-                          {opt.label}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* category chips */}
-            {categories.length > 1 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={{ marginHorizontal: -20, marginBottom: 14 }}
-                contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
-              >
-                {categories.map((cat) => {
-                  const active = categoryFilter === cat.id;
-                  return (
-                    <Pressable
-                      key={cat.id}
-                      onPress={() => setCategoryFilter(cat.id)}
-                      style={{
-                        paddingVertical: 7,
-                        paddingHorizontal: 14,
-                        borderRadius: 6,
-                        backgroundColor: active ? INK : SURFACE,
-                        borderWidth: active ? 0 : 1,
-                        borderColor: HAIRLINE,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontSize: 12.5,
-                          fontWeight: "700",
-                          color: active ? "#0a0a0c" : INK,
-                        }}
-                      >
-                        {cat.name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            )}
-
-            {filtered.length === 0 ? (
-              <View style={{ marginTop: 40, alignItems: "center", gap: 14 }}>
-                <Text
-                  style={{ textAlign: "center", fontSize: 13, color: FAINT }}
-                >
-                  {items.length === 0
-                    ? "Nothing in your fridge yet."
-                    : "No items in this category."}
-                </Text>
-                {items.length === 0 && (
+              ) : (
+                <View>
                   <Pressable
-                    onPress={() => router.push("/add")}
+                    onPress={() => setSortMenu((v) => !v)}
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
-                      gap: 6,
-                      backgroundColor: ACCENT,
-                      paddingVertical: 10,
-                      paddingHorizontal: 18,
-                      borderRadius: 8,
+                      gap: 5,
+                      paddingVertical: 6,
+                      paddingHorizontal: 10,
+                      borderRadius: 6,
+                      backgroundColor: SURFACE,
+                      borderWidth: 1,
+                      borderColor: HAIRLINE,
                     }}
                   >
-                    <Ionicons name="add" size={16} color="#0a0a0c" />
+                    <MaterialCommunityIcons
+                      name="filter-variant"
+                      size={13}
+                      color={INK}
+                    />
                     <Text
-                      style={{
-                        fontSize: 13,
-                        fontWeight: "700",
-                        color: "#0a0a0c",
-                      }}
+                      style={{ fontSize: 11.5, fontWeight: "700", color: INK }}
                     >
-                      Add an item
+                      {SORT_OPTIONS.find((o) => o.key === sort)?.label}
                     </Text>
                   </Pressable>
-                )}
-              </View>
+                  {sortMenu && (
+                    <View
+                      style={{
+                        position: "absolute",
+                        right: 0,
+                        top: 38,
+                        minWidth: 120,
+                        backgroundColor: SURFACE,
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: HAIRLINE,
+                        padding: 6,
+                      }}
+                    >
+                      {SORT_OPTIONS.map((opt) => (
+                        <Pressable
+                          key={opt.key}
+                          onPress={() => {
+                            setSort(opt.key);
+                            setSortMenu(false);
+                          }}
+                          style={{
+                            paddingVertical: 8,
+                            paddingHorizontal: 10,
+                            borderRadius: 6,
+                            backgroundColor:
+                              sort === opt.key ? SURFACE2 : "transparent",
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 12.5,
+                              fontWeight: "600",
+                              color: sort === opt.key ? BLUE : INK,
+                            }}
+                          >
+                            {opt.label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+
+            {/* category chips */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginHorizontal: -20, marginBottom: 14 }}
+              contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+            >
+              {chips.map((cat) => {
+                const active = categoryFilter === cat.id;
+                return (
+                  <Pressable
+                    key={cat.id}
+                    onPress={() => setCategoryFilter(cat.id)}
+                    style={{
+                      paddingVertical: 7,
+                      paddingHorizontal: 14,
+                      borderRadius: 6,
+                      backgroundColor: active ? INK : SURFACE,
+                      borderWidth: active ? 0 : 1,
+                      borderColor: HAIRLINE,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12.5,
+                        fontWeight: "700",
+                        color: active ? "#0a0a0c" : INK,
+                      }}
+                    >
+                      {cat.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+              <Pressable
+                onPress={() => router.push("/categories")}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                  paddingVertical: 7,
+                  paddingHorizontal: 12,
+                  borderRadius: 6,
+                  borderWidth: 1,
+                  borderColor: HAIRLINE,
+                  borderStyle: "dashed",
+                }}
+              >
+                <MaterialCommunityIcons
+                  name="pencil-outline"
+                  size={12}
+                  color={MUTED}
+                />
+                <Text style={{ fontSize: 12, fontWeight: "700", color: MUTED }}>
+                  Categories
+                </Text>
+              </Pressable>
+            </ScrollView>
+
+            {filtered.length === 0 ? (
+              <Text
+                style={{
+                  marginTop: 40,
+                  textAlign: "center",
+                  fontSize: 13,
+                  color: FAINT,
+                }}
+              >
+                {items.length === 0
+                  ? "Nothing in your fridge yet."
+                  : "Nothing in this category."}
+              </Text>
             ) : grouped ? (
               grouped.map((g) => (
                 <View key={g.id} style={{ marginBottom: 22 }}>
@@ -367,7 +379,11 @@ export default function Inventory() {
                     }}
                   >
                     <Text
-                      style={{ fontSize: 15, fontWeight: "700", color: INK }}
+                      style={{
+                        fontSize: 15,
+                        fontWeight: "700",
+                        color: g.id === UNCATEGORIZED ? MUTED : INK,
+                      }}
                     >
                       {g.name}
                     </Text>
@@ -390,7 +406,14 @@ export default function Inventory() {
                         item={item}
                         last={i === g.items.length - 1}
                         showFridge={showFridgeTags}
-                        onPress={() => router.push(`/item/${item.id}`)}
+                        selecting={selecting}
+                        selected={selected.has(item.id)}
+                        onPress={() =>
+                          selecting
+                            ? toggleSelect(item.id)
+                            : router.push(`/item/${item.id}`)
+                        }
+                        onLongPress={() => startSelect(item.id)}
                       />
                     ))}
                   </View>
@@ -413,7 +436,14 @@ export default function Inventory() {
                     item={item}
                     last={i === sorted.length - 1}
                     showFridge={showFridgeTags}
-                    onPress={() => router.push(`/item/${item.id}`)}
+                    selecting={selecting}
+                    selected={selected.has(item.id)}
+                    onPress={() =>
+                      selecting
+                        ? toggleSelect(item.id)
+                        : router.push(`/item/${item.id}`)
+                    }
+                    onLongPress={() => startSelect(item.id)}
                   />
                 ))}
               </View>
@@ -421,7 +451,224 @@ export default function Inventory() {
           </>
         )}
       </ScrollView>
+
+      {/* selection action bar */}
+      {selecting && (
+        <View
+          style={{
+            position: "absolute",
+            left: 16,
+            right: 16,
+            bottom: (insets.bottom || 10) + 78,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            backgroundColor: SURFACE,
+            borderWidth: 1,
+            borderColor: HAIRLINE,
+            borderRadius: 14,
+            padding: 10,
+          }}
+        >
+          <Text
+            style={{
+              flex: 1,
+              marginLeft: 4,
+              fontSize: 13,
+              fontWeight: "700",
+              color: INK,
+            }}
+          >
+            {selected.size} selected
+          </Text>
+          <Pressable
+            onPress={() => setMoveOpen(true)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 5,
+              backgroundColor: ACCENT,
+              paddingVertical: 9,
+              paddingHorizontal: 14,
+              borderRadius: 8,
+            }}
+          >
+            <MaterialCommunityIcons
+              name="folder-move-outline"
+              size={15}
+              color="#0a0a0c"
+            />
+            <Text
+              style={{ fontSize: 12.5, fontWeight: "800", color: "#0a0a0c" }}
+            >
+              Move to…
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
+      <MoveToSheet
+        visible={moveOpen}
+        categories={categories}
+        count={selected.size}
+        onClose={() => setMoveOpen(false)}
+        onPick={moveTo}
+        onManage={() => {
+          setMoveOpen(false);
+          router.push("/categories");
+        }}
+      />
     </SafeAreaView>
+  );
+}
+
+function MoveToSheet({
+  visible,
+  categories,
+  count,
+  onClose,
+  onPick,
+  onManage,
+}: {
+  visible: boolean;
+  categories: Category[];
+  count: number;
+  onClose: () => void;
+  onPick: (categoryId: string | null) => void;
+  onManage: () => void;
+}) {
+  return (
+    <Modal
+      transparent
+      visible={visible}
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <Pressable
+        onPress={onClose}
+        style={{
+          flex: 1,
+          justifyContent: "flex-end",
+          backgroundColor: "rgba(0,0,0,0.55)",
+        }}
+      >
+        <Pressable
+          onPress={() => {}}
+          style={{
+            backgroundColor: SURFACE,
+            borderTopLeftRadius: 18,
+            borderTopRightRadius: 18,
+            paddingHorizontal: 16,
+            paddingTop: 14,
+            paddingBottom: 34,
+          }}
+        >
+          <View
+            style={{
+              alignSelf: "center",
+              width: 36,
+              height: 4,
+              borderRadius: 2,
+              backgroundColor: HAIRLINE,
+              marginBottom: 12,
+            }}
+          />
+          <Text
+            style={{
+              fontSize: 13,
+              fontWeight: "700",
+              color: FAINT,
+              marginBottom: 10,
+            }}
+          >
+            Move {count} item{count === 1 ? "" : "s"} to…
+          </Text>
+          <ScrollView style={{ maxHeight: 340 }}>
+            {categories.map((c) => (
+              <Pressable
+                key={c.id}
+                onPress={() => onPick(c.id)}
+                style={{
+                  paddingVertical: 13,
+                  paddingHorizontal: 10,
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: "600", color: INK }}>
+                  {c.name}
+                </Text>
+              </Pressable>
+            ))}
+            <Pressable
+              onPress={() => onPick(null)}
+              style={{
+                paddingVertical: 13,
+                paddingHorizontal: 10,
+                borderRadius: 8,
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: "600", color: MUTED }}>
+                Uncategorized (clear)
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={onManage}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                paddingVertical: 13,
+                paddingHorizontal: 10,
+                borderRadius: 8,
+                borderTopWidth: 1,
+                borderTopColor: HAIRLINE,
+                marginTop: 4,
+              }}
+            >
+              <MaterialCommunityIcons name="plus" size={15} color={ACCENT} />
+              <Text
+                style={{ fontSize: 13.5, fontWeight: "700", color: ACCENT }}
+              >
+                New / manage categories
+              </Text>
+            </Pressable>
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function HeaderBtn({
+  icon,
+  accent,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  accent?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} hitSlop={8}>
+      <View
+        style={{
+          height: 34,
+          width: 34,
+          borderRadius: 17,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: accent ? ACCENT : SURFACE,
+          borderWidth: accent ? 0 : 1,
+          borderColor: HAIRLINE,
+        }}
+      >
+        <Ionicons
+          name={icon}
+          size={accent ? 20 : 16}
+          color={accent ? "#0a0a0c" : INK}
+        />
+      </View>
+    </Pressable>
   );
 }
 
@@ -429,12 +676,18 @@ function ItemRow({
   item,
   last,
   showFridge,
+  selecting,
+  selected,
   onPress,
+  onLongPress,
 }: {
   item: FlatItem;
   last: boolean;
   showFridge: boolean;
+  selecting: boolean;
+  selected: boolean;
   onPress: () => void;
+  onLongPress: () => void;
 }) {
   const { setItemQty } = useInventory();
   const fresh = freshColor(item.freshness);
@@ -442,6 +695,8 @@ function ItemRow({
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={280}
       style={{
         flexDirection: "row",
         alignItems: "center",
@@ -450,25 +705,45 @@ function ItemRow({
         paddingHorizontal: 14,
         borderBottomWidth: last ? 0 : 1,
         borderBottomColor: HAIRLINE,
+        backgroundColor: selected ? "rgba(38,198,218,0.12)" : "transparent",
       }}
     >
-      <View
-        style={{
-          width: 38,
-          height: 38,
-          borderRadius: 6,
-          backgroundColor: SURFACE2,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <FoodIcon
-          icon={item.icon}
-          iconUrl={item.iconUrl}
-          name={item.name}
-          size={30}
-        />
-      </View>
+      {selecting ? (
+        <View
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            borderWidth: 1.5,
+            borderColor: selected ? ACCENT : "rgba(255,255,255,0.25)",
+            backgroundColor: selected ? ACCENT : "transparent",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {selected && (
+            <MaterialCommunityIcons name="check" size={13} color="#0a0a0c" />
+          )}
+        </View>
+      ) : (
+        <View
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 6,
+            backgroundColor: SURFACE2,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <FoodIcon
+            icon={item.icon}
+            iconUrl={item.iconUrl}
+            name={item.name}
+            size={30}
+          />
+        </View>
+      )}
 
       <View style={{ flex: 1, minWidth: 0 }}>
         <View
@@ -539,34 +814,36 @@ function ItemRow({
             {item.note}
           </Text>
         )}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            marginTop: 6,
-          }}
-        >
-          <Stepper
-            icon="minus"
-            onPress={() => setItemQty(item.id, item.qty - 1)}
-          />
-          <Text
+        {!selecting && (
+          <View
             style={{
-              minWidth: 14,
-              textAlign: "center",
-              fontSize: 12,
-              fontWeight: "700",
-              color: INK,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              marginTop: 6,
             }}
           >
-            {item.qty}
-          </Text>
-          <Stepper
-            icon="plus"
-            onPress={() => setItemQty(item.id, item.qty + 1)}
-          />
-        </View>
+            <Stepper
+              icon="minus"
+              onPress={() => setItemQty(item.id, item.qty - 1)}
+            />
+            <Text
+              style={{
+                minWidth: 14,
+                textAlign: "center",
+                fontSize: 12,
+                fontWeight: "700",
+                color: INK,
+              }}
+            >
+              {item.qty}
+            </Text>
+            <Stepper
+              icon="plus"
+              onPress={() => setItemQty(item.id, item.qty + 1)}
+            />
+          </View>
+        )}
       </View>
     </Pressable>
   );

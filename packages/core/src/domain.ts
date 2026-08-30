@@ -21,7 +21,8 @@ const AGENT_KEYWORDS: { agent: ChatAgentName; pattern: RegExp }[] = [
   },
   {
     agent: "Chef",
-    pattern: /\b(cook|recipe|meal|make (for|tonight)|dinner|lunch|breakfast|dish|ingredients)\b/i,
+    pattern:
+      /\b(cook|recipe|meal|make (for|tonight)|dinner|lunch|breakfast|dish|ingredients)\b/i,
   },
 ];
 
@@ -46,6 +47,15 @@ export function freshColor(freshness: number): string {
 export function daysLabel(days: number): string {
   if (days < 0) return "Expired";
   return days <= 1 ? "Today" : `${days}d left`;
+}
+
+// A pasted "amazon.com/dp/..." with no scheme would trip the backend's `url` validator —
+// prepend https:// rather than rejecting it, since that's obviously what was meant.
+// Mirrors normalizeShopUrl in apps/web/lib/thatfridge/useThatFridge.ts.
+export function normalizeShopUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
 export function timeAgo(ms: number): string {
@@ -73,18 +83,21 @@ const ICON_NUTRITION_CATEGORY: Record<string, NutritionCategory> = {
   leftovers: "other_extras",
 };
 
-export function guessNutritionCategory(icon: string | null | undefined): NutritionCategory | null {
+export function guessNutritionCategory(
+  icon: string | null | undefined,
+): NutritionCategory | null {
   return (icon && ICON_NUTRITION_CATEGORY[icon]) || null;
 }
 
-export const NUTRITION_CATEGORIES: { key: NutritionCategory; label: string }[] = [
-  { key: "protein", label: "Protein" },
-  { key: "vegetables", label: "Vegetables" },
-  { key: "fruit", label: "Fruit" },
-  { key: "grains", label: "Grains & Starches" },
-  { key: "dairy", label: "Dairy" },
-  { key: "other_extras", label: "Other/Extras" },
-];
+export const NUTRITION_CATEGORIES: { key: NutritionCategory; label: string }[] =
+  [
+    { key: "protein", label: "Protein" },
+    { key: "vegetables", label: "Vegetables" },
+    { key: "fruit", label: "Fruit" },
+    { key: "grains", label: "Grains & Starches" },
+    { key: "dairy", label: "Dairy" },
+    { key: "other_extras", label: "Other/Extras" },
+  ];
 
 export const STORAGE_LOCATIONS: {
   key: StorageLocation;

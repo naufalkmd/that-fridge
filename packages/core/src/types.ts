@@ -11,12 +11,23 @@ export type StorageLocation = "fridge" | "freezer" | "pantry";
 // Balance score's variety calculation - see NUTRITION_CATEGORIES in data.ts and scoring.ts.
 export type NutritionCategory = "protein" | "vegetables" | "fruit" | "grains" | "dairy" | "other_extras";
 
+// A free user-defined organisational label for the Inventory filter/grouping bar. Entirely
+// separate from NutritionCategory — categories never touch the Food Balance / Waste Saver
+// scores or the Balanced Plate badge.
+export interface Category {
+  id: string;
+  name: string;
+  color: string | null;
+  position: number;
+}
+
 export interface Item {
   id: string;
   name: string;
   icon: string;
   iconUrl?: string | null;
   nutritionCategory?: NutritionCategory | null;
+  categoryId?: string | null;
   freshness: number;
   days: number;
   note: string;

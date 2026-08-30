@@ -2,6 +2,7 @@ import { ApiError, type HttpClient, type TokenStore } from "./http";
 import type {
   BadgeKey,
   BadgeProgress,
+  Category,
   CurrentUser,
   FoodFocus,
   FriendProfile,
@@ -51,6 +52,7 @@ interface RawItem {
   icon: string;
   icon_url: string | null;
   nutrition_category: NutritionCategory | null;
+  category_id: string | null;
   freshness: number | null;
   days: number | null;
   opened?: boolean;
@@ -83,6 +85,7 @@ function toItem(raw: RawItem): Item {
     icon: raw.icon,
     iconUrl: raw.icon_url ?? null,
     nutritionCategory: raw.nutrition_category ?? null,
+    categoryId: raw.category_id ?? null,
     freshness: raw.freshness ?? 0,
     days: raw.days ?? 0,
     note: raw.note ?? "",
@@ -114,6 +117,7 @@ export interface CreateItemInput {
   icon: string;
   icon_url?: string | null;
   nutrition_category?: NutritionCategory | null;
+  category_id?: string | null;
   location?: StorageLocation;
   quantity?: number;
   expiry_date?: string;
@@ -291,7 +295,12 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     email: string,
     password: string,
   ): Promise<AuthResult> {
-    const res = await http.post<AuthResult>("/register", { name, username, email, password });
+    const res = await http.post<AuthResult>("/register", {
+      name,
+      username,
+      email,
+      password,
+    });
     await tokens.set(res.token);
     return res;
   }
@@ -356,11 +365,19 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return toFridge(await http.post<RawFridge>("/fridges", { name }));
   }
 
-  async function createSection(fridgeId: string, name: string): Promise<Section> {
-    return toSection(await http.post<RawSection>(`/fridges/${fridgeId}/sections`, { name }));
+  async function createSection(
+    fridgeId: string,
+    name: string,
+  ): Promise<Section> {
+    return toSection(
+      await http.post<RawSection>(`/fridges/${fridgeId}/sections`, { name }),
+    );
   }
 
-  async function createItem(sectionId: string, data: CreateItemInput): Promise<Item> {
+  async function createItem(
+    sectionId: string,
+    data: CreateItemInput,
+  ): Promise<Item> {
     const raw = await http.post<RawItem>(`/sections/${sectionId}/items`, data);
     return toItem(raw);
   }
@@ -374,7 +391,10 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     await http.del(`/items/${id}`);
   }
 
-  async function scanBarcode(sectionId: string, barcode: string): Promise<BarcodeSuggestion> {
+  async function scanBarcode(
+    sectionId: string,
+    barcode: string,
+  ): Promise<BarcodeSuggestion> {
     const res = await http.post<{ suggestion: BarcodeSuggestion }>(
       `/sections/${sectionId}/items/barcode`,
       { barcode },
@@ -387,23 +407,37 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   function scanReceipt(sectionId: string, image: unknown): Promise<ScanResult> {
     const fd = new FormData();
     fd.append("image", image as never);
-    return http.post<ScanResult>(`/sections/${sectionId}/items/receipt/scan`, fd);
+    return http.post<ScanResult>(
+      `/sections/${sectionId}/items/receipt/scan`,
+      fd,
+    );
   }
-  function scanFridgePhoto(sectionId: string, image: unknown): Promise<ScanResult> {
+  function scanFridgePhoto(
+    sectionId: string,
+    image: unknown,
+  ): Promise<ScanResult> {
     const fd = new FormData();
     fd.append("image", image as never);
     return http.post<ScanResult>(`/sections/${sectionId}/items/photo/scan`, fd);
   }
 
   /** Read the printed best-before date off a package photo. `found: false` when nothing legible. */
-  function scanExpiryPhoto(sectionId: string, image: unknown): Promise<ExpiryScanResult> {
+  function scanExpiryPhoto(
+    sectionId: string,
+    image: unknown,
+  ): Promise<ExpiryScanResult> {
     const fd = new FormData();
     fd.append("image", image as never);
-    return http.post<ExpiryScanResult>(`/sections/${sectionId}/items/expiry-scan`, fd);
+    return http.post<ExpiryScanResult>(
+      `/sections/${sectionId}/items/expiry-scan`,
+      fd,
+    );
   }
 
   /** AI icon generation (fal.ai, throttled 10/min) — the result is auto-saved to the library. */
-  function generateIcon(prompt: string): Promise<{ icon_url: string; generated_icon_id: string }> {
+  function generateIcon(
+    prompt: string,
+  ): Promise<{ icon_url: string; generated_icon_id: string }> {
     return http.post("/icons/generate", { prompt });
   }
   /** The current user's saved AI-generated icons, newest first. */
@@ -426,15 +460,22 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.get<NotificationEvent[]>("/notification-events");
   }
 
-  function markNotification(id: string, done: boolean): Promise<NotificationEvent> {
-    return http.patch<NotificationEvent>(`/notification-events/${id}`, { done });
+  function markNotification(
+    id: string,
+    done: boolean,
+  ): Promise<NotificationEvent> {
+    return http.patch<NotificationEvent>(`/notification-events/${id}`, {
+      done,
+    });
   }
 
   function getNotificationPrefs(): Promise<NotificationPrefs> {
     return http.get<NotificationPrefs>("/notification-prefs");
   }
 
-  function updateNotificationPrefs(data: Partial<NotificationPrefs>): Promise<NotificationPrefs> {
+  function updateNotificationPrefs(
+    data: Partial<NotificationPrefs>,
+  ): Promise<NotificationPrefs> {
     return http.patch<NotificationPrefs>("/notification-prefs", data);
   }
 
@@ -442,23 +483,71 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.get<ShoppingItem[]>("/shopping-items");
   }
 
-  function addShoppingItem(fridgeId: string, name: string): Promise<ShoppingItem> {
+  function addShoppingItem(
+    fridgeId: string,
+    name: string,
+    shopUrl?: string | null,
+  ): Promise<ShoppingItem> {
     return http.post<ShoppingItem>(`/fridges/${fridgeId}/shopping-items`, {
       name,
       icon: null,
       section: "other",
+      ...(shopUrl ? { shopUrl } : {}),
     });
   }
 
   function updateShoppingItem(
     id: string,
-    data: Partial<{ name: string; checked: boolean; section: string }>,
+    data: Partial<{
+      name: string;
+      checked: boolean;
+      section: string;
+      shopUrl: string | null;
+    }>,
   ): Promise<ShoppingItem> {
     return http.patch<ShoppingItem>(`/shopping-items/${id}`, data);
   }
 
   function deleteShoppingItem(id: string): Promise<void> {
     return http.del(`/shopping-items/${id}`).then(() => undefined);
+  }
+
+  // ---- categories (user-defined Inventory labels) --------------------------
+
+  function listCategories(): Promise<Category[]> {
+    return http.get<Category[]>("/categories");
+  }
+
+  function createCategory(
+    name: string,
+    color?: string | null,
+  ): Promise<Category> {
+    return http.post<Category>("/categories", {
+      name,
+      ...(color ? { color } : {}),
+    });
+  }
+
+  function updateCategory(
+    id: string,
+    data: Partial<{ name: string; color: string | null; position: number }>,
+  ): Promise<Category> {
+    return http.patch<Category>(`/categories/${id}`, data);
+  }
+
+  function deleteCategory(id: string): Promise<void> {
+    return http.del(`/categories/${id}`).then(() => undefined);
+  }
+
+  /** Assign (or clear, with null) a category on many items at once. Returns how many changed. */
+  function setItemsCategory(
+    itemIds: string[],
+    categoryId: string | null,
+  ): Promise<{ updated: number }> {
+    return http.patch<{ updated: number }>("/items/bulk-category", {
+      item_ids: itemIds,
+      category_id: categoryId,
+    });
   }
 
   function suggestRecipes(params: {
@@ -500,7 +589,10 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   function createRecipe(data: RecipeInput): Promise<Recipe> {
     return http.post<Recipe>("/recipes", data);
   }
-  function updateRecipe(id: string, data: Partial<RecipeInput>): Promise<Recipe> {
+  function updateRecipe(
+    id: string,
+    data: Partial<RecipeInput>,
+  ): Promise<Recipe> {
     return http.patch<Recipe>(`/recipes/${id}`, data);
   }
   /** Upload one recipe reference photo/video → its stored `{ type, url }`. */
@@ -536,7 +628,9 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.get<FridgeMember[]>(`/fridges/${fridgeId}/members`);
   }
   function removeFridgeMember(fridgeId: string, userId: string): Promise<void> {
-    return http.del(`/fridges/${fridgeId}/members/${userId}`).then(() => undefined);
+    return http
+      .del(`/fridges/${fridgeId}/members/${userId}`)
+      .then(() => undefined);
   }
   function leaveFridge(fridgeId: string): Promise<void> {
     return http.post(`/fridges/${fridgeId}/leave`).then(() => undefined);
@@ -544,10 +638,14 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
 
   // ---- social: friends, invites, join requests --------------------------------
   function searchUsers(q: string): Promise<UserSearchResult[]> {
-    return http.get<UserSearchResult[]>(`/users/search?q=${encodeURIComponent(q)}`);
+    return http.get<UserSearchResult[]>(
+      `/users/search?q=${encodeURIComponent(q)}`,
+    );
   }
   function getFriendProfile(username: string): Promise<FriendProfile> {
-    return http.get<FriendProfile>(`/users/${encodeURIComponent(username)}/profile`);
+    return http.get<FriendProfile>(
+      `/users/${encodeURIComponent(username)}/profile`,
+    );
   }
   function requestJoinFridge(fridgeId: string): Promise<FridgeJoinRequest> {
     return http.post<FridgeJoinRequest>(`/fridges/${fridgeId}/join-requests`);
@@ -555,8 +653,13 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   function listJoinRequests(fridgeId: string): Promise<FridgeJoinRequest[]> {
     return http.get<FridgeJoinRequest[]>(`/fridges/${fridgeId}/join-requests`);
   }
-  function inviteToFridge(fridgeId: string, userId: string): Promise<FridgeJoinRequest> {
-    return http.post<FridgeJoinRequest>(`/fridges/${fridgeId}/invites`, { userId });
+  function inviteToFridge(
+    fridgeId: string,
+    userId: string,
+  ): Promise<FridgeJoinRequest> {
+    return http.post<FridgeJoinRequest>(`/fridges/${fridgeId}/invites`, {
+      userId,
+    });
   }
   function getMyInvites(): Promise<MyInvite[]> {
     return http.get<MyInvite[]>("/invites");
@@ -606,10 +709,18 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   function getBadges(): Promise<BadgeProgress[]> {
     return http.get<BadgeProgress[]>("/badges");
   }
-  function postBadgeProgress(badgeKey: BadgeKey, incrementBy = 1): Promise<BadgeProgress> {
-    return http.post<BadgeProgress>(`/badges/${badgeKey}/progress`, { incrementBy });
+  function postBadgeProgress(
+    badgeKey: BadgeKey,
+    incrementBy = 1,
+  ): Promise<BadgeProgress> {
+    return http.post<BadgeProgress>(`/badges/${badgeKey}/progress`, {
+      incrementBy,
+    });
   }
-  function incrementOrganizerTally(data: { checked: number; correct: number }): Promise<OrganizerTally> {
+  function incrementOrganizerTally(data: {
+    checked: number;
+    correct: number;
+  }): Promise<OrganizerTally> {
     return http.post<OrganizerTally>("/organizer-tally/increment", data);
   }
 
@@ -618,7 +729,10 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.get<{ facts: string[] }>("/memory").then((r) => r.facts);
   }
   /** Fire-and-forget after a chat exchange — asks the model to update remembered facts. */
-  function extractMemory(userMessage: string, agentResponse: string): Promise<string[]> {
+  function extractMemory(
+    userMessage: string,
+    agentResponse: string,
+  ): Promise<string[]> {
     return http
       .post<{ facts: string[] }>("/memory/extract", {
         user_message: userMessage,
@@ -627,7 +741,9 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       .then((r) => r.facts);
   }
   function deleteMemoryFact(index: number): Promise<string[]> {
-    return http.del<{ facts: string[] }>(`/memory/facts/${index}`).then((r) => r.facts);
+    return http
+      .del<{ facts: string[] }>(`/memory/facts/${index}`)
+      .then((r) => r.facts);
   }
   function clearMemoryFacts(): Promise<void> {
     return http.del("/memory").then(() => undefined);
@@ -641,9 +757,13 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
 
   // ---- chat sessions -------------------------------------------------------
   function listChatSessions(): Promise<ChatSessionSummary[]> {
-    return http.get<{ sessions: ChatSessionSummary[] }>("/chat/sessions").then((r) => r.sessions);
+    return http
+      .get<{ sessions: ChatSessionSummary[] }>("/chat/sessions")
+      .then((r) => r.sessions);
   }
-  function getChatSessionMessages(sessionId: string): Promise<ChatHistoryResult> {
+  function getChatSessionMessages(
+    sessionId: string,
+  ): Promise<ChatHistoryResult> {
     return http.get<ChatHistoryResult>(`/chat/sessions/${sessionId}`);
   }
   function deleteChatSession(sessionId: string): Promise<void> {
@@ -663,7 +783,9 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.post<UsageHistoryEntry>("/usage-history", {
       name: data.name,
       icon: data.icon,
-      ...(data.daysRemaining !== undefined ? { daysRemaining: data.daysRemaining } : {}),
+      ...(data.daysRemaining !== undefined
+        ? { daysRemaining: data.daysRemaining }
+        : {}),
       ...(data.freshness !== undefined ? { freshness: data.freshness } : {}),
       ...(data.category ? { category: data.category } : {}),
     });
@@ -699,6 +821,11 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     addShoppingItem,
     updateShoppingItem,
     deleteShoppingItem,
+    listCategories,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    setItemsCategory,
     suggestRecipes,
     markRecipeMade,
     getUsageHistory,

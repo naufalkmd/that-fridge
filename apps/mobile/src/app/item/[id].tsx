@@ -21,6 +21,7 @@ import {
   daysLabel,
   describeError,
   freshColor,
+  normalizeShopUrl,
   type NutritionCategory,
   type StorageLocation,
 } from "@thatfridge/core";
@@ -60,7 +61,8 @@ function isoInDays(days: number): string {
 export default function ItemDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { itemById, fridges, setItemQty, patchItem, removeItem, restoreItem } = useInventory();
+  const { itemById, fridges, setItemQty, patchItem, removeItem, restoreItem } =
+    useInventory();
   const { items: shoppingItems, add: addToShopping } = useShopping();
   const { refresh: refreshScore } = useKitchenScore();
   const toast = useToast();
@@ -88,7 +90,9 @@ export default function ItemDetail() {
   if (!item) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas p-6">
-        <Text className="text-muted">This item is no longer in your fridge.</Text>
+        <Text className="text-muted">
+          This item is no longer in your fridge.
+        </Text>
         <Pressable onPress={() => router.back()} className="mt-4">
           <Text className="font-semibold text-accent">Close</Text>
         </Pressable>
@@ -96,7 +100,9 @@ export default function ItemDetail() {
     );
   }
 
-  const loc = STORAGE_LOCATIONS.find((l) => l.key === (item.location ?? "fridge"))!;
+  const loc = STORAGE_LOCATIONS.find(
+    (l) => l.key === (item.location ?? "fridge"),
+  )!;
   const fresh = freshColor(item.freshness);
 
   const tip =
@@ -128,7 +134,7 @@ export default function ItemDetail() {
         location,
         nutrition_category: category,
         note: note.trim(),
-        shop_url: shopUrl.trim() || null,
+        shop_url: normalizeShopUrl(shopUrl),
         ...(expiryDays != null
           ? { expiry_date: isoInDays(expiryDays), shelf_life_days: expiryDays }
           : {}),
@@ -184,27 +190,34 @@ export default function ItemDetail() {
 
   function throwAway() {
     const snap = item!;
-    Alert.alert("Throw away", `Bin "${snap.name}"? This doesn't count toward your scores.`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Throw away",
-        style: "destructive",
-        onPress: async () => {
-          setBusy(true);
-          try {
-            await removeItem(snap.id);
-            router.back();
-            toast.show(`Removed ${snap.name}`, {
-              actionLabel: "Undo",
-              onAction: () => restoreItem(snap),
-            });
-          } catch (e) {
-            setBusy(false);
-            Alert.alert("Error", e instanceof Error ? e.message : "Failed to remove.");
-          }
+    Alert.alert(
+      "Throw away",
+      `Bin "${snap.name}"? This doesn't count toward your scores.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Throw away",
+          style: "destructive",
+          onPress: async () => {
+            setBusy(true);
+            try {
+              await removeItem(snap.id);
+              router.back();
+              toast.show(`Removed ${snap.name}`, {
+                actionLabel: "Undo",
+                onAction: () => restoreItem(snap),
+              });
+            } catch (e) {
+              setBusy(false);
+              Alert.alert(
+                "Error",
+                e instanceof Error ? e.message : "Failed to remove.",
+              );
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   }
 
   if (editing) {
@@ -213,42 +226,86 @@ export default function ItemDetail() {
         className="flex-1 bg-canvas"
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <SheetHeader title="Edit item" onBack={() => setEditing(false)} onClose={() => setEditing(false)} />
+        <SheetHeader
+          title="Edit item"
+          onBack={() => setEditing(false)}
+          onClose={() => setEditing(false)}
+        />
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 4, paddingBottom: 40, gap: 16 }}
+          contentContainerStyle={{
+            paddingHorizontal: 22,
+            paddingTop: 4,
+            paddingBottom: 40,
+            gap: 16,
+          }}
           keyboardShouldPersistTaps="handled"
         >
           <Field label="NAME">
-            <TextInput value={name} onChangeText={setName} placeholderTextColor={FAINT} style={inputStyle} />
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholderTextColor={FAINT}
+              style={inputStyle}
+            />
           </Field>
           <Field label="ICON">
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <FoodIcon icon={item.icon} iconUrl={item.iconUrl} name={item.name} size={44} />
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
+            >
+              <FoodIcon
+                icon={item.icon}
+                iconUrl={item.iconUrl}
+                name={item.name}
+                size={44}
+              />
               <Pressable
-                onPress={() => router.push({ pathname: "/icon-picker", params: { itemId: item.id } })}
-                style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, backgroundColor: SURFACE2 }}
+                onPress={() =>
+                  router.push({
+                    pathname: "/icon-picker",
+                    params: { itemId: item.id },
+                  })
+                }
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                  backgroundColor: SURFACE2,
+                }}
               >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: INK }}>Change icon</Text>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: INK }}>
+                  Change icon
+                </Text>
               </Pressable>
             </View>
           </Field>
           <Field label="LOCATION">
             <ChipRow
-              options={STORAGE_LOCATIONS.map((l) => ({ key: l.key, label: l.label }))}
+              options={STORAGE_LOCATIONS.map((l) => ({
+                key: l.key,
+                label: l.label,
+              }))}
               value={location}
               onChange={(k) => setLocation(k as StorageLocation)}
             />
           </Field>
           <Field label="FOOD GROUP">
             <ChipRow
-              options={NUTRITION_CATEGORIES.map((c) => ({ key: c.key, label: c.label }))}
+              options={NUTRITION_CATEGORIES.map((c) => ({
+                key: c.key,
+                label: c.label,
+              }))}
               value={category}
-              onChange={(k) => setCategory(category === k ? null : (k as NutritionCategory))}
+              onChange={(k) =>
+                setCategory(category === k ? null : (k as NutritionCategory))
+              }
             />
           </Field>
           <Field label="BEST BEFORE">
             <ChipRow
-              options={BEST_BEFORE_PRESETS.map((p) => ({ key: String(p.days), label: p.label }))}
+              options={BEST_BEFORE_PRESETS.map((p) => ({
+                key: String(p.days),
+                label: p.label,
+              }))}
               value={expiryDays == null ? null : String(expiryDays)}
               onChange={(k) => setExpiryDays(Number(k))}
             />
@@ -282,19 +339,40 @@ export default function ItemDetail() {
           <View style={{ flexDirection: "row", gap: 12, marginTop: 4 }}>
             <Pressable
               onPress={() => setEditing(false)}
-              style={{ flex: 1, alignItems: "center", paddingVertical: 13, borderRadius: 6, backgroundColor: SURFACE2, borderWidth: 1, borderColor: HAIRLINE }}
+              style={{
+                flex: 1,
+                alignItems: "center",
+                paddingVertical: 13,
+                borderRadius: 6,
+                backgroundColor: SURFACE2,
+                borderWidth: 1,
+                borderColor: HAIRLINE,
+              }}
             >
               <Text style={{ fontWeight: "700", color: INK }}>Cancel</Text>
             </Pressable>
             <Pressable
               onPress={save}
               disabled={saving}
-              style={{ flex: 1, alignItems: "center", paddingVertical: 13, borderRadius: 6, backgroundColor: AMBER }}
+              style={{
+                flex: 1,
+                alignItems: "center",
+                paddingVertical: 13,
+                borderRadius: 6,
+                backgroundColor: AMBER,
+              }}
             >
               {saving ? (
                 <ActivityIndicator color="#0a0a0c" />
               ) : (
-                <Text style={{ fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
+                <Text
+                  style={{
+                    fontWeight: "700",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    color: "#0a0a0c",
+                  }}
+                >
                   Save
                 </Text>
               )}
@@ -310,7 +388,11 @@ export default function ItemDetail() {
       <SheetHeader title="Item" />
       <ScrollView
         className="flex-1 bg-canvas"
-        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 6, paddingBottom: 36 }}
+        contentContainerStyle={{
+          paddingHorizontal: 22,
+          paddingTop: 6,
+          paddingBottom: 36,
+        }}
       >
         <View style={{ alignItems: "center", marginBottom: 14 }}>
           <View
@@ -323,7 +405,12 @@ export default function ItemDetail() {
               justifyContent: "center",
             }}
           >
-            <FoodIcon icon={item.icon} iconUrl={item.iconUrl} name={item.name} size={52} />
+            <FoodIcon
+              icon={item.icon}
+              iconUrl={item.iconUrl}
+              name={item.name}
+              size={52}
+            />
           </View>
           <Pressable
             onPress={startEdit}
@@ -344,21 +431,77 @@ export default function ItemDetail() {
           </Pressable>
         </View>
 
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 2 }}>
-          <Text style={{ fontSize: 20, fontWeight: "700", color: INK, textAlign: "center" }}>{item.name}</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            marginBottom: 2,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: "700",
+              color: INK,
+              textAlign: "center",
+            }}
+          >
+            {item.name}
+          </Text>
           <CategoryTag category={item.nutritionCategory} />
         </View>
-        <Text style={{ textAlign: "center", fontSize: 12.5, color: FAINT, marginBottom: 18 }}>
+        <Text
+          style={{
+            textAlign: "center",
+            fontSize: 12.5,
+            color: FAINT,
+            marginBottom: 18,
+          }}
+        >
           {item.fridgeName}
         </Text>
 
-        <View style={{ backgroundColor: SURFACE2, borderRadius: 8, padding: 16, marginBottom: 14 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
-            <Text style={{ fontSize: 12.5, fontWeight: "600", color: INK }}>Freshness</Text>
-            <Text style={{ fontSize: 12.5, fontWeight: "600", color: fresh }}>{item.freshness}%</Text>
+        <View
+          style={{
+            backgroundColor: SURFACE2,
+            borderRadius: 8,
+            padding: 16,
+            marginBottom: 14,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginBottom: 6,
+            }}
+          >
+            <Text style={{ fontSize: 12.5, fontWeight: "600", color: INK }}>
+              Freshness
+            </Text>
+            <Text style={{ fontSize: 12.5, fontWeight: "600", color: fresh }}>
+              {item.freshness}%
+            </Text>
           </View>
-          <View style={{ height: 6, borderRadius: 3, backgroundColor: HAIRLINE, overflow: "hidden", marginBottom: 10 }}>
-            <View style={{ height: "100%", borderRadius: 3, width: `${Math.max(3, item.freshness)}%`, backgroundColor: fresh }} />
+          <View
+            style={{
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: HAIRLINE,
+              overflow: "hidden",
+              marginBottom: 10,
+            }}
+          >
+            <View
+              style={{
+                height: "100%",
+                borderRadius: 3,
+                width: `${Math.max(3, item.freshness)}%`,
+                backgroundColor: fresh,
+              }}
+            />
           </View>
           <Text style={{ fontSize: 12.5, color: MUTED }}>
             {daysLabel(item.days)}
@@ -366,24 +509,52 @@ export default function ItemDetail() {
           </Text>
         </View>
 
-        <View style={{ backgroundColor: SURFACE2, borderRadius: 6, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 16 }}>
-          <Text style={{ fontSize: 12.5, lineHeight: 18, color: INK }}>{tip}</Text>
+        <View
+          style={{
+            backgroundColor: SURFACE2,
+            borderRadius: 6,
+            paddingVertical: 10,
+            paddingHorizontal: 14,
+            marginBottom: 16,
+          }}
+        >
+          <Text style={{ fontSize: 12.5, lineHeight: 18, color: INK }}>
+            {tip}
+          </Text>
         </View>
 
         <View style={{ marginBottom: 14 }}>
-          <Text style={{ fontSize: 12.5, color: MUTED, marginBottom: 8 }}>Quantity</Text>
+          <Text style={{ fontSize: 12.5, color: MUTED, marginBottom: 8 }}>
+            Quantity
+          </Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-            <Step icon="minus" onPress={() => setItemQty(item.id, item.qty - 1)} />
-            <Text style={{ minWidth: 24, textAlign: "center", fontSize: 15, fontWeight: "700", color: INK }}>
+            <Step
+              icon="minus"
+              onPress={() => setItemQty(item.id, item.qty - 1)}
+            />
+            <Text
+              style={{
+                minWidth: 24,
+                textAlign: "center",
+                fontSize: 15,
+                fontWeight: "700",
+                color: INK,
+              }}
+            >
               {item.qty}
             </Text>
-            <Step icon="plus" onPress={() => setItemQty(item.id, item.qty + 1)} />
+            <Step
+              icon="plus"
+              onPress={() => setItemQty(item.id, item.qty + 1)}
+            />
           </View>
         </View>
 
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
           <Pressable
-            onPress={() => !onShoppingList && addToShopping(item.name)}
+            onPress={() =>
+              !onShoppingList && addToShopping(item.name, item.shopUrl)
+            }
             style={{
               flex: 1,
               flexDirection: "row",
@@ -402,8 +573,16 @@ export default function ItemDetail() {
               size={14}
               color={onShoppingList ? GOOD : BLUE}
             />
-            <Text style={{ fontSize: 13, fontWeight: "700", color: onShoppingList ? GOOD : BLUE }}>
-              {onShoppingList ? "On your shopping list" : "Add to shopping list"}
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: "700",
+                color: onShoppingList ? GOOD : BLUE,
+              }}
+            >
+              {onShoppingList
+                ? "On your shopping list"
+                : "Add to shopping list"}
             </Text>
           </Pressable>
           {!!item.shopUrl && (
@@ -443,7 +622,13 @@ export default function ItemDetail() {
               size={14}
               color={item.opened ? FAINT : BLUE}
             />
-            <Text style={{ fontSize: 13, fontWeight: "700", color: item.opened ? FAINT : BLUE }}>
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: "700",
+                color: item.opened ? FAINT : BLUE,
+              }}
+            >
               {item.opened ? "Opened — going bad sooner" : "Opened it"}
             </Text>
           </View>
@@ -453,9 +638,23 @@ export default function ItemDetail() {
           <Pressable
             onPress={usedItUp}
             disabled={busy}
-            style={{ flex: 1, alignItems: "center", paddingVertical: 13, borderRadius: 6, backgroundColor: AMBER }}
+            style={{
+              flex: 1,
+              alignItems: "center",
+              paddingVertical: 13,
+              borderRadius: 6,
+              backgroundColor: AMBER,
+            }}
           >
-            <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
+            <Text
+              style={{
+                fontSize: 13.5,
+                fontWeight: "700",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+                color: "#0a0a0c",
+              }}
+            >
               Used it up
             </Text>
           </Pressable>
@@ -472,7 +671,9 @@ export default function ItemDetail() {
               borderColor: `${BAD}66`,
             }}
           >
-            <Text style={{ fontSize: 13.5, fontWeight: "700", color: BAD }}>Throw away</Text>
+            <Text style={{ fontSize: 13.5, fontWeight: "700", color: BAD }}>
+              Throw away
+            </Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -491,10 +692,24 @@ const inputStyle = {
   color: INK,
 } as const;
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <View>
-      <Text style={{ marginBottom: 6, fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT }}>
+      <Text
+        style={{
+          marginBottom: 6,
+          fontSize: 12,
+          fontWeight: "700",
+          letterSpacing: 0.3,
+          color: FAINT,
+        }}
+      >
         {label}
       </Text>
       {children}
@@ -526,7 +741,13 @@ function ChipRow({
               backgroundColor: active ? AMBER : SURFACE2,
             }}
           >
-            <Text style={{ fontSize: 12, fontWeight: "700", color: active ? "#0a0a0c" : INK }}>
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: "700",
+                color: active ? "#0a0a0c" : INK,
+              }}
+            >
               {o.label}
             </Text>
           </Pressable>
@@ -536,7 +757,13 @@ function ChipRow({
   );
 }
 
-function Step({ icon, onPress }: { icon: "minus" | "plus"; onPress: () => void }) {
+function Step({
+  icon,
+  onPress,
+}: {
+  icon: "minus" | "plus";
+  onPress: () => void;
+}) {
   return (
     <Pressable
       onPress={onPress}
