@@ -2,7 +2,18 @@
 
 Get ThatFridge running locally, plus every wall we've actually hit and the fix that worked.
 
-_Last updated: 2026-08-28._
+_Last updated: 2026-08-30._
+
+## Where the other docs live
+
+| Doc | For |
+|---|---|
+| **this file** | getting a dev environment running · common errors |
+| `apps/mobile/CONTRIBUTING.md` | the day-to-day workflow — **merge = live (OTA), tag = native TestFlight build** |
+| `apps/mobile/RELEASE.md` | one-time release setup (App Store Connect API key, `EXPO_TOKEN`) + OTA/build commands |
+| `backend/DEPLOY.md` | deploying the API to the production VPS |
+| `apps/legal/README.md` | the `thatfridge.com` static site |
+| `TO_DO.md` | the launch plan + parity status |
 
 ---
 
@@ -14,9 +25,9 @@ _Last updated: 2026-08-28._
 |---|---|---|
 | **Node** | 20–22 | This repo's `engines` says ≥20. EAS CLI officially supports ≤22 — if you're on 24/25, `nvm install 22 && nvm use 22` for anything EAS. |
 | **pnpm** | 10.x | `corepack enable` then `corepack prepare pnpm@10.32.1 --activate`, or `npm i -g pnpm`. |
-| **PHP** | 8.2+ | + Composer. |
+| **PHP** | **8.4+** (8.5 recommended) | + Composer. `composer.lock` pulls Symfony 8 → needs PHP ≥ 8.4.1. On Ubuntu use `ppa:ondrej/php`. |
 | **Docker Desktop** | any | For Postgres + Redis. (Or bring your own Postgres 15/16 — see the Docker note.) |
-| **Xcode** | latest | macOS only, for the iOS Simulator. Not needed for Expo Go. |
+| **Xcode** | latest | macOS only, for the iOS Simulator + the dev client. |
 
 Backend and mobile talk over your LAN, so **your phone/simulator and your Mac must be on the
 same Wi-Fi**.
@@ -113,24 +124,25 @@ EXPO_PUBLIC_API_URL=http://192.168.x.x:8000/api
 EXPO_PUBLIC_RC_IOS_KEY=test_...
 ```
 
-Then, easiest first:
+**Use a development build, not Expo Go.** The app configures `react-native-purchases` on
+launch and uses `expo-camera` / `expo-notifications` — Expo Go can't load those. (It'll boot
+in Expo Go with the paywall / scan / notifications stubbed, fine for a quick JS-only glance,
+but not for real work.)
+
+**iOS Simulator dev client** (no paid Apple account — `eas.json` `development` profile is
+`ios.simulator: true`):
 
 ```bash
-pnpm mobile                      # from repo root — `expo start`, then press i / a / w or scan the QR
+cd apps/mobile
+pnpm exec eas login                                     # first time; needs access to the `avocacode` org
+pnpm exec eas build --profile development --platform ios      # points at localhost:8000
+# or --profile development-prod to point the dev client at https://api.thatfridge.com
+pnpm exec eas build:run -p ios                          # installs the finished build to a booted simulator
+pnpm exec expo start --dev-client                       # serve JS to it (press i to open)
 ```
 
-- **Expo Go** works for most of the app. `expo-camera` (barcode scan), `expo-notifications`,
-  and `react-native-purchases` (paywall) **do not** — those need a dev build.
-- **iOS Simulator without a paid Apple account:** the `eas.json` `development` profile is a
-  `ios.simulator: true` build.
-
-  ```bash
-  cd apps/mobile
-  pnpm exec eas login                                   # first time; needs access to the `avocacode` org
-  pnpm exec eas build --profile development --platform ios
-  pnpm exec eas build:run -p ios                        # installs the finished build to a booted simulator
-  pnpm exec expo start --dev-client                     # serve JS to it
-  ```
+Rebuild the dev client only when native things change (a new native package, `app.config.ts`,
+the icon). Everything else is a Metro reload. See `apps/mobile/CONTRIBUTING.md`.
 
 ## 4. Legacy web app (`apps/web`) — optional, frozen
 
@@ -163,6 +175,13 @@ section. When you hit and solve something new, add it here.
 ---
 
 ## Local backend / infra
+
+### `composer install` → `symfony/http-foundation ... requires php >=8.4.1 -> your php version does not satisfy that requirement`
+
+`composer.lock` was resolved against PHP 8.5 and pulled in Symfony 8 components. Install
+**PHP 8.4 or 8.5**. macOS: `brew install php` (8.5). Ubuntu: `sudo add-apt-repository ppa:ondrej/php`
+then `apt install php8.5-{fpm,cli,pgsql,redis,mbstring,xml,curl,zip,bcmath,intl,gd}` and
+`update-alternatives --set php /usr/bin/php8.5`. `composer.json` requires `^8.4`.
 
 ### Login shows `SQLSTATE[08006] ... connection to server at "127.0.0.1", port 5433 failed`
 
@@ -261,6 +280,13 @@ cd apps/mobile && pnpm exec expo start --clear
 ```
 
 Restructures (moving screens into route groups, changing `app.config.ts`) always want `--clear`.
+Adding a **new route file** may also need a full app relaunch before its deep link resolves.
+
+### App icon / splash / a permission string / a native package change isn't showing
+
+Those are **native** — baked into the binary at `eas build` time. A Metro reload or `eas update`
+(OTA) will never pick them up. Rebuild the dev client (`--profile development-prod`), or ship a
+tagged TestFlight build. Only JS + JS-imported assets travel over the air.
 
 ### `command not found: timeout` in scripts
 
@@ -270,6 +296,10 @@ macOS has no `timeout`. Use `gtimeout` (`brew install coreutils`) or a backgroun
 ---
 
 ## EAS (builds & updates)
+
+> **CI is set up.** Merge to `main` → `eas update` (OTA) runs automatically. `git tag v1.0.x`
+> → `eas build` + TestFlight submit. Full details + one-time setup: `apps/mobile/RELEASE.md`
+> and `apps/mobile/CONTRIBUTING.md`. The entries below are for running EAS by hand.
 
 ### `npx eas ...` → `npm error could not determine executable to run`
 
