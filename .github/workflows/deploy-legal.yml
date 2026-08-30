@@ -1,0 +1,34 @@
+name: Deploy legal site
+
+# Ships apps/legal (the static thatfridge.com marketing + legal pages) to
+# Cloudflare Workers on every merge to main that touches it. No build step —
+# the folder is served as-is. Config lives in apps/legal/wrangler.jsonc.
+#
+# One-time setup: add repo secrets CLOUDFLARE_API_TOKEN (a token with
+# "Edit Cloudflare Workers" on the thatfridge.com account) and
+# CLOUDFLARE_ACCOUNT_ID. Then disconnect any Cloudflare Git integration for
+# this repo so it stops building every branch.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/legal/**"
+      - ".github/workflows/deploy-legal.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-legal
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/legal
+          command: deploy

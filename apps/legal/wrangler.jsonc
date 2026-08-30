@@ -1,0 +1,22 @@
+{
+  // Static-only Worker (no server code) — serves the files in this folder as
+  // thatfridge.com. Deployed by .github/workflows/deploy-legal.yml on merges to
+  // main that touch apps/legal/**. Deploy by hand from this folder with:
+  //   npx wrangler deploy
+  //
+  // Defaults do what this site needs: html_handling "auto-trailing-slash" serves
+  // /privacy/index.html at /privacy/, and directory Worker assets are cached +
+  // served without any build step.
+  "name": "thatfridge-legal",
+  "compatibility_date": "2026-08-30",
+  "assets": {
+    "directory": "./"
+  },
+  // Requires the thatfridge.com zone to be on this Cloudflare account. If the
+  // domains aren't ready, comment this out and add the custom domain once from
+  // the dashboard (Workers & Pages -> the project -> Settings -> Domains).
+  "routes": [
+    { "pattern": "thatfridge.com", "custom_domain": true },
+    { "pattern": "www.thatfridge.com", "custom_domain": true }
+  ]
+}
