@@ -2,6 +2,7 @@ import { ApiError, type HttpClient, type TokenStore } from "./http";
 import type {
   BadgeKey,
   BadgeProgress,
+  Category,
   CurrentUser,
   FoodFocus,
   FriendProfile,
@@ -51,6 +52,7 @@ interface RawItem {
   icon: string;
   icon_url: string | null;
   nutrition_category: NutritionCategory | null;
+  category_id: string | null;
   freshness: number | null;
   days: number | null;
   opened?: boolean;
@@ -83,6 +85,7 @@ function toItem(raw: RawItem): Item {
     icon: raw.icon,
     iconUrl: raw.icon_url ?? null,
     nutritionCategory: raw.nutrition_category ?? null,
+    categoryId: raw.category_id ?? null,
     freshness: raw.freshness ?? 0,
     days: raw.days ?? 0,
     note: raw.note ?? "",
@@ -114,6 +117,7 @@ export interface CreateItemInput {
   icon: string;
   icon_url?: string | null;
   nutrition_category?: NutritionCategory | null;
+  category_id?: string | null;
   location?: StorageLocation;
   quantity?: number;
   expiry_date?: string;
@@ -461,6 +465,35 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.del(`/shopping-items/${id}`).then(() => undefined);
   }
 
+  // ---- categories (user-defined Inventory labels) --------------------------
+
+  function listCategories(): Promise<Category[]> {
+    return http.get<Category[]>("/categories");
+  }
+
+  function createCategory(name: string, color?: string | null): Promise<Category> {
+    return http.post<Category>("/categories", { name, ...(color ? { color } : {}) });
+  }
+
+  function updateCategory(
+    id: string,
+    data: Partial<{ name: string; color: string | null; position: number }>,
+  ): Promise<Category> {
+    return http.patch<Category>(`/categories/${id}`, data);
+  }
+
+  function deleteCategory(id: string): Promise<void> {
+    return http.del(`/categories/${id}`).then(() => undefined);
+  }
+
+  /** Assign (or clear, with null) a category on many items at once. Returns how many changed. */
+  function setItemsCategory(itemIds: string[], categoryId: string | null): Promise<{ updated: number }> {
+    return http.patch<{ updated: number }>("/items/bulk-category", {
+      item_ids: itemIds,
+      category_id: categoryId,
+    });
+  }
+
   function suggestRecipes(params: {
     mealType?: MealType | null;
     vibes?: Vibe[];
@@ -699,6 +732,11 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     addShoppingItem,
     updateShoppingItem,
     deleteShoppingItem,
+    listCategories,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    setItemsCategory,
     suggestRecipes,
     markRecipeMade,
     getUsageHistory,
