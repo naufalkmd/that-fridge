@@ -38,6 +38,7 @@ import { useKitchenScore } from "@/lib/kitchenScore";
 import { useSocial } from "@/lib/social";
 import { useAgentInsight } from "@/lib/agentInsight";
 import { PixelText } from "@/components/brand";
+import { MarkdownText } from "@/components/markdown-text";
 import { SectionHeader } from "@/components/ui";
 import { FridgeScopePicker } from "@/components/fridge-scope";
 import { KitchenScore } from "@/components/home/KitchenScore";
@@ -76,7 +77,7 @@ export default function Home() {
   const { items, fridges, loading, refresh } = useInventory();
   const { events, unread } = useNotifications();
   const { items: shoppingItems } = useShopping();
-  const { scope } = useScope();
+  const { scope, setScope } = useScope();
   const { usageHistory, organizerTally, scoreSnapshots } = useKitchenScore();
   const { pendingCount } = useSocial();
 
@@ -155,8 +156,24 @@ export default function Home() {
 
   function onHeroScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     if (!heroWidth) return;
-    setHeroSlide(Math.round(e.nativeEvent.contentOffset.x / heroWidth));
+    const idx = Math.round(e.nativeEvent.contentOffset.x / heroWidth);
+    setHeroSlide(idx);
+    // Swiping to a fridge makes it the active scope (the "add fridge" slide is last → no match).
+    const fr = heroViews[idx];
+    if (fr && fr.id !== scope) setScope(fr.id);
   }
+
+  // Keep the carousel in sync when scope changes elsewhere (the picker) or on first layout.
+  useEffect(() => {
+    if (!heroWidth) return;
+    const idx = heroViews.findIndex((f) => f.id === scope);
+    if (idx >= 0 && idx !== heroSlide) {
+      heroRef.current?.scrollTo({ x: idx * heroWidth, animated: true });
+      setHeroSlide(idx);
+    }
+    // heroSlide intentionally omitted — it's the value we're reconciling, not a trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope, heroWidth, heroViews]);
 
   const slideCount = heroViews.length + 1;
 
@@ -583,7 +600,7 @@ function CrewTip({
   return (
     <TipCard eyebrow={eyebrow} agent={agent} onPress={onPress} onDismiss={onDismiss}>
       {insight.text ? (
-        <Text style={{ fontSize: 13.5, lineHeight: 19, color: INK }}>{insight.text}</Text>
+        <MarkdownText text={insight.text} size={13.5} />
       ) : insight.loading ? (
         <Text style={{ fontSize: 13, color: FAINT }}>{agent} is thinking…</Text>
       ) : (
