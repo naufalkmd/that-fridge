@@ -7,17 +7,24 @@ use Illuminate\Http\Request;
 
 class NotificationPrefController extends Controller
 {
+    /**
+     * @var array<string, bool>
+     */
+    private const DEFAULTS = [
+        'expiry_alerts' => true,
+        'low_stock' => true,
+        'recipe_tips' => true,
+        'weekly_digest' => true,
+        // Crew taking real actions (adding/using items, dropping notes) is opt-in, unlike
+        // the other notification-style prefs above.
+        'crew_actions_enabled' => false,
+        // Invites, join requests, approvals, people joining/leaving - directed at you, so on.
+        'social' => true,
+    ];
+
     public function show(Request $request)
     {
-        $pref = $request->user()->notificationPref()->firstOrCreate([], [
-            'expiry_alerts' => true,
-            'low_stock' => true,
-            'recipe_tips' => true,
-            'weekly_digest' => true,
-            // Crew taking real actions (moving items, adding to the shopping list) is
-            // opt-in, unlike the other notification-style prefs above.
-            'crew_actions_enabled' => false,
-        ]);
+        $pref = $request->user()->notificationPref()->firstOrCreate([], self::DEFAULTS);
 
         return new NotificationPrefResource($pref);
     }
@@ -30,15 +37,10 @@ class NotificationPrefController extends Controller
             'recipeTips' => ['sometimes', 'boolean'],
             'weeklyDigest' => ['sometimes', 'boolean'],
             'crewActionsEnabled' => ['sometimes', 'boolean'],
+            'social' => ['sometimes', 'boolean'],
         ]);
 
-        $pref = $request->user()->notificationPref()->firstOrCreate([], [
-            'expiry_alerts' => true,
-            'low_stock' => true,
-            'recipe_tips' => true,
-            'weekly_digest' => true,
-            'crew_actions_enabled' => false,
-        ]);
+        $pref = $request->user()->notificationPref()->firstOrCreate([], self::DEFAULTS);
 
         $pref->update([
             'expiry_alerts' => $data['expiryAlerts'] ?? $pref->expiry_alerts,
@@ -46,6 +48,7 @@ class NotificationPrefController extends Controller
             'recipe_tips' => $data['recipeTips'] ?? $pref->recipe_tips,
             'weekly_digest' => $data['weeklyDigest'] ?? $pref->weekly_digest,
             'crew_actions_enabled' => $data['crewActionsEnabled'] ?? $pref->crew_actions_enabled,
+            'social' => $data['social'] ?? $pref->social,
         ]);
 
         return new NotificationPrefResource($pref);

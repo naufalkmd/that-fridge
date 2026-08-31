@@ -74,6 +74,11 @@ class User extends Authenticatable
         return $this->hasOne(NotificationPref::class);
     }
 
+    public function pushTokens(): HasMany
+    {
+        return $this->hasMany(PushToken::class);
+    }
+
     public function goal(): HasOne
     {
         return $this->hasOne(UserGoal::class);

@@ -8,6 +8,7 @@ use App\Http\Resources\MyRequestResource;
 use App\Models\Fridge;
 use App\Models\FridgeJoinRequest;
 use App\Models\User;
+use App\Services\Notifier;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -55,12 +56,26 @@ class FridgeJoinRequestController extends Controller
             $this->attachMember($fridge, $request->user());
             $existing->update(['status' => 'accepted']);
 
+            Notifier::notify(
+                $fridge->user,
+                'inviteAccepted',
+                '@'.$request->user()->username." accepted your invite to {$fridge->name}",
+                $fridge,
+            );
+
             return new FridgeJoinRequestResource($existing->load('requester'));
         }
 
         $joinRequest = FridgeJoinRequest::updateOrCreate(
             ['fridge_id' => $fridge->id, 'requester_id' => $request->user()->id],
             ['status' => 'pending', 'initiated_by' => 'requester']
+        );
+
+        Notifier::notify(
+            $fridge->user,
+            'joinRequest',
+            '@'.$request->user()->username." asked to join {$fridge->name}",
+            $fridge,
         );
 
         return new FridgeJoinRequestResource($joinRequest->load('requester'));
@@ -94,12 +109,26 @@ class FridgeJoinRequestController extends Controller
             $this->attachMember($fridge, $target);
             $existing->update(['status' => 'accepted']);
 
+            Notifier::notify(
+                $target,
+                'requestApproved',
+                "You're in — {$fridge->name} approved your request",
+                $fridge,
+            );
+
             return new FridgeJoinRequestResource($existing->load('requester'));
         }
 
         $joinRequest = FridgeJoinRequest::updateOrCreate(
             ['fridge_id' => $fridge->id, 'requester_id' => $target->id],
             ['status' => 'pending', 'initiated_by' => 'owner']
+        );
+
+        Notifier::notify(
+            $target,
+            'invite',
+            '@'.$fridge->user->username." invited you to join {$fridge->name}",
+            $fridge,
         );
 
         return new FridgeJoinRequestResource($joinRequest->load('requester'));
@@ -180,6 +209,22 @@ class FridgeJoinRequestController extends Controller
         $this->attachMember($joinRequest->fridge, $joinRequest->requester);
         $joinRequest->update(['status' => 'accepted']);
 
+        if ($joinRequest->initiated_by === 'owner') {
+            Notifier::notify(
+                $joinRequest->fridge->user,
+                'inviteAccepted',
+                '@'.$joinRequest->requester->username." joined {$joinRequest->fridge->name}",
+                $joinRequest->fridge,
+            );
+        } else {
+            Notifier::notify(
+                $joinRequest->requester,
+                'requestApproved',
+                "You're in — {$joinRequest->fridge->name} approved your request",
+                $joinRequest->fridge,
+            );
+        }
+
         return response()->noContent();
     }
 
@@ -200,6 +245,22 @@ class FridgeJoinRequestController extends Controller
         }
 
         $joinRequest->update(['status' => 'declined']);
+
+        if ($joinRequest->initiated_by === 'requester') {
+            Notifier::notify(
+                $joinRequest->requester,
+                'requestDeclined',
+                "Your request to join {$joinRequest->fridge->name} wasn't approved",
+                $joinRequest->fridge,
+            );
+        } elseif ($request->user()->id === $joinRequest->requester_id) {
+            Notifier::notify(
+                $joinRequest->fridge->user,
+                'inviteDeclined',
+                '@'.$joinRequest->requester->username." declined your invite to {$joinRequest->fridge->name}",
+                $joinRequest->fridge,
+            );
+        }
 
         return response()->noContent();
     }

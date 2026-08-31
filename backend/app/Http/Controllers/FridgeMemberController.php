@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\FridgeMemberResource;
 use App\Models\Fridge;
 use App\Models\User;
+use App\Services\Notifier;
 use Illuminate\Http\Request;
 
 class FridgeMemberController extends Controller
@@ -41,6 +42,8 @@ class FridgeMemberController extends Controller
 
         $fridge->members()->detach($user->id);
 
+        Notifier::notify($user, 'removed', "You were removed from {$fridge->name}", $fridge);
+
         return response()->noContent();
     }
 
@@ -56,6 +59,13 @@ class FridgeMemberController extends Controller
         }
 
         $fridge->members()->detach($request->user()->id);
+
+        Notifier::notify(
+            $fridge->user,
+            'memberLeft',
+            '@'.$request->user()->username." left {$fridge->name}",
+            $fridge,
+        );
 
         return response()->noContent();
     }
