@@ -1,4 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import * as AppleAuthentication from "expo-apple-authentication";
+import {
+  GoogleSignin,
+  isSuccessResponse,
+} from "@react-native-google-signin/google-signin";
 import type { CurrentUser } from "@thatfridge/core";
 
 import { api, secureTokenStore } from "@/lib/api";
@@ -6,11 +11,20 @@ import { unregisterPush } from "@/lib/push";
 
 type Status = "loading" | "signedOut" | "signedIn";
 
+// Set to the Web OAuth client id (see RELEASE.md). When it's absent the Google button hides
+// itself rather than crashing on a misconfigured native module.
+export const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+if (GOOGLE_WEB_CLIENT_ID) {
+  GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+}
+
 interface AuthContextValue {
   status: Status;
   user: CurrentUser | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, username: string, email: string, password: string) => Promise<void>;
+  signInWithApple: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
@@ -60,8 +74,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const signInWithApple = useCallback(async () => {
+    const cred = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
+    if (!cred.identityToken) throw new Error("Apple didn't return an identity token.");
+    // Apple only sends the name on the very first authorization, ever.
+    const name = cred.fullName
+      ? [cred.fullName.givenName, cred.fullName.familyName].filter(Boolean).join(" ")
+      : undefined;
+    const { user } = await api.loginWithApple(cred.identityToken, name || undefined);
+    setUser(user);
+    setStatus("signedIn");
+  }, []);
+
+  const signInWithGoogle = useCallback(async () => {
+    await GoogleSignin.hasPlayServices();
+    const res = await GoogleSignin.signIn();
+    if (!isSuccessResponse(res)) return; // user cancelled
+    const idToken = res.data.idToken;
+    if (!idToken) throw new Error("Google didn't return an ID token.");
+    const { user } = await api.loginWithGoogle(idToken);
+    setUser(user);
+    setStatus("signedIn");
+  }, []);
+
   const signOut = useCallback(async () => {
     await unregisterPush();
+    await GoogleSignin.signOut().catch(() => {});
     await api.logout();
     setUser(null);
     setStatus("signedOut");
@@ -75,8 +118,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ status, user, signIn, signUp, signOut, deleteAccount }),
-    [status, user, signIn, signUp, signOut, deleteAccount],
+    () => ({
+      status,
+      user,
+      signIn,
+      signUp,
+      signInWithApple,
+      signInWithGoogle,
+      signOut,
+      deleteAccount,
+    }),
+    [
+      status,
+      user,
+      signIn,
+      signUp,
+      signInWithApple,
+      signInWithGoogle,
+      signOut,
+      deleteAccount,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

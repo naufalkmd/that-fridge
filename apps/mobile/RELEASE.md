@@ -89,3 +89,34 @@ The activity/invite feed (`src/lib/push.ts` → backend `SendPushNotification` �
    EAS uploads it to Expo's push service; nothing about it ships in the app or CI.
 
 Verify end to end with `eas push` or by triggering an invite from a second account.
+
+## Sign in with Apple / Google
+
+Both need config the app doesn't ship with. The buttons hide themselves until it's present
+(Apple: on any real iOS build; Google: when `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` is set), and
+they need a native rebuild because they add native modules.
+
+### Apple
+
+1. Apple Developer → **Identifiers** → the App ID `test.thatfridge.app` → tick **Sign In with
+   Apple** → Save. (EAS regenerates the provisioning profile with the entitlement on the next
+   build; the `expo-apple-authentication` plugin adds the entitlement to the app.)
+2. Nothing else for the native flow — the identity token's `aud` is the bundle id, which is
+   already `APPLE_CLIENT_IDS`'s default on the backend.
+
+### Google
+
+1. Google Cloud Console → **APIs & Services → Credentials**. Configure the OAuth consent
+   screen first if you haven't.
+2. **Create credentials → OAuth client ID → iOS** — bundle id `test.thatfridge.app`. Note the
+   **iOS client ID** and its **reversed** form (`com.googleusercontent.apps.…`).
+3. **Create credentials → OAuth client ID → Web application** — note the **Web client ID**.
+   This is what `@react-native-google-signin` and the backend both verify against.
+4. Set these:
+   | value | where |
+   |---|---|
+   | reversed iOS client ID | `GOOGLE_IOS_URL_SCHEME` — `apps/mobile/.env` for dev, EAS build env var for CI (`eas env:create`) |
+   | Web client ID | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` — same two places |
+   | `<iOS client ID>,<Web client ID>` | backend `GOOGLE_CLIENT_IDS` (server `.env`) |
+
+Then bump `version`, cut a new build, and test both buttons on a device.

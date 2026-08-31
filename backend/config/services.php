@@ -43,4 +43,15 @@ return [
         'key' => env('FAL_KEY'),
     ],
 
+    // Sign in with Apple / Google. `client_ids` are the audiences an identity token is
+    // allowed to carry — comma-separated in env. Apple: the iOS bundle id (native flow) and
+    // any Services ID (web). Google: the iOS OAuth client id and the Web OAuth client id.
+    'apple' => [
+        'client_ids' => array_filter(explode(',', (string) env('APPLE_CLIENT_IDS', 'test.thatfridge.app'))),
+    ],
+
+    'google' => [
+        'client_ids' => array_filter(explode(',', (string) env('GOOGLE_CLIENT_IDS', ''))),
+    ],
+
 ];

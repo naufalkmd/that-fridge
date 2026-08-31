@@ -305,6 +305,24 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return res;
   }
 
+  async function loginWithApple(
+    identityToken: string,
+    name?: string | null,
+  ): Promise<AuthResult> {
+    const res = await http.post<AuthResult>("/auth/apple", {
+      identityToken,
+      ...(name ? { name } : {}),
+    });
+    await tokens.set(res.token);
+    return res;
+  }
+
+  async function loginWithGoogle(idToken: string): Promise<AuthResult> {
+    const res = await http.post<AuthResult>("/auth/google", { idToken });
+    await tokens.set(res.token);
+    return res;
+  }
+
   async function logout(): Promise<void> {
     try {
       await http.post("/logout");
@@ -811,6 +829,8 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   return {
     login,
     register,
+    loginWithApple,
+    loginWithGoogle,
     logout,
     me,
     deleteAccount,

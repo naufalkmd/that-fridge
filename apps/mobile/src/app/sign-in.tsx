@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -11,9 +11,11 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as AppleAuthentication from "expo-apple-authentication";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { describeError } from "@thatfridge/core";
-import { useAuth } from "@/lib/auth";
+import { GOOGLE_WEB_CLIENT_ID, useAuth } from "@/lib/auth";
 import { Logo, PixelText } from "@/components/brand";
 
 type Mode = "login" | "signup";
@@ -22,7 +24,14 @@ const USERNAME_RE = /^[a-zA-Z0-9_-]+$/;
 
 export default function SignIn() {
   const router = useRouter();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithApple, signInWithGoogle } = useAuth();
+
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  useEffect(() => {
+    AppleAuthentication.isAvailableAsync()
+      .then(setAppleAvailable)
+      .catch(() => setAppleAvailable(false));
+  }, []);
 
   const [mode, setMode] = useState<Mode>("login");
   const [name, setName] = useState("");
@@ -72,6 +81,22 @@ export default function SignIn() {
       setError(
         describeError(err, isLogin ? "Couldn't log you in." : "Couldn't create your account."),
       );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function social(run: () => Promise<void>) {
+    setError(null);
+    setBusy(true);
+    try {
+      await run();
+      router.replace("/home");
+    } catch (err) {
+      const e = err as { code?: string; message?: string };
+      // Apple + Google both throw a "cancelled" variant when the user backs out.
+      if (e?.code === "ERR_REQUEST_CANCELED" || e?.code === "SIGN_IN_CANCELLED") return;
+      setError(describeError(err, "That sign-in didn't go through."));
     } finally {
       setBusy(false);
     }
@@ -182,6 +207,45 @@ export default function SignIn() {
               </Pressable>
             </View>
           </View>
+
+          {(appleAvailable || !!GOOGLE_WEB_CLIENT_ID) && (
+            <View className="mt-5 gap-3">
+              <View className="flex-row items-center gap-3">
+                <View className="h-px flex-1 bg-hairline" />
+                <Text className="text-[11px] font-semibold uppercase tracking-wide text-faint">
+                  or
+                </Text>
+                <View className="h-px flex-1 bg-hairline" />
+              </View>
+
+              {appleAvailable && (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={
+                    AppleAuthentication.AppleAuthenticationButtonType.CONTINUE
+                  }
+                  buttonStyle={
+                    AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                  }
+                  cornerRadius={10}
+                  style={{ height: 48, width: "100%" }}
+                  onPress={() => social(signInWithApple)}
+                />
+              )}
+
+              {!!GOOGLE_WEB_CLIENT_ID && (
+                <Pressable
+                  onPress={() => social(signInWithGoogle)}
+                  disabled={busy}
+                  className="flex-row items-center justify-center gap-2.5 rounded-[10px] bg-ink py-3.5 active:opacity-80"
+                >
+                  <Ionicons name="logo-google" size={16} color="#0a0a0c" />
+                  <Text className="text-[14px] font-bold text-[#0a0a0c]">
+                    Continue with Google
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          )}
 
           <Pressable className="mt-5" onPress={() => switchMode(isLogin ? "signup" : "login")}>
             <Text className="text-center text-[12.5px] text-muted">
