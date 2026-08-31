@@ -47,6 +47,22 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
   unofficial `PixelMix-Bold.ttf` (unused; EULA forbids DIY weights).
 - [X] Confirm each team member's Shipaton eligibility: age of majority, not a sanctioned
   country, not RevenueCat / sponsor staff.
+- [🟡] **Sign in with Apple / Google — external config.** Both flows are **built** (branch merged
+  to `main`: `POST /auth/apple` + `/auth/google` with JWKS verification; mobile buttons that
+  hide themselves until configured). Needs the new **v1.2.0 native build** either way.
+  - [X] **Apple** — "Sign In with Apple" capability enabled on App ID `test.thatfridge.app`.
+    Nothing else: the backend allows the bundle id as the token audience by default. Works once
+    v1.2.0 ships.
+  - [ ] **Google** — Google Cloud Console → OAuth consent screen → **Credentials**:
+    1. **OAuth client → iOS** (bundle `test.thatfridge.app`) → gives an iOS client id +
+       reversed form `com.googleusercontent.apps.…`
+    2. **OAuth client → Web application** → gives a Web client id
+    3. Set: `GOOGLE_IOS_URL_SCHEME` (reversed iOS id) + `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
+       (Web id) in `apps/mobile/.env` **and** as EAS build env vars; `GOOGLE_CLIENT_IDS`
+       (`<iOS id>,<Web id>`) in the server `.env`.
+    4. Google needs its **own build after that** — the `iosUrlScheme` bakes into Info.plist at
+       build time. Ship v1.2.0 Apple-only first; Google in the next build.
+  - Details: `apps/mobile/RELEASE.md` → "Sign in with Apple / Google".
 
 **Don't:** market ThatFridge as "launched" anywhere (public TestFlight link, ProductHunt,
 press) before the store listing is live — risks the Shipaton "brand-new app" disqualification.
@@ -92,8 +108,20 @@ Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ *
 - [X] Seed a stable **reviewer demo account** on prod — `keira@thatfridge.test` / `password123`
   with a seeded fridge + 7 curated recipes. **⚠ Change the password before submitting.**
 - [ ] Sentry on the Laravel app.
-- [ ] Transactional email provider (Postmark/Resend free tier) — prod is `MAIL_MAILER=log`, so
-  password-reset emails don't send yet.
+- [🟡] **Transactional email — wire up the mailer.** The **forgot-password feature is built**
+  (branch `forgot-password`: code-based reset, `POST /forgot-password` + `/reset-password`,
+  mobile 2-step screen; pure JS+backend, OTA-able). `resend/resend-php` is installed. Prod is
+  still `MAIL_MAILER=log` (code lands in `storage/logs/laravel.log`). To finish, on the server
+  `.env` pick one, then `php artisan config:cache` + redeploy:
+  - **SMTP via `support@thatfridge.com`** (a real mailbox now exists) — `MAIL_MAILER=smtp`,
+    `MAIL_HOST=<provider>` (Google Workspace `smtp.gmail.com:587` + an App Password / Zoho
+    `smtp.zoho.com` / M365 `smtp.office365.com` / cPanel `mail.thatfridge.com`),
+    `MAIL_USERNAME=support@thatfridge.com`, `MAIL_PASSWORD=<app password>`,
+    `MAIL_FROM_ADDRESS=support@thatfridge.com`, `MAIL_FROM_NAME=ThatFridge`. Simplest; fine for
+    reset-code volume.
+  - **Resend** — `MAIL_MAILER=resend` + `RESEND_API_KEY` + verify `thatfridge.com` in the
+    Resend dashboard (add SPF/DKIM DNS). Better deliverability, no daily cap.
+  - Then merge `forgot-password`, and tick §8.
 - [ ] Restrict `config/cors.php` `allowed_origins` before the web build ships (currently allows all).
 - [X] Privacy / Terms / Support pages — live at `https://thatfridge.com` (see §1; `apps/legal/`,
   Git-connected Cloudflare Worker, auto-redeploy on `main`).
@@ -154,6 +182,11 @@ multiple / shared fridges, advanced notification tuning.
 - [X] **`eas build`** — dev-client simulator build (`development-prod`) verified against the
   live API; **production build 1 submitted to TestFlight 2026-08-28** (`eas build/submit`,
   automated in `.github/workflows/testflight.yml`).
+- [ ] **Cut v1.2.0** (`main` is bumped, PR #17). `git tag v1.2.0 && git push --tags`. First
+  build since adding `expo-apple-authentication`, `@react-native-google-signin`,
+  `expo-speech-recognition`, and the push entitlement — if CI fails on capability/credential
+  sync, run one `eas build -p ios --profile production` interactively once. Unblocks: Apple
+  sign-in, voice dictation, push delivery. Then smoke-test all three on a device.
 - [ ] Full **smoke-test on a real device / simulator** against the live API — nothing since the
   parity port has run.
 - [ ] Bottom-sheet **grab-to-dismiss** gesture on modal screens (needs
@@ -292,9 +325,12 @@ it" item state** persisted (`items.opened` column, freshness capped when opened)
   manual-add form still only auto-guesses the icon (no generate). Minor.
 - **Organizer move dismiss** — mobile applies/sweeps moves but has no per-move "dismiss"
   (`dismissOrganizerMove` on web). Minor.
-- **Voice input** in chat — needs a native STT module (no Expo one). **Blocked.**
+- ~~**Voice input** in chat~~ ✅ done — mic button in the chat composer →
+  `expo-speech-recognition` (OS recognizer, on-device). Needs the v1.2.0 native build.
 - **wide-viewport (≥900px) layouts** on Home / Inventory / Chat (bundled with web-deployment).
-- Server-driven **push** (APNs auth key + FCM + device-token endpoint + backend sends).
+- ~~Server-driven **push**~~ ✅ done — `Notifier` service + `push_tokens` + `SendPushNotification`
+  (Expo push) wired into invites/members/notes/item activity + in-app feed. APNs key on EAS is
+  done; needs the v1.2.0 native build to deliver.
 
 Everything else audited at parity: all 21 web screens exist; fridge-notes CRUD, Customer
 Center (mobile is richer here), what-to-eat (shuffle/vibes/meal-type/food-focus/exact+similar),
@@ -315,7 +351,8 @@ carousel + swipe-dismiss agent insights, undo toasts, skeleton loaders — all p
   preview/production done; verify at build time)
 - [ ] Account deletion works from a clean install (against the live API)
 - [X] Privacy / terms / support URLs live (`thatfridge.com`) — [ ] still confirm they're linked in-app
-- [ ] Transactional email working (password reset) — prod still on `MAIL_MAILER=log`
+- [🟡] Transactional email working (password reset) — feature built (branch `forgot-password`),
+  prod still on `MAIL_MAILER=log`; wire the mailer (§2)
 - [ ] Camera permission string set; `ITSAppUsesNonExemptEncryption` set
 - [ ] Local notifications fire correctly and route on tap
 - [ ] RevenueCat: sandbox purchase + restore verified; `thatfridge_pro` gate works both ways
