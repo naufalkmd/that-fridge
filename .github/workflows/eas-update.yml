@@ -59,6 +59,9 @@ jobs:
         env:
           # Full commit message can be multi-line — pass via env and take the first line.
           RAW_MSG: ${{ github.event.inputs.message || github.event.head_commit.message }}
+          # `eas update` doesn't read eas.json build-profile env, so EXPO_PUBLIC_* must be set
+          # here or the bundle ships with it undefined (→ app falls back, breaks every request).
+          EXPO_PUBLIC_API_URL: https://api.thatfridge.com/api
         run: |
           MSG="$(printf '%s' "$RAW_MSG" | head -1)"
           eas update --branch production --non-interactive --message "$MSG"
