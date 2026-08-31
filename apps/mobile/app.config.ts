@@ -105,16 +105,18 @@ const config: ExpoConfig = {
           "ThatFridge turns your speech into text for the chat.",
       },
     ],
-    [
-      "@react-native-google-signin/google-signin",
-      {
-        // Reversed iOS OAuth client id (com.googleusercontent.apps.XXXX). Set
-        // GOOGLE_IOS_URL_SCHEME in .env for local dev and as an EAS build env var for CI.
-        iosUrlScheme:
-          process.env.GOOGLE_IOS_URL_SCHEME ??
-          "com.googleusercontent.apps.PLACEHOLDER-set-GOOGLE_IOS_URL_SCHEME",
-      },
-    ],
+    // Google Sign-In is only wired in once its reversed iOS OAuth client id
+    // (com.googleusercontent.apps.XXXX) is set as GOOGLE_IOS_URL_SCHEME — a placeholder
+    // scheme fails Apple's binary validation on submit, and google-auth.ts's guarded
+    // require() already hides the button when the native module isn't in the build.
+    ...(process.env.GOOGLE_IOS_URL_SCHEME
+      ? [
+          [
+            "@react-native-google-signin/google-signin",
+            { iosUrlScheme: process.env.GOOGLE_IOS_URL_SCHEME },
+          ] as [string, Record<string, unknown>],
+        ]
+      : []),
   ],
   experiments: {
     typedRoutes: true,
