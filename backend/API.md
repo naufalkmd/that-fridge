@@ -44,6 +44,22 @@ Create an account and get a token back immediately (no separate login needed).
 
 **422** — `{"message": "...", "errors": {"email": ["These credentials do not match our records."]}}`
 
+A password login against a social-only account (no password set) returns the same **422**.
+
+---
+
+### `POST /auth/apple` · `POST /auth/google`
+
+Sign in with Apple / Google Sign-In. The app verifies nothing itself — it forwards the identity token and the server validates the signature, issuer, audience (`APPLE_CLIENT_IDS` / `GOOGLE_CLIENT_IDS`) and expiry against the provider's JWKS.
+
+**Body** — Apple: `{ "identityToken": "<JWT>", "name": "Ada Lovelace" }` (`name` optional, only sent on the first-ever Apple authorization). Google: `{ "idToken": "<JWT>" }`.
+
+Resolution: reuse the account already linked to this provider id → else link one that shares the **verified** email → else create a fresh passwordless account (username auto-generated, `email_verified_at` set when the provider vouched for the address; Apple "Hide My Email" / no-email accounts get a synthetic `<provider>_<sub>@users.thatfridge.app` address).
+
+**200** (existing account) / **201** (new account) — same `{ user, token }` shape as register.
+
+**422** — `{"errors": {"token": ["..."]}}` when the token fails verification.
+
 ---
 
 ### `POST /logout` 🔒

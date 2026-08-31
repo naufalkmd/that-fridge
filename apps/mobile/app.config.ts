@@ -91,6 +91,19 @@ const config: ExpoConfig = {
         // after this was wired up — plus an APNs key on EAS (see RELEASE.md).
       },
     ],
+    // Adds the "Sign In with Apple" entitlement. The App ID (test.thatfridge.app) must have
+    // that capability enabled in the Apple Developer portal — see RELEASE.md.
+    "expo-apple-authentication",
+    [
+      "@react-native-google-signin/google-signin",
+      {
+        // Reversed iOS OAuth client id (com.googleusercontent.apps.XXXX). Set
+        // GOOGLE_IOS_URL_SCHEME in .env for local dev and as an EAS build env var for CI.
+        iosUrlScheme:
+          process.env.GOOGLE_IOS_URL_SCHEME ??
+          "com.googleusercontent.apps.PLACEHOLDER-set-GOOGLE_IOS_URL_SCHEME",
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

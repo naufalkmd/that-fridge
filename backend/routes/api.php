@@ -32,6 +32,8 @@ use Illuminate\Support\Facades\Route;
 // Auth routes (public)
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/auth/apple', [AuthController::class, 'apple']);
+Route::post('/auth/google', [AuthController::class, 'google']);
 
 // Protected routes (Track A - requires auth)
 Route::middleware('auth:sanctum')->group(function () {
