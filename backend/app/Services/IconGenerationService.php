@@ -26,6 +26,13 @@ class IconGenerationService
     private const PIXEL_SIZE = 16;
 
     /**
+     * The 16px result is then blown back up nearest-neighbour to this before storing, so the
+     * blocks stay crisp on clients that can't do `image-rendering: pixelated` (native
+     * <Image>). The bundled pixel-art pack is pre-scaled the same way.
+     */
+    private const STORE_SIZE = 128;
+
+    /**
      * Every curated icon has a bold dark outline around its silhouette - a big part of what
      * reads as "the same icon set". flux never draws one, so it gets synthesized here.
      */
@@ -122,8 +129,17 @@ class IconGenerationService
         $this->boostVibrancy($dst, $size);
         $this->addOutline($dst, $size);
 
+        // Blow the 16px result back up nearest-neighbour (imagecopyresized = point sampling,
+        // not imagecopyresampled's smoothing) so every pixel becomes a solid STORE_SIZE/16
+        // block. Clients then only ever downscale a crisp blocky image.
+        $out = imagecreatetruecolor(self::STORE_SIZE, self::STORE_SIZE);
+        imagealphablending($out, false);
+        imagesavealpha($out, true);
+        imagefill($out, 0, 0, imagecolorallocatealpha($out, 0, 0, 0, 127));
+        imagecopyresized($out, $dst, 0, 0, 0, 0, self::STORE_SIZE, self::STORE_SIZE, $size, $size);
+
         ob_start();
-        imagepng($dst);
+        imagepng($out);
         $resized = ob_get_clean();
 
         return $resized ?: $bytes;
