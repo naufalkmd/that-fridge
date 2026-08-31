@@ -120,3 +120,15 @@ they need a native rebuild because they add native modules.
    | `<iOS client ID>,<Web client ID>` | backend `GOOGLE_CLIENT_IDS` (server `.env`) |
 
 Then bump `version`, cut a new build, and test both buttons on a device.
+
+## Voice dictation (Quick Chat)
+
+`src/lib/voice.ts` → `expo-speech-recognition` → the OS speech recognizer. No key, no server
+audio. Just needs a **native rebuild** — the config plugin adds
+`NSMicrophoneUsageDescription` + `NSSpeechRecognitionUsageDescription` (and Android
+`RECORD_AUDIO`). The mic button hides itself on builds without the native module, so an OTA
+to an old build is safe. Test by tapping the mic in Quick Chat and speaking; the transcript
+should fill the composer.
+
+Note: this is the first mic permission in the app (`expo-camera` deliberately opted out), so
+App Review will now see a microphone-usage prompt.

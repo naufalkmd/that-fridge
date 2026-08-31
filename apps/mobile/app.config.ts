@@ -95,6 +95,17 @@ const config: ExpoConfig = {
     // that capability enabled in the Apple Developer portal — see RELEASE.md.
     "expo-apple-authentication",
     [
+      // Voice dictation in Quick Chat. Runs after expo-camera (which sets
+      // microphonePermission:false) so the mic usage string it needs wins.
+      "expo-speech-recognition",
+      {
+        microphonePermission:
+          "ThatFridge uses the microphone so you can talk to the chat instead of typing.",
+        speechRecognitionPermission:
+          "ThatFridge turns your speech into text for the chat.",
+      },
+    ],
+    [
       "@react-native-google-signin/google-signin",
       {
         // Reversed iOS OAuth client id (com.googleusercontent.apps.XXXX). Set
