@@ -232,7 +232,7 @@ class AgentControllerTest extends TestCase
         $response->assertStatus(422);
     }
 
-    public function test_suggest_item_details_returns_shelf_life_and_location(): void
+    public function test_suggest_item_details_returns_shelf_life_location_and_food_group(): void
     {
         $user = User::factory()->create();
         config(['services.openrouter.key' => null]);
@@ -242,6 +242,7 @@ class AgentControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson(['location' => 'freezer']);
+        $response->assertJson(['location' => 'freezer', 'nutrition_category' => 'vegetables']);
+        $response->assertJsonStructure(['shelf_life_days', 'location', 'nutrition_category']);
     }
 }

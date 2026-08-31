@@ -248,19 +248,37 @@ class AgentServiceTest extends TestCase
 
         $result = app(AgentService::class)->suggestItemDetails('Frozen Peas', null);
 
-        $this->assertSame(['shelf_life_days' => 7, 'location' => 'freezer'], $result);
+        $this->assertSame(
+            ['shelf_life_days' => 7, 'location' => 'freezer', 'nutrition_category' => 'vegetables'],
+            $result,
+        );
     }
 
     public function test_suggest_item_details_uses_the_real_model_response_when_available(): void
     {
         config(['services.openrouter.key' => 'test-key']);
         Http::fake(['openrouter.ai/*' => Http::response([
-            'choices' => [['message' => ['content' => '{"shelf_life_days": 365, "location": "pantry"}']]],
+            'choices' => [['message' => ['content' => '{"shelf_life_days": 365, "location": "pantry", "nutrition_category": "grains"}']]],
         ], 200)]);
 
         $result = app(AgentService::class)->suggestItemDetails('Canned Beans', null);
 
-        $this->assertSame(['shelf_life_days' => 365, 'location' => 'pantry'], $result);
+        $this->assertSame(
+            ['shelf_life_days' => 365, 'location' => 'pantry', 'nutrition_category' => 'grains'],
+            $result,
+        );
+    }
+
+    public function test_suggest_item_details_rejects_an_unknown_food_group_and_falls_back_to_the_keyword_guess(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => '{"shelf_life_days": 3, "location": "fridge", "nutrition_category": "carbs"}']]],
+        ], 200)]);
+
+        $result = app(AgentService::class)->suggestItemDetails('Chicken Breast', null);
+
+        $this->assertSame('protein', $result['nutrition_category']);
     }
 
     public function test_suggest_item_details_falls_back_when_the_model_reply_is_unparseable(): void
@@ -272,7 +290,20 @@ class AgentServiceTest extends TestCase
 
         $result = app(AgentService::class)->suggestItemDetails('Milk', 'milk');
 
-        $this->assertSame(['shelf_life_days' => 7, 'location' => 'fridge'], $result);
+        $this->assertSame(
+            ['shelf_life_days' => 7, 'location' => 'fridge', 'nutrition_category' => 'dairy'],
+            $result,
+        );
+    }
+
+    public function test_suggest_item_details_returns_a_null_food_group_when_nothing_matches(): void
+    {
+        config(['services.openrouter.key' => null]);
+        Http::fake();
+
+        $result = app(AgentService::class)->suggestItemDetails('Mystery Box', null);
+
+        $this->assertNull($result['nutrition_category']);
     }
 
     public function test_suggest_item_details_clamps_an_out_of_range_shelf_life(): void
