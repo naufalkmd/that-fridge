@@ -15,7 +15,8 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { describeError } from "@thatfridge/core";
-import { GOOGLE_WEB_CLIENT_ID, useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
+import { googleAuthAvailable } from "@/lib/google-auth";
 import { Logo, PixelText } from "@/components/brand";
 
 type Mode = "login" | "signup";
@@ -208,7 +209,7 @@ export default function SignIn() {
             </View>
           </View>
 
-          {(appleAvailable || !!GOOGLE_WEB_CLIENT_ID) && (
+          {(appleAvailable || !!googleAuthAvailable) && (
             <View className="mt-5 gap-3">
               <View className="flex-row items-center gap-3">
                 <View className="h-px flex-1 bg-hairline" />
@@ -232,7 +233,7 @@ export default function SignIn() {
                 />
               )}
 
-              {!!GOOGLE_WEB_CLIENT_ID && (
+              {!!googleAuthAvailable && (
                 <Pressable
                   onPress={() => social(signInWithGoogle)}
                   disabled={busy}

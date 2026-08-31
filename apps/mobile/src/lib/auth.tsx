@@ -1,22 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import * as AppleAuthentication from "expo-apple-authentication";
-import {
-  GoogleSignin,
-  isSuccessResponse,
-} from "@react-native-google-signin/google-signin";
 import type { CurrentUser } from "@thatfridge/core";
 
 import { api, secureTokenStore } from "@/lib/api";
 import { unregisterPush } from "@/lib/push";
+import { googleSignInIdToken, googleSignOut } from "@/lib/google-auth";
 
 type Status = "loading" | "signedOut" | "signedIn";
-
-// Set to the Web OAuth client id (see RELEASE.md). When it's absent the Google button hides
-// itself rather than crashing on a misconfigured native module.
-export const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-if (GOOGLE_WEB_CLIENT_ID) {
-  GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
-}
 
 interface AuthContextValue {
   status: Status;
@@ -92,11 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    await GoogleSignin.hasPlayServices();
-    const res = await GoogleSignin.signIn();
-    if (!isSuccessResponse(res)) return; // user cancelled
-    const idToken = res.data.idToken;
-    if (!idToken) throw new Error("Google didn't return an ID token.");
+    const idToken = await googleSignInIdToken();
+    if (!idToken) return; // cancelled
     const { user } = await api.loginWithGoogle(idToken);
     setUser(user);
     setStatus("signedIn");
@@ -104,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     await unregisterPush();
-    await GoogleSignin.signOut().catch(() => {});
+    await googleSignOut();
     await api.logout();
     setUser(null);
     setStatus("signedOut");
