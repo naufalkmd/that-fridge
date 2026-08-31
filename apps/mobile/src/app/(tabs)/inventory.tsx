@@ -448,6 +448,31 @@ export default function Inventory() {
                 ))}
               </View>
             )}
+
+            {!selecting && (
+              <Pressable
+                onPress={() => router.push("/add")}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  paddingVertical: 13,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: HAIRLINE,
+                  borderStyle: "dashed",
+                  marginBottom: 22,
+                }}
+              >
+                <Ionicons name="add" size={16} color={ACCENT} />
+                <Text
+                  style={{ fontSize: 13, fontWeight: "700", color: ACCENT }}
+                >
+                  Add an item
+                </Text>
+              </Pressable>
+            )}
           </>
         )}
       </ScrollView>
