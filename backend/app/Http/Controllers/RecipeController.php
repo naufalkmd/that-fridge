@@ -51,6 +51,17 @@ class RecipeController extends Controller
         return RecipeResource::collection($recipes);
     }
 
+    /**
+     * A single recipe by id - the app opens this when a recipe isn't already in its local
+     * book (e.g. tapping one on someone else's profile before favoriting it).
+     */
+    public function show(Request $request, Recipe $recipe)
+    {
+        $this->authorize('view', $recipe);
+
+        return new RecipeResource($recipe->load('user:id,name,username'));
+    }
+
     public function store(Request $request, AgentService $agentService)
     {
         $data = $this->validated($request);

@@ -1,4 +1,13 @@
-import { Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -25,11 +34,48 @@ const BAD = "#ff5567";
 export default function RecipeDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { byId, toggleFavorite, remove } = useRecipes();
+  const { byId, ensureRecipe, setFavorite, remove } = useRecipes();
   const { items } = useInventory();
   const { items: shoppingItems, add: addToShopping } = useShopping();
 
-  const recipe = byId(id);
+  const cached = byId(id);
+  const [fetched, setFetched] = useState(cached);
+  const [loading, setLoading] = useState(!cached);
+
+  useEffect(() => {
+    let alive = true;
+    if (cached) {
+      setFetched(cached);
+      return;
+    }
+    setLoading(true);
+    ensureRecipe(id).then((r) => {
+      if (alive) {
+        setFetched(r ?? undefined);
+        setLoading(false);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, [id, cached, ensureRecipe]);
+
+  // Prefer the live cache entry (reflects favorite toggles / edits) over the initial fetch.
+  const recipe = byId(id) ?? fetched;
+
+  const onToggleFav = async () => {
+    if (!recipe) return;
+    const saved = await setFavorite(recipe, !recipe.isFavorite);
+    if (saved) setFetched(saved);
+  };
+
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-canvas">
+        <ActivityIndicator color="#26c6da" />
+      </View>
+    );
+  }
   if (!recipe) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas p-6">
@@ -96,7 +142,7 @@ export default function RecipeDetail() {
             <IconBtn
               icon={recipe.isFavorite ? "heart" : "heart-outline"}
               tint={recipe.isFavorite ? AMBER : INK}
-              onPress={() => toggleFavorite(recipe.id)}
+              onPress={onToggleFav}
             />
             {recipe.isMine && (
               <IconBtn icon="pencil" tint={INK} onPress={() => router.push(`/recipe-form?id=${recipe.id}`)} />

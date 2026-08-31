@@ -600,6 +600,9 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   function listRecipes(): Promise<Recipe[]> {
     return http.get<Recipe[]>("/recipes");
   }
+  function getRecipe(id: string): Promise<Recipe> {
+    return http.get<Recipe>(`/recipes/${id}`);
+  }
   function createRecipe(data: RecipeInput): Promise<Recipe> {
     return http.post<Recipe>("/recipes", data);
   }
@@ -849,6 +852,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     getScoreSnapshots,
     recordItemUsage,
     listRecipes,
+    getRecipe,
     createRecipe,
     updateRecipe,
     uploadRecipeAttachment,

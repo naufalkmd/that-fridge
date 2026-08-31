@@ -153,6 +153,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/recipes/suggest', [RecipeController::class, 'suggest']);
     Route::post('/recipes/attachments', [RecipeController::class, 'uploadAttachment']);
     Route::post('/recipes/import-link', [RecipeController::class, 'importFromLink']);
+    // After /suggest so that literal path still wins; before the {recipe} write routes.
+    Route::get('/recipes/{recipe}', [RecipeController::class, 'show']);
     Route::patch('/recipes/{recipe}', [RecipeController::class, 'update']);
     Route::delete('/recipes/{recipe}', [RecipeController::class, 'destroy']);
     Route::post('/recipes/{recipe}/favorite', [RecipeController::class, 'favorite']);
