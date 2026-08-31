@@ -55,6 +55,12 @@ const ORDER = ["home", "inventory", "chat", "eat"] as const;
 
 type TabName = (typeof ORDER)[number];
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+// Generous touch area so a near-miss on the icon still registers — the pill itself is small,
+// and the gaps between pills otherwise belong to nothing.
+const TAB_HIT_SLOP = { top: 16, bottom: 16, left: 16, right: 16 } as const;
+
 const Tab = memo(function Tab({
   name,
   active,
@@ -79,28 +85,28 @@ const Tab = memo(function Tab({
   }));
 
   return (
-    <Animated.View
+    <AnimatedPressable
       layout={PILL}
-      style={[styles.tab, { paddingHorizontal: active ? 14 : 9 }, pillStyle]}
+      onPress={onPress}
+      hitSlop={TAB_HIT_SLOP}
+      style={[styles.tab, { paddingHorizontal: active ? 14 : 12 }, pillStyle]}
     >
-      <Pressable onPress={onPress} hitSlop={10} style={styles.tabPress}>
-        <Ionicons
-          name={active ? meta.activeIcon : meta.icon}
-          size={16}
-          color={active ? AMBER : FAINT}
-        />
-        {active && (
-          <Animated.Text
-            entering={FadeIn.duration(150)}
-            exiting={FadeOut.duration(110)}
-            numberOfLines={1}
-            style={styles.label}
-          >
-            {meta.label}
-          </Animated.Text>
-        )}
-      </Pressable>
-    </Animated.View>
+      <Ionicons
+        name={active ? meta.activeIcon : meta.icon}
+        size={16}
+        color={active ? AMBER : FAINT}
+      />
+      {active && (
+        <Animated.Text
+          entering={FadeIn.duration(150)}
+          exiting={FadeOut.duration(110)}
+          numberOfLines={1}
+          style={styles.label}
+        >
+          {meta.label}
+        </Animated.Text>
+      )}
+    </AnimatedPressable>
   );
 });
 
@@ -126,7 +132,7 @@ function AddFab() {
             scale.value = withSpring(1, SPRING);
           }}
           style={styles.fabPress}
-          hitSlop={8}
+          hitSlop={{ top: 10, bottom: 18, left: 14, right: 14 }}
         >
           <Ionicons name="add" size={26} color="#0a0a0c" />
         </Pressable>
@@ -199,13 +205,11 @@ const styles = StyleSheet.create({
     borderColor: HAIRLINE,
   },
   tab: {
-    borderRadius: 20,
-    paddingVertical: 9,
-  },
-  tabPress: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 20,
+    paddingVertical: 11,
   },
   label: {
     marginLeft: 6,
