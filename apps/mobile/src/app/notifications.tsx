@@ -26,6 +26,17 @@ const KIND: Record<
   expiring: { color: "#ff5f56", icon: "timer-sand" },
   lowStock: { color: "#39e07f", icon: "cart-outline" },
   recipe: { color: "#f5a623", icon: "chef-hat" },
+  invite: { color: BLUE, icon: "email-outline" },
+  joinRequest: { color: BLUE, icon: "account-plus-outline" },
+  requestApproved: { color: GOOD, icon: "check-circle-outline" },
+  requestDeclined: { color: FAINT, icon: "close-circle-outline" },
+  inviteAccepted: { color: GOOD, icon: "account-check-outline" },
+  inviteDeclined: { color: FAINT, icon: "account-cancel-outline" },
+  memberLeft: { color: FAINT, icon: "account-arrow-right-outline" },
+  removed: { color: "#ff5f56", icon: "account-remove-outline" },
+  itemAdded: { color: "#3d6fe0", icon: "package-variant-closed" },
+  itemUsed: { color: "#3d6fe0", icon: "package-variant" },
+  note: { color: "#3d6fe0", icon: "note-text-outline" },
 };
 
 export default function Notifications() {

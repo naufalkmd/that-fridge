@@ -1,4 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useRouter } from "expo-router";
+import * as Notifications from "expo-notifications";
 import {
   describeError,
   type NotificationEvent,
@@ -7,6 +9,7 @@ import {
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { registerForPush } from "@/lib/push";
 
 interface NotificationsContextValue {
   events: NotificationEvent[];
@@ -23,6 +26,7 @@ const NotificationsContext = createContext<NotificationsContextValue | null>(nul
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const { status } = useAuth();
+  const router = useRouter();
   const [events, setEvents] = useState<NotificationEvent[]>([]);
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,12 +52,33 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     if (status === "signedIn") {
       setLoading(true);
       load();
+      registerForPush();
     } else if (status === "signedOut") {
       setEvents([]);
       setPrefs(null);
       setLoading(false);
     }
   }, [status, load]);
+
+  // Tapping a push (foreground, background, or from a cold start) opens the feed; a push
+  // that lands while the app is open just refreshes it.
+  useEffect(() => {
+    if (status !== "signedIn") return;
+
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) router.push("/notifications");
+    });
+
+    const tapSub = Notifications.addNotificationResponseReceivedListener(() => {
+      router.push("/notifications");
+    });
+    const inboxSub = Notifications.addNotificationReceivedListener(() => load());
+
+    return () => {
+      tapSub.remove();
+      inboxSub.remove();
+    };
+  }, [status, router, load]);
 
   const markDone = useCallback(async (id: string, done: boolean) => {
     setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, done } : e)));

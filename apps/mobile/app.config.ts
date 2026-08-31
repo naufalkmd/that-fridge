@@ -85,8 +85,10 @@ const config: ExpoConfig = {
     [
       "expo-notifications",
       {
-        // Local notifications only for v1 (expiry / low-stock reminders).
-        // Server push (APNs) is a post-launch fast-follow.
+        // On-device expiry reminders (src/lib/localNotifications.ts) + remote push for
+        // activity/invite notifications via Expo (src/lib/push.ts). Remote push needs the
+        // aps-environment entitlement this plugin adds, so it only works from a build made
+        // after this was wired up — plus an APNs key on EAS (see RELEASE.md).
       },
     ],
   ],

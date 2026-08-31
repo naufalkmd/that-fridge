@@ -72,3 +72,20 @@ eas update --branch production --message "…"
 Installed TestFlight / App Store builds pick it up on next launch. No binary, no review.
 `runtimeVersion` is tied to `app.config.ts` `version`, so an OTA only reaches builds on the same
 marketing version — bump `version` + ship a new binary for native changes.
+
+## Push notifications (APNs)
+
+The activity/invite feed (`src/lib/push.ts` → backend `SendPushNotification` → Expo) needs:
+
+1. **A new native build** — the `aps-environment` entitlement is added by the `expo-notifications`
+   config plugin, so any build made before push was wired up can't register a token. The in-app
+   feed still works over OTA; only the push delivery needs the rebuild.
+2. **An APNs key on EAS** — Apple Developer → **Certificates, Identifiers & Profiles → Keys** →
+   create a key with **Apple Push Notifications service (APNs)** enabled, download the `.p8`, then:
+   ```
+   cd apps/mobile
+   eas credentials      # → iOS → production → Push Notifications: Manage everything → set up
+   ```
+   EAS uploads it to Expo's push service; nothing about it ships in the app or CI.
+
+Verify end to end with `eas push` or by triggering an invite from a second account.

@@ -19,8 +19,8 @@ type Row = {
   accent: string;
 };
 
-// Grouped + agent-badged, mirroring apps/web's NotificationsScreen. The 5th row
-// (crew activity) is mobile-only — shared-fridge changes — so it gets its own group.
+// Grouped + agent-badged, mirroring apps/web's NotificationsScreen. The SHARED FRIDGES
+// group covers activity/invite notifications (see Notifier on the backend).
 const GROUPS: { title: string; rows: Row[] }[] = [
   {
     title: "FRESHNESS & STOCK",
@@ -64,9 +64,16 @@ const GROUPS: { title: string; rows: Row[] }[] = [
     title: "SHARED FRIDGES",
     rows: [
       {
+        key: "social",
+        label: "Invites & members",
+        desc: "Invitations, join requests, approvals, and people joining or leaving.",
+        gif: "organizer",
+        accent: "#3d6fe0",
+      },
+      {
         key: "crewActionsEnabled",
         label: "Crew activity",
-        desc: "When someone in a shared fridge adds or uses an item.",
+        desc: "When someone in a shared fridge adds or uses an item, or leaves a note.",
         gif: "organizer",
         accent: "#3d6fe0",
       },
