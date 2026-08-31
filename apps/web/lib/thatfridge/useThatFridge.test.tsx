@@ -802,6 +802,7 @@ describe("useThatFridge Organizer suggested moves", () => {
       recipeTips: true,
       weeklyDigest: false,
       crewActionsEnabled: true,
+      social: true,
     });
   };
 
@@ -1256,7 +1257,7 @@ function mockInitFetch() {
   ]);
   vi.mocked(api.fetchRecipes).mockResolvedValue([]);
   vi.mocked(api.fetchShoppingItems).mockResolvedValue([]);
-  vi.mocked(api.fetchNotificationPrefs).mockResolvedValue({ expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false, crewActionsEnabled: false });
+  vi.mocked(api.fetchNotificationPrefs).mockResolvedValue({ expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false, crewActionsEnabled: false, social: true });
   vi.mocked(api.fetchNotificationEvents).mockResolvedValue([]);
   vi.mocked(api.fetchChatHistory).mockResolvedValue({ messages: [], session_id: null });
   vi.mocked(api.fetchUsageHistory).mockResolvedValue([]);

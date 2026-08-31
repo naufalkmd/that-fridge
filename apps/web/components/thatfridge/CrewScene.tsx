@@ -20,12 +20,16 @@ type PathPoint = { leftPct: number; topPct: number };
 // room (bottom-right). These paths were estimated from a percentage-grid overlay rather
 // than drawn interactively - re-check them with the drawer tool if a crew member ever
 // looks like it's clipping furniture.
+// Only these kinds surface as a badge on a crew member in the room; the rest (invites,
+// crew activity) live only in the notification history list.
+type CountedNotificationKind = Extract<NotificationKind, "expiring" | "lowStock" | "recipe">;
+
 const ZONES: {
   id: CrewId;
   label: string;
   color: string;
   path: PathPoint[];
-  notifKind?: NotificationKind;
+  notifKind?: CountedNotificationKind;
   onClick: (a: ThatFridgeActions) => void;
 }[] = [
   {
@@ -387,11 +391,13 @@ export default function CrewScene() {
   const { state, actions } = useThatFridgeCtx();
 
   const activeFridgeId = state.fridges[state.activeFridge]?.id;
-  const pendingByKind: Record<NotificationKind, number> = { expiring: 0, lowStock: 0, recipe: 0 };
+  const pendingByKind: Record<CountedNotificationKind, number> = { expiring: 0, lowStock: 0, recipe: 0 };
   for (const event of state.notificationEvents) {
     if (event.done) continue;
     if (state.kitchenScope === "active" && event.fridgeId !== activeFridgeId) continue;
-    pendingByKind[event.kind] += 1;
+    if (event.kind === "expiring" || event.kind === "lowStock" || event.kind === "recipe") {
+      pendingByKind[event.kind] += 1;
+    }
   }
 
   // Same Kitchen Score results AgentScoreCard reads, just keyed by CrewId instead of

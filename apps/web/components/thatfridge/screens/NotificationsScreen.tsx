@@ -49,6 +49,18 @@ const GROUPS: {
       },
     ],
   },
+  {
+    title: "SHARED FRIDGES",
+    rows: [
+      {
+        key: "social",
+        label: "Invites & members",
+        desc: "Invitations, join requests, and people joining or leaving a shared fridge",
+        icon: "/images/thatfridge/organizer.gif",
+        accent: theme.blue,
+      },
+    ],
+  },
 ];
 
 export default function NotificationsScreen() {

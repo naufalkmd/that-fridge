@@ -32,7 +32,7 @@ export interface HttpClient {
   post<T = unknown>(path: string, body?: unknown): Promise<T>;
   patch<T = unknown>(path: string, body?: unknown): Promise<T>;
   put<T = unknown>(path: string, body?: unknown): Promise<T>;
-  del<T = unknown>(path: string): Promise<T>;
+  del<T = unknown>(path: string, body?: unknown): Promise<T>;
 }
 
 export interface HttpClientConfig {
@@ -82,6 +82,6 @@ export function createHttpClient({ baseUrl, tokens }: HttpClientConfig): HttpCli
     post: (path, b) => request(path, { method: "POST", body: body(b) }),
     patch: (path, b) => request(path, { method: "PATCH", body: body(b) }),
     put: (path, b) => request(path, { method: "PUT", body: body(b) }),
-    del: (path) => request(path, { method: "DELETE" }),
+    del: (path, b) => request(path, { method: "DELETE", body: body(b) }),
   };
 }
