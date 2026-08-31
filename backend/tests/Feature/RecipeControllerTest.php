@@ -286,6 +286,31 @@ class RecipeControllerTest extends TestCase
         $this->assertFalse($names->contains('Never Favorited'));
     }
 
+    public function test_show_returns_any_users_recipe_by_id(): void
+    {
+        $owner = User::factory()->create(['username' => 'chef_amir']);
+        $viewer = User::factory()->create();
+        $recipe = $this->recipeFor($owner, ['name' => "Amir's Dal"]);
+
+        $response = $this->actingAs($viewer)->getJson("/api/recipes/{$recipe->id}");
+
+        $response->assertOk();
+        $response->assertJson(['data' => [
+            'id' => (string) $recipe->id,
+            'name' => "Amir's Dal",
+            'ownerUsername' => 'chef_amir',
+            'isMine' => false,
+            'isFavorite' => false,
+        ]]);
+    }
+
+    public function test_show_requires_authentication(): void
+    {
+        $recipe = $this->recipeFor(User::factory()->create());
+
+        $this->getJson("/api/recipes/{$recipe->id}")->assertStatus(401);
+    }
+
     public function test_recipe_resource_reports_owner_name_for_a_custom_recipe_and_null_for_curated(): void
     {
         $owner = User::factory()->create(['name' => 'Jordan Diaz', 'username' => 'jordan_diaz']);

@@ -8,10 +8,12 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import {
   describeError,
   type FriendProfile,
+  type Recipe,
   type UserSearchResult,
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useSocial } from "@/lib/social";
+import { useRecipes } from "@/lib/recipes";
 import { PixelText } from "@/components/brand";
 
 const SURFACE = "#131316";
@@ -26,6 +28,7 @@ const GOOD = "#39e07f";
 export default function FindFriend() {
   const router = useRouter();
   const { myInvites, acceptInvite, declineInvite, refresh } = useSocial();
+  const { setFavorite } = useRecipes();
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserSearchResult[]>([]);
@@ -59,6 +62,34 @@ export default function FindFriend() {
       Alert.alert("Error", describeError(e, "Couldn't load that profile."));
     } finally {
       setLoadingProfile(false);
+    }
+  }
+
+  async function toggleRecipeFav(recipe: Recipe) {
+    const next = !recipe.isFavorite;
+    setProfile((p) =>
+      p
+        ? {
+            ...p,
+            recipes: p.recipes.map((r) =>
+              r.id === recipe.id ? { ...r, isFavorite: next } : r,
+            ),
+          }
+        : p,
+    );
+    const saved = await setFavorite(recipe, next);
+    if (!saved) {
+      // revert on failure
+      setProfile((p) =>
+        p
+          ? {
+              ...p,
+              recipes: p.recipes.map((r) =>
+                r.id === recipe.id ? { ...r, isFavorite: recipe.isFavorite } : r,
+              ),
+            }
+          : p,
+      );
     }
   }
 
@@ -136,22 +167,44 @@ export default function FindFriend() {
 
           {profile.recipes.length > 0 && (
             <>
-              <Label>THEIR RECIPES</Label>
+              <Label>THEIR RECIPE BOOK</Label>
               <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden" }}>
                 {profile.recipes.map((r, i) => (
-                  <View
+                  <Pressable
                     key={r.id}
+                    onPress={() => router.push(`/recipe/${r.id}`)}
                     style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 10,
                       padding: 12,
                       borderBottomWidth: i === profile.recipes.length - 1 ? 0 : 1,
                       borderBottomColor: HAIRLINE,
                     }}
                   >
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: INK }}>{r.name}</Text>
-                    <Text style={{ fontSize: 11, color: FAINT }}>{r.minutes} min</Text>
-                  </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: INK }} numberOfLines={1}>
+                        {r.name}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: FAINT }}>
+                        {r.minutes} min · {r.ingredients.length} ingredient
+                        {r.ingredients.length === 1 ? "" : "s"}
+                      </Text>
+                    </View>
+                    <Pressable onPress={() => toggleRecipeFav(r)} hitSlop={10} style={{ padding: 4 }}>
+                      <MaterialCommunityIcons
+                        name={r.isFavorite ? "heart" : "heart-outline"}
+                        size={18}
+                        color={r.isFavorite ? "#26c6da" : FAINT}
+                      />
+                    </Pressable>
+                    <Ionicons name="chevron-forward" size={15} color={FAINT} />
+                  </Pressable>
                 ))}
               </View>
+              <Text style={{ fontSize: 11, color: FAINT, marginTop: 8 }}>
+                Tap the heart to save a recipe to your own book.
+              </Text>
             </>
           )}
         </ScrollView>

@@ -231,8 +231,9 @@ function Row({
         <Text style={{ fontSize: 14, fontWeight: "700", color: INK }} numberOfLines={1}>
           {r.name}
         </Text>
-        <Text style={{ fontSize: 11, color: ready ? GOOD : MUTED }}>
+        <Text style={{ fontSize: 11, color: ready ? GOOD : MUTED }} numberOfLines={1}>
           {r.minutes} min · {have}/{total} ready
+          {!r.isMine && r.ownerUsername ? ` · from @${r.ownerUsername}` : ""}
         </Text>
       </View>
       <Pressable onPress={onFav} hitSlop={10} style={{ padding: 4 }}>
