@@ -62,6 +62,18 @@ Resolution: reuse the account already linked to this provider id → else link o
 
 ---
 
+### `POST /forgot-password` · `POST /reset-password`
+
+Code-based reset — no email links, no web page. Both are rate-limited to **6 requests/minute** per IP.
+
+`POST /forgot-password` — body `{ "email": "..." }`. Emails a 6-digit code (15-min TTL, stored hashed in `password_reset_tokens`, one per address — re-requesting replaces it). **Always 200** with `{ "message": "If that email is registered, we've sent a reset code." }`, whether or not the address exists.
+
+`POST /reset-password` — body `{ "email", "code", "password" }` (`password` min 8). On a valid, unexpired code: sets the new password, **revokes every existing token** for that user, deletes the code, and returns `{ user, token }` (same shape as login — the app is signed straight in). **422** `{"errors":{"code":["That code is invalid or has expired."]}}` otherwise.
+
+Requires a working mailer (`MAIL_MAILER` + credentials). With `MAIL_MAILER=log` the code lands in `storage/logs/laravel.log`.
+
+---
+
 ### `POST /logout` 🔒
 
 Revokes the token used to make this request. No body.

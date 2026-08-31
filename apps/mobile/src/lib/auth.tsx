@@ -13,6 +13,7 @@ interface AuthContextValue {
   user: CurrentUser | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, username: string, email: string, password: string) => Promise<void>;
+  resetPassword: (email: string, code: string, password: string) => Promise<void>;
   signInWithApple: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -58,6 +59,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = useCallback(
     async (name: string, username: string, email: string, password: string) => {
       const { user } = await api.register(name, username, email, password);
+      setUser(user);
+      setStatus("signedIn");
+    },
+    [],
+  );
+
+  const resetPassword = useCallback(
+    async (email: string, code: string, password: string) => {
+      const { user } = await api.resetPassword(email.trim(), code.trim(), password);
       setUser(user);
       setStatus("signedIn");
     },
@@ -110,6 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       signIn,
       signUp,
+      resetPassword,
       signInWithApple,
       signInWithGoogle,
       signOut,
@@ -120,6 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       signIn,
       signUp,
+      resetPassword,
       signInWithApple,
       signInWithGoogle,
       signOut,

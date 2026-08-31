@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AgentController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\CategoryController;
@@ -34,6 +35,11 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/auth/apple', [AuthController::class, 'apple']);
 Route::post('/auth/google', [AuthController::class, 'google']);
+// Rate-limited: /forgot-password sends an email, /reset-password is brute-forceable.
+Route::middleware('throttle:6,1')->group(function () {
+    Route::post('/forgot-password', [PasswordResetController::class, 'forgot']);
+    Route::post('/reset-password', [PasswordResetController::class, 'reset']);
+});
 
 // Protected routes (Track A - requires auth)
 Route::middleware('auth:sanctum')->group(function () {

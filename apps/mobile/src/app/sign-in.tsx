@@ -206,6 +206,17 @@ export default function SignIn() {
                   </Text>
                 )}
               </Pressable>
+
+              {isLogin && (
+                <Pressable
+                  className="items-center"
+                  onPress={() => router.push("/forgot-password")}
+                >
+                  <Text className="text-[12px] font-semibold text-muted">
+                    Forgot password?
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </View>
 
