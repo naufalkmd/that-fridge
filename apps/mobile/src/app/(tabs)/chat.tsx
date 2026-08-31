@@ -35,6 +35,7 @@ import {
   getChatUsed,
 } from "@/lib/chatQuota";
 import { useRecipes } from "@/lib/recipes";
+import { useVoiceDictation } from "@/lib/voice";
 import { MarkdownText } from "@/components/markdown-text";
 import { RecipeSuggestionCard } from "@/components/recipe-suggestion-card";
 
@@ -81,6 +82,21 @@ export default function Chat() {
   const [used, setUsed] = useState(0);
   const [attachment, setAttachment] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+
+  // Voice dictation → fills the composer; the user still reviews and hits send.
+  const dictationBase = useRef("");
+  const voice = useVoiceDictation((transcript) => {
+    const base = dictationBase.current;
+    setText(base ? `${base} ${transcript}` : transcript);
+  });
+  function toggleDictation() {
+    if (voice.listening) {
+      voice.stop();
+    } else {
+      dictationBase.current = text.trim();
+      voice.start();
+    }
+  }
 
   const remaining = Math.max(0, FREE_CHATS_PER_WEEK - used);
 
@@ -132,6 +148,7 @@ export default function Chat() {
   }
 
   async function send(preset?: string) {
+    if (voice.listening) voice.stop();
     const msg = (preset ?? text).trim();
     if ((!msg && !attachment) || sending) return;
     if (!isPro && remaining <= 0) {
@@ -357,6 +374,36 @@ export default function Chat() {
                 </Pressable>
               </View>
             )}
+            {(voice.listening || voice.error) && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  marginBottom: 8,
+                  marginLeft: 4,
+                }}
+              >
+                {voice.listening && (
+                  <View
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: 4,
+                      backgroundColor: "#ff5f56",
+                    }}
+                  />
+                )}
+                <Text
+                  style={{
+                    fontSize: 11.5,
+                    color: voice.error ? "#ff5f56" : MUTED,
+                  }}
+                >
+                  {voice.error ?? "Listening… tap the mic to stop"}
+                </Text>
+              </View>
+            )}
             <View
               style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}
             >
@@ -390,21 +437,41 @@ export default function Chat() {
                   color: INK,
                 }}
               />
-              <Pressable
-                onPress={() => send()}
-                disabled={sending || (!text.trim() && !attachment)}
-                style={{
-                  width: 38,
-                  height: 38,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: 19,
-                  backgroundColor: AMBER,
-                  opacity: sending || (!text.trim() && !attachment) ? 0.5 : 1,
-                }}
-              >
-                <Ionicons name="arrow-up" size={18} color="#0a0a0c" />
-              </Pressable>
+              {text.trim() || attachment || !voice.available ? (
+                <Pressable
+                  onPress={() => send()}
+                  disabled={sending || (!text.trim() && !attachment)}
+                  style={{
+                    width: 38,
+                    height: 38,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 19,
+                    backgroundColor: AMBER,
+                    opacity: sending || (!text.trim() && !attachment) ? 0.5 : 1,
+                  }}
+                >
+                  <Ionicons name="arrow-up" size={18} color="#0a0a0c" />
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={toggleDictation}
+                  style={{
+                    width: 38,
+                    height: 38,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 19,
+                    backgroundColor: voice.listening ? "#ff5f56" : SURFACE2,
+                  }}
+                >
+                  <Ionicons
+                    name={voice.listening ? "stop" : "mic"}
+                    size={17}
+                    color={voice.listening ? "#0a0a0c" : INK}
+                  />
+                </Pressable>
+              )}
             </View>
           </View>
         </KeyboardAvoidingView>
