@@ -305,6 +305,24 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return res;
   }
 
+  function forgotPassword(email: string): Promise<{ message: string }> {
+    return http.post<{ message: string }>("/forgot-password", { email });
+  }
+
+  async function resetPassword(
+    email: string,
+    code: string,
+    password: string,
+  ): Promise<AuthResult> {
+    const res = await http.post<AuthResult>("/reset-password", {
+      email,
+      code,
+      password,
+    });
+    await tokens.set(res.token);
+    return res;
+  }
+
   async function loginWithApple(
     identityToken: string,
     name?: string | null,
@@ -829,6 +847,8 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   return {
     login,
     register,
+    forgotPassword,
+    resetPassword,
     loginWithApple,
     loginWithGoogle,
     logout,
