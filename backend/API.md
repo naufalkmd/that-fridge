@@ -328,10 +328,12 @@ Backs the Add-item form's "Auto-fill" button. Stateless — the item doesn't nee
 
 **200**
 ```json
-{ "shelf_life_days": 3, "location": "pantry" }
+{ "shelf_life_days": 3, "location": "pantry", "nutrition_category": "grains" }
 ```
 
-Calls the same OpenRouter model as `/chat`. Without `OPENROUTER_API_KEY` configured, or if the call fails, falls back to a small static lookup table server-side (see `AgentService::fallbackItemSuggestion`) so the button still does something reasonable offline.
+`nutrition_category` is one of the six `Item` food groups (`protein`, `vegetables`, `fruit`, `grains`, `dairy`, `other_extras`) or **null** when it can't be guessed — the app fills the food-group chips with it.
+
+Calls the same OpenRouter model as `/chat`. Without `OPENROUTER_API_KEY` configured, or if the call fails, falls back to a small static keyword lookup server-side (see `AgentService::fallbackItemSuggestion` / `guessNutritionCategory`) so the button still does something reasonable offline.
 
 ---
 

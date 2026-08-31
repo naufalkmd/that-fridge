@@ -466,11 +466,15 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.del(`/icons/generated/${id}`).then(() => undefined);
   }
 
-  /** AI "auto-fill" — suggest a shelf life + storage location from an item's name. */
+  /** AI "auto-fill" — shelf life + storage location + food group from an item's name. */
   function suggestItemDetails(
     name: string,
     icon?: string,
-  ): Promise<{ shelf_life_days: number; location: StorageLocation }> {
+  ): Promise<{
+    shelf_life_days: number;
+    location: StorageLocation;
+    nutrition_category: NutritionCategory | null;
+  }> {
     return http.post("/items/suggest-details", { name, icon });
   }
 

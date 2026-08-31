@@ -193,6 +193,7 @@ function useDraftItems(initial: () => Draft[]) {
       ...(s.shelf_life_days
         ? { expiryDate: isoInDays(s.shelf_life_days) }
         : {}),
+      ...(s.nutrition_category ? { category: s.nutrition_category } : {}),
     } satisfies Partial<Draft>;
   }, []);
 

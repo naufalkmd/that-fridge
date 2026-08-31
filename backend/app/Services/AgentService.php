@@ -333,6 +333,7 @@ Item name: "{$name}"
 Return ONLY a JSON object (no prose, no markdown fences) with exactly these fields:
 - "shelf_life_days": typical shelf life in days from today if stored properly (integer, 1-365)
 - "location": the best place to store it - one of "fridge", "freezer", "pantry"
+- "nutrition_category": the item's food group - one of "protein", "vegetables", "fruit", "grains", "dairy", "other_extras" (use "other_extras" for sauces, oils, snacks, drinks, condiments, desserts, and mixed/prepared dishes)
 PROMPT;
 
             $result = $this->client->complete([
@@ -348,6 +349,9 @@ PROMPT;
                         'location' => in_array($parsed['location'], ['fridge', 'freezer', 'pantry'], true)
                             ? $parsed['location']
                             : 'fridge',
+                        'nutrition_category' => in_array($parsed['nutrition_category'] ?? null, self::NUTRITION_CATEGORIES, true)
+                            ? $parsed['nutrition_category']
+                            : $this->guessNutritionCategory($name, $icon),
                     ];
                 }
             }
@@ -417,7 +421,45 @@ PROMPT;
         return [
             'shelf_life_days' => $defaultShelfLifeDays[$icon] ?? 7,
             'location' => $location,
+            'nutrition_category' => $this->guessNutritionCategory($name, $icon),
         ];
+    }
+
+    /**
+     * Mirrors ItemController::NUTRITION_CATEGORIES — the enum the Item store/update endpoints
+     * (and the Food Balance / Waste Saver scores) validate against.
+     */
+    private const NUTRITION_CATEGORIES = ['protein', 'vegetables', 'fruit', 'grains', 'dairy', 'other_extras'];
+
+    /**
+     * Keyword guess for the item's food group, matched against the name and the pixel-icon
+     * key. Returns null when nothing matches rather than forcing a wrong bucket — the model
+     * path above is the real source; this only has to be reasonable offline.
+     *
+     * @return 'protein'|'vegetables'|'fruit'|'grains'|'dairy'|'other_extras'|null
+     */
+    private function guessNutritionCategory(string $name, ?string $icon): ?string
+    {
+        $groups = [
+            'dairy' => ['milk', 'cheese', 'yogurt', 'yoghurt', 'butter', 'cream', 'kefir'],
+            'protein' => ['egg', 'meat', 'chicken', 'beef', 'pork', 'fish', 'salmon', 'tuna', 'tofu', 'bean', 'lentil', 'turkey', 'shrimp', 'prawn', 'bacon', 'sausage', 'ham', 'nuts', 'peanut', 'almond'],
+            'vegetables' => ['spinach', 'carrot', 'broccoli', 'lettuce', 'tomato', 'pepper', 'onion', 'potato', 'cucumber', 'celery', 'kale', 'cabbage', 'mushroom', 'zucchini', 'courgette', 'pea', 'corn', 'garlic', 'veg'],
+            'fruit' => ['apple', 'banana', 'orange', 'berr', 'grape', 'melon', 'mango', 'peach', 'pear', 'lemon', 'lime', 'strawberr', 'blueberr', 'pineapple', 'kiwi', 'cherry', 'plum', 'avocado'],
+            'grains' => ['bread', 'rice', 'pasta', 'noodle', 'cereal', 'oat', 'flour', 'tortilla', 'cracker', 'bagel', 'quinoa', 'granola', 'couscous', 'bun'],
+            'other_extras' => ['sauce', 'oil', 'juice', 'soda', 'chips', 'candy', 'chocolate', 'cookie', 'ice cream', 'jam', 'jelly', 'dressing', 'snack', 'cake', 'vinegar', 'syrup', 'condiment', 'leftover'],
+        ];
+
+        $haystack = strtolower(trim($name)).' '.strtolower((string) $icon);
+
+        foreach ($groups as $category => $keywords) {
+            foreach ($keywords as $keyword) {
+                if (str_contains($haystack, $keyword)) {
+                    return $category;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
