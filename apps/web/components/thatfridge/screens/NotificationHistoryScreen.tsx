@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Check, ChefHat, ChevronLeft, Hourglass, Mail, ShoppingCart, UserPlus, X } from "lucide-react";
+import { Bell, Check, ChefHat, ChevronLeft, Hourglass, LogOut, Mail, PackagePlus, ShoppingCart, StickyNote, UserPlus, X } from "lucide-react";
 import { timeAgo } from "@/lib/thatfridge/utils";
 import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
@@ -13,13 +13,26 @@ const KIND_META: Record<NotificationKind, { Icon: typeof Hourglass; color: strin
   expiring: { Icon: Hourglass, color: theme.agent.guardian },
   lowStock: { Icon: ShoppingCart, color: theme.agent.shopkeeper },
   recipe: { Icon: ChefHat, color: theme.agent.chef },
+  invite: { Icon: Mail, color: theme.blue },
+  joinRequest: { Icon: UserPlus, color: theme.blue },
+  requestApproved: { Icon: Check, color: theme.good },
+  requestDeclined: { Icon: X, color: theme.text.faint },
+  inviteAccepted: { Icon: Check, color: theme.good },
+  inviteDeclined: { Icon: X, color: theme.text.faint },
+  memberLeft: { Icon: LogOut, color: theme.text.faint },
+  removed: { Icon: LogOut, color: theme.bad },
+  itemAdded: { Icon: PackagePlus, color: theme.agent.organizer },
+  itemUsed: { Icon: PackagePlus, color: theme.agent.organizer },
+  note: { Icon: StickyNote, color: theme.agent.organizer },
 };
+
+const FALLBACK_META = { Icon: Bell, color: theme.text.faint };
 
 function NotificationRow({ event, onDismiss }: { event: NotificationEvent; onDismiss: (id: string) => void }) {
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const startX = useRef(0);
-  const meta = KIND_META[event.kind];
+  const meta = KIND_META[event.kind] ?? FALLBACK_META;
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (event.done) return;

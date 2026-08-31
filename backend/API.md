@@ -356,12 +356,14 @@ Singleton per user — no id in the URL. First `GET`/`PATCH` auto-creates the ro
 
 **200**
 ```json
-{ "expiryAlerts": true, "lowStock": true, "recipeTips": true, "weeklyDigest": true }
+{ "expiryAlerts": true, "lowStock": true, "recipeTips": true, "weeklyDigest": true, "crewActionsEnabled": false, "social": true }
 ```
+
+`crewActionsEnabled` gates shared-fridge item/note activity (`itemAdded`, `itemUsed`, `note`) and defaults **off**. `social` gates invites/join-requests/approvals/members (`invite`, `joinRequest`, `requestApproved`, …) and defaults **on**. When a pref is off the matching `notification_events` row is never created (same as the expiry cron).
 
 ### `PATCH /notification-prefs` 🔒
 
-**Body** — any subset of `expiryAlerts`, `lowStock`, `recipeTips`, `weeklyDigest` (booleans).
+**Body** — any subset of `expiryAlerts`, `lowStock`, `recipeTips`, `weeklyDigest`, `crewActionsEnabled`, `social` (booleans).
 
 **200** — full updated prefs object.
 
@@ -369,11 +371,33 @@ Singleton per user — no id in the URL. First `GET`/`PATCH` auto-creates the ro
 
 ## Notification events
 
-Read-only history of things the freshness cron (below) has flagged, plus a way to mark one done. Scoped through the owning fridge — cross-user access returns **403**, same as fridges/sections/items.
+History of things worth telling the user about — the freshness cron (below), plus **activity events** raised in real time when someone acts on a shared fridge or an invitation. Mark one done with the `PATCH` below.
+
+Two scopes, unioned in the feed:
+- **Personal** — `user_id` is set. Addressed to one person (an invite, an approval, "you were removed"). Visible to that user even before they're a member of the fridge it's about.
+- **Fridge-wide** — `user_id` is null. Visible to every current member (the expiry/low-stock cron writes these).
+
+Activity kinds and what raises them:
+
+| kind | raised when | recipient | pref |
+|------|-------------|-----------|------|
+| `invite` | owner invites a user | invitee | `social` |
+| `joinRequest` | user asks to join | fridge owner | `social` |
+| `requestApproved` | owner approves a request / invitee's pending request is auto-accepted | requester | `social` |
+| `requestDeclined` | owner declines a request | requester | `social` |
+| `inviteAccepted` | invitee accepts | fridge owner | `social` |
+| `inviteDeclined` | invitee declines | fridge owner | `social` |
+| `memberLeft` | member leaves | fridge owner | `social` |
+| `removed` | owner removes a member | removed member | `social` |
+| `itemAdded` | item added to a fridge with ≥2 members | other members | `crewActionsEnabled` |
+| `itemUsed` | item quantity hits 0 in a fridge with ≥2 members | other members | `crewActionsEnabled` |
+| `note` | note added to a shared fridge | other members | `crewActionsEnabled` |
+
+Every event also queues a push (`SendPushNotification`) to the recipient's registered devices via Expo.
 
 ### `GET /notification-events` 🔒
 
-Returns all events across all of the current user's fridges, newest first.
+Returns the current user's personal events plus fridge-wide events for fridges they belong to, newest first, capped at 200.
 
 **200**
 ```json
@@ -393,13 +417,33 @@ Returns all events across all of the current user's fridges, newest first.
 }
 ```
 
-`createdAt` is a Unix ms timestamp. `itemId` is nullable (present for `expiring` events, which are always tied to one item). Only the `expiring` kind is generated today — see the cron notes below.
+`createdAt` is a Unix ms timestamp. `itemId` is nullable (present for `expiring`/`itemAdded`/`itemUsed`).
 
 ### `PATCH /notification-events/{notificationEvent}` 🔒
 
 **Body** `{ "done": true }`
 
-**200** — updated event, same shape as above.
+**200** — updated event, same shape as above. Allowed for the event's target user (personal) or any member of its fridge (fridge-wide); anyone else gets **403**.
+
+---
+
+## Push tokens
+
+Device registration for Expo push. The app posts its `ExponentPushToken[…]` on sign-in and deletes it on sign-out.
+
+### `POST /push-tokens` 🔒
+
+**Body** `{ "token": "ExponentPushToken[…]", "platform": "ios" | "android" | null }`
+
+Idempotent — re-posting the same token refreshes it; a token that belonged to another user moves to the caller (one device, one active account).
+
+**204**
+
+### `DELETE /push-tokens` 🔒
+
+**Body** `{ "token": "ExponentPushToken[…]" }` — only removes a token owned by the caller.
+
+**204**
 
 ---
 

@@ -18,6 +18,7 @@ use App\Http\Controllers\NotificationEventController;
 use App\Http\Controllers\NotificationPrefController;
 use App\Http\Controllers\OrganizerTallyController;
 use App\Http\Controllers\PhotoController;
+use App\Http\Controllers\PushTokenController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\ScoreSnapshotController;
@@ -119,6 +120,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/notification-prefs', [NotificationPrefController::class, 'show']);
     Route::patch('/notification-prefs', [NotificationPrefController::class, 'update']);
+
+    Route::post('/push-tokens', [PushTokenController::class, 'store']);
+    Route::delete('/push-tokens', [PushTokenController::class, 'destroy']);
 
     Route::get('/user-goal', [UserGoalController::class, 'show']);
     Route::patch('/user-goal', [UserGoalController::class, 'update']);

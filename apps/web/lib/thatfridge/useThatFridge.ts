@@ -594,7 +594,7 @@ export function initialState(): ThatFridgeState {
     friendProfileLoading: false,
     undoMessage: null,
     syncError: null,
-    notificationPrefs: { expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false, crewActionsEnabled: false },
+    notificationPrefs: { expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false, crewActionsEnabled: false, social: true },
     notificationEvents: [],
     userGoal: null,
     organizerTally: null,

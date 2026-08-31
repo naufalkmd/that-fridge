@@ -20,6 +20,7 @@ class NotificationPrefResource extends JsonResource
             'recipeTips' => $this->recipe_tips,
             'weeklyDigest' => $this->weekly_digest,
             'crewActionsEnabled' => $this->crew_actions_enabled,
+            'social' => $this->social,
         ];
     }
 }

@@ -219,6 +219,7 @@ export interface NotificationPrefs {
   recipeTips: boolean;
   weeklyDigest: boolean;
   crewActionsEnabled: boolean;
+  social: boolean;
 }
 
 export interface UsageHistoryEntry {
@@ -256,7 +257,21 @@ export interface OrganizerTally {
   lastCheckedAt: number | null;
 }
 
-export type NotificationKind = "expiring" | "lowStock" | "recipe";
+export type NotificationKind =
+  | "expiring"
+  | "lowStock"
+  | "recipe"
+  | "invite"
+  | "joinRequest"
+  | "requestApproved"
+  | "requestDeclined"
+  | "inviteAccepted"
+  | "inviteDeclined"
+  | "memberLeft"
+  | "removed"
+  | "itemAdded"
+  | "itemUsed"
+  | "note";
 
 export interface NotificationEvent {
   id: string;

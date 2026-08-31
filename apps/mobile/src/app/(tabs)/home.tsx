@@ -132,7 +132,9 @@ export default function Home() {
 
   const pendingByKind = useMemo(() => {
     const acc = { expiring: 0, lowStock: 0, recipe: 0 };
-    for (const e of events) if (!e.done) acc[e.kind] += 1;
+    for (const e of events) {
+      if (!e.done && e.kind in acc) acc[e.kind as keyof typeof acc] += 1;
+    }
     return acc;
   }, [events]);
 

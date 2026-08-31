@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Observers\ItemObserver;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+#[ObservedBy([ItemObserver::class])]
 #[Fillable([
     'section_id',
     'product_id',

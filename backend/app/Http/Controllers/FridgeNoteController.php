@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\FridgeNoteResource;
 use App\Models\Fridge;
 use App\Models\FridgeNote;
+use App\Services\Notifier;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -42,6 +43,14 @@ class FridgeNoteController extends Controller
         ]);
 
         $note = $fridge->notes()->create([...$data, 'user_id' => $request->user()->id]);
+
+        Notifier::notifyFridge(
+            $fridge,
+            $request->user(),
+            'note',
+            '@'.$request->user()->username." left a note on {$fridge->name}",
+            null,
+        );
 
         return new FridgeNoteResource($note->load(['fridge', 'user']));
     }

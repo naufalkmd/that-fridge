@@ -479,6 +479,20 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.patch<NotificationPrefs>("/notification-prefs", data);
   }
 
+  function registerPushToken(
+    token: string,
+    platform?: "ios" | "android",
+  ): Promise<void> {
+    return http.post("/push-tokens", {
+      token,
+      ...(platform ? { platform } : {}),
+    });
+  }
+
+  function unregisterPushToken(token: string): Promise<void> {
+    return http.del("/push-tokens", { token });
+  }
+
   function listShoppingItems(): Promise<ShoppingItem[]> {
     return http.get<ShoppingItem[]>("/shopping-items");
   }
@@ -817,6 +831,8 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     markNotification,
     getNotificationPrefs,
     updateNotificationPrefs,
+    registerPushToken,
+    unregisterPushToken,
     listShoppingItems,
     addShoppingItem,
     updateShoppingItem,

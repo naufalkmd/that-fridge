@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { CurrentUser } from "@thatfridge/core";
 
 import { api, secureTokenStore } from "@/lib/api";
+import { unregisterPush } from "@/lib/push";
 
 type Status = "loading" | "signedOut" | "signedIn";
 
@@ -60,12 +61,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    await unregisterPush();
     await api.logout();
     setUser(null);
     setStatus("signedOut");
   }, []);
 
   const deleteAccount = useCallback(async () => {
+    await unregisterPush();
     await api.deleteAccount();
     setUser(null);
     setStatus("signedOut");
