@@ -436,7 +436,9 @@ open; code already had both.)
 - [🟡] TestFlight build validated by all 4 members on real devices — **build 1 (v1.0.0) submitted 2026-08-28** via `eas build/submit`; processing at App Store Connect. Add internal testers + a "What to Test" note.
 
 - [ ] Crash-free session confirmed in Sentry
-- [ ] Version 1.0.0, build number set, release set to **manual**
+- [ ] Version set (currently `1.2.0`, stale reference to `1.0.0` here fixed 2026-09-05), release
+  set to **manual** — an App Store Connect setting on the real version submission, not
+  applicable yet since only TestFlight builds exist so far
 - [X] EAS Update production channel wired · TestFlight CI (`.github/workflows/testflight.yml`)
 - [ ] Devpost submission drafted
 
