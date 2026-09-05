@@ -31,12 +31,13 @@ use App\Http\Controllers\UserGoalController;
 use Illuminate\Support\Facades\Route;
 
 // Auth routes (public)
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
 Route::post('/auth/apple', [AuthController::class, 'apple']);
 Route::post('/auth/google', [AuthController::class, 'google']);
-// Rate-limited: /forgot-password sends an email, /reset-password is brute-forceable.
+// Rate-limited: /register and /login are brute-forceable; /forgot-password sends an
+// email, /reset-password is brute-forceable too.
 Route::middleware('throttle:6,1')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
     Route::post('/forgot-password', [PasswordResetController::class, 'forgot']);
     Route::post('/reset-password', [PasswordResetController::class, 'reset']);
 });

@@ -103,7 +103,8 @@ Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ *
   (push to `main` → PHPUnit → SSH `backend/scripts/deploy.sh`); runbook `backend/DEPLOY.md`.
 - [X] GitHub Actions CD secrets (`DEPLOY_HOST` `DEPLOY_USER` `DEPLOY_SSH_KEY`) added — full
   pipeline verified green (manual `workflow_dispatch` run deployed `6dbc889` to the box).
-- [ ] Rate-limit `/api/login` + `/api/register` (throttle middleware). **Launch security item.**
+- [X] Rate-limit `/api/login` + `/api/register` (`throttle:6,1`, same limiter as
+  forgot/reset-password) — 2026-09-05.
 - [ ] Copy backups off-box (DO weekly droplet snapshot is on — add pg_dump → object storage).
 - [X] Seed a stable **reviewer demo account** on prod — `keira@thatfridge.test` / `password123`
   with a seeded fridge + 7 curated recipes. **⚠ Change the password before submitting.**
@@ -122,7 +123,10 @@ Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ *
   - **Resend** — `MAIL_MAILER=resend` + `RESEND_API_KEY` + verify `thatfridge.com` in the
     Resend dashboard (add SPF/DKIM DNS). Better deliverability, no daily cap.
   - Then merge `forgot-password`, and tick §8.
-- [ ] Restrict `config/cors.php` `allowed_origins` before the web build ships (currently allows all).
+- [X] `config/cors.php` already restricted — `allowed_origins` is empty, only a
+  localhost/127.0.0.1 pattern is allowed (checked 2026-09-05). This line was stale; nothing
+  needed for now since `apps/web` is the frozen legacy SPA and never deployed — revisit
+  `allowed_origins` once a real browser-facing origin ships (react-native-web build, per §7).
 - [X] Privacy / Terms / Support pages — live at `https://thatfridge.com` (see §1; `apps/legal/`,
   Git-connected Cloudflare Worker, auto-redeploy on `main`).
 - [X] `DELETE /api/me` endpoint + tests (hard-deletes user + tokens + owned fridges).
