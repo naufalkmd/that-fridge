@@ -24,8 +24,13 @@ class UserController extends Controller
             'q' => ['required', 'string', 'min:2', 'max:255'],
         ]);
 
+        $me = $request->user();
+        $blockedIds = $me->blocking()->pluck('users.id')
+            ->merge($me->blockedBy()->pluck('users.id'));
+
         $users = User::where('username', 'like', $data['q'].'%')
-            ->where('id', '!=', $request->user()->id)
+            ->where('id', '!=', $me->id)
+            ->whereNotIn('id', $blockedIds)
             ->orderBy('username')
             ->limit(20)
             ->get();
@@ -66,6 +71,7 @@ class UserController extends Controller
             ->get();
 
         $user->setAttribute('profileRecipes', RecipeResource::collection($recipes));
+        $user->setAttribute('blockedByMe', $viewer->blocking()->where('users.id', $user->id)->exists());
 
         return new UserProfileResource($user);
     }

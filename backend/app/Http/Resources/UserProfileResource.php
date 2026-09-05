@@ -10,12 +10,14 @@ class UserProfileResource extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * `profileFridges`/`profileRecipes` are dynamic attributes UserController::profile() sets
-     * on the User instance before wrapping it (not real columns/relations) - the fridges and
-     * custom recipes THIS user owns. Fridges are pre-shaped as {id, name, memberCount, role,
+     * `profileFridges`/`profileRecipes`/`blockedByMe` are dynamic attributes
+     * UserController::profile() sets on the User instance before wrapping it (not real
+     * columns/relations) - the fridges and custom recipes THIS user owns, plus whether the
+     * viewer has blocked them. Fridges are pre-shaped as {id, name, memberCount, role,
      * requestStatus} from the viewer's own perspective; recipes are already-resourced
      * RecipeResource collections, so isFavorite/isMine come from the viewer's perspective too.
-     * Building either here instead would mean re-querying with no access to the viewer's id.
+     * Building any of this here instead would mean re-querying with no access to the viewer's
+     * id.
      *
      * @return array<string, mixed>
      */
@@ -27,6 +29,7 @@ class UserProfileResource extends JsonResource
             'username' => $this->username,
             'fridges' => $this->profileFridges,
             'recipes' => $this->profileRecipes,
+            'blockedByMe' => $this->blockedByMe,
         ];
     }
 }

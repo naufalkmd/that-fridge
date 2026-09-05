@@ -248,9 +248,13 @@ post-launch OTA fast-follow.**
 - [X] **Minimum sign-up age 14+** — Terms already had it (§2); added the same statement + a
   Terms/Privacy link to the signup screen itself (`sign-in.tsx`, 2026-09-05), which had neither
   before.
-- [ ] **Guideline 1.2 (UGC safety):** fridge sharing + username search + join-requests are
-  invite-only (low risk), but add a **"block user"** action on the friend-search / join-request
-  flow and a **report** path (email is acceptable) before submitting, as insurance.
+- [X] **Guideline 1.2 (UGC safety):** fridge sharing + username search + join-requests are
+  invite-only (low risk), but added a **"block user"** action + a **report** path (mailto,
+  as the TO_DO said email is acceptable) — 2026-09-05. New `blocks` table; blocking hides both
+  users from each other's search and blocks future join-requests/invites either direction
+  (existing memberships/pending requests aren't touched — out of scope, either side can
+  decline/leave normally). UI: `find-friend.tsx`'s profile view, "⋯" menu → Block/Report. 12 new
+  backend tests, all passing (269 total).
 - [ ] Post-launch OTA: wire `react-i18next` + `expo-localization`, externalize strings, ship
   `ko` (and optionally `ms`) translations. No rebuild needed if done as an EAS Update.
 

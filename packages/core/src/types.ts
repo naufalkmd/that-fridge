@@ -333,6 +333,7 @@ export interface FriendProfile {
   username: string;
   fridges: FriendFridgeSummary[];
   recipes: Recipe[];
+  blockedByMe: boolean;
 }
 
 // A pending request to join a fridge - only ever fetched for a fridge the current user owns

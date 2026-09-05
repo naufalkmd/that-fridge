@@ -55,6 +55,34 @@ class UserControllerTest extends TestCase
         $response->assertJsonCount(0, 'data');
     }
 
+    public function test_search_excludes_a_user_ive_blocked(): void
+    {
+        $me = User::factory()->create();
+        $blocked = User::factory()->create(['username' => 'jordan_diaz']);
+        User::factory()->create(['username' => 'jordan_lee']);
+        $me->blocking()->attach($blocked->id);
+
+        $response = $this->actingAs($me)->getJson('/api/users/search?q=jordan');
+
+        $response->assertStatus(200);
+        $usernames = collect($response->json('data'))->pluck('username')->all();
+        $this->assertEqualsCanonicalizing(['jordan_lee'], $usernames);
+    }
+
+    public function test_search_excludes_a_user_who_blocked_me(): void
+    {
+        $me = User::factory()->create();
+        $blocker = User::factory()->create(['username' => 'jordan_diaz']);
+        User::factory()->create(['username' => 'jordan_lee']);
+        $blocker->blocking()->attach($me->id);
+
+        $response = $this->actingAs($me)->getJson('/api/users/search?q=jordan');
+
+        $response->assertStatus(200);
+        $usernames = collect($response->json('data'))->pluck('username')->all();
+        $this->assertEqualsCanonicalizing(['jordan_lee'], $usernames);
+    }
+
     public function test_search_results_never_include_email(): void
     {
         $me = User::factory()->create();
@@ -153,5 +181,19 @@ class UserControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJson(['data' => ['recipes' => [['isFavorite' => true, 'isMine' => false, 'ownerUsername' => 'jordan']]]]);
+    }
+
+    public function test_profile_reflects_whether_the_viewer_has_blocked_this_user(): void
+    {
+        $viewer = User::factory()->create();
+        $target = User::factory()->create(['username' => 'jordan']);
+
+        $before = $this->actingAs($viewer)->getJson('/api/users/jordan/profile');
+        $before->assertJson(['data' => ['blockedByMe' => false]]);
+
+        $viewer->blocking()->attach($target->id);
+
+        $after = $this->actingAs($viewer)->getJson('/api/users/jordan/profile');
+        $after->assertJson(['data' => ['blockedByMe' => true]]);
     }
 }

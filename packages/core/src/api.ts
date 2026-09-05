@@ -704,6 +704,16 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       `/users/${encodeURIComponent(username)}/profile`,
     );
   }
+  function blockUser(username: string): Promise<void> {
+    return http
+      .post(`/users/${encodeURIComponent(username)}/block`)
+      .then(() => undefined);
+  }
+  function unblockUser(username: string): Promise<void> {
+    return http
+      .del(`/users/${encodeURIComponent(username)}/block`)
+      .then(() => undefined);
+  }
   function requestJoinFridge(fridgeId: string): Promise<FridgeJoinRequest> {
     return http.post<FridgeJoinRequest>(`/fridges/${fridgeId}/join-requests`);
   }
@@ -911,6 +921,8 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     leaveFridge,
     searchUsers,
     getFriendProfile,
+    blockUser,
+    unblockUser,
     requestJoinFridge,
     listJoinRequests,
     inviteToFridge,

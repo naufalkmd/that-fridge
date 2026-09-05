@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -93,6 +93,59 @@ export default function FindFriend() {
     }
   }
 
+  function reportProfile() {
+    if (!profile) return;
+    const subject = `Report @${profile.username}`;
+    const body = `I'd like to report @${profile.username}.\n\nReason: `;
+    Linking.openURL(
+      `mailto:support@thatfridge.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+    );
+  }
+
+  async function setBlocked(blocked: boolean) {
+    if (!profile) return;
+    try {
+      if (blocked) {
+        await api.blockUser(profile.username);
+      } else {
+        await api.unblockUser(profile.username);
+      }
+      setResults((r) => r.filter((u) => u.username !== profile.username));
+      setProfile(null);
+    } catch (e) {
+      Alert.alert("Error", describeError(e, "Couldn't do that."));
+    }
+  }
+
+  function openProfileActions() {
+    if (!profile) return;
+    const username = profile.username;
+    if (profile.blockedByMe) {
+      Alert.alert(`@${username}`, undefined, [
+        { text: "Unblock", onPress: () => setBlocked(false) },
+        { text: "Cancel", style: "cancel" },
+      ]);
+      return;
+    }
+    Alert.alert(`@${username}`, undefined, [
+      { text: "Report", onPress: reportProfile },
+      {
+        text: "Block",
+        style: "destructive",
+        onPress: () =>
+          Alert.alert(
+            `Block @${username}?`,
+            "They won't be able to find you or invite you to a fridge, and you won't see them in search.",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Block", style: "destructive", onPress: () => setBlocked(true) },
+            ],
+          ),
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
+
   async function requestJoin(fridgeId: string) {
     setRequested((r) => ({ ...r, [fridgeId]: true }));
     try {
@@ -110,9 +163,14 @@ export default function FindFriend() {
         <Pressable onPress={() => (profile ? setProfile(null) : router.back())} hitSlop={8}>
           <Ionicons name="chevron-back" size={20} color={MUTED} />
         </Pressable>
-        <PixelText style={{ fontSize: 14, color: INK }}>
+        <PixelText style={{ fontSize: 14, color: INK, flex: 1 }}>
           {profile ? `@${profile.username}` : "Find a friend"}
         </PixelText>
+        {profile && (
+          <Pressable onPress={openProfileActions} hitSlop={8}>
+            <Ionicons name="ellipsis-horizontal" size={18} color={MUTED} />
+          </Pressable>
+        )}
       </View>
 
       {profile ? (

@@ -48,6 +48,10 @@ class FridgeJoinRequestController extends Controller
             throw ValidationException::withMessages(['fridge' => "You're already a member of this fridge."]);
         }
 
+        if ($request->user()->blockedEitherWayWith($fridge->user)) {
+            throw ValidationException::withMessages(['fridge' => "You can't join this fridge."]);
+        }
+
         $existing = FridgeJoinRequest::where('fridge_id', $fridge->id)
             ->where('requester_id', $request->user()->id)
             ->first();
@@ -99,6 +103,10 @@ class FridgeJoinRequestController extends Controller
 
         if ($fridge->isMember($target)) {
             throw ValidationException::withMessages(['userId' => 'That user is already a member of this fridge.']);
+        }
+
+        if ($request->user()->blockedEitherWayWith($target)) {
+            throw ValidationException::withMessages(['userId' => "You can't invite that user."]);
         }
 
         $existing = FridgeJoinRequest::where('fridge_id', $fridge->id)

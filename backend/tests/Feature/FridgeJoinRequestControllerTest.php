@@ -37,6 +37,30 @@ class FridgeJoinRequestControllerTest extends TestCase
         $response->assertStatus(422);
     }
 
+    public function test_requesting_to_join_a_fridge_owned_by_someone_youve_blocked_is_a_validation_error(): void
+    {
+        $owner = User::factory()->create();
+        $requester = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
+        $requester->blocking()->attach($owner->id);
+
+        $response = $this->actingAs($requester)->postJson("/api/fridges/{$fridge->id}/join-requests");
+
+        $response->assertStatus(422);
+    }
+
+    public function test_requesting_to_join_a_fridge_owned_by_someone_who_blocked_you_is_a_validation_error(): void
+    {
+        $owner = User::factory()->create();
+        $requester = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
+        $owner->blocking()->attach($requester->id);
+
+        $response = $this->actingAs($requester)->postJson("/api/fridges/{$fridge->id}/join-requests");
+
+        $response->assertStatus(422);
+    }
+
     public function test_re_requesting_after_a_decline_flips_the_existing_row_back_to_pending(): void
     {
         $owner = User::factory()->create();
@@ -160,6 +184,18 @@ class FridgeJoinRequestControllerTest extends TestCase
         $fridge->members()->attach($member->id, ['role' => 'member']);
 
         $this->actingAs($owner)->postJson("/api/fridges/{$fridge->id}/invites", ['userId' => $member->id])->assertStatus(422);
+    }
+
+    public function test_inviting_someone_youve_blocked_is_a_validation_error(): void
+    {
+        $owner = User::factory()->create();
+        $invitee = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
+        $owner->blocking()->attach($invitee->id);
+
+        $response = $this->actingAs($owner)->postJson("/api/fridges/{$fridge->id}/invites", ['userId' => $invitee->id]);
+
+        $response->assertStatus(422);
     }
 
     public function test_the_invited_user_can_accept_their_own_invite_but_the_owner_cannot(): void

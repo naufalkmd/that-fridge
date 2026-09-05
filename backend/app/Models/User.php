@@ -123,4 +123,27 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserBadge::class);
     }
+
+    /** Users this user has blocked. */
+    public function blocking(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'blocks', 'blocker_id', 'blocked_id')->withTimestamps();
+    }
+
+    /** Users who have blocked this user. */
+    public function blockedBy(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'blocks', 'blocked_id', 'blocker_id')->withTimestamps();
+    }
+
+    /**
+     * True if either user has blocked the other - the check every user-to-user contact point
+     * (search, join requests, invites) gates on, since a block should stop contact both ways
+     * regardless of who initiated it.
+     */
+    public function blockedEitherWayWith(User $other): bool
+    {
+        return $this->blocking()->where('users.id', $other->id)->exists()
+            || $this->blockedBy()->where('users.id', $other->id)->exists();
+    }
 }

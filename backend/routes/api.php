@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\BarcodeController;
+use App\Http\Controllers\BlockController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ExpiryScanController;
 use App\Http\Controllers\FridgeController;
@@ -105,6 +106,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // member of something.
     Route::middleware('throttle:20,1')->get('/users/search', [UserController::class, 'search']);
     Route::get('/users/{user:username}/profile', [UserController::class, 'profile']);
+    Route::post('/users/{user:username}/block', [BlockController::class, 'store']);
+    Route::delete('/users/{user:username}/block', [BlockController::class, 'destroy']);
 
     Route::post('/fridges/{fridge}/sections', [SectionController::class, 'store']);
     Route::patch('/sections/{section}', [SectionController::class, 'update']);
