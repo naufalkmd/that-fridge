@@ -127,12 +127,13 @@ Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ *
   deterministic fallback (`guardianItem()`/`lowStockItem()`/score headlines — real data, zero
   cost) that the UI already had built for the loading state. The Crew tab's own "Activate"
   button is unchanged — it was already the correct on-demand pattern.
-- [ ] **Found alongside the above: `POST /chat` has no server-side rate limiting at all**,
-  unlike `/icons/generate` (`throttle:10,1`). The "5 AI messages/week" free-tier cap is 100%
-  client-side (`chatQuota.ts`'s own comment already flags this: "move server-side... so it
-  can't be reset by clearing app data") and the Home-screen calls above didn't even go through
-  that client gate. Real unbounded cost/abuse exposure — anyone hitting the endpoint directly
-  has no cap. Not fixed yet, needs a decision on numbers.
+- [X] **`POST /chat` had no server-side rate limiting at all**, unlike `/icons/generate`
+  (`throttle:10,1`) — real unbounded cost/abuse exposure, anyone hitting the endpoint directly
+  had no cap. Fixed 2026-09-05: `throttle:15,1` on the `send` action only (history/sessions
+  stay unthrottled, they're plain DB reads). This is abuse protection, not a quota replacement
+  — the "5 AI messages/week" free-tier cap is still 100% client-side (`chatQuota.ts`) and
+  remains a real gap (its own comment already flags: "move server-side... so it can't be reset
+  by clearing app data") — bigger task, not done here.
 - [ ] Copy backups off-box (DO weekly droplet snapshot is on — add pg_dump → object storage).
 - [X] Seed a stable **reviewer demo account** on prod — `keira@thatfridge.test` / `password123`
   with a seeded fridge + 7 curated recipes. **⚠ Change the password before submitting.**

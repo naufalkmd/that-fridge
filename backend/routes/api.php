@@ -63,7 +63,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Chat history is per-user, so it needs auth to know whose history to read/write.
     Route::prefix('chat')->group(function () {
         Route::get('/', [AgentController::class, 'history']);
-        Route::post('/', [AgentController::class, 'send']);
+        // Rate-limited: every call here hits an LLM, unlike the plain-DB-read routes below.
+        // Same reasoning as /icons/generate's throttle - protects against a script hammering
+        // the endpoint directly, not meant to replace the client-side weekly quota (chatQuota.ts).
+        Route::middleware('throttle:15,1')->post('/', [AgentController::class, 'send']);
         Route::get('/sessions', [AgentController::class, 'sessions']);
         Route::get('/sessions/{sessionId}', [AgentController::class, 'sessionMessages']);
         Route::delete('/sessions/{sessionId}', [AgentController::class, 'deleteSession']);
