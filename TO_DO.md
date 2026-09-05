@@ -108,7 +108,9 @@ Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ *
 - [ ] Copy backups off-box (DO weekly droplet snapshot is on — add pg_dump → object storage).
 - [X] Seed a stable **reviewer demo account** on prod — `keira@thatfridge.test` / `password123`
   with a seeded fridge + 7 curated recipes. **⚠ Change the password before submitting.**
-- [ ] Sentry on the Laravel app.
+- [🟡] Sentry on the Laravel app — `sentry/sentry-laravel` installed, wired into
+  `bootstrap/app.php`, no-ops until `SENTRY_LARAVEL_DSN` is set (2026-09-05). Left: create a
+  Sentry project, paste the DSN into the server `.env`, redeploy.
 - [🟡] **Transactional email — wire up the mailer.** The **forgot-password feature is built**
   (branch `forgot-password`: code-based reset, `POST /forgot-password` + `/reset-password`,
   mobile 2-step screen; pure JS+backend, OTA-able). `resend/resend-php` is installed. Prod is
