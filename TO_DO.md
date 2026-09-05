@@ -260,8 +260,12 @@ post-launch OTA fast-follow.**
 
 - [ ] App icon **1024×1024**.
 - [ ] iPhone **6.9" + 6.5"** screenshots — **no device frame**, 1179×2556.
-- [ ] Store listing: description, subtitle, keywords, support URL.
-- [ ] App Privacy ("nutrition labels") form — complete and accurate.
+- [🟡] Store listing: description, subtitle, keywords, support URL — **drafted** in
+  `apps/mobile/STORE_LISTING.md` (2026-09-05), needs a review pass before pasting into ASC.
+- [🟡] App Privacy ("nutrition labels") form — **drafted** in `apps/mobile/STORE_LISTING.md`,
+  grounded in the actual data the app/backend collect. Flags one real gap found while drafting:
+  voice dictation isn't actually on-device (RELEASE.md's claim doesn't match `voice.ts`) —
+  decide whether to fix the code or just declare Audio Data accurately.
 - [ ] Age rating.
 - [ ] App Review notes with demo credentials.
 - [ ] Guideline 4.2 rebuttal ready (native camera, notifications, haptics, native nav) in case
