@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import NetInfo from "@react-native-community/netinfo";
 
 /**
  * Persistent "You're offline" bar, shown whenever the device has no usable connection.
@@ -13,12 +12,27 @@ import NetInfo from "@react-native-community/netinfo";
  * `isConnected` is the transport layer (Wi-Fi/cellular radio up); `isInternetReachable` is
  * NetInfo's own reachability probe and can briefly be `null` while it's still checking, which
  * would otherwise flash the banner on every launch - only treat an explicit `false` as offline.
+ *
+ * NetInfo's entry point calls TurboModuleRegistry.getEnforcing() at import time, which throws
+ * on a build that predates this feature (same risk as expo-speech-recognition - see voice.ts).
+ * Load it defensively so an OTA to such a build no-ops this banner instead of crashing the
+ * whole app at launch.
  */
+let NetInfo: typeof import("@react-native-community/netinfo").default | null =
+  null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  NetInfo = require("@react-native-community/netinfo").default;
+} catch {
+  NetInfo = null;
+}
+
 export function OfflineBanner() {
   const insets = useSafeAreaInsets();
   const [offline, setOffline] = useState(false);
 
   useEffect(() => {
+    if (!NetInfo) return;
     return NetInfo.addEventListener((state) => {
       setOffline(
         state.isConnected === false || state.isInternetReachable === false,
