@@ -153,11 +153,11 @@ Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ *
     the `throttle:15,1` either way).
   - 10 new backend tests (quota enforcement + Pro bypass + webhook auth/parsing), 282 total
     passing.
-  - **Still needed, external, can't do myself:** in the RevenueCat dashboard → Project Settings
-    → Integrations → Webhooks, add endpoint `https://api.thatfridge.com/api/webhooks/revenuecat`
-    and set its Authorization header to the generated secret; set the same value as
-    `REVENUECAT_WEBHOOK_SECRET` on the server `.env` (`openssl rand -hex 32` to generate) +
-    `config:cache`. Until that's done this is scaffolded but dormant, same as Sentry.
+  - [X] **Webhook wired up live, 2026-09-05:** RevenueCat dashboard has the endpoint
+    (`https://api.thatfridge.com/api/webhooks/revenuecat`) + Authorization-header secret
+    configured; the same secret is set as `REVENUECAT_WEBHOOK_SECRET` on the server `.env` and
+    confirmed picked up via `php artisan config:show services.revenuecat` after `config:cache`.
+    No longer dormant — `pro_expires_at` now updates live off real subscription events.
 - [ ] Copy backups off-box (DO weekly droplet snapshot is on — add pg_dump → object storage).
 - [X] Seed a stable **reviewer demo account** on prod — `keira@thatfridge.test` / `password123`
   with a seeded fridge + 7 curated recipes. **⚠ Change the password before submitting.**
