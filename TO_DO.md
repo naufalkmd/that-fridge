@@ -291,14 +291,16 @@ compact/"Activate" calls (uncapped by count, only rate-limited — generously ~3
 Receipt/photo scanning is Pro-gated, so free users don't touch that cost at all. **≈$0.10/month
 under normal use.**
 
-**⚠ Found while doing this analysis: icon generation has no Pro gate and no per-user cap at
-all** — neither `icon-picker.tsx` nor `IconController.php` check `isPro`/`is_pro` anywhere,
-only the existing `throttle:10,1` route limit applies. At that ceiling, one script hitting it
-constantly could theoretically generate ~14,400 images/day (~$144–360/day at fal.ai rates) for
-free. Not a normal-usage risk, but a real one — same class of gap as the `/chat` quota this
-session already fixed. Worth the same treatment (gate behind `isPro()`, or a small free-tier
-cap) before launch. **Not fixed here — flagging it because it directly affects this whole
-analysis's cost assumptions if left open.**
+- [X] **Icon generation had no Pro gate and no per-user cap** — neither `icon-picker.tsx` nor
+  `IconController.php` checked `isPro`/`is_pro` anywhere, only the existing `throttle:10,1`
+  route limit applied. Fixed same-session, same shape as the `/chat` quota fix above:
+  `IconController::generate()` now rejects (402) non-Pro users once they've generated
+  `FREE_ICONS_PER_WEEK` (5) icons this ISO week (`Carbon::now()->startOfWeek(Carbon::MONDAY)`,
+  counting `GeneratedIcon` rows), Pro users (`isPro()`) unlimited. Free tier stays *capped*
+  rather than fully blocked (icon gen was never documented as Pro-exclusive) — matches "Pro
+  removes AI limits," consistent with chat's treatment. 4 new feature tests in
+  `tests/Feature/IconControllerTest.php` (rejection after cap, Pro bypass, only-counts-this-week,
+  succeeds-under-cap); full suite 286/286 passing.
 
 ### Revenue side & break-even [estimated, both Apple-commission scenarios]
 
@@ -363,11 +365,11 @@ tier rounding in MY/KR after Apple's automatic conversion.
 
 At current fixed costs, break-even is ~20–25 paying subscribers depending on Small Business
 Program enrollment (confirm that — free, no reason not to). AI costs are genuinely cheap per
-unit and aren't the margin risk; **unbounded free-tier usage is** (icon generation specifically,
-found during this analysis). The pricing itself ($2.99/$19.99, 7-day trial, 5 free msgs/week) is
-reasonably well-designed for conversion psychology already — the real levers left are closing
-the icon-gen gap and, eventually, replacing the **[benchmark]** conversion-rate assumptions with
-real post-launch data.
+unit; the unbounded-free-tier-usage risk found during this analysis (icon generation) is now
+closed — see above. The pricing itself ($2.99/$19.99, 7-day trial, 5 free msgs/week, 5 free
+icons/week) is reasonably well-designed for conversion psychology already — the remaining lever
+is eventually replacing the **[benchmark]** conversion-rate assumptions with real post-launch
+data.
 
 ---
 

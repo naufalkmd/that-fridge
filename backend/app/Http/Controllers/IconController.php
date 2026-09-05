@@ -4,11 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\GeneratedIcon;
 use App\Services\IconGenerationService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class IconController extends Controller
 {
+    // Same shape as AgentController::FREE_CHATS_PER_WEEK - icon generation had no Pro gate and
+    // no per-user cap at all (only the route's throttle:10,1), found while modeling AI costs in
+    // TO_DO.md §3a. Per-image cost (fal.ai flux/schnell, ~$0.01-0.025) is noticeably higher than
+    // a chat message (~$0.002), so free tier stays capped rather than fully blocked - matches
+    // "Pro removes AI limits" rather than "Pro unlocks icon generation" (never documented as a
+    // Pro-only feature anywhere).
+    private const FREE_ICONS_PER_WEEK = 5;
+
     public function __construct(protected IconGenerationService $iconService) {}
 
     /**
@@ -35,6 +44,19 @@ class IconController extends Controller
         $data = $request->validate([
             'prompt' => ['required', 'string', 'max:200'],
         ]);
+
+        if (! $request->user()->isPro()) {
+            $weekStart = Carbon::now()->startOfWeek(Carbon::MONDAY);
+            $used = GeneratedIcon::where('user_id', $request->user()->id)
+                ->where('created_at', '>=', $weekStart)
+                ->count();
+
+            if ($used >= self::FREE_ICONS_PER_WEEK) {
+                return response()->json([
+                    'message' => "You've used your ".self::FREE_ICONS_PER_WEEK." free icon generations this week. Upgrade to Pro for unlimited AI icons.",
+                ], 402);
+            }
+        }
 
         $result = $this->iconService->generateIcon($data['prompt'], $request->user()->id);
 
