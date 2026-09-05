@@ -24,7 +24,7 @@ RevenueCat for subscriptions, Expo for push) actually touch — checked against
 | **Contact Info — Physical Address** | No | — | — | Never collected |
 | **User Content — Photos or Videos** | Yes | Yes | No | Receipt/fridge-photo scanning (`ReceiptController`, `PhotoController`) — sent to OpenRouter for OCR/analysis |
 | **User Content — Other User Content** | Yes | Yes | No | Chat messages, recipe notes, fridge sticky notes |
-| **User Content — Audio Data** | Yes | Yes | No | Voice dictation (`expo-speech-recognition`) — `voice.ts`'s `start()` never sets `requiresOnDeviceRecognition: true`, so it can use Apple's server-based speech recognition, not on-device only. RELEASE.md's "on-device" claim doesn't match the code (see note below) |
+| **User Content — Audio Data** | No | — | — | Voice dictation (`expo-speech-recognition`) — `voice.ts`'s `start()` now sets `requiresOnDeviceRecognition: true` (fixed 2026-09-05), so audio never leaves the device. Only the resulting transcript is sent, already covered under Other User Content |
 | **Identifiers — User ID** | Yes | Yes | No | Backend user id + RevenueCat app-user id |
 | **Identifiers — Device ID** | Yes | Yes | No | Expo push token (`push_tokens` table) tied to the account |
 | **Purchases — Purchase History** | Yes | Yes | No | RevenueCat subscription/entitlement status |
@@ -40,15 +40,6 @@ RevenueCat for subscriptions, Expo for push) actually touch — checked against
 
 **"Is data used to track you?"** → **No** — no ad network, no data broker, no cross-app/cross-site
 tracking SDK anywhere in `package.json`.
-
-**On the Audio Data row:** you have two options —
-1. Keep the Audio Data declaration as-is above (accurate to the current code), or
-2. Fix `voice.ts` to pass `requiresOnDeviceRecognition: true` to `start()` so speech never leaves
-   the device, then drop the Audio Data row entirely (only the resulting transcript text would
-   remain, already covered under Other User Content). RELEASE.md currently claims on-device
-   behavior that the code doesn't actually enforce — worth fixing regardless of which App
-   Privacy answer you go with, so the doc matches reality. Say the word and I can make that
-   one-line code fix.
 
 ---
 

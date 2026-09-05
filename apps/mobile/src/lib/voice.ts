@@ -1,8 +1,10 @@
 import { useCallback, useRef, useState } from "react";
 
 // Dictation for the chat composer. Uses the OS speech recognizer (iOS SFSpeechRecognizer /
-// Android SpeechRecognizer) via expo-speech-recognition — no audio ever touches our servers.
-// `onText` fires with the running transcript; `isFinal` marks the last one for an utterance.
+// Android SpeechRecognizer) via expo-speech-recognition, forced on-device
+// (requiresOnDeviceRecognition below) so audio never leaves the device — not to our servers,
+// not to Apple's either. `onText` fires with the running transcript; `isFinal` marks the last
+// one for an utterance.
 
 export interface VoiceDictation {
   available: boolean;
@@ -71,6 +73,7 @@ function useVoiceDictationNative(onText: OnText): VoiceDictation {
         interimResults: true,
         continuous: false,
         addsPunctuation: true,
+        requiresOnDeviceRecognition: true,
       });
     } catch (e) {
       setError(
