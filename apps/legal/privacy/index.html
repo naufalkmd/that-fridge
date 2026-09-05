@@ -20,7 +20,7 @@
 
   <span class="pill">Privacy Policy</span>
   <h1>Privacy Policy</h1>
-  <p class="updated">Effective 28 August 2026 · Last updated 28 August 2026</p>
+  <p class="updated">Effective 28 August 2026 · Last updated 5 September 2026</p>
 
   <p>This policy explains what data the ThatFridge iOS app and its backend service
   (together, <strong>"ThatFridge"</strong>, <strong>"we"</strong>, <strong>"us"</strong>)
@@ -45,6 +45,7 @@
     <li><strong>Recipes</strong> — titles, ingredients, steps, tags, links you import, and any photo or video attachments you add.</li>
     <li><strong>Fridge notes</strong>, <strong>goals</strong>, and earned <strong>badges</strong>.</li>
     <li><strong>Fridge sharing</strong> — if you invite someone to a fridge or request to join one, we store that request and the members list. People who share a fridge can see its contents, notes and items.</li>
+    <li><strong>Blocking</strong> — if you block another user, we store that block so it can stop future contact between you (search, invites and join requests) in both directions. Blocking someone doesn't affect any fridge membership or content that already existed.</li>
   </ul>
 
   <h3>Photos you submit</h3>
@@ -74,9 +75,13 @@
   access is active.</p>
 
   <h3>Notifications</h3>
-  <p>Expiry and low-stock reminders are scheduled <strong>locally on your device</strong>. In
-  the current version we do <strong>not</strong> operate server-sent push notifications and do
-  not collect a push token.</p>
+  <p>Expiry and low-stock reminders are scheduled <strong>locally on your device</strong> and
+  never leave it. Separately, activity notifications — invites, fridge membership changes,
+  notes, and item activity from people you share a fridge with — are delivered as
+  <strong>push notifications</strong>. This requires registering a <strong>push token</strong>
+  (an identifier tied to your device, issued by Expo's push service) with our server; when a
+  notification fires, we send that token plus the notification's title and body to Expo, which
+  relays it to Apple's push notification service. See &sect;4 for Expo as a data processor.</p>
 
   <h2>2. What we do NOT collect</h2>
   <ul>
@@ -107,7 +112,8 @@
     <tr><td>Downstream LLM providers (via OpenRouter)</td><td>Generate the AI responses</td><td>Same as above, per OpenRouter's routing</td></tr>
     <tr><td>fal.ai</td><td>Receipt / fridge-photo vision parsing and food-icon image generation</td><td>The image you submitted and short prompts</td></tr>
     <tr><td>RevenueCat</td><td>Subscription entitlement management</td><td>Account ID, purchase / receipt data, device info</td></tr>
-    <tr><td>Apple</td><td>App distribution, payments, in-app purchases</td><td>Handled under Apple's privacy policy</td></tr>
+    <tr><td>Expo (650 Industries, Inc.)</td><td>Delivers push notifications</td><td>Push token, notification title and body</td></tr>
+    <tr><td>Apple</td><td>App distribution, payments, in-app purchases, push delivery</td><td>Handled under Apple's privacy policy</td></tr>
   </table>
   <p>We may also disclose data if required by law, or to protect the rights, safety or property
   of ThatFridge or its users.</p>

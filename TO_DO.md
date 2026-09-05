@@ -42,6 +42,11 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
   `support@` + `privacy@thatfridge.com` route via Cloudflare Email Routing to
   `naufalkmd00@gmail.com` — test mail to both confirmed received. (Receive-only; to *send*
   as `support@` later, add it in Gmail "Send mail as" with an SMTP provider.)
+  **Privacy Policy updated 2026-09-05** — §1 Notifications flatly said push notifications
+  weren't operated and no push token was collected, which was true when written but has been
+  false since the social-notifications feature shipped; also added the `blocks` table (§ Guideline
+  1.2 work) and Expo as a §4 data processor. Known gap, not fixed here: §11 promises material
+  changes get "surfaced in the app," and nothing does that yet.
 - [X] **Buy the PixelMix commercial licence** — bought via Sellfy ($25, 2026-08-28). EULA saved
   at `apps/mobile/assets/fonts/PixelMix-EULA.docx`. **Two follow-ups** (see
   `PixelMix-NOTES.md`): (a) the desktop EULA doesn't clearly grant app/web *embedding* — email
