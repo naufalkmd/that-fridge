@@ -56,7 +56,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // TRACK B: Ingestion & Agents
     Route::prefix('sections/{section}')->group(function () {
         Route::post('items/manual', [IngestionController::class, 'store']);
-        Route::post('items/barcode', [BarcodeController::class, 'scan']);
+        // Barcode scan calls an OpenRouter classification step per lookup on top of the
+        // OpenFoodFacts request - same floor-against-hammering reasoning as the vision routes
+        // below, just a lighter cap since it's cheaper per call.
+        Route::middleware('throttle:20,1')->post('items/barcode', [BarcodeController::class, 'scan']);
         // receipt/photo/expiry-scan all hit OpenRouter Vision per call - throttled the same as
         // /chat, on top of the isPro()/weekly-cap gating inside each controller.
         Route::middleware('throttle:15,1')->post('items/receipt/scan', [ReceiptController::class, 'scan']);
@@ -78,7 +81,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/sessions/{sessionId}', [AgentController::class, 'deleteSession']);
     });
 
-    Route::post('/items/suggest-details', [AgentController::class, 'suggestItemDetails']);
+    // Manual-add auto-fill - same reasoning as barcode's throttle above, hits an LLM per call.
+    Route::middleware('throttle:20,1')->post('/items/suggest-details', [AgentController::class, 'suggestItemDetails']);
 
     Route::get('/icons/generated', [IconController::class, 'index']);
     Route::delete('/icons/generated/{generatedIcon}', [IconController::class, 'destroy']);

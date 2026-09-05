@@ -319,7 +319,12 @@ under normal use.**
   persisted per-scan row to count against, unlike `ChatHistory`/`GeneratedIcon`. All three routes
   also gained `throttle:15,1` (matching `/chat`'s rate) as a floor against raw hammering, on top
   of the gating. 8 new feature tests across `ReceiptControllerTest`, `PhotoControllerTest`,
-  `ExpiryScanControllerTest`; full suite 294/294 passing.
+  `ExpiryScanControllerTest`; full suite 294/294 passing. Swept the two remaining unthrottled
+  LLM-calling routes at the same time: `items/barcode` (calls `AgentService::suggestItemDetails`
+  internally for shelf-life/location classification) and `/items/suggest-details` (manual-add
+  auto-fill) both got `throttle:20,1` — cheaper per-call than vision, so no Pro-gate/cap, just
+  the same hammering floor. Every AI-calling endpoint in the API now has at least a route
+  throttle.
 
 ### Revenue side & break-even [estimated, both Apple-commission scenarios]
 
