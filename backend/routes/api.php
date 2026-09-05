@@ -23,6 +23,7 @@ use App\Http\Controllers\PhotoController;
 use App\Http\Controllers\PushTokenController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\RecipeController;
+use App\Http\Controllers\RevenueCatWebhookController;
 use App\Http\Controllers\ScoreSnapshotController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\ShoppingItemController;
@@ -34,6 +35,9 @@ use Illuminate\Support\Facades\Route;
 // Auth routes (public)
 Route::post('/auth/apple', [AuthController::class, 'apple']);
 Route::post('/auth/google', [AuthController::class, 'google']);
+// RevenueCat calls this directly, not a logged-in app user - auth is the Authorization header
+// secret checked inside the controller, not auth:sanctum. See services.revenuecat.webhook_secret.
+Route::post('/webhooks/revenuecat', [RevenueCatWebhookController::class, 'handle']);
 // Rate-limited: /register and /login are brute-forceable; /forgot-password sends an
 // email, /reset-password is brute-forceable too.
 Route::middleware('throttle:6,1')->group(function () {

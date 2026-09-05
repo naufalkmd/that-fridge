@@ -54,4 +54,12 @@ return [
         'client_ids' => array_filter(explode(',', (string) env('GOOGLE_CLIENT_IDS', ''))),
     ],
 
+    'revenuecat' => [
+        // Whatever value you set as the "Authorization header" for this webhook in the
+        // RevenueCat dashboard (Project Settings → Integrations → Webhooks) - compared
+        // constant-time against the incoming Authorization header. Not a HMAC signing secret;
+        // that's a separate (and plan-gated) verification method RevenueCat also offers.
+        'webhook_secret' => env('REVENUECAT_WEBHOOK_SECRET'),
+    ],
+
 ];

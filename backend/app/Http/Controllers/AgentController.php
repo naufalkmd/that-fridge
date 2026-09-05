@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\AgentService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -18,6 +19,12 @@ class AgentController extends Controller
     private const HISTORY_LIMIT = 200;
 
     private const SESSION_LIST_LIMIT = 50;
+
+    // Mirrors apps/mobile/src/lib/chatQuota.ts's FREE_CHATS_PER_WEEK - that copy is a
+    // client-side pre-check for UX (disable the button before even trying), this one is the
+    // real enforcement. A free user calling the API directly, bypassing the app entirely,
+    // previously had no limit at all - the backend had no way to tell Pro from free.
+    private const FREE_CHATS_PER_WEEK = 5;
 
     private const CHAT_CONTEXT_TURNS = 8;
 
@@ -163,6 +170,20 @@ class AgentController extends Controller
             // never writes it) - stateless, same as the fridge-photo scan flow.
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
         ]);
+
+        // Compact calls (Home tip cards / "Activate") are exempt, matching the client-side
+        // quota's existing behaviour - they were always meant to be free regardless of Pro
+        // status. Real chat messages from a non-Pro user are capped server-side now; Pro users
+        // are unlimited (still subject to the throttle:15,1 route middleware either way).
+        if (! $request->boolean('compact') && ! $request->user()->isPro()) {
+            $weekStart = Carbon::now()->startOfWeek(Carbon::MONDAY);
+            $used = $request->user()->chatHistory()->where('created_at', '>=', $weekStart)->count();
+            if ($used >= self::FREE_CHATS_PER_WEEK) {
+                return response()->json([
+                    'message' => "You've used your ".self::FREE_CHATS_PER_WEEK." free messages this week. Upgrade to Pro for unlimited AI chat.",
+                ], 402);
+            }
+        }
 
         // Read directly from the DB rather than having the client fetch-and-forward these
         // on every message like inventory/usage_history - facts exist only to serve

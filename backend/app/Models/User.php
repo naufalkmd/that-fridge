@@ -31,6 +31,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'data_transfer_consented_at' => 'datetime',
+            'pro_expires_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -146,5 +147,14 @@ class User extends Authenticatable
     {
         return $this->blocking()->where('users.id', $other->id)->exists()
             || $this->blockedBy()->where('users.id', $other->id)->exists();
+    }
+
+    /**
+     * Synced from RevenueCat webhooks (RevenueCatWebhookController) - never set directly from
+     * a user-facing request, so `pro_expires_at` is deliberately not in #[Fillable] above.
+     */
+    public function isPro(): bool
+    {
+        return $this->pro_expires_at !== null && $this->pro_expires_at->isFuture();
     }
 }

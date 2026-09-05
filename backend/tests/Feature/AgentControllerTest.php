@@ -15,6 +15,19 @@ class AgentControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** No ChatHistory factory exists yet - plain inserts for the quota tests below. */
+    private function seedChatHistory(User $user, int $count): void
+    {
+        for ($i = 0; $i < $count; $i++) {
+            ChatHistory::create([
+                'user_id' => $user->id,
+                'agent' => 'Chef',
+                'user_message' => "message {$i}",
+                'agent_response' => 'ok',
+            ]);
+        }
+    }
+
     public function test_chat_requires_authentication(): void
     {
         $response = $this->postJson('/api/chat', ['message' => 'hi', 'agent' => 'Chef']);
@@ -53,6 +66,65 @@ class AgentControllerTest extends TestCase
             'agent' => 'Chef',
             'user_message' => 'What should I cook?',
         ]);
+    }
+
+    public function test_chat_is_rejected_after_the_free_weekly_limit_for_a_non_pro_user(): void
+    {
+        $user = User::factory()->create();
+        config(['services.openrouter.key' => null]);
+        $this->seedChatHistory($user, 5);
+
+        $response = $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'One more please',
+            'agent' => 'Chef',
+        ]);
+
+        $response->assertStatus(402);
+        $this->assertDatabaseCount('chat_history', 5); // the rejected message was never persisted
+    }
+
+    public function test_chat_compact_calls_are_exempt_from_the_weekly_limit(): void
+    {
+        $user = User::factory()->create();
+        config(['services.openrouter.key' => null]);
+        $this->seedChatHistory($user, 5);
+
+        $response = $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'Quick tip?',
+            'agent' => 'Chef',
+            'compact' => true,
+        ]);
+
+        $response->assertStatus(200);
+    }
+
+    public function test_chat_is_unlimited_for_a_pro_user(): void
+    {
+        $user = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
+        config(['services.openrouter.key' => null]);
+        $this->seedChatHistory($user, 5);
+
+        $response = $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'One more please',
+            'agent' => 'Chef',
+        ]);
+
+        $response->assertStatus(200);
+    }
+
+    public function test_chat_quota_only_counts_this_weeks_messages(): void
+    {
+        $user = User::factory()->create();
+        config(['services.openrouter.key' => null]);
+        $this->seedChatHistory($user, 5);
+        ChatHistory::where('user_id', $user->id)->update(['created_at' => now()->subWeeks(2)]);
+
+        $response = $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'First one this week',
+            'agent' => 'Chef',
+        ]);
+
+        $response->assertStatus(200);
     }
 
     public function test_chat_passes_the_compact_flag_through_to_the_agent_service(): void

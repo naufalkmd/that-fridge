@@ -130,10 +130,34 @@ Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ *
 - [X] **`POST /chat` had no server-side rate limiting at all**, unlike `/icons/generate`
   (`throttle:10,1`) — real unbounded cost/abuse exposure, anyone hitting the endpoint directly
   had no cap. Fixed 2026-09-05: `throttle:15,1` on the `send` action only (history/sessions
-  stay unthrottled, they're plain DB reads). This is abuse protection, not a quota replacement
-  — the "5 AI messages/week" free-tier cap is still 100% client-side (`chatQuota.ts`) and
-  remains a real gap (its own comment already flags: "move server-side... so it can't be reset
-  by clearing app data") — bigger task, not done here.
+  stay unthrottled, they're plain DB reads).
+- [X] **The "5 AI messages/week" free-tier cap was 100% client-side and the backend had zero
+  concept of Pro vs. free at all** — confirmed by checking: no `RevenueCat` reference anywhere
+  in `backend/app` or `routes`, no webhook receiver, no entitlement sync. Any registered
+  account (free registration) could call `/chat` directly, bypassing the app's UI gate
+  entirely, and get the same AI access a paying subscriber gets — the throttle above only
+  capped burst rate (up to ~21,600 msgs/day sustained), not usage. Fixed 2026-09-05:
+  - New `RevenueCatWebhookController` (`POST /webhooks/revenuecat`, outside `auth:sanctum` —
+    verified via a constant-time Authorization-header secret comparison instead, RevenueCat's
+    other verification option, HMAC signing, may be plan-gated). Trusts whatever
+    `expiration_at_ms` an event carries for the `thatfridge_pro` entitlement and writes it to
+    the new `users.pro_expires_at` column, regardless of the specific event `type` — RevenueCat
+    always sends the entitlement's current true expiration, so this is self-correcting/
+    idempotent rather than needing to branch per event type. `app_user_id` maps straight to our
+    user id (`Purchases.logIn(user.id)` was already wired client-side).
+  - `User::isPro()` = `pro_expires_at` in the future.
+  - `AgentController::send()` now actually enforces the weekly cap server-side for non-Pro
+    users (real `chat_history` count for the current ISO week, Monday-start to match
+    `chatQuota.ts`), returns 402 once exceeded. Compact calls (Home tips / "Activate") stay
+    exempt, matching the existing product decision. Pro users are unlimited (still subject to
+    the `throttle:15,1` either way).
+  - 10 new backend tests (quota enforcement + Pro bypass + webhook auth/parsing), 282 total
+    passing.
+  - **Still needed, external, can't do myself:** in the RevenueCat dashboard → Project Settings
+    → Integrations → Webhooks, add endpoint `https://api.thatfridge.com/api/webhooks/revenuecat`
+    and set its Authorization header to the generated secret; set the same value as
+    `REVENUECAT_WEBHOOK_SECRET` on the server `.env` (`openssl rand -hex 32` to generate) +
+    `config:cache`. Until that's done this is scaffolded but dormant, same as Sentry.
 - [ ] Copy backups off-box (DO weekly droplet snapshot is on — add pg_dump → object storage).
 - [X] Seed a stable **reviewer demo account** on prod — `keira@thatfridge.test` / `password123`
   with a seeded fridge + 7 curated recipes. **⚠ Change the password before submitting.**
