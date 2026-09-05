@@ -148,11 +148,22 @@ Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ *
   - `User::isPro()` = `pro_expires_at` in the future.
   - `AgentController::send()` now actually enforces the weekly cap server-side for non-Pro
     users (real `chat_history` count for the current ISO week, Monday-start to match
-    `chatQuota.ts`), returns 402 once exceeded. Compact calls (Home tips / "Activate") stay
-    exempt, matching the existing product decision. Pro users are unlimited (still subject to
-    the `throttle:15,1` either way).
-  - 10 new backend tests (quota enforcement + Pro bypass + webhook auth/parsing), 282 total
-    passing.
+    `chatQuota.ts`), returns 402 once exceeded. Pro users are unlimited (still subject to the
+    `throttle:15,1` either way).
+  - [X] **Compact calls (Home tips / "Activate {agent}") now share that same weekly budget,
+    2026-09-05** — previously exempt, which turned out to be an unintentional free-tier
+    loophole: `eat.tsx`'s `activate()` never actually sent `compact: true` (the option didn't
+    even exist on `sendChat()` client-side), so those calls were silently persisting to
+    `chat_history` *and* consuming quota already, just invisibly, with failures swallowed by an
+    empty `catch {}`. Fixed properly rather than patched around: `sendChat()` now takes a real
+    `compact` option (wired up from both `eat.tsx`'s `activate()` and the currently-unused
+    `agentInsight.ts`); server-side, compact calls are tracked via a cache counter
+    (`compact_chat_quota:{userId}:{isoWeek}`, since they're still deliberately not persisted to
+    `chat_history` - that part of the original design was fine) and added to the real
+    `chat_history` count for one combined weekly total. `eat.tsx`'s `activate()` now surfaces a
+    toast with an "Upgrade" action on a 402, instead of failing silently.
+  - 13 new backend tests (quota enforcement, shared-budget behavior, Pro bypass, webhook
+    auth/parsing), 296 total passing.
   - [X] **Webhook wired up live, 2026-09-05:** RevenueCat dashboard has the endpoint
     (`https://api.thatfridge.com/api/webhooks/revenuecat`) + Authorization-header secret
     configured; the same secret is set as `REVENUECAT_WEBHOOK_SECRET` on the server `.env` and

@@ -83,7 +83,7 @@ class AgentControllerTest extends TestCase
         $this->assertDatabaseCount('chat_history', 5); // the rejected message was never persisted
     }
 
-    public function test_chat_compact_calls_are_exempt_from_the_weekly_limit(): void
+    public function test_compact_calls_are_rejected_once_real_messages_have_used_up_the_weekly_limit(): void
     {
         $user = User::factory()->create();
         config(['services.openrouter.key' => null]);
@@ -95,7 +95,47 @@ class AgentControllerTest extends TestCase
             'compact' => true,
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(402);
+    }
+
+    public function test_compact_calls_count_toward_the_same_weekly_limit_as_real_messages(): void
+    {
+        $user = User::factory()->create();
+        config(['services.openrouter.key' => null]);
+
+        // 5 compact calls (Activate / Home tip cards) use up the whole free budget on their
+        // own, even with zero real chat_history rows - this is the "no longer a free-tier
+        // loophole" behaviour.
+        for ($i = 0; $i < 5; $i++) {
+            $this->actingAs($user)->postJson('/api/chat', [
+                'message' => 'Quick tip?',
+                'agent' => 'Chef',
+                'compact' => true,
+            ])->assertStatus(200);
+        }
+
+        $response = $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'One more tip?',
+            'agent' => 'Chef',
+            'compact' => true,
+        ]);
+
+        $response->assertStatus(402);
+        $this->assertDatabaseCount('chat_history', 0); // compact calls still aren't persisted
+    }
+
+    public function test_compact_calls_are_unlimited_for_a_pro_user(): void
+    {
+        $user = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
+        config(['services.openrouter.key' => null]);
+
+        for ($i = 0; $i < 8; $i++) {
+            $this->actingAs($user)->postJson('/api/chat', [
+                'message' => 'Quick tip?',
+                'agent' => 'Chef',
+                'compact' => true,
+            ])->assertStatus(200);
+        }
     }
 
     public function test_chat_is_unlimited_for_a_pro_user(): void

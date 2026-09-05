@@ -5,8 +5,9 @@ import { daysLabel, type ChatAgentName, type FlatItem } from "@thatfridge/core";
 import { api } from "@/lib/api";
 
 // One-shot agent "insight" for the Home crew tip cards — mirrors the web's ensureAgentInsight.
-// Fetched at most once per agent per app launch (module cache), never counts against the
-// chat quota (that's bumped by the Chat screen, not here).
+// Fetched at most once per agent per app launch (module cache). Still counts against the free
+// weekly chat quota server-side (same shared budget as Quick Chat and "Activate {agent}"), just
+// not persisted into chat_history/session list - see AgentController::send's compact handling.
 
 const PROMPT: Record<ChatAgentName, string> = {
   Guardian: "In one short sentence, what in my fridge should I use first and why?",
@@ -30,7 +31,10 @@ async function ensure(agent: ChatAgentName, items: FlatItem[]) {
     .map((i) => `${i.name} (${daysLabel(i.days)})`)
     .join(", ");
   try {
-    const res = await api.sendChat(PROMPT[agent], agent, { inventory });
+    const res = await api.sendChat(PROMPT[agent], agent, {
+      inventory,
+      compact: true,
+    });
     cache.set(agent, { text: res.agent_response, loading: false });
   } catch {
     cache.set(agent, { text: null, loading: false });

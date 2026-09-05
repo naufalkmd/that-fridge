@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\AgentService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class AgentController extends Controller
@@ -171,16 +172,22 @@ class AgentController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
         ]);
 
-        // Compact calls (Home tip cards / "Activate") are exempt, matching the client-side
-        // quota's existing behaviour - they were always meant to be free regardless of Pro
-        // status. Real chat messages from a non-Pro user are capped server-side now; Pro users
-        // are unlimited (still subject to the throttle:15,1 route middleware either way).
-        if (! $request->boolean('compact') && ! $request->user()->isPro()) {
-            $weekStart = Carbon::now()->startOfWeek(Carbon::MONDAY);
-            $used = $request->user()->chatHistory()->where('created_at', '>=', $weekStart)->count();
+        // Compact calls (Home tip cards / "Activate {agent}") share the same weekly budget as
+        // real Quick Chat messages for a non-Pro user - previously they were fully exempt, which
+        // meant a free user could get unlimited AI replies just by never using Quick Chat
+        // directly. They're still not persisted to chat_history (see below), so they can't be
+        // counted from a DB row the way real messages are - tracked in cache instead, keyed per
+        // user per ISO week, and added to the chat_history count for the combined total.
+        $weekStart = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        $compactQuotaKey = 'compact_chat_quota:'.$request->user()->id.':'.$weekStart->format('oW');
+
+        if (! $request->user()->isPro()) {
+            $used = $request->user()->chatHistory()->where('created_at', '>=', $weekStart)->count()
+                + (int) Cache::get($compactQuotaKey, 0);
+
             if ($used >= self::FREE_CHATS_PER_WEEK) {
                 return response()->json([
-                    'message' => "You've used your ".self::FREE_CHATS_PER_WEEK." free messages this week. Upgrade to Pro for unlimited AI chat.",
+                    'message' => "You've used your ".self::FREE_CHATS_PER_WEEK." free AI replies this week. Upgrade to Pro for unlimited AI chat.",
                 ], 402);
             }
         }
@@ -213,6 +220,10 @@ class AgentController extends Controller
         // history() and clutter the Chat History session list with entries that just come
         // back on the next page load.
         if ($request->boolean('compact')) {
+            if (! $request->user()->isPro()) {
+                Cache::put($compactQuotaKey, (int) Cache::get($compactQuotaKey, 0) + 1, now()->addWeek());
+            }
+
             return response()->json([
                 'session_id' => $request->input('session_id'),
                 'user_message' => $result['user_message'],

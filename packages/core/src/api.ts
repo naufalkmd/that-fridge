@@ -374,6 +374,10 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       sessionId?: string | null;
       /** A photo to attach — RN: `{ uri, name, type }`; web: a `File`/`Blob`. */
       image?: unknown;
+      /** One-shot crew tip fetch (Home tip cards / "Activate {agent}") - asks the server for
+       * a short plain-text reply and skips saving it into chat history/sessions. Still counts
+       * against the free weekly quota, same as a real Quick Chat message. */
+      compact?: boolean;
     } = {},
   ): Promise<SendChatResult> {
     if (opts.image && typeof FormData !== "undefined") {
@@ -382,6 +386,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       fd.append("agent", agent);
       if (opts.inventory) fd.append("inventory", opts.inventory);
       if (opts.sessionId) fd.append("session_id", opts.sessionId);
+      if (opts.compact) fd.append("compact", "1");
       // RN's FormData accepts { uri, name, type }; the DOM one accepts Blob/File.
       fd.append("image", opts.image as never);
       return http.post<SendChatResult>("/chat", fd);
@@ -391,6 +396,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       agent,
       inventory: opts.inventory,
       session_id: opts.sessionId || undefined,
+      compact: opts.compact || undefined,
     });
   }
 

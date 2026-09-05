@@ -21,12 +21,14 @@ import Animated, {
 } from "react-native-reanimated";
 
 import {
+  ApiError,
   STORAGE_LOCATIONS,
   computeFoodBalanceScore,
   computeOrganizerScore,
   computeShopkeeperScore,
   computeWasteSaverScore,
   daysLabel,
+  describeError,
   freshColor,
   getShoppingRecommendations,
   type ChatAgentName,
@@ -398,11 +400,20 @@ export default function Crew() {
             .slice(0, 40)
             .map((i) => `${i.name} (${daysLabel(i.days)})`)
             .join(", "),
+          compact: true,
         },
       );
       insightOverride.set(meta.agent, res.agent_response);
-    } catch {
-      /* ignore */
+    } catch (e) {
+      // Same weekly cap as Quick Chat (compact calls count against it too) - surface it here
+      // too instead of failing silently, since this is the only other place a free user can
+      // burn through it.
+      toast.show(
+        describeError(e, "Couldn't get a tip right now."),
+        e instanceof ApiError && e.status === 402
+          ? { actionLabel: "Upgrade", onAction: () => router.push("/paywall") }
+          : undefined,
+      );
     } finally {
       setActivating(false);
     }
