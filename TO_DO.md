@@ -192,8 +192,16 @@ multiple / shared fridges, advanced notification tuning.
 - [ ] Full **smoke-test on a real device / simulator** against the live API — today's testing
   covered the paywall/purchase flow; the rest of the app (inventory, chat, notifications, social)
   hasn't had a dedicated pass since the parity port.
-- [ ] Bottom-sheet **grab-to-dismiss** gesture on modal screens (needs
-  `react-native-gesture-handler` root wiring).
+- [X] Bottom-sheet **grab-to-dismiss** gesture — 2026-09-05. Scope turned out narrower than it
+  sounded: the ~12 `presentation: "modal"` navigation *screens* already had native
+  swipe-to-dismiss for free (that's standard iOS behavior via `@react-navigation/native-stack`,
+  nothing to build). The real gap was two custom in-screen `<Modal>`-based sheets
+  (`MoveToSheet` in `inventory.tsx`, the date picker in `add.tsx`) that had a decorative drag
+  handle bar with no actual gesture behind it, and `GestureHandlerRootView` was missing from
+  the root layout entirely (needed for gestures to work inside a `<Modal>`, which portals
+  outside the normal view tree). Built a shared `@/components/bottom-sheet.tsx` (drag lives on
+  the handle only, so a `ScrollView` in the sheet body still scrolls normally) and wired
+  `GestureHandlerRootView` into `_layout.tsx`; both existing sheets now use it.
 - [ ] Native-feel pass: haptics, safe-area audit on every screen, keyboard-avoiding views,
   offline banners / sync-error toast.
 - [ ] Finish `apps/web/lib/thatfridge` → `packages/core` extraction; point `apps/web` at the

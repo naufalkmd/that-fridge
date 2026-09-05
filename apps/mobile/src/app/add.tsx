@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -37,6 +36,7 @@ import { useInventory } from "@/lib/inventory";
 import { usePro } from "@/lib/pro";
 import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
+import { BottomSheet } from "@/components/bottom-sheet";
 
 const AMBER = "#26c6da";
 const SURFACE = "#131316";
@@ -1300,62 +1300,34 @@ function DateField({
       )}
 
       {Platform.OS === "ios" && (
-        <Modal
-          transparent
-          visible={open}
-          animationType="fade"
-          onRequestClose={() => setOpen(false)}
-        >
-          <Pressable
-            onPress={() => setOpen(false)}
+        <BottomSheet visible={open} onClose={() => setOpen(false)}>
+          <View
             style={{
-              flex: 1,
-              justifyContent: "flex-end",
-              backgroundColor: "rgba(0,0,0,0.55)",
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              paddingVertical: 6,
             }}
           >
-            <Pressable
-              onPress={() => {}}
-              style={{
-                backgroundColor: SURFACE,
-                borderTopLeftRadius: 18,
-                borderTopRightRadius: 18,
-                paddingHorizontal: 16,
-                paddingTop: 8,
-                paddingBottom: 34,
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  paddingVertical: 6,
-                }}
-              >
-                <Text style={{ fontSize: 13, fontWeight: "700", color: FAINT }}>
-                  Best before
-                </Text>
-                <Pressable onPress={() => setOpen(false)} hitSlop={8}>
-                  <Text
-                    style={{ fontSize: 15, fontWeight: "700", color: AMBER }}
-                  >
-                    Done
-                  </Text>
-                </Pressable>
-              </View>
-              <DateTimePicker
-                value={current}
-                mode="date"
-                display="inline"
-                themeVariant="dark"
-                accentColor={AMBER}
-                onChange={(_e, d) => d && onChange(toISODate(d))}
-                style={{ alignSelf: "stretch" }}
-              />
+            <Text style={{ fontSize: 13, fontWeight: "700", color: FAINT }}>
+              Best before
+            </Text>
+            <Pressable onPress={() => setOpen(false)} hitSlop={8}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: AMBER }}>
+                Done
+              </Text>
             </Pressable>
-          </Pressable>
-        </Modal>
+          </View>
+          <DateTimePicker
+            value={current}
+            mode="date"
+            display="inline"
+            themeVariant="dark"
+            accentColor={AMBER}
+            onChange={(_e, d) => d && onChange(toISODate(d))}
+            style={{ alignSelf: "stretch" }}
+          />
+        </BottomSheet>
       )}
     </View>
   );

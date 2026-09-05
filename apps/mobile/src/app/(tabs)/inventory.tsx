@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   LayoutRectangle,
-  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -38,6 +37,7 @@ import { useInventory } from "@/lib/inventory";
 import { useCategories } from "@/lib/categories";
 import { useScope, scopeItems } from "@/lib/scope";
 import { PixelText } from "@/components/brand";
+import { BottomSheet } from "@/components/bottom-sheet";
 import { FridgeScopePicker } from "@/components/fridge-scope";
 import { CategoryTag, LocationTag } from "@/components/tags";
 import { FoodIcon } from "@/components/food-icon";
@@ -813,104 +813,66 @@ function MoveToSheet({
   onManage: () => void;
 }) {
   return (
-    <Modal
-      transparent
-      visible={visible}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <Pressable
-        onPress={onClose}
+    <BottomSheet visible={visible} onClose={onClose}>
+      <Text
         style={{
-          flex: 1,
-          justifyContent: "flex-end",
-          backgroundColor: "rgba(0,0,0,0.55)",
+          fontSize: 13,
+          fontWeight: "700",
+          color: FAINT,
+          marginBottom: 10,
         }}
       >
-        <Pressable
-          onPress={() => {}}
-          style={{
-            backgroundColor: SURFACE,
-            borderTopLeftRadius: 18,
-            borderTopRightRadius: 18,
-            paddingHorizontal: 16,
-            paddingTop: 14,
-            paddingBottom: 34,
-          }}
-        >
-          <View
+        Move {count} item{count === 1 ? "" : "s"} to…
+      </Text>
+      <ScrollView style={{ maxHeight: 340 }}>
+        {categories.map((c) => (
+          <Pressable
+            key={c.id}
+            onPress={() => onPick(c.id)}
             style={{
-              alignSelf: "center",
-              width: 36,
-              height: 4,
-              borderRadius: 2,
-              backgroundColor: HAIRLINE,
-              marginBottom: 12,
-            }}
-          />
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: "700",
-              color: FAINT,
-              marginBottom: 10,
+              paddingVertical: 13,
+              paddingHorizontal: 10,
+              borderRadius: 8,
             }}
           >
-            Move {count} item{count === 1 ? "" : "s"} to…
+            <Text style={{ fontSize: 14, fontWeight: "600", color: INK }}>
+              {c.name}
+            </Text>
+          </Pressable>
+        ))}
+        <Pressable
+          onPress={() => onPick(null)}
+          style={{
+            paddingVertical: 13,
+            paddingHorizontal: 10,
+            borderRadius: 8,
+          }}
+        >
+          <Text style={{ fontSize: 14, fontWeight: "600", color: MUTED }}>
+            Uncategorized (clear)
           </Text>
-          <ScrollView style={{ maxHeight: 340 }}>
-            {categories.map((c) => (
-              <Pressable
-                key={c.id}
-                onPress={() => onPick(c.id)}
-                style={{
-                  paddingVertical: 13,
-                  paddingHorizontal: 10,
-                  borderRadius: 8,
-                }}
-              >
-                <Text style={{ fontSize: 14, fontWeight: "600", color: INK }}>
-                  {c.name}
-                </Text>
-              </Pressable>
-            ))}
-            <Pressable
-              onPress={() => onPick(null)}
-              style={{
-                paddingVertical: 13,
-                paddingHorizontal: 10,
-                borderRadius: 8,
-              }}
-            >
-              <Text style={{ fontSize: 14, fontWeight: "600", color: MUTED }}>
-                Uncategorized (clear)
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={onManage}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-                paddingVertical: 13,
-                paddingHorizontal: 10,
-                borderRadius: 8,
-                borderTopWidth: 1,
-                borderTopColor: HAIRLINE,
-                marginTop: 4,
-              }}
-            >
-              <MaterialCommunityIcons name="plus" size={15} color={ACCENT} />
-              <Text
-                style={{ fontSize: 13.5, fontWeight: "700", color: ACCENT }}
-              >
-                New / manage categories
-              </Text>
-            </Pressable>
-          </ScrollView>
         </Pressable>
-      </Pressable>
-    </Modal>
+        <Pressable
+          onPress={onManage}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            paddingVertical: 13,
+            paddingHorizontal: 10,
+            borderRadius: 8,
+            borderTopWidth: 1,
+            borderTopColor: HAIRLINE,
+            marginTop: 4,
+          }}
+        >
+          <MaterialCommunityIcons name="plus" size={15} color={ACCENT} />
+          <Text style={{ fontSize: 13.5, fontWeight: "700", color: ACCENT }}>
+            New / manage categories
+          </Text>
+        </Pressable>
+      </ScrollView>
+    </BottomSheet>
   );
 }
 
