@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 
 import Ionicons from "@expo/vector-icons/Ionicons";
 
@@ -56,6 +57,9 @@ export default function Profile() {
                   setWorking(true);
                   try {
                     await deleteAccount();
+                    await Haptics.notificationAsync(
+                      Haptics.NotificationFeedbackType.Success,
+                    );
                     router.replace("/sign-in");
                   } catch (e) {
                     setWorking(false);

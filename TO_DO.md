@@ -202,8 +202,16 @@ multiple / shared fridges, advanced notification tuning.
   outside the normal view tree). Built a shared `@/components/bottom-sheet.tsx` (drag lives on
   the handle only, so a `ScrollView` in the sheet body still scrolls normally) and wired
   `GestureHandlerRootView` into `_layout.tsx`; both existing sheets now use it.
-- [ ] Native-feel pass: haptics, safe-area audit on every screen, keyboard-avoiding views,
-  offline banners / sync-error toast.
+- [🟡] Native-feel pass — 2026-09-05. Audited all 33 screens for safe-area and
+  keyboard-avoiding gaps: both came back clean (every screen already has a native header,
+  `SheetHeader`, its own `SafeAreaView`, or genuinely doesn't need one; every text input either
+  has `KeyboardAvoidingView` where needed or keeps its action inline/auto-saves, so the keyboard
+  never covers anything important). Haptics was the real gap: 7 screens with real delete/remove
+  actions (`fridge/[id].tsx` delete-fridge/leave/remove-member, `profile.tsx` delete account,
+  `categories.tsx`, `ai-data.tsx` ×3, `icon-picker.tsx`, `recipe/[id].tsx`, `shopping.tsx`) had
+  zero tactile feedback despite haptics being used consistently elsewhere (inventory drag-drop,
+  home tip-card moves) — now fixed. Still open: offline banners / sync-error toast — not
+  audited, real remaining scope.
 - [ ] Finish `apps/web/lib/thatfridge` → `packages/core` extraction; point `apps/web` at the
   package. (Most Home + score logic already moved.)
 - [X] **`mobile-app` → `main`** merged 2026-08-28; feature branch retired 2026-08-30 —

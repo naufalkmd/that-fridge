@@ -12,6 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import * as Haptics from "expo-haptics";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { describeError, getShoppingRecommendations } from "@thatfridge/core";
@@ -40,6 +41,7 @@ export default function Shopping() {
 
   function removeWithUndo(id: string, name: string) {
     remove(id);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     toast.show(`Removed ${name}`, {
       actionLabel: "Undo",
       onAction: () => add(name),

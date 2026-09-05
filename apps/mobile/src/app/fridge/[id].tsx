@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
@@ -150,6 +151,9 @@ export default function ManageFridge() {
           onPress: async () => {
             try {
               await (owner ? api.deleteFridge(id) : api.leaveFridge(id));
+              await Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
               await refresh();
               router.back();
             } catch (e) {
@@ -262,7 +266,12 @@ export default function ManageFridge() {
                   onPress={() =>
                     api
                       .removeFridgeMember(id, m.id)
-                      .then(() => setMembers((prev) => prev.filter((x) => x.id !== m.id)))
+                      .then(() => {
+                        void Haptics.notificationAsync(
+                          Haptics.NotificationFeedbackType.Success,
+                        );
+                        setMembers((prev) => prev.filter((x) => x.id !== m.id));
+                      })
                       .catch(() => {})
                   }
                   hitSlop={6}

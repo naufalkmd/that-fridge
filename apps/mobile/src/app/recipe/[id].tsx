@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { describeError } from "@thatfridge/core";
@@ -109,6 +110,9 @@ export default function RecipeDetail() {
         onPress: async () => {
           try {
             await remove(recipe!.id);
+            await Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Success,
+            );
             router.back();
           } catch (e) {
             Alert.alert("Error", describeError(e, "Couldn't delete that."));

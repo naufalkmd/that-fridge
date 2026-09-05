@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { FOOD_ICON_KEYS, ICON_LABELS, describeError, type GeneratedIcon } from "@thatfridge/core";
@@ -67,6 +68,7 @@ export default function IconPicker() {
 
   async function removeFromLibrary(id: string) {
     setLibrary((l) => l.filter((g) => g.id !== id));
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     api.deleteGeneratedIcon(id).catch(() => {});
   }
 

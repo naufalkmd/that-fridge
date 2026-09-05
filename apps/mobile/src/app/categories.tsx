@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as Haptics from "expo-haptics";
 
 import { describeError } from "@thatfridge/core";
 import { useCategories } from "@/lib/categories";
@@ -65,7 +66,16 @@ export default function Categories() {
       `"${name}" — items in it become Uncategorized. This can't be undone.`,
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => remove(id) },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Success,
+            );
+            remove(id);
+          },
+        },
       ],
     );
   }

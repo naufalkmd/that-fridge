@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
@@ -41,6 +42,7 @@ export default function AIData() {
 
   async function deleteFact(i: number) {
     setFacts(await api.deleteMemoryFact(i).catch(() => facts));
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }
   function clearFacts() {
     Alert.alert("Clear memory", "Forget everything the crew remembers about you?", [
@@ -50,6 +52,9 @@ export default function AIData() {
         style: "destructive",
         onPress: async () => {
           await api.clearMemoryFacts().catch(() => {});
+          void Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Success,
+          );
           setFacts([]);
         },
       },
@@ -57,6 +62,7 @@ export default function AIData() {
   }
   async function deleteUsage(id: string) {
     await api.deleteUsageHistoryEntry(id).catch(() => {});
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     refresh();
   }
 
