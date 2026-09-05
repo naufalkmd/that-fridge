@@ -239,12 +239,20 @@ post-launch OTA fast-follow.**
   region set — no reason to geo-restrict).
 - [ ] **Pricing:** create the sub price points; App Store + RevenueCat auto-localize to MYR /
   KRW. Confirm the KRW price reads as a clean number and is VAT-inclusive (Apple handles VAT).
-- [ ] **Korea PIPA:** provide a **Korean-language privacy policy** (`/privacy/ko/`), obtain
-  **separate consent for cross-border transfer** of personal data (chat text + photos →
-  OpenRouter / fal.ai in the US) at sign-up, and name a privacy contact. PIPA is strict and
-  Korean review does check the policy link.
-- [ ] **Malaysia PDPA (2010, amended 2024):** consent at sign-up, breach-notification process,
-  name a data-protection contact. Current policy mostly covers this — add the contact.
+- [🟡] **Korea PIPA:** privacy contact already named (`apps/legal/privacy/index.html` §10 —
+  Muhammad Naufal Kamaruddin, privacy@thatfridge.com), checked 2026-09-05. Still genuinely open:
+  - [ ] **Korean-language privacy policy** — `/privacy/ko/` is still a 404 (confirmed live,
+    2026-09-05), just a promise-to-publish in the English page. Needs an actual Korean
+    translation — not something to machine-translate unsupervised for a legal document; get a
+    native/professional pass.
+  - [ ] **Separate consent for cross-border transfer** at sign-up. The general "you agree to
+    our Terms and Privacy Policy" notice added to `sign-in.tsx` today (§4a min-age item) is
+    likely *not* sufficient — PIPA is stricter than PDPA and wants explicit, distinct consent
+    for the specific cross-border transfer (chat text + photos → OpenRouter in the US), not
+    bundled into general ToS acceptance.
+- [X] **Malaysia PDPA (2010, amended 2024):** already covered — consent-at-sign-up language,
+  breach-notification commitment, and a named contact (privacy@thatfridge.com) all already in
+  `apps/legal/privacy/index.html` §10. Checked 2026-09-05, nothing to add.
 - [X] **Minimum sign-up age 14+** — Terms already had it (§2); added the same statement + a
   Terms/Privacy link to the signup screen itself (`sign-in.tsx`, 2026-09-05), which had neither
   before.
