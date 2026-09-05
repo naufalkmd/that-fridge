@@ -39,7 +39,7 @@ const ZONES: {
     scoreKey: "balance",
     color: "#f5a623",
     notifKind: "recipe",
-    route: "/eat",
+    route: "/eat?tab=recipes",
     path: [
       { x: 12.4, y: 28.4 }, { x: 15.87, y: 27.65 }, { x: 30, y: 26.91 }, { x: 35.6, y: 28.4 },
       { x: 47.33, y: 28.03 }, { x: 41.2, y: 29.52 }, { x: 40.13, y: 33.24 }, { x: 36.4, y: 34.36 },
@@ -52,7 +52,7 @@ const ZONES: {
     scoreKey: "organizer",
     color: "#3d6fe0",
     notifKind: null,
-    route: "/organizer",
+    route: "/eat?tab=organizer",
     path: [
       { x: 59.07, y: 29.89 }, { x: 71.33, y: 29.89 }, { x: 74.27, y: 31.38 }, { x: 87.33, y: 31.38 },
       { x: 87.6, y: 40.32 }, { x: 77.73, y: 40.69 }, { x: 77.47, y: 33.62 },
@@ -63,7 +63,7 @@ const ZONES: {
     scoreKey: "waste",
     color: "#ff5f56",
     notifKind: "expiring",
-    route: "/inventory",
+    route: "/eat?tab=guardian",
     path: [
       { x: 8.93, y: 77.4 }, { x: 21.73, y: 77.77 }, { x: 26, y: 74.42 }, { x: 27.87, y: 86.71 },
       { x: 18.53, y: 87.08 }, { x: 18.27, y: 81.12 }, { x: 36.13, y: 80.75 },
@@ -74,7 +74,7 @@ const ZONES: {
     scoreKey: "shopkeeper",
     color: "#39e07f",
     notifKind: "lowStock",
-    route: "/shopping",
+    route: "/eat?tab=shopping",
     path: [
       { x: 59.76, y: 67.38 }, { x: 67.49, y: 68.13 }, { x: 68.83, y: 69.99 }, { x: 73.36, y: 69.62 },
       { x: 75.49, y: 68.5 }, { x: 80.03, y: 67.75 }, { x: 84.83, y: 68.5 }, { x: 87.49, y: 73.34 },

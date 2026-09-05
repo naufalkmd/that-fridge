@@ -291,11 +291,6 @@ export default function Inventory() {
             </PixelText>
             <View style={{ flexDirection: "row", gap: 8 }}>
               <HeaderBtn icon="search" onPress={() => router.push("/search")} />
-              <HeaderBtn
-                icon="add"
-                accent
-                onPress={() => router.push("/add")}
-              />
             </View>
           </View>
 

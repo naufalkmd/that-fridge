@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Linking,
   Pressable,
@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
@@ -256,7 +256,11 @@ export default function Crew() {
   } = useKitchenScore();
   const { events, prefs, togglePref } = useNotifications();
   const toast = useToast();
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState<Tab>("recipes");
+  useEffect(() => {
+    if (TABS.some((t) => t.key === tabParam)) setTab(tabParam as Tab);
+  }, [tabParam]);
   const meta = TABS.find((t) => t.key === tab)!;
 
   const scoped = useMemo(() => scopeItems(items, scope), [items, scope]);

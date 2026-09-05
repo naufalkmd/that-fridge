@@ -36,6 +36,7 @@ import { useShopping } from "@/lib/shopping";
 import { useKitchenScore } from "@/lib/kitchenScore";
 import { useSocial } from "@/lib/social";
 import { useAgentInsight } from "@/lib/agentInsight";
+import { usePro } from "@/lib/pro";
 import { PixelText } from "@/components/brand";
 import { MarkdownText } from "@/components/markdown-text";
 import { SectionHeader } from "@/components/ui";
@@ -45,6 +46,7 @@ import { CrewScene } from "@/components/home/CrewScene";
 import { FridgeNotes } from "@/components/home/FridgeNotes";
 
 const BLUE = "#5b8dee";
+const PRO_PURPLE = "#a78bfa";
 const GOOD = "#39e07f";
 const BAD = "#ff5567";
 const SURFACE = "#131316";
@@ -78,6 +80,7 @@ export default function Home() {
   const { scope, setScope } = useScope();
   const { usageHistory, organizerTally, scoreSnapshots } = useKitchenScore();
   const { pendingCount } = useSocial();
+  const { isPro } = usePro();
 
   const [refreshing, setRefreshing] = useState(false);
   const [suggestions, setSuggestions] = useState<Recipe[] | null>(null);
@@ -206,9 +209,14 @@ export default function Home() {
               </Text>
             </View>
           </Pressable>
-          <PixelText style={{ fontSize: 20, letterSpacing: 0.5, color: INK }}>
-            ThatFridge
-          </PixelText>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <PixelText style={{ fontSize: 20, letterSpacing: 0.5, color: INK }}>
+              ThatFridge
+            </PixelText>
+            {isPro && (
+              <Ionicons name="star" size={13} color={PRO_PURPLE} />
+            )}
+          </View>
           <View style={{ flexDirection: "row", gap: 8 }}>
             <HeaderIcon
               icon="person-add-outline"

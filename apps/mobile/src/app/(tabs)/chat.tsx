@@ -53,12 +53,6 @@ const GREETING: Msg = {
   role: "agent",
   text: "Hi! Ask me anything about what's in your fridge.",
 };
-const QUICK_ASKS = [
-  "What's expiring soon?",
-  "What can I cook tonight?",
-  "What do I need to buy?",
-  "How's my fridge doing?",
-];
 
 type Msg = {
   role: "user" | "agent";
@@ -210,8 +204,6 @@ export default function Chat() {
     }
   }
 
-  const showQuickAsks = !loading && messages.length <= 3;
-
   return (
     <ImageBackground
       source={WALLPAPER}
@@ -302,39 +294,6 @@ export default function Chat() {
             )}
             {sending && <TypingDots />}
           </ScrollView>
-
-          {showQuickAsks && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={{ flexGrow: 0 }}
-              contentContainerStyle={{
-                paddingHorizontal: 16,
-                paddingBottom: 10,
-                gap: 8,
-              }}
-              keyboardShouldPersistTaps="handled"
-            >
-              {QUICK_ASKS.map((label) => (
-                <Pressable
-                  key={label}
-                  onPress={() => send(label)}
-                  style={{
-                    backgroundColor: "rgba(19,19,22,0.9)",
-                    borderWidth: 1,
-                    borderColor: HAIRLINE,
-                    borderRadius: 6,
-                    paddingVertical: 8,
-                    paddingHorizontal: 13,
-                  }}
-                >
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: INK }}>
-                    {label}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
 
           <View
             style={{
