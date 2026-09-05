@@ -81,8 +81,8 @@ WHAT YOU CAN DO
 • Build a recipe book from what you cook, with photos and notes
 
 THATFRIDGE PRO
-Unlock unlimited AI chat, receipt & photo bulk-add, multiple shared fridges, and advanced
-notification tuning. Every plan starts with a 7-day free trial.
+Unlock unlimited AI chat, receipt & photo bulk-add, and multiple shared fridges. Every plan
+starts with a 7-day free trial.
 
 • ThatFridge Pro Monthly — auto-renews monthly after the free trial
 • ThatFridge Pro Yearly — auto-renews yearly after the free trial, save vs. monthly
@@ -167,8 +167,13 @@ marketing site or content wrapper.
 ## Still needed (not something I can draft — needs real assets/device)
 
 - App icon, 1024×1024, no transparency, no rounded corners (Apple adds the mask)
-- iPhone 6.9" + 6.5" screenshots, 1179×2556, no device frame — capture from a real device/sim
-  running the actual app, ideally the paywall + a couple of core screens (Home, Chat, Inventory)
+- iPhone screenshots at **1320×2868 (6.9" display only)** — verified against Apple's current
+  spec 2026-09-05: providing 6.9" alone satisfies the iPhone requirement, App Store Connect
+  auto-scales it down for every smaller size, so a separate 6.5" set isn't needed. (The
+  1179×2556 previously noted here was the 6.3" size, not 6.9"/6.5" - corrected.) No device
+  frame (raw screenshot, no bezel), no alpha channel/transparency, 1-10 images, jpeg/jpg/png.
+  Capture from a real device/sim running the actual app, ideally the paywall + a couple of core
+  screens (Home, Chat, Inventory).
 - Age rating questionnaire (App Store Connect walks through this — answer based on actual
   content; ThatFridge has no UGC beyond fridge names/notes between people you've already
   approved into a shared fridge, no chat between strangers)

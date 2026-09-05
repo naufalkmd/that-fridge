@@ -544,7 +544,9 @@ post-launch OTA fast-follow.**
   channel (fully opaque, no visible transparency, but App Store Connect's icon validator
   rejects *any* alpha channel on the 1024² upload regardless). Flattened to RGB 2026-09-05 —
   same art, ready to upload as-is. Corners are already square (Apple applies its own mask).
-- [ ] iPhone **6.9" + 6.5"** screenshots — **no device frame**, 1179×2556.
+- [ ] iPhone screenshots — **1320×2868, 6.9" only** (verified 2026-09-05 against Apple's
+  current spec: satisfies every smaller size automatically, no separate 6.5" set needed), **no
+  device frame**, no alpha channel.
 
 - [🟡] Store listing: description, subtitle, keywords, support URL — **drafted** in
   `apps/mobile/STORE_LISTING.md` (2026-09-05), needs a review pass before pasting into ASC.
@@ -653,7 +655,10 @@ open; code already had both.)
 - [X] RevenueCat: sandbox purchase + restore verified 2026-09-05; `thatfridge_pro` gate works
   both ways
 - [ ] 7-day free trial active (doubles as judge access)
-- [ ] Icon 1024², splash, iPhone 6.9" + 6.5" screenshots (no device frame — 1179×2556)
+- [ ] Icon 1024², splash, iPhone screenshots — **1320×2868, 6.9" only** (verified against
+  Apple's current spec 2026-09-05: satisfies every smaller size via auto-scaling, no separate
+  6.5" set needed; 1179×2556 previously noted here was actually the 6.3" size — corrected).
+  No device frame, no alpha channel.
 - [ ] App Privacy form complete and accurate · Age rating done
 - [ ] Demo account + review notes filled in
 
