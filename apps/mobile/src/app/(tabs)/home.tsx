@@ -214,7 +214,16 @@ export default function Home() {
               ThatFridge
             </PixelText>
             {isPro && (
-              <Ionicons name="star" size={13} color={PRO_PURPLE} />
+              <View
+                style={{
+                  backgroundColor: `${PRO_PURPLE}1f`,
+                  borderRadius: 999,
+                  paddingHorizontal: 6,
+                  paddingVertical: 4,
+                }}
+              >
+                <Ionicons name="star" size={11} color={PRO_PURPLE} />
+              </View>
             )}
           </View>
           <View style={{ flexDirection: "row", gap: 8 }}>
