@@ -47,21 +47,16 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
   unofficial `PixelMix-Bold.ttf` (unused; EULA forbids DIY weights).
 - [X] Confirm each team member's Shipaton eligibility: age of majority, not a sanctioned
   country, not RevenueCat / sponsor staff.
-- [🟡] **Sign in with Apple / Google — external config.** Both flows are **built** (branch merged
-  to `main`: `POST /auth/apple` + `/auth/google` with JWKS verification; mobile buttons that
-  hide themselves until configured). Needs the new **v1.2.0 native build** either way.
+- [X] **Sign in with Apple / Google.** Both flows built (`POST /auth/apple` + `/auth/google`
+  with JWKS verification; mobile buttons that hide themselves until configured) and now fully
+  configured — 2026-09-05.
   - [X] **Apple** — "Sign In with Apple" capability enabled on App ID `test.thatfridge.app`.
-    Nothing else: the backend allows the bundle id as the token audience by default. Works once
-    v1.2.0 ships.
-  - [ ] **Google** — Google Cloud Console → OAuth consent screen → **Credentials**:
-    1. **OAuth client → iOS** (bundle `test.thatfridge.app`) → gives an iOS client id +
-       reversed form `com.googleusercontent.apps.…`
-    2. **OAuth client → Web application** → gives a Web client id
-    3. Set: `GOOGLE_IOS_URL_SCHEME` (reversed iOS id) + `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
-       (Web id) in `apps/mobile/.env` **and** as EAS build env vars; `GOOGLE_CLIENT_IDS`
-       (`<iOS id>,<Web id>`) in the server `.env`.
-    4. Google needs its **own build after that** — the `iosUrlScheme` bakes into Info.plist at
-       build time. Ship v1.2.0 Apple-only first; Google in the next build.
+  - [X] **Google** — Cloud project + OAuth consent (Google Auth Platform) created, iOS + Web
+    OAuth clients created. `GOOGLE_IOS_URL_SCHEME` + `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` set on
+    EAS `production` + local `.env`; `GOOGLE_CLIENT_IDS` set + `config:cache`d on the server
+    (confirmed via `php artisan config:show services.google.client_ids`). New native build
+    shipped with both. Google's sign-in button also restyled to match Apple's exact button
+    metrics (fixed height 48, pure white, same corner radius — was visibly mismatched before).
   - Details: `apps/mobile/RELEASE.md` → "Sign in with Apple / Google".
 
 **Don't:** market ThatFridge as "launched" anywhere (public TestFlight link, ProductHunt,
