@@ -659,7 +659,13 @@ function CrewTip({
   onDismiss: () => void;
   fallback: React.ReactNode;
 }) {
-  const insight = useAgentInsight(agent, items, items.length > 0);
+  // enabled: false — Home never fires the AI call itself, only shows one if it's already
+  // cached from the user tapping "Activate {agent}" on the Crew tab this session (agentInsight's
+  // cache is a shared module-level singleton). Otherwise this always falls back to `fallback`
+  // (deterministic, computed from real data, zero cost) instead of eagerly hitting /chat on
+  // every Home mount - that was firing 3 real LLM calls on every cold app launch regardless of
+  // whether the fridge had changed since the last one.
+  const insight = useAgentInsight(agent, items, false);
   return (
     <TipCard
       eyebrow={eyebrow}
