@@ -300,10 +300,11 @@ export default function SignIn() {
                 <Pressable
                   onPress={() => social(signInWithGoogle)}
                   disabled={busy}
-                  className="flex-row items-center justify-center gap-2.5 rounded-[10px] bg-ink py-3.5 active:opacity-80"
+                  className="flex-row items-center justify-center gap-2.5 rounded-[10px] bg-white active:opacity-80"
+                  style={{ height: 48, width: "100%" }}
                 >
-                  <Ionicons name="logo-google" size={16} color="#0a0a0c" />
-                  <Text className="text-[14px] font-bold text-[#0a0a0c]">
+                  <Ionicons name="logo-google" size={18} color="#0a0a0c" />
+                  <Text className="text-[17px] font-semibold text-[#0a0a0c]">
                     Continue with Google
                   </Text>
                 </Pressable>
