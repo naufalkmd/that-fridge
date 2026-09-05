@@ -260,12 +260,11 @@ don't have yet — replace with actual numbers once there's a few months of real
 Apple $99/yr + domain ~$10.46/yr + VPS $21.60/mo (=$259.20/yr) ≈ **$368.66/yr ≈ $30.72/mo**,
 regardless of user count.
 
-**Apple's commission — depends on an unconfirmed enrollment:**
-- 15% if enrolled in the **App Store Small Business Program** (free, automatic for developers
-  under $1M/yr proceeds — ThatFridge obviously qualifies). **Not confirmed enrolled anywhere in
-  this TO_DO — check this. It's free and takes a few minutes; there's no reason not to.**
-- 30% standard rate if not enrolled.
-- Both scenarios computed below since enrollment isn't confirmed.
+**Apple's commission:**
+- [X] **App Store Small Business Program application submitted 2026-09-05** (single account,
+  no Associated Developer Accounts) — pending Apple's review/approval. 15% once approved
+  (typically a few business days, next payment cycle), vs. 30% standard rate until then.
+- Both scenarios still computed below until approval is confirmed.
 
 **US withholding — [confirmed via §1]:** 30% on US-storefront sales only (Malaysian individual,
 no US tax treaty). Target markets are Malaysia + South Korea, not the US, so this should only
