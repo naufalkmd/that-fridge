@@ -150,30 +150,34 @@ multiple / shared fridges, advanced notification tuning.
 
 **Left (Member A — Apple account is now approved, Team ID issued 2026-08-28):**
 
-- [ ] **App Store Connect → Subscriptions.** One group ("ThatFridge Pro"). Two products,
-  **permanent IDs** (never reusable — don't typo):
-  - `thatfridge_pro_monthly` — 1 month
-  - `thatfridge_pro_yearly` — 1 year
-  - **Price (USD base):** monthly **$2.99**, yearly **$19.99** (≈ $1.67/mo, "save 44%" — the
-    annual is the hero plan). Rationale: category norm ($2–5/mo), low enough for post-trial
-    impulse, can raise later (existing subs grandfathered), don't go < $1.99.
-  - **7-day free trial** (introductory offer) on each — doubles as Shipaton judge access.
-  - **Per-storefront price points** (set after the base; Apple shows VAT/SST-inclusive and
-    remits it): Malaysia `RM12.90` / `RM89`; South Korea `₩3,900` / `₩25,000` (round the ugly
-    auto-conversions).
-  - **Localizations:** English name `ThatFridge Pro` + 1-line description required now. Korean
-    + Malay skippable for v1 — add later as a metadata update, no rebuild (see §4a).
-  - **Review Information screenshot:** the paywall screen. Placeholder image OK to save now;
-    swap the real in-app screenshot (or a RevenueCat paywall-preview screenshot) before the
-    app goes to review.
-- [ ] RevenueCat: add a real **App Store app** (`test.thatfridge.app`) alongside the test store;
-  App Store shared secret + App Store Connect API key; remap the offering's `$rc_monthly` /
-  `$rc_annual` packages to `thatfridge_pro_monthly` / `thatfridge_pro_yearly`. Prices then flow
-  from App Store Connect automatically — RC does not set prices.
-- [ ] In the RC paywall editor, confirm price text uses **variables** (`{{ price }}`,
-  `{{ sub_price_per_month }}`), not a hardcoded "$4.99".
-- [ ] Swap the test-store key for the real `appl_…` App Store key in `.env` / EAS env.
+- [🟡] **App Store Connect → Subscriptions.** One group ("ThatFridge Pro"), created. Two
+  products, **permanent IDs** (never reusable — don't typo):
+  - [X] `thatfridge_pro_monthly` — 1 month, price **$2.99**, 7-day free trial, English
+    localization, review screenshot — status **Ready to Submit** (2026-09-05).
+  - [X] `thatfridge_pro_yearly` — 1 year, price **$19.99**, 7-day free trial, English
+    localization, review screenshot — status **Ready to Submit** (2026-09-05).
+  - Both show Apple's "first subscription must be submitted with a new app version" notice —
+    expected; they ride along with the real App Store version submission later (§5), not
+    submitted standalone.
+  - [ ] **Per-storefront price points** still not set: Malaysia `RM12.90` / `RM89`; South
+    Korea `₩3,900` / `₩25,000` (round the ugly auto-conversions).
+  - [ ] Korean + Malay localizations — skippable for v1, add later as a metadata update (§4a).
+- [X] RevenueCat: real **App Store app** added (`test.thatfridge.app`) alongside the test
+  store — In-App Purchase key configured + validated (2026-09-05). `thatfridge_pro_monthly` /
+  `thatfridge_pro_yearly` registered as RC products, attached to the `thatfridge_pro`
+  entitlement and to the existing `$rc_monthly` / `$rc_annual` packages (so the published
+  paywall serves both test-store and real App Store products with no paywall changes needed).
+- [X] RC paywall editor already used **variables** (`{{ product.price_per_period_abbreviated }}`)
+  for price text, not a hardcoded price — confirmed, no change needed.
+- [X] Real `appl_…` App Store key set as `EXPO_PUBLIC_RC_IOS_KEY` on the EAS **production**
+  environment (2026-09-05) — previously **completely unset**, meaning no TestFlight build to
+  date had ever initialized `Purchases.configure()`. Local `.env` still has the test-store key
+  (fine for local/simulator dev). New TestFlight build shipped with the real key same day.
 - [ ] Verify a **sandbox purchase + restore** end-to-end; `thatfridge_pro` gate works both ways.
+  In progress: sandbox tester Apple ID creation blocked on email validation errors (34607 /
+  "Could Not Verify Address") — needs a genuinely fresh email never linked to any Apple ID
+  (no `+` aliasing, no reused inbox). Once signed in via Settings → Developer → Sandbox Apple
+  Account, test the purchase on the new build.
 
 ---
 

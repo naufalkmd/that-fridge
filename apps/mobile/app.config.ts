@@ -71,8 +71,13 @@ const config: ExpoConfig = {
       "expo-camera",
       {
         cameraPermission: "ThatFridge uses the camera to scan grocery barcodes.",
-        // Barcode scanning only — no mic. Keeps the iOS review surface minimal.
-        microphonePermission: false,
+        // No `microphonePermission: false` here — expo-camera's plugin unconditionally
+        // *deletes* NSMicrophoneUsageDescription from the Info.plist when this is `false`,
+        // via a deferred mod that runs after every plugin's static config is applied. That
+        // wipes out the string expo-speech-recognition sets below regardless of array order
+        // (a real build got rejected for it — ITMS-90683, missing purpose string). Camera's
+        // Android RECORD_AUDIO is still opted out below; speech-recognition adds it back for
+        // Android separately.
         recordAudioAndroid: false,
       },
     ],
@@ -95,8 +100,7 @@ const config: ExpoConfig = {
     // that capability enabled in the Apple Developer portal — see RELEASE.md.
     "expo-apple-authentication",
     [
-      // Voice dictation in Quick Chat. Runs after expo-camera (which sets
-      // microphonePermission:false) so the mic usage string it needs wins.
+      // Voice dictation in Quick Chat.
       "expo-speech-recognition",
       {
         microphonePermission:
