@@ -383,7 +383,8 @@ open; code already had both.)
   against prod 2026-09-05 (§2)
 - [X] Camera permission string set (`app.config.ts`'s `expo-camera` plugin config); `ITSAppUsesNonExemptEncryption: false` already set — both confirmed already present, checked 2026-09-05
 - [ ] Local notifications fire correctly and route on tap
-- [ ] RevenueCat: sandbox purchase + restore verified; `thatfridge_pro` gate works both ways
+- [X] RevenueCat: sandbox purchase + restore verified 2026-09-05; `thatfridge_pro` gate works
+  both ways
 - [ ] 7-day free trial active (doubles as judge access)
 - [ ] Icon 1024², splash, iPhone 6.9" + 6.5" screenshots (no device frame — 1179×2556)
 - [ ] App Privacy form complete and accurate · Age rating done
