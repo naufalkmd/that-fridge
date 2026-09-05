@@ -32,3 +32,10 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/legal
           command: deploy
+          # wrangler-action@v3 defaults to an old wrangler CLI (3.90 as of writing) that
+          # doesn't support a pure-assets Worker with no `main` script - it always demanded an
+          # entry-point even though wrangler.jsonc's `assets.directory` is enough on its own.
+          # This has silently failed every run since the workflow was created (confirmed via
+          # gh run list) - pin a wrangler major version new enough to actually support this.
+          # See https://github.com/cloudflare/wrangler-action/issues/369.
+          wranglerVersion: "4"
