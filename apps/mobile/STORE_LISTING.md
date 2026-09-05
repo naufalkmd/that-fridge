@@ -164,19 +164,73 @@ marketing site or content wrapper.
 
 ---
 
-## Still needed (not something I can draft — needs real assets/device)
+## 4. Age rating questionnaire
 
-- App icon, 1024×1024, no transparency, no rounded corners (Apple adds the mask)
-- iPhone screenshots at **1320×2868 (6.9" display only)** — verified against Apple's current
-  spec 2026-09-05: providing 6.9" alone satisfies the iPhone requirement, App Store Connect
-  auto-scales it down for every smaller size, so a separate 6.5" set isn't needed. (The
-  1179×2556 previously noted here was the 6.3" size, not 6.9"/6.5" - corrected.) No device
-  frame (raw screenshot, no bezel), no alpha channel/transparency, 1-10 images, jpeg/jpg/png.
-  Capture from a real device/sim running the actual app, ideally the paywall + a couple of core
-  screens (Home, Chat, Inventory).
-- Age rating questionnaire (App Store Connect walks through this — answer based on actual
-  content; ThatFridge has no UGC beyond fridge names/notes between people you've already
-  approved into a shared fridge, no chat between strangers)
-- App Review demo account + notes — the reviewer account already exists
-  (`keira@thatfridge.test`, TO_DO.md §2) — **change its password before submitting**, then write
-  a short "What to test" note pointing review at a pre-seeded fridge
+App Store Connect → your app → **App Rating**. Apple's system was substantially reworked in
+2026 — bands are now **4+, 9+, 13+, 16+, 18+, Unrated** (not the old 4+/9+/12+/17+), and as of
+**September 2026** a new mandatory **Social Media** content descriptor was added, checking
+whether the app has "the ability to redistribute, amplify, or interact with user-generated
+content through a social feed or similar discovery method." **I can't verify the exact live
+wording/flow of this questionnaire myself (too recent, changing) — sanity-check my answers
+below against what ASC actually shows you before submitting.**
+
+Reasoning, grounded in what the app actually does (checked against the codebase, not guessed):
+
+| Question | Answer | Why |
+| --- | --- | --- |
+| Violence (cartoon/fantasy or realistic) | None | Nothing in the app depicts violence |
+| Sexual content or nudity | None | — |
+| Profanity or crude humor | None | AI crew responses are food-focused, no profanity |
+| Alcohol, tobacco, or drug use/references | None | Checked all 7 seeded recipes (`DatabaseSeeder.php`) — none reference alcohol, tobacco, or drugs |
+| Mature or suggestive themes | None | — |
+| Horror or fear themes | None | — |
+| Medical/treatment information | None | Guardian's food-safety flags are about freshness, not medical advice |
+| Gambling or contests | None | — |
+| Unrestricted web access | No | No in-app browser, no unrestricted web access anywhere |
+| User-generated content | **Yes** | Fridge names, sticky notes, recipe notes — but only visible to people already approved into that specific shared fridge, never public |
+| **Social Media** (new, 2026) | **No** | No public feed, no content discovery/redistribution/amplification mechanism — sharing is scoped to a closed group of approved fridge members you invited yourself, the opposite of the "social feed" this descriptor targets |
+| Messaging/communication with other users | No | The only "chat" is with the AI crew; there's no direct messaging between two real users (fridge notes are shared-space, not DMs) |
+
+**Expected result: 4+.** Nothing here should push it higher — this is a clean household
+utility app with closed-group, approval-gated sharing, not an open social product.
+
+---
+
+## 5. App Review information
+
+**Before submitting:** the reviewer account already exists — `keira@thatfridge.test` /
+`password123` (TO_DO.md §2), pre-seeded with a fridge + 7 curated recipes. **⚠ Change this
+password before submitting** (it's been sitting in a committed TO_DO.md, effectively public) —
+update it directly on prod, then use the new one below.
+
+### Demo account
+- Email: `keira@thatfridge.test`
+- Password: *(set a new one before submitting — don't reuse `password123`)*
+
+### Notes for the reviewer (draft — paste into App Store Connect → App Review Information → Notes)
+
+```
+Demo account: keira@thatfridge.test / [password set at submission]
+
+This account has a pre-seeded fridge ("Keira's Kitchen") with sample items across every storage
+zone (fridge/freezer/pantry) and 7 curated recipes already in the recipe book, so every core
+screen has real content on first login - no empty states to work around.
+
+What to test:
+- Home: shows the AI "crew" (Chef, Guardian, Organizer, Shopkeeper) with tips based on the
+  seeded inventory, and a Kitchen Score.
+- Inventory: tap any item to see freshness/expiry; try adding one manually (barcode/receipt/
+  photo scanning require a Pro subscription - see below).
+- Chat: ask any crew member a question, e.g. "what should I cook tonight?" (free tier: 5
+  messages/week).
+- Recipes: the 7 seeded recipes are visible in the recipe book from first login.
+
+To test Pro features (unlimited AI chat, receipt/photo scanning, multiple/shared fridges): the
+app offers a 7-day free trial with no promo code needed - starting the trial from the paywall
+(Profile tab -> Upgrade) unlocks every Pro feature immediately in the App Store sandbox review
+environment.
+
+No account creation is required to review the app - the demo account above covers every core
+flow. If you'd like to test sign-up instead, Sign in with Apple and Google are both available
+on the sign-in screen.
+```

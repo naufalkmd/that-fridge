@@ -555,8 +555,14 @@ post-launch OTA fast-follow.**
   drafting: voice dictation wasn't actually on-device (RELEASE.md's claim didn't match
   `voice.ts`) — `requiresOnDeviceRecognition: true` added 2026-09-05, now true.
 
-- [ ] Age rating.
-- [ ] App Review notes with demo credentials.
+- [🟡] Age rating — **drafted** in `apps/mobile/STORE_LISTING.md` §4 (2026-09-06), reasoned
+  from actual content (checked all 7 seeded recipes for alcohol references — none). Expected
+  **4+**. Flags the new (Sept 2026) mandatory Social Media descriptor explicitly — answered No
+  (no public feed/discovery, sharing is closed to approved fridge members). Verify against
+  ASC's actual live questionnaire before submitting; the category structure changed recently
+  and I can't confirm the exact current wording myself.
+- [🟡] App Review notes with demo credentials — **drafted** in `apps/mobile/STORE_LISTING.md`
+  §5 (2026-09-06), ready to paste into ASC once the demo account's password is changed.
 - [X] Guideline 4.2 rebuttal drafted in `apps/mobile/STORE_LISTING.md` §3 (2026-09-05) — keep on
   hand, don't submit pre-emptively; only use if Apple actually flags a thin-wrapper rejection.
 - [ ] Decide Google Play account type (personal vs organization) — for the post-launch Android
@@ -659,8 +665,10 @@ open; code already had both.)
   Apple's current spec 2026-09-05: satisfies every smaller size via auto-scaling, no separate
   6.5" set needed; 1179×2556 previously noted here was actually the 6.3" size — corrected).
   No device frame, no alpha channel.
-- [ ] App Privacy form complete and accurate · Age rating done
-- [ ] Demo account + review notes filled in
+- [🟡] App Privacy form complete and accurate · Age rating done — both **drafted**, need
+  pasting into ASC (§5 above)
+- [🟡] Demo account + review notes filled in — **drafted**, needs the account's password
+  changed first (§2)
 
 - [🟡] TestFlight build validated by all 4 members on real devices — **build 1 (v1.0.0) submitted 2026-08-28** via `eas build/submit`; processing at App Store Connect. Add internal testers + a "What to Test" note.
 
