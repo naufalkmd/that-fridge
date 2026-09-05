@@ -1,725 +1,174 @@
 # ThatFridge — TO DO (iOS launch + RevenueCat Shipaton 2026)
 
-Consolidates the old `APP_STORE_LAUNCH_PLAN.md` + `SHIPATON_2026.md`.
-
 **Goal:** ship ThatFridge to the **Apple App Store**, live and approved. iOS only. Native Expo /
 React Native — no Capacitor, no WebView. This launch is also our **RevenueCat Shipaton 2026**
 entry.
 
 **Target markets:** Malaysia + South Korea. API hosted in Singapore; v1 app UI English-only,
-localized store listings + Korean UI fast-follow — see §4a.
+localized store listings + Korean UI fast-follow.
 
 **Hard deadline: Sep 30, 2026, 11:45 pm PDT.** The app must be **fully published and live**
 (Apple review passed), not just submitted — review takes days, so submit ~2 weeks early.
 
-**Where we are (2026-08-28):** every core screen + most of the web feature set is ported to
-`apps/mobile` at visual parity with `apps/web` (see §7). RevenueCat SDK, entitlement, `default`
-offering, and a published AI-designed paywall are done. **Backend infra is done:** the API is
-live at `https://api.thatfridge.com` with GitHub Actions CD (test → auto-deploy), TLS, backups,
-queue + scheduler; the legal site is live at `https://thatfridge.com`; email routing works.
-**`main` is the only working branch** (the `mobile-app` feature branch was retired 2026-08-30).
-**Apple Developer enrollment approved, first TestFlight build (v1.0.0) submitted.** CD:
-merge to `main` → OTA `eas update` to the `production` channel (JS); `git tag v1.0.x` →
-`eas build` + TestFlight submit (native). See `apps/mobile/CONTRIBUTING.md`.
+**Where we are (2026-09-06):** backend, RevenueCat, and the mobile app are all functionally
+complete and live. Every AI-calling / monetization-relevant endpoint is now Pro-gated and
+rate-limited server-side (not just client-side). What's left is almost entirely App Store
+submission mechanics (screenshots, pasting drafted content into ASC) plus the Devpost/Shipaton
+track — see below.
 
-Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external setup
+Legend: ✅ done · 🟡 partial / drafted, needs action · ⬜ not started
 
 ---
 
-## 1. Critical path — external accounts (Member A)
-
-- [X] **Apple Developer Program enrollment — Individual** — approved 2026-08-28, Team ID issued.
-
-- [🟡] **App Store Connect: Paid Apps Agreement + banking + tax** — W-8BEN submitted (Malaysian
-  individual, no US treaty → 30% withholding on US sales only; FTIN = LHDN tax number).
-  **Confirm the Paid Applications agreement shows "Active"** (bank + tax rows green) — processing
-  takes ~1–2 days. IAPs can't be tested until it's Active.
-
-- [X] Domain + privacy/terms/support pages (2026-08-28). `apps/legal/` — **live at
-  `https://thatfridge.com`** + `www` with TLS, **now genuinely auto-redeploying on push to
-  `main`** (fixed 2026-09-05, see below). Placeholders filled (operator *Muhammad Naufal
-  Kamaruddin*, Malaysian law). `api.thatfridge.com` → `167.172.88.75` (§2).
-  `support@` + `privacy@thatfridge.com` route via Cloudflare Email Routing to
-  `naufalkmd00@gmail.com` — test mail to both confirmed received. (Receive-only; to *send*
-  as `support@` later, add it in Gmail "Send mail as" with an SMTP provider.)
-  **Privacy Policy updated 2026-09-05** — §1 Notifications flatly said push notifications
-  weren't operated and no push token was collected, which was true when written but has been
-  false since the social-notifications feature shipped; also added the `blocks` table (§ Guideline
-  1.2 work) and Expo as a §4 data processor. Known gap, not fixed here: §11 promises material
-  changes get "surfaced in the app," and nothing does that yet.
-  **Fixed 2026-09-05: "auto-redeploy on push to main" was never actually true until today.**
-  `.github/workflows/deploy-legal.yml` had failed on every single run since it was created
-  (`gh run list` showed 100% failure) — first on `wrangler-action@v3`'s default wrangler CLI
-  not supporting an assets-only Worker with no `main` script (fixed: pinned `wranglerVersion:
-  "4"`), then on `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` never actually having been added
-  as repo secrets. The live site had only ever reflected whatever got deployed by hand once
-  around 2026-08-28 — every legal-page edit since then, including this session's Privacy Policy
-  fix, sat on `main` invisibly until now. Both secrets added, workflow re-run, **confirmed live**
-  (`curl https://thatfridge.com/privacy/` shows the 5 Sept update).
-- [X] **Buy the PixelMix commercial licence** — bought via Sellfy ($25, 2026-08-28). EULA saved
-  at `apps/mobile/assets/fonts/PixelMix-EULA.docx`. **Two follow-ups** (see
-  `PixelMix-NOTES.md`): (a) the desktop EULA doesn't clearly grant app/web *embedding* — email
-  font@andrewtyler.net for written confirmation and keep it with the receipt; (b) drop the
-  unofficial `PixelMix-Bold.ttf` (unused; EULA forbids DIY weights).
-- [X] Confirm each team member's Shipaton eligibility: age of majority, not a sanctioned
-  country, not RevenueCat / sponsor staff.
-- [X] **Sign in with Apple / Google.** Both flows built (`POST /auth/apple` + `/auth/google`
-  with JWKS verification; mobile buttons that hide themselves until configured) and now fully
-  configured — 2026-09-05.
-
-  - [X] **Apple** — "Sign In with Apple" capability enabled on App ID `test.thatfridge.app`.
-  - [X] **Google** — Cloud project + OAuth consent (Google Auth Platform) created, iOS + Web
-    OAuth clients created. `GOOGLE_IOS_URL_SCHEME` + `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` set on
-    EAS `production` + local `.env`; `GOOGLE_CLIENT_IDS` set + `config:cache`d on the server
-    (confirmed via `php artisan config:show services.google.client_ids`). New native build
-    shipped with both. Google's sign-in button also restyled to match Apple's exact button
-    metrics (fixed height 48, pure white, same corner radius — was visibly mismatched before).
-
-  - Details: `apps/mobile/RELEASE.md` → "Sign in with Apple / Google".
-
-**Don't:** market ThatFridge as "launched" anywhere (public TestFlight link, ProductHunt,
-press) before the store listing is live — risks the Shipaton "brand-new app" disqualification.
-Private TestFlight is fine.
-
----
-
-## 1a. Cost tracker
-
-All USD, approximate. "Recurring" = keep paying to keep the app live.
-
-| Item                                    | Cost         | Type      | Status   | Notes                                                                                                                                       |
-| --------------------------------------- | ------------ | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Apple Developer Program                 | $99 / yr     | Recurring | ✅ Paid  | Individual enrollment                                                                                                                       |
-| Domain —`thatfridge.com`             | ~$10.46 / yr | Recurring | ✅ Paid  | API host + privacy/terms/support pages                                                                                                      |
-| PixelMix commercial font licence        | $25          | One-time  | ✅ Paid  | via Sellfy 2026-08-28; embedding confirmation still pending (§1)                                                                           |
-| VPS — Laravel API + Postgres + Redis   | $21.60 / mo  | Recurring | ✅ Live  | DigitalOcean**SGP1**, 2 vCPU / 2 GB ($18) + weekly backups ($3.60). `api.thatfridge.com` → `167.172.88.75`. Deployed 2026-08-28. |
-| Privacy / terms / support pages hosting | $0           | —        | ✅ Live  | Cloudflare Workers static assets (free),`thatfridge.com`                                                                                  |
-| Cloudflare Email Routing                | $0           | —        | ✅ Live  | `support@` / `privacy@thatfridge.com` → Gmail                                                                                          |
-| Sentry (crash monitoring)               | $0           | —        | ⬜       | Free developer tier (§2)                                                                                                                   |
-| RevenueCat                              | $0           | —        | ✅       | Free under $2.5k tracked revenue / mo                                                                                                       |
-| Expo EAS builds                         | $0           | —        | ✅       | Free tier covers launch build cadence                                                                                                       |
-| Devpost / Shipaton entry                | $0           | —        | —       | Free                                                                                                                                        |
-| Google Play Console                     | $25          | One-time  | ⬜ Later | Post-launch — Android deferred                                                                                                             |
-
-**Paid to date: ~$135** (Apple $99 + domain ~$10.46 + PixelMix $25), plus the VPS now running
-at **$21.60/mo**. Possibly still due: a transactional-email plan (most have a free tier).
-Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ **$370 / yr**.
-
----
-
-## 2. Backend / infra (Member A)
-
-- [X] Deploy Laravel to the VPS (2026-08-28) — live at `https://api.thatfridge.com` (HTTP 200 on
-  `/up`, auth + `/api/fridges` verified). Ubuntu 24.04, **PHP 8.5** (ondrej PPA — lock needs
-  Symfony 8), Nginx, Postgres 16, Redis 7, Certbot (auto-renew, expires Nov 26), `APP_DEBUG=false`,
-  queue + scheduler systemd units, daily pg_dump + storage backup. **CD:** `.github/workflows/deploy-api.yml`
-  (push to `main` → PHPUnit → SSH `backend/scripts/deploy.sh`); runbook `backend/DEPLOY.md`.
-- [X] GitHub Actions CD secrets (`DEPLOY_HOST` `DEPLOY_USER` `DEPLOY_SSH_KEY`) added — full
-  pipeline verified green (manual `workflow_dispatch` run deployed `6dbc889` to the box).
-- [X] Rate-limit `/api/login` + `/api/register` (`throttle:6,1`, same limiter as
-  forgot/reset-password) — 2026-09-05.
-- [X] **Home-screen crew tips fired real LLM calls on every cold app launch** — `CrewTip`
-  (Guardian/Shopkeeper/Chef) eager-fetched `useAgentInsight(..., items.length > 0)` on every
-  Home mount, 3 real `POST /chat` calls per open regardless of whether the fridge had changed,
-  and didn't count against the client-side weekly quota either. Fixed 2026-09-05: `enabled:
-  false` — Home now only shows a cached insight if the user already tapped "Activate {agent}"
-  on the Crew tab this session (shared module-level cache), otherwise shows the existing
-  deterministic fallback (`guardianItem()`/`lowStockItem()`/score headlines — real data, zero
-  cost) that the UI already had built for the loading state. The Crew tab's own "Activate"
-  button is unchanged — it was already the correct on-demand pattern.
-- [X] **`POST /chat` had no server-side rate limiting at all**, unlike `/icons/generate`
-  (`throttle:10,1`) — real unbounded cost/abuse exposure, anyone hitting the endpoint directly
-  had no cap. Fixed 2026-09-05: `throttle:15,1` on the `send` action only (history/sessions
-  stay unthrottled, they're plain DB reads).
-- [X] **The "5 AI messages/week" free-tier cap was 100% client-side and the backend had zero
-  concept of Pro vs. free at all** — confirmed by checking: no `RevenueCat` reference anywhere
-  in `backend/app` or `routes`, no webhook receiver, no entitlement sync. Any registered
-  account (free registration) could call `/chat` directly, bypassing the app's UI gate
-  entirely, and get the same AI access a paying subscriber gets — the throttle above only
-  capped burst rate (up to ~21,600 msgs/day sustained), not usage. Fixed 2026-09-05:
-  - New `RevenueCatWebhookController` (`POST /webhooks/revenuecat`, outside `auth:sanctum` —
-    verified via a constant-time Authorization-header secret comparison instead, RevenueCat's
-    other verification option, HMAC signing, may be plan-gated). Trusts whatever
-    `expiration_at_ms` an event carries for the `thatfridge_pro` entitlement and writes it to
-    the new `users.pro_expires_at` column, regardless of the specific event `type` — RevenueCat
-    always sends the entitlement's current true expiration, so this is self-correcting/
-    idempotent rather than needing to branch per event type. `app_user_id` maps straight to our
-    user id (`Purchases.logIn(user.id)` was already wired client-side).
-  - `User::isPro()` = `pro_expires_at` in the future.
-  - `AgentController::send()` now actually enforces the weekly cap server-side for non-Pro
-    users (real `chat_history` count for the current ISO week, Monday-start to match
-    `chatQuota.ts`), returns 402 once exceeded. Pro users are unlimited (still subject to the
-    `throttle:15,1` either way).
-  - [X] **Compact calls (Home tips / "Activate {agent}") now share that same weekly budget,
-    2026-09-05** — previously exempt, which turned out to be an unintentional free-tier
-    loophole: `eat.tsx`'s `activate()` never actually sent `compact: true` (the option didn't
-    even exist on `sendChat()` client-side), so those calls were silently persisting to
-    `chat_history` *and* consuming quota already, just invisibly, with failures swallowed by an
-    empty `catch {}`. Fixed properly rather than patched around: `sendChat()` now takes a real
-    `compact` option (wired up from both `eat.tsx`'s `activate()` and the currently-unused
-    `agentInsight.ts`); server-side, compact calls are tracked via a cache counter
-    (`compact_chat_quota:{userId}:{isoWeek}`, since they're still deliberately not persisted to
-    `chat_history` - that part of the original design was fine) and added to the real
-    `chat_history` count for one combined weekly total. `eat.tsx`'s `activate()` now surfaces a
-    toast with an "Upgrade" action on a 402, instead of failing silently.
-  - 13 new backend tests (quota enforcement, shared-budget behavior, Pro bypass, webhook
-    auth/parsing), 296 total passing.
-  - [X] **Webhook wired up live, 2026-09-05:** RevenueCat dashboard has the endpoint
-    (`https://api.thatfridge.com/api/webhooks/revenuecat`) + Authorization-header secret
-    configured; the same secret is set as `REVENUECAT_WEBHOOK_SECRET` on the server `.env` and
-    confirmed picked up via `php artisan config:show services.revenuecat` after `config:cache`.
-    No longer dormant — `pro_expires_at` now updates live off real subscription events.
-- [ ] Copy backups off-box (DO weekly droplet snapshot is on — add pg_dump → object storage).
-- [X] Seed a stable **reviewer demo account** on prod — `keira@thatfridge.test` / `password123`
-  with a seeded fridge + 7 curated recipes. **⚠ Change the password before submitting.**
-
-- [🟡] Sentry on the Laravel app — `sentry/sentry-laravel` installed, wired into
-  `bootstrap/app.php`, no-ops until `SENTRY_LARAVEL_DSN` is set (2026-09-05). Left: create a
-  Sentry project, paste the DSN into the server `.env`, redeploy.
-
-- [X] **Transactional email — mailer wired up and verified live** (2026-09-05). Went with
-  **Resend**, not SMTP via `support@thatfridge.com` — that address is Cloudflare Email Routing
-  (receive-only forwarding to Gmail), not an actual sendable mailbox, so the SMTP option in this
-  TO_DO's old wording wasn't really "ready" the way it sounded. Domain verified (DKIM +
-  SPF/MX on the `send` subdomain — doesn't touch the root domain's existing mail routing).
-  `MAIL_MAILER=resend` + `RESEND_API_KEY` + `MAIL_FROM_ADDRESS=support@thatfridge.com` set on
-  the server, `config:cache`d. Confirmed end-to-end: real `POST /forgot-password` calls against
-  prod, reset-code emails actually landed in two different real inboxes (iCloud + Gmail).
-  (Hit one snag along the way: first API key pasted wasn't actually a Resend key — 36 chars, no
-  `re_` prefix, likely a domain/project ID copied by mistake — caught via
-  `Resend\Exceptions\ErrorException: API key is invalid` in `storage/logs/laravel.log`, fixed by
-  regenerating the real key.)
-- [X] `config/cors.php` already restricted — `allowed_origins` is empty, only a
-  localhost/127.0.0.1 pattern is allowed (checked 2026-09-05). This line was stale; nothing
-  needed for now since `apps/web` is the frozen legacy SPA and never deployed — revisit
-  `allowed_origins` once a real browser-facing origin ships (react-native-web build, per §7).
-- [X] Privacy / Terms / Support pages — live at `https://thatfridge.com` (see §1; `apps/legal/`,
-  Git-connected Cloudflare Worker, auto-redeploy on `main`).
-- [X] `DELETE /api/me` endpoint + tests (hard-deletes user + tokens + owned fridges).
-
----
-
-## 3. RevenueCat / IAP
-
-**Done (Member B):** `react-native-purchases` + `-ui` v10 wired · `Purchases.configure()` on
-launch with `EXPO_PUBLIC_RC_IOS_KEY` · `usePro()` → `entitlements.active.thatfridge_pro` ·
-`paywall.tsx` (hosted `RevenueCatUI.Paywall` + custom fallback) · Customer Center from Profile ·
-`Purchases.logIn(user.id)` · restore on Profile + paywall · free-tier gate: 5 AI-chat
-messages/week (`src/lib/chatQuota.ts`, client-side ISO-week counter, now also enforced
-server-side — see below) + receipt/photo add Pro-gated (client-side in `add.tsx`, **and now
-server-side** in `ReceiptController`/`PhotoController`).
-
-**Done (dashboard):** RevenueCat project `ThatFridge`, `thatfridge_pro` entitlement, `default`
-offering (`$rc_monthly` + `$rc_annual` on test-store `monthly`/`yearly` products), and a
-**published AI-designed paywall** on the offering — App-Store-compliant (visible restore link,
-auto-renew terms).
-
-**Monetization design:** two auto-renewing subs — `thatfridge_pro_monthly` +
-`thatfridge_pro_yearly` — both with a **7-day free trial** (the trial doubles as judge access,
-so no promo codes). Pro unlocks: unlimited AI chat / what-to-eat, receipt & photo bulk-add,
-multiple / shared fridges.
-
-- [X] **Multiple/shared fridges wasn't actually gated anywhere, 2026-09-05** — same class of
-  gap as the AI-cost ones above, found by asking "is this one actually wired." Neither
-  `FridgeController::store()` nor the join/invite-accept flow (`FridgeJoinRequestController`)
-  checked `isPro()` — a free user could create unlimited fridges and accept unlimited invites.
-  Fixed: `User::canJoinAnotherFridge()` (Pro, or currently a member of 0 fridges) is checked in
-  `store()` and in `attachMember()` — the single choke point all three accept paths
-  (self-request auto-accept, owner-invite auto-accept, `approve()`) funnel through, so it's
-  enforced exactly once regardless of entry point. Free tier = 1 fridge per user (owned or
-  joined), no limit on that fridge's member count — this caps *fridge-hopping*, not basic
-  household sharing on your one fridge. 5 new backend tests, 301 total passing. Also fixed the
-  client silently swallowing a blocked accept (`social.tsx`'s `acceptInvite`/`approveRequest`,
-  `fridge/[id].tsx`'s `decideRequest`) — now shows a toast with an "Upgrade" action, same
-  pattern as the Activate fix above.
-  - **"Advanced notification tuning" removed from the paywall/Terms instead of gated** — turned
-    out nothing in `NotificationPrefController` distinguishes "basic" from "advanced" (it's 6
-    flat boolean toggles, all available to everyone); the phrase only ever existed as paywall
-    marketing copy and a line in `apps/legal/terms/index.html`, not a built feature. Rather than
-    invent a basic/advanced split under deadline pressure, removed the unbuilt claim from both
-    `paywall.tsx`'s `BENEFITS` list and the Terms (dated 5 September 2026) so Pro's feature list
-    matches what actually exists. RevenueCat's hosted paywall never had this line, so nothing to
-    fix there.
-
-**Left (Member A — Apple account is now approved, Team ID issued 2026-08-28):**
-
-- [🟡] **App Store Connect → Subscriptions.** One group ("ThatFridge Pro"), created. Two
-  products, **permanent IDs** (never reusable — don't typo):
-
-  - [X] `thatfridge_pro_monthly` — 1 month, price **$2.99**, 7-day free trial, English
-    localization, review screenshot — status **Ready to Submit** (2026-09-05).
-  - [X] `thatfridge_pro_yearly` — 1 year, price **$19.99**, 7-day free trial, English
-    localization, review screenshot — status **Ready to Submit** (2026-09-05).
-
-  - Both show Apple's "first subscription must be submitted with a new app version" notice —
-    expected; they ride along with the real App Store version submission later (§5), not
-    submitted standalone.
-
-  - [ ] **Per-storefront price points** still not set: Malaysia `RM12.90` / `RM89`; South
-    Korea `₩3,900` / `₩25,000` (round the ugly auto-conversions).
-  - [ ] Korean + Malay localizations — skippable for v1, add later as a metadata update (§4a).
-
-- [X] RevenueCat: real **App Store app** added (`test.thatfridge.app`) alongside the test
-  store — In-App Purchase key configured + validated (2026-09-05). `thatfridge_pro_monthly` /
-  `thatfridge_pro_yearly` registered as RC products, attached to the `thatfridge_pro`
-  entitlement and to the existing `$rc_monthly` / `$rc_annual` packages (so the published
-  paywall serves both test-store and real App Store products with no paywall changes needed).
-- [X] RC paywall editor already used **variables** (`{{ product.price_per_period_abbreviated }}`)
-  for price text, not a hardcoded price — confirmed, no change needed.
-- [X] Real `appl_…` App Store key set as `EXPO_PUBLIC_RC_IOS_KEY` on the EAS **production**
-  environment (2026-09-05) — previously **completely unset**, meaning no TestFlight build to
-  date had ever initialized `Purchases.configure()`. Local `.env` still has the test-store key
-  (fine for local/simulator dev). New TestFlight build shipped with the real key same day.
-- [X] Verified a **sandbox purchase + restore** end-to-end (2026-09-05) — bought
-  `thatfridge_pro` on the fixed TestFlight build via a sandbox tester Apple ID, entitlement
-  unlocked. Reinstalled the app fresh and Pro was active immediately (RevenueCat auto-syncs
-  with StoreKit on `Purchases.configure()` — no manual restore needed, which is itself the
-  strongest possible proof the full pipeline works). §3 is now fully done except per-storefront
-  MY/KR pricing and Korean/Malay localization (both deferred, see above).
-
----
-
-## 3a. Business & pricing analysis (2026-09-05)
-
-**Read this as a model, not a promise.** ThatFridge hasn't launched — there's no real
-conversion-rate or churn data yet. Every number below is tagged **[confirmed]** (from this
-repo/TO_DO's own cost tracker or actual API pricing pages), **[estimated]** (a calculation from
-confirmed inputs), or **[benchmark]** (an industry-typical figure standing in for real data we
-don't have yet — replace with actual numbers once there's a few months of real usage).
-
-### Cost side
-
-**Fixed infra — [confirmed], from §1a's cost tracker:**
-Apple $99/yr + domain ~$10.46/yr + VPS $21.60/mo (=$259.20/yr) ≈ **$368.66/yr ≈ $30.72/mo**,
-regardless of user count.
-
-**Apple's commission:**
-- [X] **App Store Small Business Program application submitted 2026-09-05** (single account,
-  no Associated Developer Accounts) — pending Apple's review/approval. 15% once approved
-  (typically a few business days, next payment cycle), vs. 30% standard rate until then.
-- Both scenarios still computed below until approval is confirmed.
-
-**US withholding — [confirmed via §1]:** 30% on US-storefront sales only (Malaysian individual,
-no US tax treaty). Target markets are Malaysia + South Korea, not the US, so this should only
-bite a minority of revenue — but it stacks with Apple's cut on whatever US sales do happen.
-
-**AI variable cost per call — [estimated from public pricing]:**
-Checked what's actually configured, not guessed: chat + receipt/photo scanning both run on
-`anthropic/claude-haiku-4.5` via OpenRouter (`OpenRouterClient.php`'s default model) — **$1/M
-input tokens, $5/M output tokens**. Icon generation uses fal.ai's `flux/schnell` — **~$0.003/MP,
-roughly $0.01–0.025/image** depending on resolution. Estimated per-call cost:
-- Chat message (~1,000 input + ~200 output tokens): **≈$0.002**
-- Receipt/photo scan (vision, ~1,400 image tokens): **≈$0.0015–0.002**
-- Icon generation: **≈$0.01–0.025**
-
-These are genuinely cheap per unit — AI cost was never the threat to margin here, *unbounded
-usage* is (see risks below).
-
-**Estimated AI cost per active Pro subscriber/month [estimated]:** assuming a realistically
-engaged user — ~40 chat messages, ~15 receipt/photo scans (the flagship Pro feature), ~7 icon
-generations — **≈$0.15–0.40/month**. Trivial next to the subscription price.
-
-**Estimated AI cost per free user/month [estimated]:** capped chat (5/week ≈ 22/mo ≈ $0.04) +
-compact/"Activate" calls (uncapped by count, only rate-limited — generously ~30/mo ≈ $0.06).
-Receipt/photo scanning is Pro-gated, so free users don't touch that cost at all. **≈$0.10/month
-under normal use.**
-
-- [X] **Icon generation had no Pro gate and no per-user cap** — neither `icon-picker.tsx` nor
-  `IconController.php` checked `isPro`/`is_pro` anywhere, only the existing `throttle:10,1`
-  route limit applied. Fixed same-session, same shape as the `/chat` quota fix above:
-  `IconController::generate()` now rejects (402) non-Pro users once they've generated
-  `FREE_ICONS_PER_WEEK` (5) icons this ISO week (`Carbon::now()->startOfWeek(Carbon::MONDAY)`,
-  counting `GeneratedIcon` rows), Pro users (`isPro()`) unlimited. Free tier stays *capped*
-  rather than fully blocked (icon gen was never documented as Pro-exclusive) — matches "Pro
-  removes AI limits," consistent with chat's treatment. 4 new feature tests in
-  `tests/Feature/IconControllerTest.php` (rejection after cap, Pro bypass, only-counts-this-week,
-  succeeds-under-cap); full suite 286/286 passing.
-
-- [X] **Bigger version of the same gap: receipt scan, fridge-photo scan, and expiry-date scan
-  (all OpenRouter Vision calls) had zero server-side enforcement at all** — no `isPro()` check,
-  no per-user cap, and unlike chat/icons, not even a route `throttle`. `add.tsx` blocks non-Pro
-  users from reaching receipt/photo mode in the UI, but that was cosmetic only — any
-  authenticated user could `POST /sections/{id}/items/receipt/scan` or `.../photo/scan` directly
-  for unlimited free vision calls. Worse than the icon-gen gap since receipt/photo scan is the
-  documented *flagship Pro feature* (§ above) and had no throttle floor at all. Fixed same-session:
-  `ReceiptController::scan()` and `PhotoController::scan()` now hard-gate on `isPro()` (402 if
-  not Pro — these two are genuinely Pro-exclusive, matching the existing client UX exactly, no
-  free tier). `ExpiryScanController::scan()` is *not* Pro-gated client-side (available to all
-  users from the add-item date field), so it got a free-tier weekly cap instead
-  (`FREE_EXPIRY_SCANS_PER_WEEK` = 10/ISO-week, Pro unlimited) — same shape as chat/icons, but
-  cache-based (`Cache::get`/`put`, key `expiry_scan_quota:{userId}:{isoWeek}`) since there's no
-  persisted per-scan row to count against, unlike `ChatHistory`/`GeneratedIcon`. All three routes
-  also gained `throttle:15,1` (matching `/chat`'s rate) as a floor against raw hammering, on top
-  of the gating. 8 new feature tests across `ReceiptControllerTest`, `PhotoControllerTest`,
-  `ExpiryScanControllerTest`; full suite 294/294 passing. Swept the two remaining unthrottled
-  LLM-calling routes at the same time: `items/barcode` (calls `AgentService::suggestItemDetails`
-  internally for shelf-life/location classification) and `/items/suggest-details` (manual-add
-  auto-fill) both got `throttle:20,1` — cheaper per-call than vision, so no Pro-gate/cap, just
-  the same hammering floor. Every AI-calling endpoint in the API now has at least a route
-  throttle.
-
-### Revenue side & break-even [estimated, both Apple-commission scenarios]
-
-Net monthly-equivalent revenue per subscriber after Apple's cut (ignoring US withholding, which
-shouldn't hit MY/KR-majority revenue):
-
-| Plan | Price | Net @ 15% (enrolled) | Net @ 30% (not enrolled) |
-|---|---|---|---|
-| Monthly | $2.99 | $2.54/mo | $2.09/mo |
-| Annual | $19.99/yr | $1.42/mo equiv. | $1.17/mo equiv. |
-
-Blending at a **65% annual / 35% monthly** mix **[benchmark — reasonable given annual is the
-deliberately-designed "hero" plan, see psychology section]**, minus ≈$0.25/mo estimated AI cost
-per subscriber:
-
-- **At 15% (enrolled):** blended net ≈$1.81/mo − $0.25 AI ≈ **$1.56/subscriber/mo contribution**
-- **At 30% (not enrolled):** blended net ≈$1.49/mo − $0.25 AI ≈ **$1.24/subscriber/mo contribution**
-
-**Break-even on fixed costs ($30.72/mo):**
-- At 15%: **≈20 paying subscribers**
-- At 30%: **≈25 paying subscribers**
-
-That's a low, genuinely achievable bar — this isn't a "need thousands of users" business at the
-infra scale it's currently running at. Every subscriber past break-even is close to pure
-contribution margin (~$1.24–1.56/mo each) until RevenueCat's 1% cut kicks in past $2.5k MTR,
-which only trims a further 1%, not a material change to this picture.
-
-**What this analysis does *not* capture:** paid user acquisition (there's no ad budget in the
-cost tracker — growth is organic/#BuildInPublic per §6, so acquisition cost is currently ≈$0,
-but that also caps how fast subscriber count grows), your own time, refunds, or App Store price
-tier rounding in MY/KR after Apple's automatic conversion.
-
-### User psychology — why this pricing structure should actually convert
-
-- **Annual-as-anchor:** $19.99/yr framed as "save 44%" against paying monthly ($2.99×12=$35.88)
-  works because presenting the monthly price first sets the expensive reference point, making
-  annual read as the smart choice — not an accident, matches TO_DO's existing "annual is the
-  hero plan" design intent.
-- **Trial requires a card upfront (Apple's standard flow), which is a real conversion lever, not
-  just friction:** once someone's entered payment info, the psychological bar to *actively
-  cancel* within 7 days is higher than the bar to start a trial in the first place — inertia
-  favors conversion. This is why trial-to-paid conversion (**≈40–60%** **[benchmark]**) is
-  typically much higher than raw free-to-paid conversion (**≈2–5%** **[benchmark]** for consumer
-  utility apps).
-- **5 free messages/week isn't an arbitrary number** — it's enough to hit a genuine "this AI
-  answer was actually useful" moment, but shallow enough that the cap gets hit *every single
-  week*, re-surfacing the upgrade decision on a recurring cadence instead of a one-time paywall
-  a user dismisses once and forgets.
-- **Receipt/photo scanning as the flagship Pro-gated feature is the strongest lever here**,
-  psychologically: every free user has *already felt* the friction of manual entry (there's no
-  other option on free), so the upgrade pitch is escaping a pain they've personally experienced,
-  not an abstract "unlock more" pitch.
-- **Kitchen Score / streaks (already built) support retention via loss aversion** — once a
-  streak exists, disengaging feels like losing something, which keeps users in the ecosystem
-  where the Pro upsell keeps recurring.
-- **Localized charm pricing (RM12.90, ₩3,900) already avoids the "ugly auto-conversion" trap**
-  per §3's existing design intent — round, locally-normal-looking numbers read as intentional
-  pricing, not an afterthought currency conversion, which matters for trust in unfamiliar
-  storefronts.
-
-### Bottom line
-
-At current fixed costs, break-even is ~20–25 paying subscribers depending on Small Business
-Program enrollment (confirm that — free, no reason not to). AI costs are genuinely cheap per
-unit; the unbounded-free-tier-usage risk found during this analysis (icon generation) is now
-closed — see above. The pricing itself ($2.99/$19.99, 7-day trial, 5 free msgs/week, 5 free
-icons/week) is reasonably well-designed for conversion psychology already — the remaining lever
-is eventually replacing the **[benchmark]** conversion-rate assumptions with real post-launch
-data.
-
----
-
-## 4. Mobile app (Members B / C / D)
-
-- [X] **`eas build`** — dev-client simulator build (`development-prod`) verified against the
-  live API; **production build 1 submitted to TestFlight 2026-08-28** (`eas build/submit`,
-  automated in `.github/workflows/testflight.yml`).
-- [X] **Cut v1.2.0** — tag exists, and today's TestFlight builds (§3) already shipped multiple
-  `1.2.0` builds via CI, including Apple sign-in, voice dictation (now genuinely on-device), and
-  push entitlement. Sandbox purchase + restore verified on-device (§3).
-- [ ] Full **smoke-test on a real device / simulator** against the live API — today's testing
-  covered the paywall/purchase flow; the rest of the app (inventory, chat, notifications, social)
-  hasn't had a dedicated pass since the parity port.
-- [X] Bottom-sheet **grab-to-dismiss** gesture — 2026-09-05. Scope turned out narrower than it
-  sounded: the ~12 `presentation: "modal"` navigation *screens* already had native
-  swipe-to-dismiss for free (that's standard iOS behavior via `@react-navigation/native-stack`,
-  nothing to build). The real gap was two custom in-screen `<Modal>`-based sheets
-  (`MoveToSheet` in `inventory.tsx`, the date picker in `add.tsx`) that had a decorative drag
-  handle bar with no actual gesture behind it, and `GestureHandlerRootView` was missing from
-  the root layout entirely (needed for gestures to work inside a `<Modal>`, which portals
-  outside the normal view tree). Built a shared `@/components/bottom-sheet.tsx` (drag lives on
-  the handle only, so a `ScrollView` in the sheet body still scrolls normally) and wired
-  `GestureHandlerRootView` into `_layout.tsx`; both existing sheets now use it.
-- [X] Native-feel pass — 2026-09-05. Audited all 33 screens for safe-area and
-  keyboard-avoiding gaps: both came back clean (every screen already has a native header,
-  `SheetHeader`, its own `SafeAreaView`, or genuinely doesn't need one; every text input either
-  has `KeyboardAvoidingView` where needed or keeps its action inline/auto-saves, so the keyboard
-  never covers anything important). Haptics was the real gap: 7 screens with real delete/remove
-  actions (`fridge/[id].tsx` delete-fridge/leave/remove-member, `profile.tsx` delete account,
-  `categories.tsx`, `ai-data.tsx` ×3, `icon-picker.tsx`, `recipe/[id].tsx`, `shopping.tsx`) had
-  zero tactile feedback despite haptics being used consistently elsewhere (inventory drag-drop,
-  home tip-card moves) — fixed. Offline banners / sync-error toast: added
-  `@react-native-community/netinfo` + a persistent "You're offline" bar (top-anchored, not
-  bottom where `UpdateBanner`/toasts live, so they can never overlap) in
-  `apps/mobile/src/components/offline-banner.tsx`. For the sync-error half, fixed it once at the
-  root instead of touching every screen: `packages/core/src/http.ts`'s `fetch()` now wraps a
-  connectivity failure into the same `ApiError` every screen already unwraps via
-  `describeError(e, fallback)` — so every existing error surface (Alerts *and* toasts, app-wide)
-  automatically shows "You're offline…" instead of its generic fallback text when that's the
-  real cause, with no per-screen changes needed. New native module — needs a rebuild, not just
-  OTA.
-- [ ] Finish `apps/web/lib/thatfridge` → `packages/core` extraction; point `apps/web` at the
-  package. (Most Home + score logic already moved.)
-- [X] **`mobile-app` → `main`** merged 2026-08-28; feature branch retired 2026-08-30 —
-  `main` is now the working branch (see `apps/mobile/CONTRIBUTING.md`).
-- [X] **Mobile CD, two lanes:**
-  - `.github/workflows/eas-update.yml` — merge to `main` touching `apps/mobile/**` /
-    `packages/**` → typecheck → `eas update --branch production` (OTA, testers get it on
-    next launch).
-  - `.github/workflows/testflight.yml` — `git tag v*` or manual → `eas build -p ios --profile production --auto-submit` to TestFlight.
-  - One-time setup in `apps/mobile/RELEASE.md` (ASC API key → `eas credentials`, `EXPO_TOKEN`
-    secret, `ascAppId` — **done**). Workflow: `apps/mobile/CONTRIBUTING.md`.
-
-**Locked decisions — no re-litigation:** NativeWind · Expo Router · pnpm workspaces + turborepo ·
-Node 20 · bundle id `test.thatfridge.app` · iOS target 15.1 · Apple enrollment Individual · v1
-notifications local/on-device (server push is post-launch) · Android deferred entirely · one
-universal UI codebase (`react-native-web` renders `apps/mobile` in a browser; legacy `apps/web`
-retired once web output ships — post-launch) · signing keys + Apple assets in a shared password
-manager from day one · **v1 app UI is English-only** (see §4a).
-
----
-
-## 4a. Localization & regional compliance — target markets 🇲🇾 🇰🇷
-
-**Markets:** Malaysia + South Korea. API hosted in **Singapore** (best latency for both — see
-`backend/DEPLOY.md`). Malaysians are comfortable in English; Korean users expect a Korean UI.
-
-**Decision (2026-08-28): English-only app UI for v1; localized store listings; Korean UI as a
-post-launch OTA fast-follow.**
-
-- [ ] **App Store Connect — localized metadata** for `en`, `ko`, `ms`: name/subtitle, description,
-  keywords, and **localized screenshots** (at minimum `ko`). Korean downloads depend on this.
-- [ ] Set App Store **availability** to include Malaysia + South Korea (and pick the wider
-  region set — no reason to geo-restrict).
-- [ ] **Pricing:** create the sub price points; App Store + RevenueCat auto-localize to MYR /
-  KRW. Confirm the KRW price reads as a clean number and is VAT-inclusive (Apple handles VAT).
-
-- [🟡] **Korea PIPA:** privacy contact already named (`apps/legal/privacy/index.html` §10 —
-  Muhammad Naufal Kamaruddin, privacy@thatfridge.com), checked 2026-09-05. Still genuinely open:
-  - [ ] **Korean-language privacy policy** — `/privacy/ko/` is still a 404 (confirmed live,
-    2026-09-05), just a promise-to-publish in the English page. Needs an actual Korean
-    translation — not something to machine-translate unsupervised for a legal document; get a
-    native/professional pass.
-  - [X] **Separate consent for cross-border transfer** at sign-up — a real checkbox on
-    `sign-in.tsx` (2026-09-05), distinct from the general Terms/Privacy notice, gating
-    submission (`validate()` rejects an unchecked box). Backend requires and records it:
-    `dataTransferConsent` is a required+accepted field on `POST /register`,
-    `users.data_transfer_consented_at` set server-side (never client-suppliable as a
-    timestamp, only a boolean triggers `now()`, so it can't be backdated). 3 new backend tests.
-    **Known gap:** only covers email/password sign-up — `AuthController::apple()`/`google()`
-    create users too (social sign-in) and don't go through this consent gate. Fixing that needs
-    a pre-OAuth consent interstitial for new users, a bigger UX task not done here.
-
-- [X] **Malaysia PDPA (2010, amended 2024):** already covered — consent-at-sign-up language,
-  breach-notification commitment, and a named contact (privacy@thatfridge.com) all already in
-  `apps/legal/privacy/index.html` §10. Checked 2026-09-05, nothing to add.
-- [X] **Minimum sign-up age 14+** — Terms already had it (§2); added the same statement + a
-  Terms/Privacy link to the signup screen itself (`sign-in.tsx`, 2026-09-05), which had neither
-  before.
-- [X] **Guideline 1.2 (UGC safety):** fridge sharing + username search + join-requests are
-  invite-only (low risk), but added a **"block user"** action + a **report** path (mailto,
-  as the TO_DO said email is acceptable) — 2026-09-05. New `blocks` table; blocking hides both
-  users from each other's search and blocks future join-requests/invites either direction
-  (existing memberships/pending requests aren't touched — out of scope, either side can
-  decline/leave normally). UI: `find-friend.tsx`'s profile view, "⋯" menu → Block/Report. 12 new
-  backend tests, all passing (269 total).
-- [ ] Post-launch OTA: wire `react-i18next` + `expo-localization`, externalize strings, ship
-  `ko` (and optionally `ms`) translations. No rebuild needed if done as an EAS Update.
-
----
-
-## 5. Store submission assets (Members A / D)
-
-- [X] App icon **1024×1024** — already existed (`assets/images/icon.png`), but had an alpha
-  channel (fully opaque, no visible transparency, but App Store Connect's icon validator
-  rejects *any* alpha channel on the 1024² upload regardless). Flattened to RGB 2026-09-05 —
-  same art, ready to upload as-is. Corners are already square (Apple applies its own mask).
-- [ ] iPhone screenshots — **1320×2868, 6.9" only** (verified 2026-09-05 against Apple's
-  current spec: satisfies every smaller size automatically, no separate 6.5" set needed), **no
-  device frame**, no alpha channel.
-
-- [🟡] Store listing: description, subtitle, keywords, support URL — **drafted** in
-  `apps/mobile/STORE_LISTING.md` (2026-09-05), needs a review pass before pasting into ASC.
-- [🟡] App Privacy ("nutrition labels") form — **drafted** in `apps/mobile/STORE_LISTING.md`,
-  grounded in the actual data the app/backend collect. Caught and fixed one real gap while
-  drafting: voice dictation wasn't actually on-device (RELEASE.md's claim didn't match
-  `voice.ts`) — `requiresOnDeviceRecognition: true` added 2026-09-05, now true.
-
-- [🟡] Age rating — **drafted** in `apps/mobile/STORE_LISTING.md` §4 (2026-09-06), reasoned
-  from actual content (checked all 7 seeded recipes for alcohol references — none). Expected
-  **4+**. Flags the new (Sept 2026) mandatory Social Media descriptor explicitly — answered No
-  (no public feed/discovery, sharing is closed to approved fridge members). Verify against
-  ASC's actual live questionnaire before submitting; the category structure changed recently
-  and I can't confirm the exact current wording myself.
-- [🟡] App Review notes with demo credentials — **drafted** in `apps/mobile/STORE_LISTING.md`
-  §5 (2026-09-06), ready to paste into ASC once the demo account's password is changed.
-- [X] Guideline 4.2 rebuttal drafted in `apps/mobile/STORE_LISTING.md` §3 (2026-09-05) — keep on
-  hand, don't submit pre-emptively; only use if Apple actually flags a thin-wrapper rejection.
-- [ ] Decide Google Play account type (personal vs organization) — for the post-launch Android
-  submission.
-
----
-
-## 6. Shipaton / Devpost (Member D)
-
-- [ ] Devpost project page: feature description.
-- [ ] Demo video **≤ 2:00**, public on YouTube/Vimeo, **no copyrighted music/footage**.
-- [ ] #BuildInPublic: a public thread / dev log, updated 2–3×/week (the plan, the parity port,
-  the published paywall, clean git history are good posts).
-- [ ] Peace Prize: short impact statement (household food-waste → savings + environmental).
+## What's left to do
+
+### Blocking App Store submission
+- [ ] **Confirm Paid Applications agreement shows "Active"** in App Store Connect (bank + tax
+  rows green) — IAPs can't be tested/submitted until it's Active.
+- [ ] **Change the demo account's password** (`keira@thatfridge.test`, currently `password123`
+  — treat as public, it's been in a committed file) before submitting.
+- [ ] **Capture iPhone screenshots** — 1320×2868px, **6.9" size only** (this alone satisfies
+  every smaller size via Apple's auto-scaling — verified against Apple's current spec
+  2026-09-05). No device frame, no alpha channel. 1-10 images; suggest paywall + Home + Chat +
+  Inventory.
+- [ ] **Paste drafted content into App Store Connect** — all fully written in
+  `apps/mobile/STORE_LISTING.md`: store listing copy (§2), App Privacy form (§1), age rating
+  reasoning (§4, expected 4+), App Review notes + demo account instructions (§5). Review before
+  pasting, verify age-rating answers against ASC's actual live questionnaire (category
+  structure changed recently, can't confirm the exact current wording).
+- [ ] **Full real-device/simulator smoke test** against the live API — inventory, chat,
+  notifications, social/blocking, icon-gen, expiry-scan, Activate button. Nothing dedicated
+  since the parity port; only the paywall/purchase flow has been verified so far.
+- [ ] Confirm the 7-day free trial is actually active on the **live** subscription products
+  (not just configured in RevenueCat's dashboard) — it doubles as judge/reviewer access.
+- [ ] Confirm account deletion works from a clean install against the live API.
+- [ ] Confirm local notifications fire correctly and route to the right screen on tap.
+- [ ] Confirm crash-free session in Sentry (needs the DSN set first — see Reference).
+- [ ] App built against prod `EXPO_PUBLIC_API_URL`, no localhost reachable — verify at build
+  time (`eas.json` profiles already correct).
+- [ ] TestFlight build validated by the whole team on real devices; add internal testers + a
+  "What to Test" note.
+- [ ] Set release to **manual** in ASC once the real version submission exists (not applicable
+  yet — only TestFlight builds so far).
+
+### Market expansion (Malaysia + Korea)
+- [ ] Set per-storefront subscription prices: Malaysia `RM12.90`/`RM89`, Korea `₩3,900`/`₩25,000`.
+- [ ] App Store Connect localized metadata for `en`/`ko`/`ms` (name, subtitle, description,
+  keywords, screenshots — at minimum `ko`, Korean downloads depend on it).
+- [ ] Set App Store availability to include Malaysia + Korea.
+- [ ] **Korean-language privacy policy** — `/privacy/ko/` is still a 404. Needs a real
+  translation, not unsupervised machine translation for a legal document.
+- [ ] **Known compliance gap:** the cross-border-transfer consent checkbox (Korea PIPA) only
+  covers email/password sign-up — Apple/Google social sign-in creates users too and skips it.
+  Needs a pre-OAuth consent interstitial for new social-signin users.
+
+### Shipaton / Devpost (deadline: same Sep 30, 11:45pm PDT)
+- [ ] Devpost project page + feature description.
+- [ ] Demo video ≤2:00, public on YouTube/Vimeo, no copyrighted music/footage.
+- [ ] #BuildInPublic thread/dev log, updated 2-3×/week.
+- [ ] Peace Prize impact statement (household food-waste → savings + environmental).
 - [ ] App Store URL on the submission.
-- [ ] **Submit on Devpost before Sep 30, 2026, 11:45 pm PDT.**
+- [ ] **Submit on Devpost before the deadline.**
+- **Don't** market as "launched" anywhere public (TestFlight link, ProductHunt, press) before
+  the store listing is live — risks Shipaton's "brand-new app" disqualification.
 
-**Prize targets — commit to Peace Prize + #BuildInPublic + Design Award.** (Grand Prize needs
-sustained MRR/growth an app ~2 weeks live can't show; skip Catvertising — off-thesis for a paid
-utility. Consider OneSignal ($25k, retention/push) only if push goes server-driven anyway.)
-
-**Design Award angle:** "dark neon pixel tech" system, PixelMix font, the AI-crew concept — the
-native port now matches the web app screen-for-screen.
-
----
-
-## 7. Screen / feature parity status
-
-Every core screen is at **visual parity with `apps/web`** (the bar since 2026-08-28). Built and
-in the app: Auth · Home (Kitchen-Score SVG gauge wired to `usage-history` / `organizer-tally` /
-`score-snapshots`, animated CrewScene, fridge hero carousel + palette button, swipe-dismiss crew
-tips, read-only note squares) · Inventory + item detail (sort, category filter, section
-reassignment) · Search · Add (method picker; barcode + manual + **receipt/photo AI bulk-add** +
-**auto-fill**, receipt/photo Pro-gated) · **Crew / FoodHub** (Recipes library + what-to-eat FAB
-/ Shopping / Guardian risk bands / Organizer per-location move + sweep) · Chat (auto-routed
-agent, greeting, history icon, animated typing, photo attach, add-to-recipe-book, memory
-extract) · Notifications (feed + pending social rows + settings) · Shopping list (+
-recommendations) · Profile (+ Your fridges, links to Goals/Badges/AI-Data/About) · Recipe book +
-`recipe/[id]` + `recipe-form` (import-from-link) · Goals · Badges (unlock via
-`postBadgeProgress`) · AI Data & Memory · Chat History · About · **multi-fridge & social**
-(`find-friend`, `fridge/[id]` manage: rename / style photo / custom upload / members / invites /
-join requests / leave-delete) · fridge sticky notes · floating-pill tab bar (Home · Inventory ·
-＋ · Chat · Crew) · skeleton loaders.
-
-`packages/core` gained ~55 API methods + `home.ts` / `progress.ts` / `food-icons.ts` (scoring,
-streak, goals, badge catalog, shopping recs, `getScoreTrend` / `getScoreSeries` /
-`getFoodGroupCoverage`, `routeChatAgent`, `suggestItemDetails`, `scanExpiryPhoto`,
-`generateIcon`, `guessFoodIcon`, …).
-
-### Done 2026-08-28 (parity pass, all JS-only OTA except the "opened" column)
-
-Kitchen Score sparkline (`getScoreSeries`) · per-agent visuals — Chef food-group icons /
-Organizer ring / Shopkeeper bar (`getFoodGroupCoverage`) · grouped notification settings with
-agent GIF badges · `MarkRecipeMadeSheet` (`recipe/mark-made`, ingredient↔item reconcile) ·
-scan the printed expiry date (`core.scanExpiryPhoto`) · recipe photo/video attachments (upload
-in `recipe-form` + image lightbox `recipe/attachment`) · AI icon generation (`icon-picker`) ·
-the **full 164-icon pixel-art pack** + `core.guessFoodIcon` (items show real icons, not
-initials) · pre-scaled all pixel assets nearest-neighbor (no more upscale blur) · **"Opened
-it" item state** persisted (`items.opened` column, freshness capped when opened) · CategoryTag
-→ icon. Sheet-enter animation = n/a (native modal slide-up already; grab-to-dismiss is §4).
-
-### Still open vs. the web
-
-- **Real-device pass** for the receipt/photo scan review's full pick-photo → OCR → confirm
-  cycle (UI itself already verified on the simulator).
-- **wide-viewport (≥900px) layouts** on Home / Inventory / Chat — bundled with Web deployment
-  below.
-- **Android:** `eas build -p android`; Play Console (register as an organization to skip the
-  12-tester / 14-day closed-testing gate); Data Safety form; screenshots; submit.
-- **Web deployment** (universal codebase): `expo export -p web` → host the static build; add
-  wide-viewport branches; `Platform.OS === "web"` guards; then retire `apps/web` and point the
-  domain at the new build. iPad layout pass rides along.
-
-Everything else audited at parity: all 21 web screens exist; fridge-notes CRUD, Customer
-Center (mobile is richer here), what-to-eat (shuffle/vibes/meal-type/food-focus/exact+similar),
-chat photo-attach + memory extract + add-to-recipe-book, shopping recommendations, hero
-carousel + swipe-dismiss agent insights, undo toasts, skeleton loaders, voice dictation (mic
-button in chat composer), server-driven push (`Notifier` + APNs), icon generation in the
-manual Add form (shared `ItemCard`, same as scan review), Organizer per-move dismiss — all
-present, shipped in v1.2.0. (Last two confirmed 2026-09-05 — TO_DO had them listed as still
-open; code already had both.)
+### Deferred to post-launch (don't work on these before Sep 30)
+- [ ] Copy backups off the VPS (weekly droplet snapshot is on; add pg_dump → object storage).
+- [ ] Sentry DSN (crash monitoring is scaffolded, currently a no-op).
+- [ ] `apps/web/lib/thatfridge` → `packages/core` extraction (most already moved).
+- [ ] `react-i18next` + `expo-localization` — ship Korean (and optionally Malay) UI as an OTA,
+  no rebuild needed.
+- [ ] Android: `eas build -p android`, Play Console, Data Safety form, screenshots, submit.
+  Decide personal vs. organization account type first.
+- [ ] Web deployment: `expo export -p web`, wide-viewport (≥900px) layouts, retire legacy
+  `apps/web`.
+- [ ] PixelMix font: get written confirmation the desktop EULA covers app/web embedding (email
+  font@andrewtyler.net), and drop the unused unofficial `PixelMix-Bold.ttf`.
+- [ ] Privacy Policy §11 promises material changes get "surfaced in the app" — nothing does
+  that yet.
 
 ---
 
-## 8. Pre-submission checklist
+## Reference
 
-- [X] Prod API on HTTPS, `APP_DEBUG=false`, queue + scheduler running, backups on (2026-08-28)
-- [ ] App built against prod `EXPO_PUBLIC_API_URL`; no localhost reachable (`eas.json`
-  preview/production done; verify at build time)
-- [ ] Account deletion works from a clean install (against the live API)
-- [X] Privacy / terms / support URLs live (`thatfridge.com`) — [ ] still confirm they're linked in-app
-- [X] Transactional email working (password reset) — Resend wired up, verified end-to-end
-  against prod 2026-09-05 (§2)
-- [X] Camera permission string set (`app.config.ts`'s `expo-camera` plugin config); `ITSAppUsesNonExemptEncryption: false` already set — both confirmed already present, checked 2026-09-05
-- [ ] Local notifications fire correctly and route on tap
-- [X] RevenueCat: sandbox purchase + restore verified 2026-09-05; `thatfridge_pro` gate works
-  both ways
-- [ ] 7-day free trial active (doubles as judge access)
-- [ ] Icon 1024², splash, iPhone screenshots — **1320×2868, 6.9" only** (verified against
-  Apple's current spec 2026-09-05: satisfies every smaller size via auto-scaling, no separate
-  6.5" set needed; 1179×2556 previously noted here was actually the 6.3" size — corrected).
-  No device frame, no alpha channel.
-- [🟡] App Privacy form complete and accurate · Age rating done — both **drafted**, need
-  pasting into ASC (§5 above)
-- [🟡] Demo account + review notes filled in — **drafted**, needs the account's password
-  changed first (§2)
+### Cost tracker (all USD, approximate)
 
-- [🟡] TestFlight build validated by all 4 members on real devices — **build 1 (v1.0.0) submitted 2026-08-28** via `eas build/submit`; processing at App Store Connect. Add internal testers + a "What to Test" note.
+| Item | Cost | Status |
+| --- | --- | --- |
+| Apple Developer Program | $99/yr | Paid |
+| Domain — `thatfridge.com` | ~$10.46/yr | Paid |
+| PixelMix commercial font licence | $25 one-time | Paid (embedding confirmation pending, see above) |
+| VPS — DigitalOcean SGP1, 2 vCPU/2GB + backups | $21.60/mo | Live |
+| Legal site hosting (Cloudflare Workers), email routing | $0 | Live |
+| Sentry, RevenueCat, Expo EAS, Devpost | $0 | Free tiers |
+| Google Play Console | $25 one-time | Deferred (post-launch) |
 
-- [ ] Crash-free session confirmed in Sentry
-- [ ] Version set (currently `1.2.0`, stale reference to `1.0.0` here fixed 2026-09-05), release
-  set to **manual** — an App Store Connect setting on the real version submission, not
-  applicable yet since only TestFlight builds exist so far
-- [X] EAS Update production channel wired · TestFlight CI (`.github/workflows/testflight.yml`)
-- [ ] Devpost submission drafted
+**Fixed recurring cost: ≈$30.72/mo ($368.66/yr)**, regardless of user count. Apple's commission
+is 15% once the Small Business Program application (submitted 2026-09-05) is approved, 30%
+until then. **US withholding:** 30% on US-storefront sales only (Malaysian individual, no US
+tax treaty, W-8BEN filed) — shouldn't bite much given MY/KR are the target markets, but stacks
+with Apple's cut on whatever US sales do happen.
 
----
+### Business model — bottom line
 
-## 9. QA matrix (Member A owns the process; whole team runs it)
+Break-even is **≈20 paying subscribers** at 15% commission, **≈25** at 30% — a low, genuinely
+achievable bar at this infra scale. Blended contribution margin per subscriber is
+**≈$1.24-1.56/mo** (65/35 annual/monthly mix assumption) after Apple's cut and AI cost. AI cost
+itself is trivial (~$0.15-0.40/mo per active Pro subscriber, ~$0.10/mo per free user) — the
+real risk was ever unbounded free-tier usage, which is now closed (see Free-tier limits below).
+Full reasoning, psychology notes, and benchmark-vs-confirmed figure tagging: see git history
+(`3a. Business & pricing analysis`, commit history 2026-09-05) if this needs revisiting with
+real post-launch data.
 
-| Area          | Checks                                                                                                                    |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Devices       | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device                                                                |
-| Auth          | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session                         |
-| Core loop     | add item, barcode scan (camera allow / deny / deny-then-enable), inventory edit/delete, mark recipe made decrements stock |
-| Notifications | local alert fires at the right time, taps route to the item, permission denied handled                                    |
-| Paywall       | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow                                            |
-| Native chrome | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe                                     |
-| Network       | airplane mode on every screen, slow 3G, API 500s, retry paths                                                             |
-| Lifecycle     | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly                                   |
-| Compliance    | account deletion from a clean install, privacy-policy link opens, demo account works fresh                                |
+**Not captured in this model:** paid user acquisition (growth is organic/#BuildInPublic, so
+acquisition cost is ≈$0 but also caps growth speed), your own time, refunds.
 
----
+### RevenueCat / subscriptions
 
-## 10. Top risks & mitigations
+Two products, **permanent IDs — never reusable, don't typo**: `thatfridge_pro_monthly`
+($2.99/mo) and `thatfridge_pro_yearly` ($19.99/yr), both with a 7-day free trial, both status
+"Ready to Submit" in ASC. Pro unlocks: unlimited AI chat/what-to-eat, receipt & photo bulk-add,
+multiple/shared fridges. Sandbox purchase + restore verified end-to-end 2026-09-05.
 
-1. **Apple identity verification is slow (#1 risk).** Submit as an Individual now. Everything
-   except TestFlight and submission works without a paid account (Expo dev client / simulator
-   build). If not cleared within a week, escalate to Apple support.
-2. **App Store Connect financials lead time.** Paid Apps Agreement + banking + tax take days and
-   need real tax info. Until active, IAPs can't be tested and the Shipaton requirement can't be
-   met. Start the same day as enrollment.
-3. **Guideline 3.1.2 (subscription scrutiny).** Restore button, clear pricing, terms, no dark
-   patterns — the published paywall is built to spec; keep it that way.
-4. **Guideline 4.2 (thin-wrapper rejection).** Low for a real RN app, but keep native features
-   visible; have a written feature-list rebuttal.
-5. **"First public release" timing (Shipaton).** No public TestFlight link / press before the
-   store listing is live, or risk the "not brand-new" disqualification.
-6. **The deadline is a wall.** Sep 30, no extensions. A rejection on Sep 28 could end the run.
-   Submit ~2 weeks early; team on-call for same-day resubmits.
-7. **Scope creep.** Anything not already in the app is post-launch OTA. The paywall is
-   mandatory — don't trade paywall / release-track time for a nice-to-have screen.
-8. **Lost signing keys.** Shared password manager, from day one.
+### Free-tier limits (all enforced server-side, not just client-side)
 
----
+| Feature | Free tier | Pro |
+| --- | --- | --- |
+| AI chat (Quick Chat + "Activate {agent}", shared budget) | 5/week | Unlimited |
+| Icon generation | 5/week | Unlimited |
+| Expiry-date photo scan | 10/week | Unlimited |
+| Receipt / fridge-photo scan | Not available | Unlimited |
+| Fridges (owned or joined, total) | 1 | Unlimited |
 
-## 11. Architecture
+Every AI-calling route also has a floor-level `throttle` regardless of Pro status, as abuse
+protection against direct API hammering.
+
+### Demo / reviewer account
+
+`keira@thatfridge.test` — pre-seeded with a fridge + 7 curated recipes (no alcohol references,
+relevant for the age-rating answer). **Change the password before submitting** (see checklist).
+
+### Locked decisions — no re-litigation
+
+NativeWind · Expo Router · pnpm workspaces + turborepo · bundle id `test.thatfridge.app` · iOS
+target 15.1 · Apple enrollment Individual · v1 notifications local/on-device (server push is
+already built too, for social events) · Android deferred entirely · one universal UI codebase
+(`react-native-web` renders `apps/mobile` in a browser; legacy `apps/web` retired once web
+output ships) · signing keys + Apple assets in a shared password manager · **v1 app UI is
+English-only**, localized store listings only.
+
+### Infra & CD
+
+- API: `https://api.thatfridge.com` (DigitalOcean SGP1, `167.172.88.75`, PHP 8.5/Nginx/
+  Postgres/Redis). CD: `.github/workflows/deploy-api.yml`, push to `main` → test → deploy.
+- Legal site: `https://thatfridge.com` (Cloudflare Workers). CD:
+  `.github/workflows/deploy-legal.yml`.
+- Mobile OTA: `.github/workflows/eas-update.yml`, push to `main` touching `apps/mobile`/
+  `packages` → production channel.
+- Mobile native builds: `.github/workflows/testflight.yml`, `git tag v*` or manual dispatch.
+- `main` is the only working branch.
+
+### Architecture
 
 ```
 thatfridge/                  (monorepo — pnpm workspaces + turborepo)
@@ -729,3 +178,31 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
 ├── apps/web/                LEGACY Next.js SPA — frozen; retired once web output ships (post-launch)
 └── backend/                 Laravel API — deploy + prod hardening
 ```
+
+### Top risks & mitigations
+
+1. **Guideline 3.1.2 (subscription scrutiny).** Restore button, clear pricing, terms, no dark
+   patterns — the published paywall is already built to spec.
+2. **Guideline 4.2 (thin-wrapper rejection).** Low risk for a real RN app with substantial
+   native feature use; a written rebuttal is on hand in `STORE_LISTING.md` §3 if needed — don't
+   submit it pre-emptively.
+3. **Shipaton "first public release" timing.** No public TestFlight link/press before the store
+   listing is live.
+4. **The deadline is a wall.** Sep 30, no extensions. Submit ~2 weeks early; be ready for
+   same-day resubmits if rejected.
+5. **Scope creep.** Anything not already in the app is post-launch OTA. The paywall is
+   mandatory — don't trade release-track time for a nice-to-have screen.
+
+### QA matrix
+
+| Area | Checks |
+| --- | --- |
+| Devices | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device |
+| Auth | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session |
+| Core loop | add item, barcode scan (camera allow/deny/deny-then-enable), inventory edit/delete, mark recipe made decrements stock |
+| Notifications | local alert fires at the right time, taps route to the item, permission denied handled |
+| Paywall | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow |
+| Native chrome | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe |
+| Network | airplane mode on every screen, slow 3G, API 500s, retry paths |
+| Lifecycle | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly |
+| Compliance | account deletion from a clean install, privacy-policy link opens, demo account works fresh |
