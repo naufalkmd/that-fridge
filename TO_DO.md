@@ -193,13 +193,12 @@ multiple / shared fridges, advanced notification tuning.
 - [X] **`eas build`** — dev-client simulator build (`development-prod`) verified against the
   live API; **production build 1 submitted to TestFlight 2026-08-28** (`eas build/submit`,
   automated in `.github/workflows/testflight.yml`).
-- [ ] **Cut v1.2.0** (`main` is bumped, PR #17). `git tag v1.2.0 && git push --tags`. First
-  build since adding `expo-apple-authentication`, `@react-native-google-signin`,
-  `expo-speech-recognition`, and the push entitlement — if CI fails on capability/credential
-  sync, run one `eas build -p ios --profile production` interactively once. Unblocks: Apple
-  sign-in, voice dictation, push delivery. Then smoke-test all three on a device.
-- [ ] Full **smoke-test on a real device / simulator** against the live API — nothing since the
-  parity port has run.
+- [X] **Cut v1.2.0** — tag exists, and today's TestFlight builds (§3) already shipped multiple
+  `1.2.0` builds via CI, including Apple sign-in, voice dictation (now genuinely on-device), and
+  push entitlement. Sandbox purchase + restore verified on-device (§3).
+- [ ] Full **smoke-test on a real device / simulator** against the live API — today's testing
+  covered the paywall/purchase flow; the rest of the app (inventory, chat, notifications, social)
+  hasn't had a dedicated pass since the parity port.
 - [ ] Bottom-sheet **grab-to-dismiss** gesture on modal screens (needs
   `react-native-gesture-handler` root wiring).
 - [ ] Native-feel pass: haptics, safe-area audit on every screen, keyboard-avoiding views,
