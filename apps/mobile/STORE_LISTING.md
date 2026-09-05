@@ -113,6 +113,49 @@ fridge,grocery,food tracker,expiry,meal planner,recipes,shopping list,pantry,lef
 
 ---
 
+## 3. Guideline 4.2 rebuttal (draft, keep on hand — don't submit pre-emptively)
+
+For App Review notes **only if** Apple flags the app as a "thin wrapper" under 4.2 Minimum
+Functionality. Don't paste this in unprompted — most apps never see this guideline invoked;
+submitting a defensive rebuttal nobody asked for just wastes a reviewer's time. Grounded in
+`app.config.ts` / `package.json` — every capability named below is a real, shipped dependency,
+not aspirational.
+
+```
+ThatFridge is a native iOS app built with Expo/React Native — there is no WebView, no wrapped
+website, and no third-party app-building platform involved (Capacitor, Cordova, etc. were
+deliberately never used). Every screen is native UI rendered through React Native's UIKit
+bridge. The app makes substantive use of platform capabilities a website cannot provide:
+
+- Native camera (expo-camera) for barcode scanning, with its own permission flow
+- Native photo library access (expo-image-picker) for receipt scanning, fridge photos, and
+  recipe photo/video attachments
+- On-device speech recognition (Apple's Speech framework, forced on-device — no audio ever
+  leaves the phone) for voice dictation in chat
+- Local notifications, scheduled and delivered on-device for expiry/low-stock reminders
+- Server-driven push notifications (APNs via Expo) for social activity — invites, fridge
+  membership changes, shared notes
+- Native haptic feedback (expo-haptics) throughout the interaction model — drag-and-drop
+  reordering, destructive-action confirmation, move/assign gestures
+- Native gesture-driven UI (react-native-gesture-handler + react-native-reanimated): drag items
+  between categories, grab-to-dismiss bottom sheets, animated drag-and-drop
+- Sign in with Apple and Google, both via native SDKs (expo-apple-authentication,
+  @react-native-google-signin), not a web OAuth redirect
+- Native in-app purchases via StoreKit (RevenueCat), with a native paywall UI
+- Native network-state awareness (@react-native-community/netinfo) for offline handling
+- expo-router's native navigation stack — native modal presentations, native tab bar, native
+  back-gesture support throughout
+
+Beyond the technical integration, the app provides functionality with no meaningful web
+equivalent: AI-driven inventory management from photographed receipts and fridge contents,
+personalized recipe/meal suggestions based on what's actually in the household's fridge right
+now, multi-user shared-fridge collaboration with live sync, and a scoring/streak system that
+tracks food-waste reduction over time. This is a full-featured household management tool, not a
+marketing site or content wrapper.
+```
+
+---
+
 ## Still needed (not something I can draft — needs real assets/device)
 
 - App icon, 1024×1024, no transparency, no rounded corners (Apple adds the mask)

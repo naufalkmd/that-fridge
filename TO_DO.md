@@ -331,8 +331,8 @@ post-launch OTA fast-follow.**
 
 - [ ] Age rating.
 - [ ] App Review notes with demo credentials.
-- [ ] Guideline 4.2 rebuttal ready (native camera, notifications, haptics, native nav) in case
-  of a thin-wrapper rejection.
+- [X] Guideline 4.2 rebuttal drafted in `apps/mobile/STORE_LISTING.md` §3 (2026-09-05) — keep on
+  hand, don't submit pre-emptively; only use if Apple actually flags a thin-wrapper rejection.
 - [ ] Decide Google Play account type (personal vs organization) — for the post-launch Android
   submission.
 
