@@ -57,11 +57,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('sections/{section}')->group(function () {
         Route::post('items/manual', [IngestionController::class, 'store']);
         Route::post('items/barcode', [BarcodeController::class, 'scan']);
-        Route::post('items/receipt/scan', [ReceiptController::class, 'scan']);
+        // receipt/photo/expiry-scan all hit OpenRouter Vision per call - throttled the same as
+        // /chat, on top of the isPro()/weekly-cap gating inside each controller.
+        Route::middleware('throttle:15,1')->post('items/receipt/scan', [ReceiptController::class, 'scan']);
         Route::post('items/receipt/confirm', [ReceiptController::class, 'confirm']);
-        Route::post('items/photo/scan', [PhotoController::class, 'scan']);
+        Route::middleware('throttle:15,1')->post('items/photo/scan', [PhotoController::class, 'scan']);
         Route::post('items/photo/confirm', [PhotoController::class, 'confirm']);
-        Route::post('items/expiry-scan', [ExpiryScanController::class, 'scan']);
+        Route::middleware('throttle:15,1')->post('items/expiry-scan', [ExpiryScanController::class, 'scan']);
     });
 
     // Chat history is per-user, so it needs auth to know whose history to read/write.

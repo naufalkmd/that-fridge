@@ -194,8 +194,9 @@ Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ *
 launch with `EXPO_PUBLIC_RC_IOS_KEY` · `usePro()` → `entitlements.active.thatfridge_pro` ·
 `paywall.tsx` (hosted `RevenueCatUI.Paywall` + custom fallback) · Customer Center from Profile ·
 `Purchases.logIn(user.id)` · restore on Profile + paywall · free-tier gate: 5 AI-chat
-messages/week (`src/lib/chatQuota.ts`, client-side ISO-week counter → move server-side
-post-launch) + receipt/photo add Pro-gated.
+messages/week (`src/lib/chatQuota.ts`, client-side ISO-week counter, now also enforced
+server-side — see below) + receipt/photo add Pro-gated (client-side in `add.tsx`, **and now
+server-side** in `ReceiptController`/`PhotoController`).
 
 **Done (dashboard):** RevenueCat project `ThatFridge`, `thatfridge_pro` entitlement, `default`
 offering (`$rc_monthly` + `$rc_annual` on test-store `monthly`/`yearly` products), and a
@@ -301,6 +302,24 @@ under normal use.**
   removes AI limits," consistent with chat's treatment. 4 new feature tests in
   `tests/Feature/IconControllerTest.php` (rejection after cap, Pro bypass, only-counts-this-week,
   succeeds-under-cap); full suite 286/286 passing.
+
+- [X] **Bigger version of the same gap: receipt scan, fridge-photo scan, and expiry-date scan
+  (all OpenRouter Vision calls) had zero server-side enforcement at all** — no `isPro()` check,
+  no per-user cap, and unlike chat/icons, not even a route `throttle`. `add.tsx` blocks non-Pro
+  users from reaching receipt/photo mode in the UI, but that was cosmetic only — any
+  authenticated user could `POST /sections/{id}/items/receipt/scan` or `.../photo/scan` directly
+  for unlimited free vision calls. Worse than the icon-gen gap since receipt/photo scan is the
+  documented *flagship Pro feature* (§ above) and had no throttle floor at all. Fixed same-session:
+  `ReceiptController::scan()` and `PhotoController::scan()` now hard-gate on `isPro()` (402 if
+  not Pro — these two are genuinely Pro-exclusive, matching the existing client UX exactly, no
+  free tier). `ExpiryScanController::scan()` is *not* Pro-gated client-side (available to all
+  users from the add-item date field), so it got a free-tier weekly cap instead
+  (`FREE_EXPIRY_SCANS_PER_WEEK` = 10/ISO-week, Pro unlimited) — same shape as chat/icons, but
+  cache-based (`Cache::get`/`put`, key `expiry_scan_quota:{userId}:{isoWeek}`) since there's no
+  persisted per-scan row to count against, unlike `ChatHistory`/`GeneratedIcon`. All three routes
+  also gained `throttle:15,1` (matching `/chat`'s rate) as a floor against raw hammering, on top
+  of the gating. 8 new feature tests across `ReceiptControllerTest`, `PhotoControllerTest`,
+  `ExpiryScanControllerTest`; full suite 294/294 passing.
 
 ### Revenue side & break-even [estimated, both Apple-commission scenarios]
 

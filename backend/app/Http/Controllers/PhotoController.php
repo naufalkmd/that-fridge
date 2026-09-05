@@ -22,6 +22,13 @@ class PhotoController extends Controller
     {
         $this->authorize('update', $section);
 
+        // Fridge-photo scan is a Pro-exclusive feature (add.tsx blocks free users from reaching
+        // this mode client-side) - this closes the server-side hole that let anyone call the
+        // vision API directly regardless of what the UI shows.
+        if (! $request->user()->isPro()) {
+            return response()->json(['message' => 'Fridge photo scanning is a Pro feature. Upgrade to Pro to use it.'], 402);
+        }
+
         $request->validate([
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
         ]);
