@@ -106,20 +106,18 @@ Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ *
 - [🟡] Sentry on the Laravel app — `sentry/sentry-laravel` installed, wired into
   `bootstrap/app.php`, no-ops until `SENTRY_LARAVEL_DSN` is set (2026-09-05). Left: create a
   Sentry project, paste the DSN into the server `.env`, redeploy.
-- [🟡] **Transactional email — wire up the mailer.** The **forgot-password feature is built**
-  (branch `forgot-password`: code-based reset, `POST /forgot-password` + `/reset-password`,
-  mobile 2-step screen; pure JS+backend, OTA-able). `resend/resend-php` is installed. Prod is
-  still `MAIL_MAILER=log` (code lands in `storage/logs/laravel.log`). To finish, on the server
-  `.env` pick one, then `php artisan config:cache` + redeploy:
-  - **SMTP via `support@thatfridge.com`** (a real mailbox now exists) — `MAIL_MAILER=smtp`,
-    `MAIL_HOST=<provider>` (Google Workspace `smtp.gmail.com:587` + an App Password / Zoho
-    `smtp.zoho.com` / M365 `smtp.office365.com` / cPanel `mail.thatfridge.com`),
-    `MAIL_USERNAME=support@thatfridge.com`, `MAIL_PASSWORD=<app password>`,
-    `MAIL_FROM_ADDRESS=support@thatfridge.com`, `MAIL_FROM_NAME=ThatFridge`. Simplest; fine for
-    reset-code volume.
-  - **Resend** — `MAIL_MAILER=resend` + `RESEND_API_KEY` + verify `thatfridge.com` in the
-    Resend dashboard (add SPF/DKIM DNS). Better deliverability, no daily cap.
-  - Then merge `forgot-password`, and tick §8.
+- [X] **Transactional email — mailer wired up and verified live** (2026-09-05). Went with
+  **Resend**, not SMTP via `support@thatfridge.com` — that address is Cloudflare Email Routing
+  (receive-only forwarding to Gmail), not an actual sendable mailbox, so the SMTP option in this
+  TO_DO's old wording wasn't really "ready" the way it sounded. Domain verified (DKIM +
+  SPF/MX on the `send` subdomain — doesn't touch the root domain's existing mail routing).
+  `MAIL_MAILER=resend` + `RESEND_API_KEY` + `MAIL_FROM_ADDRESS=support@thatfridge.com` set on
+  the server, `config:cache`d. Confirmed end-to-end: real `POST /forgot-password` calls against
+  prod, reset-code emails actually landed in two different real inboxes (iCloud + Gmail).
+  (Hit one snag along the way: first API key pasted wasn't actually a Resend key — 36 chars, no
+  `re_` prefix, likely a domain/project ID copied by mistake — caught via
+  `Resend\Exceptions\ErrorException: API key is invalid` in `storage/logs/laravel.log`, fixed by
+  regenerating the real key.)
 - [X] `config/cors.php` already restricted — `allowed_origins` is empty, only a
   localhost/127.0.0.1 pattern is allowed (checked 2026-09-05). This line was stale; nothing
   needed for now since `apps/web` is the frozen legacy SPA and never deployed — revisit
@@ -373,9 +371,9 @@ open; code already had both.)
   preview/production done; verify at build time)
 - [ ] Account deletion works from a clean install (against the live API)
 - [X] Privacy / terms / support URLs live (`thatfridge.com`) — [ ] still confirm they're linked in-app
-- [🟡] Transactional email working (password reset) — feature built (branch `forgot-password`),
-  prod still on `MAIL_MAILER=log`; wire the mailer (§2)
-- [ ] Camera permission string set; `ITSAppUsesNonExemptEncryption` set
+- [X] Transactional email working (password reset) — Resend wired up, verified end-to-end
+  against prod 2026-09-05 (§2)
+- [X] Camera permission string set (`app.config.ts`'s `expo-camera` plugin config); `ITSAppUsesNonExemptEncryption: false` already set — both confirmed already present, checked 2026-09-05
 - [ ] Local notifications fire correctly and route on tap
 - [ ] RevenueCat: sandbox purchase + restore verified; `thatfridge_pro` gate works both ways
 - [ ] 7-day free trial active (doubles as judge access)
