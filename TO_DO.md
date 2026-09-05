@@ -258,7 +258,10 @@ post-launch OTA fast-follow.**
 
 ## 5. Store submission assets (Members A / D)
 
-- [ ] App icon **1024×1024**.
+- [X] App icon **1024×1024** — already existed (`assets/images/icon.png`), but had an alpha
+  channel (fully opaque, no visible transparency, but App Store Connect's icon validator
+  rejects *any* alpha channel on the 1024² upload regardless). Flattened to RGB 2026-09-05 —
+  same art, ready to upload as-is. Corners are already square (Apple applies its own mask).
 - [ ] iPhone **6.9" + 6.5"** screenshots — **no device frame**, 1179×2556.
 - [🟡] Store listing: description, subtitle, keywords, support URL — **drafted** in
   `apps/mobile/STORE_LISTING.md` (2026-09-05), needs a review pass before pasting into ASC.
