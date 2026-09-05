@@ -285,6 +285,13 @@ class FridgeJoinRequestController extends Controller
             return;
         }
 
+        if (! $user->canJoinAnotherFridge()) {
+            // $user is whoever's about to become a member, not necessarily the caller (an owner
+            // approving someone else's request hits this branch too) - kept generic so it reads
+            // sensibly from either side.
+            abort(402, 'Multiple / shared fridges is a Pro feature - the person joining needs to upgrade to Pro first.');
+        }
+
         try {
             $fridge->members()->attach($user->id, ['role' => 'member']);
         } catch (QueryException $e) {

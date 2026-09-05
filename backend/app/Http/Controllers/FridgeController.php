@@ -38,6 +38,10 @@ class FridgeController extends Controller
 
     public function store(Request $request)
     {
+        if (! $request->user()->canJoinAnotherFridge()) {
+            abort(402, 'Multiple fridges is a Pro feature. Upgrade to Pro to create another one.');
+        }
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'style' => ['nullable', 'string', 'max:255'],

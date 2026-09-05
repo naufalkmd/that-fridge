@@ -131,8 +131,11 @@ export default function ManageFridge() {
       await (approve ? api.approveJoinRequest(reqId) : api.declineJoinRequest(reqId));
       if (approve) await Promise.all([refresh(), api.listFridgeMembers(id).then(setMembers)]);
       refreshSocial();
-    } catch {
+    } catch (e) {
       api.listJoinRequests(id).then(setRequests);
+      if (approve) {
+        Alert.alert("Couldn't approve", describeError(e, "Couldn't approve that request."));
+      }
     }
   }
 

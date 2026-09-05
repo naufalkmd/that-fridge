@@ -217,7 +217,29 @@ auto-renew terms).
 **Monetization design:** two auto-renewing subs — `thatfridge_pro_monthly` +
 `thatfridge_pro_yearly` — both with a **7-day free trial** (the trial doubles as judge access,
 so no promo codes). Pro unlocks: unlimited AI chat / what-to-eat, receipt & photo bulk-add,
-multiple / shared fridges, advanced notification tuning.
+multiple / shared fridges.
+
+- [X] **Multiple/shared fridges wasn't actually gated anywhere, 2026-09-05** — same class of
+  gap as the AI-cost ones above, found by asking "is this one actually wired." Neither
+  `FridgeController::store()` nor the join/invite-accept flow (`FridgeJoinRequestController`)
+  checked `isPro()` — a free user could create unlimited fridges and accept unlimited invites.
+  Fixed: `User::canJoinAnotherFridge()` (Pro, or currently a member of 0 fridges) is checked in
+  `store()` and in `attachMember()` — the single choke point all three accept paths
+  (self-request auto-accept, owner-invite auto-accept, `approve()`) funnel through, so it's
+  enforced exactly once regardless of entry point. Free tier = 1 fridge per user (owned or
+  joined), no limit on that fridge's member count — this caps *fridge-hopping*, not basic
+  household sharing on your one fridge. 5 new backend tests, 301 total passing. Also fixed the
+  client silently swallowing a blocked accept (`social.tsx`'s `acceptInvite`/`approveRequest`,
+  `fridge/[id].tsx`'s `decideRequest`) — now shows a toast with an "Upgrade" action, same
+  pattern as the Activate fix above.
+  - **"Advanced notification tuning" removed from the paywall/Terms instead of gated** — turned
+    out nothing in `NotificationPrefController` distinguishes "basic" from "advanced" (it's 6
+    flat boolean toggles, all available to everyone); the phrase only ever existed as paywall
+    marketing copy and a line in `apps/legal/terms/index.html`, not a built feature. Rather than
+    invent a basic/advanced split under deadline pressure, removed the unbuilt claim from both
+    `paywall.tsx`'s `BENEFITS` list and the Terms (dated 5 September 2026) so Pro's feature list
+    matches what actually exists. RevenueCat's hosted paywall never had this line, so nothing to
+    fix there.
 
 **Left (Member A — Apple account is now approved, Team ID issued 2026-08-28):**
 

@@ -118,6 +118,35 @@ class FridgeJoinRequestControllerTest extends TestCase
         $this->assertDatabaseHas('fridge_join_requests', ['id' => $joinRequest->id, 'status' => 'accepted']);
     }
 
+    public function test_approving_a_request_is_rejected_when_the_requester_already_has_a_non_pro_fridge(): void
+    {
+        $owner = User::factory()->create();
+        $requester = User::factory()->create();
+        Fridge::create(['user_id' => $requester->id, 'name' => 'Requesters own fridge']);
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
+        $joinRequest = FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $requester->id, 'status' => 'pending']);
+
+        $response = $this->actingAs($owner)->postJson("/api/join-requests/{$joinRequest->id}/approve");
+
+        $response->assertStatus(402);
+        $this->assertDatabaseMissing('fridge_members', ['fridge_id' => $fridge->id, 'user_id' => $requester->id]);
+        $this->assertDatabaseHas('fridge_join_requests', ['id' => $joinRequest->id, 'status' => 'pending']);
+    }
+
+    public function test_approving_a_request_succeeds_when_the_requester_is_pro_despite_already_having_a_fridge(): void
+    {
+        $owner = User::factory()->create();
+        $requester = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
+        Fridge::create(['user_id' => $requester->id, 'name' => 'Requesters own fridge']);
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
+        $joinRequest = FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $requester->id, 'status' => 'pending']);
+
+        $response = $this->actingAs($owner)->postJson("/api/join-requests/{$joinRequest->id}/approve");
+
+        $response->assertStatus(204);
+        $this->assertDatabaseHas('fridge_members', ['fridge_id' => $fridge->id, 'user_id' => $requester->id, 'role' => 'member']);
+    }
+
     public function test_approving_an_already_approved_request_again_does_not_error(): void
     {
         // Simulates a double-click/two-tab race: the requester is already a member (as if a

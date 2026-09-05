@@ -13,7 +13,6 @@ const BENEFITS = [
   "Unlimited “what to eat” suggestions",
   "Receipt & photo scanning for bulk add",
   "Multiple and shared fridges",
-  "Advanced notification tuning",
 ];
 
 const TERMS_URL = "https://thatfridge.com/terms/";

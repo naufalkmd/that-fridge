@@ -52,6 +52,40 @@ class FridgeControllerTest extends TestCase
         $response->assertJson(['data' => ['role' => 'owner', 'member_count' => 1]]);
     }
 
+    public function test_store_is_rejected_for_a_non_pro_user_who_already_has_a_fridge(): void
+    {
+        $user = User::factory()->create();
+        Fridge::create(['user_id' => $user->id, 'name' => 'First Fridge']);
+
+        $response = $this->actingAs($user)->postJson('/api/fridges', ['name' => 'Second Fridge']);
+
+        $response->assertStatus(402);
+        $this->assertDatabaseCount('fridges', 1);
+    }
+
+    public function test_store_is_rejected_for_a_non_pro_user_whose_only_fridge_is_one_they_joined(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Owned by someone else']);
+        $fridge->members()->attach($member->id, ['role' => 'member']);
+
+        $response = $this->actingAs($member)->postJson('/api/fridges', ['name' => 'My Own']);
+
+        $response->assertStatus(402);
+    }
+
+    public function test_store_succeeds_for_a_pro_user_who_already_has_a_fridge(): void
+    {
+        $user = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
+        Fridge::create(['user_id' => $user->id, 'name' => 'First Fridge']);
+
+        $response = $this->actingAs($user)->postJson('/api/fridges', ['name' => 'Second Fridge']);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseCount('fridges', 2);
+    }
+
     public function test_a_joined_non_owner_member_can_rename_and_restyle_the_fridge(): void
     {
         $owner = User::factory()->create();

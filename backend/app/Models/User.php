@@ -157,4 +157,17 @@ class User extends Authenticatable
     {
         return $this->pro_expires_at !== null && $this->pro_expires_at->isFuture();
     }
+
+    /**
+     * "Multiple / shared fridges" is a Pro feature - a free user can be part of exactly one
+     * fridge at a time (owned or joined; the owner is auto-attached as a member, so
+     * memberFridges() alone covers both cases). That one fridge can still have any number of
+     * members - this only blocks a single user from accumulating more than one fridge, not
+     * basic household sharing on it. Checked wherever a membership row actually gets created:
+     * FridgeController::store() and FridgeJoinRequestController::attachMember().
+     */
+    public function canJoinAnotherFridge(): bool
+    {
+        return $this->isPro() || $this->memberFridges()->count() < 1;
+    }
 }

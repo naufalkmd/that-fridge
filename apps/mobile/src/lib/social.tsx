@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useRouter } from "expo-router";
 
-import type { MyInvite, MyJoinRequest } from "@thatfridge/core";
+import { ApiError, describeError, type MyInvite, type MyJoinRequest } from "@thatfridge/core";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useInventory } from "@/lib/inventory";
+import { useToast } from "@/lib/toast";
 
 // Cross-fridge pending actions: invites sent TO me, and join requests FOR fridges I own.
 // Shown on the Notifications screen and the find-a-friend screen.
@@ -26,6 +28,24 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   const { refresh: refreshInventory } = useInventory();
   const [myInvites, setMyInvites] = useState<MyInvite[]>([]);
   const [myJoinRequests, setMyJoinRequests] = useState<MyJoinRequest[]>([]);
+  const toast = useToast();
+  const router = useRouter();
+
+  // Approving/accepting can fail (already a member, blocked user, or - for the requester
+  // specifically - the "one fridge on the free tier" cap) after the row's already been
+  // optimistically removed from the pending list; refresh() puts it back, and this surfaces
+  // why instead of the request just silently reappearing.
+  const notifyFailure = useCallback(
+    (e: unknown) => {
+      toast.show(
+        describeError(e, "Couldn't complete that."),
+        e instanceof ApiError && e.status === 402
+          ? { actionLabel: "Upgrade", onAction: () => router.push("/paywall") }
+          : undefined,
+      );
+    },
+    [toast, router],
+  );
 
   const refresh = useCallback(async () => {
     const [inv, req] = await Promise.allSettled([api.getMyInvites(), api.getMyJoinRequests()]);
@@ -44,10 +64,13 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   const acceptInvite = useCallback(
     async (id: string) => {
       setMyInvites((p) => p.filter((i) => i.id !== id));
-      await api.approveJoinRequest(id).catch(() => refresh());
+      await api.approveJoinRequest(id).catch((e) => {
+        refresh();
+        notifyFailure(e);
+      });
       await refreshInventory();
     },
-    [refresh, refreshInventory],
+    [refresh, refreshInventory, notifyFailure],
   );
   const declineInvite = useCallback(
     async (id: string) => {
@@ -59,10 +82,13 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   const approveRequest = useCallback(
     async (id: string) => {
       setMyJoinRequests((p) => p.filter((r) => r.id !== id));
-      await api.approveJoinRequest(id).catch(() => refresh());
+      await api.approveJoinRequest(id).catch((e) => {
+        refresh();
+        notifyFailure(e);
+      });
       await refreshInventory();
     },
-    [refresh, refreshInventory],
+    [refresh, refreshInventory, notifyFailure],
   );
   const declineRequest = useCallback(
     async (id: string) => {
