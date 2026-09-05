@@ -179,11 +179,12 @@ multiple / shared fridges, advanced notification tuning.
   environment (2026-09-05) — previously **completely unset**, meaning no TestFlight build to
   date had ever initialized `Purchases.configure()`. Local `.env` still has the test-store key
   (fine for local/simulator dev). New TestFlight build shipped with the real key same day.
-- [ ] Verify a **sandbox purchase + restore** end-to-end; `thatfridge_pro` gate works both ways.
-  In progress: sandbox tester Apple ID creation blocked on email validation errors (34607 /
-  "Could Not Verify Address") — needs a genuinely fresh email never linked to any Apple ID
-  (no `+` aliasing, no reused inbox). Once signed in via Settings → Developer → Sandbox Apple
-  Account, test the purchase on the new build.
+- [X] Verified a **sandbox purchase + restore** end-to-end (2026-09-05) — bought
+  `thatfridge_pro` on the fixed TestFlight build via a sandbox tester Apple ID, entitlement
+  unlocked. Reinstalled the app fresh and Pro was active immediately (RevenueCat auto-syncs
+  with StoreKit on `Purchases.configure()` — no manual restore needed, which is itself the
+  strongest possible proof the full pipeline works). §3 is now fully done except per-storefront
+  MY/KR pricing and Korean/Malay localization (both deferred, see above).
 
 ---
 
