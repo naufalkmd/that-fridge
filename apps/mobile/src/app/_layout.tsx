@@ -22,6 +22,7 @@ import { NotesProvider } from "@/lib/notes";
 import { ToastProvider } from "@/lib/toast";
 import { ExpiryReminderSync } from "@/lib/ExpiryReminderSync";
 import { UpdateBanner } from "@/components/update-banner";
+import { OfflineBanner } from "@/components/offline-banner";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -228,6 +229,7 @@ export default function RootLayout() {
                                   />
                                 </Stack>
                                 <UpdateBanner />
+                                <OfflineBanner />
                               </NotesProvider>
                             </RecipesProvider>
                           </KitchenScoreProvider>

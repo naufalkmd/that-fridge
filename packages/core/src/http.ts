@@ -54,7 +54,16 @@ export function createHttpClient({ baseUrl, tokens }: HttpClientConfig): HttpCli
       ...((opts.headers as Record<string, string>) ?? {}),
     };
 
-    const res = await fetch(`${base}${path}`, { ...opts, headers });
+    let res: Response;
+    try {
+      res = await fetch(`${base}${path}`, { ...opts, headers });
+    } catch {
+      // fetch() itself throws on no connectivity (not an HTTP response, so no status code) -
+      // wrap it as an ApiError so every existing `describeError(e, fallback)` call site across
+      // the app automatically shows this instead of its generic fallback, with no changes
+      // needed at each call site. status 0 is a sentinel, never a real HTTP status.
+      throw new ApiError(0, "You're offline — check your connection and try again.");
+    }
 
     if (res.status === 204) return undefined as T;
 
