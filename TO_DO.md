@@ -245,6 +245,132 @@ multiple / shared fridges, advanced notification tuning.
 
 ---
 
+## 3a. Business & pricing analysis (2026-09-05)
+
+**Read this as a model, not a promise.** ThatFridge hasn't launched — there's no real
+conversion-rate or churn data yet. Every number below is tagged **[confirmed]** (from this
+repo/TO_DO's own cost tracker or actual API pricing pages), **[estimated]** (a calculation from
+confirmed inputs), or **[benchmark]** (an industry-typical figure standing in for real data we
+don't have yet — replace with actual numbers once there's a few months of real usage).
+
+### Cost side
+
+**Fixed infra — [confirmed], from §1a's cost tracker:**
+Apple $99/yr + domain ~$10.46/yr + VPS $21.60/mo (=$259.20/yr) ≈ **$368.66/yr ≈ $30.72/mo**,
+regardless of user count.
+
+**Apple's commission — depends on an unconfirmed enrollment:**
+- 15% if enrolled in the **App Store Small Business Program** (free, automatic for developers
+  under $1M/yr proceeds — ThatFridge obviously qualifies). **Not confirmed enrolled anywhere in
+  this TO_DO — check this. It's free and takes a few minutes; there's no reason not to.**
+- 30% standard rate if not enrolled.
+- Both scenarios computed below since enrollment isn't confirmed.
+
+**US withholding — [confirmed via §1]:** 30% on US-storefront sales only (Malaysian individual,
+no US tax treaty). Target markets are Malaysia + South Korea, not the US, so this should only
+bite a minority of revenue — but it stacks with Apple's cut on whatever US sales do happen.
+
+**AI variable cost per call — [estimated from public pricing]:**
+Checked what's actually configured, not guessed: chat + receipt/photo scanning both run on
+`anthropic/claude-haiku-4.5` via OpenRouter (`OpenRouterClient.php`'s default model) — **$1/M
+input tokens, $5/M output tokens**. Icon generation uses fal.ai's `flux/schnell` — **~$0.003/MP,
+roughly $0.01–0.025/image** depending on resolution. Estimated per-call cost:
+- Chat message (~1,000 input + ~200 output tokens): **≈$0.002**
+- Receipt/photo scan (vision, ~1,400 image tokens): **≈$0.0015–0.002**
+- Icon generation: **≈$0.01–0.025**
+
+These are genuinely cheap per unit — AI cost was never the threat to margin here, *unbounded
+usage* is (see risks below).
+
+**Estimated AI cost per active Pro subscriber/month [estimated]:** assuming a realistically
+engaged user — ~40 chat messages, ~15 receipt/photo scans (the flagship Pro feature), ~7 icon
+generations — **≈$0.15–0.40/month**. Trivial next to the subscription price.
+
+**Estimated AI cost per free user/month [estimated]:** capped chat (5/week ≈ 22/mo ≈ $0.04) +
+compact/"Activate" calls (uncapped by count, only rate-limited — generously ~30/mo ≈ $0.06).
+Receipt/photo scanning is Pro-gated, so free users don't touch that cost at all. **≈$0.10/month
+under normal use.**
+
+**⚠ Found while doing this analysis: icon generation has no Pro gate and no per-user cap at
+all** — neither `icon-picker.tsx` nor `IconController.php` check `isPro`/`is_pro` anywhere,
+only the existing `throttle:10,1` route limit applies. At that ceiling, one script hitting it
+constantly could theoretically generate ~14,400 images/day (~$144–360/day at fal.ai rates) for
+free. Not a normal-usage risk, but a real one — same class of gap as the `/chat` quota this
+session already fixed. Worth the same treatment (gate behind `isPro()`, or a small free-tier
+cap) before launch. **Not fixed here — flagging it because it directly affects this whole
+analysis's cost assumptions if left open.**
+
+### Revenue side & break-even [estimated, both Apple-commission scenarios]
+
+Net monthly-equivalent revenue per subscriber after Apple's cut (ignoring US withholding, which
+shouldn't hit MY/KR-majority revenue):
+
+| Plan | Price | Net @ 15% (enrolled) | Net @ 30% (not enrolled) |
+|---|---|---|---|
+| Monthly | $2.99 | $2.54/mo | $2.09/mo |
+| Annual | $19.99/yr | $1.42/mo equiv. | $1.17/mo equiv. |
+
+Blending at a **65% annual / 35% monthly** mix **[benchmark — reasonable given annual is the
+deliberately-designed "hero" plan, see psychology section]**, minus ≈$0.25/mo estimated AI cost
+per subscriber:
+
+- **At 15% (enrolled):** blended net ≈$1.81/mo − $0.25 AI ≈ **$1.56/subscriber/mo contribution**
+- **At 30% (not enrolled):** blended net ≈$1.49/mo − $0.25 AI ≈ **$1.24/subscriber/mo contribution**
+
+**Break-even on fixed costs ($30.72/mo):**
+- At 15%: **≈20 paying subscribers**
+- At 30%: **≈25 paying subscribers**
+
+That's a low, genuinely achievable bar — this isn't a "need thousands of users" business at the
+infra scale it's currently running at. Every subscriber past break-even is close to pure
+contribution margin (~$1.24–1.56/mo each) until RevenueCat's 1% cut kicks in past $2.5k MTR,
+which only trims a further 1%, not a material change to this picture.
+
+**What this analysis does *not* capture:** paid user acquisition (there's no ad budget in the
+cost tracker — growth is organic/#BuildInPublic per §6, so acquisition cost is currently ≈$0,
+but that also caps how fast subscriber count grows), your own time, refunds, or App Store price
+tier rounding in MY/KR after Apple's automatic conversion.
+
+### User psychology — why this pricing structure should actually convert
+
+- **Annual-as-anchor:** $19.99/yr framed as "save 44%" against paying monthly ($2.99×12=$35.88)
+  works because presenting the monthly price first sets the expensive reference point, making
+  annual read as the smart choice — not an accident, matches TO_DO's existing "annual is the
+  hero plan" design intent.
+- **Trial requires a card upfront (Apple's standard flow), which is a real conversion lever, not
+  just friction:** once someone's entered payment info, the psychological bar to *actively
+  cancel* within 7 days is higher than the bar to start a trial in the first place — inertia
+  favors conversion. This is why trial-to-paid conversion (**≈40–60%** **[benchmark]**) is
+  typically much higher than raw free-to-paid conversion (**≈2–5%** **[benchmark]** for consumer
+  utility apps).
+- **5 free messages/week isn't an arbitrary number** — it's enough to hit a genuine "this AI
+  answer was actually useful" moment, but shallow enough that the cap gets hit *every single
+  week*, re-surfacing the upgrade decision on a recurring cadence instead of a one-time paywall
+  a user dismisses once and forgets.
+- **Receipt/photo scanning as the flagship Pro-gated feature is the strongest lever here**,
+  psychologically: every free user has *already felt* the friction of manual entry (there's no
+  other option on free), so the upgrade pitch is escaping a pain they've personally experienced,
+  not an abstract "unlock more" pitch.
+- **Kitchen Score / streaks (already built) support retention via loss aversion** — once a
+  streak exists, disengaging feels like losing something, which keeps users in the ecosystem
+  where the Pro upsell keeps recurring.
+- **Localized charm pricing (RM12.90, ₩3,900) already avoids the "ugly auto-conversion" trap**
+  per §3's existing design intent — round, locally-normal-looking numbers read as intentional
+  pricing, not an afterthought currency conversion, which matters for trust in unfamiliar
+  storefronts.
+
+### Bottom line
+
+At current fixed costs, break-even is ~20–25 paying subscribers depending on Small Business
+Program enrollment (confirm that — free, no reason not to). AI costs are genuinely cheap per
+unit and aren't the margin risk; **unbounded free-tier usage is** (icon generation specifically,
+found during this analysis). The pricing itself ($2.99/$19.99, 7-day trial, 5 free msgs/week) is
+reasonably well-designed for conversion psychology already — the real levers left are closing
+the icon-gen gap and, eventually, replacing the **[benchmark]** conversion-rate assumptions with
+real post-launch data.
+
+---
+
 ## 4. Mobile app (Members B / C / D)
 
 - [X] **`eas build`** — dev-client simulator build (`development-prod`) verified against the
