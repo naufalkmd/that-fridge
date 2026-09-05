@@ -324,31 +324,24 @@ it" item state** persisted (`items.opened` column, freshness capped when opened)
 
 ### Still open vs. the web
 
-- ~~**Receipt/photo scan review is thin**~~ ✅ done 2026-08-28 — per-item inline icon picker
-  (pack + generate + library), compact location icons + section/best-before chips, qty,
-  per-item date-scan + per-item/all Auto-fill, condition note, remove, "add item the scan
-  missed". Review UI verified rendering on the simulator; the full pick-photo → OCR → confirm
-  cycle still needs a real device pass.
-- **Icon generation in the *manual* Add form** — the scan review has it now; the plain
-  manual-add form still only auto-guesses the icon (no generate). Minor.
-- **Organizer move dismiss** — mobile applies/sweeps moves but has no per-move "dismiss"
-  (`dismissOrganizerMove` on web). Minor.
-- ~~**Voice input** in chat~~ ✅ done — mic button in the chat composer →
-  `expo-speech-recognition` (OS recognizer, on-device). Needs the v1.2.0 native build.
-- **wide-viewport (≥900px) layouts** on Home / Inventory / Chat (bundled with web-deployment).
-- ~~Server-driven **push**~~ ✅ done — `Notifier` service + `push_tokens` + `SendPushNotification`
-  (Expo push) wired into invites/members/notes/item activity + in-app feed. APNs key on EAS is
-  done; needs the v1.2.0 native build to deliver.
-
-Everything else audited at parity: all 21 web screens exist; fridge-notes CRUD, Customer
-Center (mobile is richer here), what-to-eat (shuffle/vibes/meal-type/food-focus/exact+similar),
-chat photo-attach + memory extract + add-to-recipe-book, shopping recommendations, hero
-carousel + swipe-dismiss agent insights, undo toasts, skeleton loaders — all present.
+- **Real-device pass** for the receipt/photo scan review's full pick-photo → OCR → confirm
+  cycle (UI itself already verified on the simulator).
+- **wide-viewport (≥900px) layouts** on Home / Inventory / Chat — bundled with Web deployment
+  below.
 - **Android:** `eas build -p android`; Play Console (register as an organization to skip the
   12-tester / 14-day closed-testing gate); Data Safety form; screenshots; submit.
 - **Web deployment** (universal codebase): `expo export -p web` → host the static build; add
   wide-viewport branches; `Platform.OS === "web"` guards; then retire `apps/web` and point the
   domain at the new build. iPad layout pass rides along.
+
+Everything else audited at parity: all 21 web screens exist; fridge-notes CRUD, Customer
+Center (mobile is richer here), what-to-eat (shuffle/vibes/meal-type/food-focus/exact+similar),
+chat photo-attach + memory extract + add-to-recipe-book, shopping recommendations, hero
+carousel + swipe-dismiss agent insights, undo toasts, skeleton loaders, voice dictation (mic
+button in chat composer), server-driven push (`Notifier` + APNs), icon generation in the
+manual Add form (shared `ItemCard`, same as scan review), Organizer per-move dismiss — all
+present, shipped in v1.2.0. (Last two confirmed 2026-09-05 — TO_DO had them listed as still
+open; code already had both.)
 
 ---
 
