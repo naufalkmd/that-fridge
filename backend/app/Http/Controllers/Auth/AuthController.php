@@ -22,6 +22,11 @@ class AuthController extends Controller
             'username' => ['required', 'string', 'max:255', 'alpha_dash', 'unique:users,username'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
+            // Korea PIPA wants explicit, separate consent for cross-border transfer of
+            // personal data - distinct from agreeing to the Terms/Privacy Policy generally.
+            // 'accepted' means it must be true/1/"yes" - anything else (including omitted)
+            // fails validation.
+            'dataTransferConsent' => ['required', 'accepted'],
         ]);
 
         $user = User::create([
@@ -29,6 +34,7 @@ class AuthController extends Controller
             'username' => $data['username'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
+            'data_transfer_consented_at' => now(),
         ]);
 
         $user->notificationPref()->create([]);

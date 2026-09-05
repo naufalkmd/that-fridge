@@ -44,11 +44,55 @@ class AuthControllerTest extends TestCase
             'username' => 'jordan_diaz',
             'email' => 'jordan@example.com',
             'password' => 'at-least-8-chars',
+            'dataTransferConsent' => true,
         ]);
 
         $response->assertStatus(201);
         $response->assertJson(['user' => ['name' => 'Jordan Diaz', 'username' => 'jordan_diaz', 'email' => 'jordan@example.com']]);
         $this->assertDatabaseHas('users', ['username' => 'jordan_diaz']);
+    }
+
+    public function test_register_records_when_data_transfer_consent_was_given(): void
+    {
+        $response = $this->postJson('/api/register', [
+            'name' => 'Jordan Diaz',
+            'username' => 'jordan_diaz',
+            'email' => 'jordan@example.com',
+            'password' => 'at-least-8-chars',
+            'dataTransferConsent' => true,
+        ]);
+
+        $response->assertStatus(201);
+        $user = User::where('username', 'jordan_diaz')->firstOrFail();
+        $this->assertNotNull($user->data_transfer_consented_at);
+    }
+
+    public function test_register_requires_data_transfer_consent(): void
+    {
+        $response = $this->postJson('/api/register', [
+            'name' => 'Jordan Diaz',
+            'username' => 'jordan_diaz',
+            'email' => 'jordan@example.com',
+            'password' => 'at-least-8-chars',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('dataTransferConsent');
+        $this->assertDatabaseMissing('users', ['username' => 'jordan_diaz']);
+    }
+
+    public function test_register_rejects_data_transfer_consent_set_to_false(): void
+    {
+        $response = $this->postJson('/api/register', [
+            'name' => 'Jordan Diaz',
+            'username' => 'jordan_diaz',
+            'email' => 'jordan@example.com',
+            'password' => 'at-least-8-chars',
+            'dataTransferConsent' => false,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('dataTransferConsent');
     }
 
     public function test_login_and_me_return_the_username(): void

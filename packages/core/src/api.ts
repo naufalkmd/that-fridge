@@ -294,12 +294,14 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     username: string,
     email: string,
     password: string,
+    dataTransferConsent: boolean,
   ): Promise<AuthResult> {
     const res = await http.post<AuthResult>("/register", {
       name,
       username,
       email,
       password,
+      dataTransferConsent,
     });
     await tokens.set(res.token);
     return res;

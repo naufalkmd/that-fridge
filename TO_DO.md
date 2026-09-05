@@ -245,11 +245,15 @@ post-launch OTA fast-follow.**
     2026-09-05), just a promise-to-publish in the English page. Needs an actual Korean
     translation — not something to machine-translate unsupervised for a legal document; get a
     native/professional pass.
-  - [ ] **Separate consent for cross-border transfer** at sign-up. The general "you agree to
-    our Terms and Privacy Policy" notice added to `sign-in.tsx` today (§4a min-age item) is
-    likely *not* sufficient — PIPA is stricter than PDPA and wants explicit, distinct consent
-    for the specific cross-border transfer (chat text + photos → OpenRouter in the US), not
-    bundled into general ToS acceptance.
+  - [X] **Separate consent for cross-border transfer** at sign-up — a real checkbox on
+    `sign-in.tsx` (2026-09-05), distinct from the general Terms/Privacy notice, gating
+    submission (`validate()` rejects an unchecked box). Backend requires and records it:
+    `dataTransferConsent` is a required+accepted field on `POST /register`,
+    `users.data_transfer_consented_at` set server-side (never client-suppliable as a
+    timestamp, only a boolean triggers `now()`, so it can't be backdated). 3 new backend tests.
+    **Known gap:** only covers email/password sign-up — `AuthController::apple()`/`google()`
+    create users too (social sign-in) and don't go through this consent gate. Fixing that needs
+    a pre-OAuth consent interstitial for new users, a bigger UX task not done here.
 - [X] **Malaysia PDPA (2010, amended 2024):** already covered — consent-at-sign-up language,
   breach-notification commitment, and a named contact (privacy@thatfridge.com) all already in
   `apps/legal/privacy/index.html` §10. Checked 2026-09-05, nothing to add.

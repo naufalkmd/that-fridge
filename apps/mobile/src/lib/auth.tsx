@@ -12,7 +12,13 @@ interface AuthContextValue {
   status: Status;
   user: CurrentUser | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, username: string, email: string, password: string) => Promise<void>;
+  signUp: (
+    name: string,
+    username: string,
+    email: string,
+    password: string,
+    dataTransferConsent: boolean,
+  ) => Promise<void>;
   resetPassword: (email: string, code: string, password: string) => Promise<void>;
   signInWithApple: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -57,8 +63,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = useCallback(
-    async (name: string, username: string, email: string, password: string) => {
-      const { user } = await api.register(name, username, email, password);
+    async (
+      name: string,
+      username: string,
+      email: string,
+      password: string,
+      dataTransferConsent: boolean,
+    ) => {
+      const { user } = await api.register(
+        name,
+        username,
+        email,
+        password,
+        dataTransferConsent,
+      );
       setUser(user);
       setStatus("signedIn");
     },

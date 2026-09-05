@@ -41,6 +41,7 @@ export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [dataTransferConsent, setDataTransferConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -61,6 +62,9 @@ export default function SignIn() {
     if (!USERNAME_RE.test(u)) return "Usernames can only use letters, numbers, - and _.";
     if (password.length < 8) return "Password must be at least 8 characters.";
     if (password !== confirm) return "Passwords don't match.";
+    if (!dataTransferConsent) {
+      return "Please confirm you consent to your data being processed outside your country.";
+    }
     return null;
   }
 
@@ -76,7 +80,7 @@ export default function SignIn() {
       if (isLogin) {
         await signIn(email.trim(), password);
       } else {
-        await signUp(name.trim(), username.trim(), email.trim(), password);
+        await signUp(name.trim(), username.trim(), email.trim(), password, dataTransferConsent);
       }
       router.replace("/home");
     } catch (err) {
@@ -194,24 +198,50 @@ export default function SignIn() {
               )}
 
               {!isLogin && (
-                <Text className="text-[11.5px] leading-4 text-faint">
-                  You must be at least 14 years old to use ThatFridge. By creating an
-                  account, you agree to our{" "}
-                  <Text
-                    className="font-semibold text-muted"
-                    onPress={() => Linking.openURL("https://thatfridge.com/terms")}
-                  >
-                    Terms
-                  </Text>{" "}
-                  and{" "}
-                  <Text
-                    className="font-semibold text-muted"
-                    onPress={() => Linking.openURL("https://thatfridge.com/privacy")}
-                  >
-                    Privacy Policy
+                <>
+                  <Text className="text-[11.5px] leading-4 text-faint">
+                    You must be at least 14 years old to use ThatFridge. By creating an
+                    account, you agree to our{" "}
+                    <Text
+                      className="font-semibold text-muted"
+                      onPress={() => Linking.openURL("https://thatfridge.com/terms")}
+                    >
+                      Terms
+                    </Text>{" "}
+                    and{" "}
+                    <Text
+                      className="font-semibold text-muted"
+                      onPress={() => Linking.openURL("https://thatfridge.com/privacy")}
+                    >
+                      Privacy Policy
+                    </Text>
+                    .
                   </Text>
-                  .
-                </Text>
+
+                  <Pressable
+                    className="flex-row items-start gap-2.5"
+                    onPress={() => setDataTransferConsent((v) => !v)}
+                  >
+                    <Ionicons
+                      name={dataTransferConsent ? "checkbox" : "square-outline"}
+                      size={18}
+                      color={dataTransferConsent ? "#26c6da" : "rgba(234,234,236,0.58)"}
+                      style={{ marginTop: 1 }}
+                    />
+                    <Text className="flex-1 text-[11.5px] leading-4 text-faint">
+                      I consent to my data (including chat messages and photos) being
+                      processed outside my country by ThatFridge's AI service providers, as
+                      described in the{" "}
+                      <Text
+                        className="font-semibold text-muted"
+                        onPress={() => Linking.openURL("https://thatfridge.com/privacy")}
+                      >
+                        Privacy Policy
+                      </Text>
+                      .
+                    </Text>
+                  </Pressable>
+                </>
               )}
 
               <Pressable
