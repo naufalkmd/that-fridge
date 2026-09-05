@@ -35,8 +35,9 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
   **Confirm the Paid Applications agreement shows "Active"** (bank + tax rows green) — processing
   takes ~1–2 days. IAPs can't be tested until it's Active.
 
-- [🟡] Domain + privacy/terms/support pages (2026-08-28). `apps/legal/` — **live at
-  `https://thatfridge.com`** + `www` with TLS. Placeholders filled (operator *Muhammad Naufal
+- [X] Domain + privacy/terms/support pages (2026-08-28). `apps/legal/` — **live at
+  `https://thatfridge.com`** + `www` with TLS, **now genuinely auto-redeploying on push to
+  `main`** (fixed 2026-09-05, see below). Placeholders filled (operator *Muhammad Naufal
   Kamaruddin*, Malaysian law). `api.thatfridge.com` → `167.172.88.75` (§2).
   `support@` + `privacy@thatfridge.com` route via Cloudflare Email Routing to
   `naufalkmd00@gmail.com` — test mail to both confirmed received. (Receive-only; to *send*
@@ -46,17 +47,15 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
   false since the social-notifications feature shipped; also added the `blocks` table (§ Guideline
   1.2 work) and Expo as a §4 data processor. Known gap, not fixed here: §11 promises material
   changes get "surfaced in the app," and nothing does that yet.
-  **Found 2026-09-05: "auto-redeploy on push to main" was never actually true.**
-  `.github/workflows/deploy-legal.yml` has failed on every single run since it was created
-  (`gh run list` shows 100% failure) — first on `wrangler-action@v3`'s default wrangler CLI
+  **Fixed 2026-09-05: "auto-redeploy on push to main" was never actually true until today.**
+  `.github/workflows/deploy-legal.yml` had failed on every single run since it was created
+  (`gh run list` showed 100% failure) — first on `wrangler-action@v3`'s default wrangler CLI
   not supporting an assets-only Worker with no `main` script (fixed: pinned `wranglerVersion:
-  "4"`), then on `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` never actually being added as
-  repo secrets — only `DEPLOY_HOST`/`DEPLOY_SSH_KEY`/`DEPLOY_USER`/`EXPO_TOKEN` exist
-  (confirmed via `gh secret list`). The live site has only ever reflected whatever got deployed
-  by hand once around 2026-08-28 — **every legal-page edit since then, including today's
-  Privacy Policy fix above, is sitting on `main` but not actually live.** Needs: generate a
-  Cloudflare API token (Edit Cloudflare Workers permission) + grab the Account ID, `gh secret
-  set` both, then re-run the workflow.
+  "4"`), then on `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` never actually having been added
+  as repo secrets. The live site had only ever reflected whatever got deployed by hand once
+  around 2026-08-28 — every legal-page edit since then, including this session's Privacy Policy
+  fix, sat on `main` invisibly until now. Both secrets added, workflow re-run, **confirmed live**
+  (`curl https://thatfridge.com/privacy/` shows the 5 Sept update).
 - [X] **Buy the PixelMix commercial licence** — bought via Sellfy ($25, 2026-08-28). EULA saved
   at `apps/mobile/assets/fonts/PixelMix-EULA.docx`. **Two follow-ups** (see
   `PixelMix-NOTES.md`): (a) the desktop EULA doesn't clearly grant app/web *embedding* — email
