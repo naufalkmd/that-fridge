@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -190,6 +191,27 @@ export default function SignIn() {
 
               {error && (
                 <Text className="text-[12.5px] font-semibold text-bad">{error}</Text>
+              )}
+
+              {!isLogin && (
+                <Text className="text-[11.5px] leading-4 text-faint">
+                  You must be at least 14 years old to use ThatFridge. By creating an
+                  account, you agree to our{" "}
+                  <Text
+                    className="font-semibold text-muted"
+                    onPress={() => Linking.openURL("https://thatfridge.com/terms")}
+                  >
+                    Terms
+                  </Text>{" "}
+                  and{" "}
+                  <Text
+                    className="font-semibold text-muted"
+                    onPress={() => Linking.openURL("https://thatfridge.com/privacy")}
+                  >
+                    Privacy Policy
+                  </Text>
+                  .
+                </Text>
               )}
 
               <Pressable

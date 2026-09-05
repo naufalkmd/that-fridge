@@ -246,8 +246,9 @@ post-launch OTA fast-follow.**
   Korean review does check the policy link.
 - [ ] **Malaysia PDPA (2010, amended 2024):** consent at sign-up, breach-notification process,
   name a data-protection contact. Current policy mostly covers this — add the contact.
-- [ ] **Minimum sign-up age 14+** (state in Terms + the register screen) to avoid PIPA/'13'
-  parental-consent requirements for minors.
+- [X] **Minimum sign-up age 14+** — Terms already had it (§2); added the same statement + a
+  Terms/Privacy link to the signup screen itself (`sign-in.tsx`, 2026-09-05), which had neither
+  before.
 - [ ] **Guideline 1.2 (UGC safety):** fridge sharing + username search + join-requests are
   invite-only (low risk), but add a **"block user"** action on the friend-search / join-request
   flow and a **report** path (email is acceptable) before submitting, as insurance.
