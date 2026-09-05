@@ -29,10 +29,12 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
 ## 1. Critical path — external accounts (Member A)
 
 - [X] **Apple Developer Program enrollment — Individual** — approved 2026-08-28, Team ID issued.
+
 - [🟡] **App Store Connect: Paid Apps Agreement + banking + tax** — W-8BEN submitted (Malaysian
   individual, no US treaty → 30% withholding on US sales only; FTIN = LHDN tax number).
   **Confirm the Paid Applications agreement shows "Active"** (bank + tax rows green) — processing
   takes ~1–2 days. IAPs can't be tested until it's Active.
+
 - [X] Domain + privacy/terms/support pages (2026-08-28). `apps/legal/` deployed as a
   Git-connected Cloudflare Worker (static assets); **live at `https://thatfridge.com`** +
   `www` with TLS, auto-redeploy on push to `main`. Placeholders filled (operator *Muhammad
@@ -50,6 +52,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
 - [X] **Sign in with Apple / Google.** Both flows built (`POST /auth/apple` + `/auth/google`
   with JWKS verification; mobile buttons that hide themselves until configured) and now fully
   configured — 2026-09-05.
+
   - [X] **Apple** — "Sign In with Apple" capability enabled on App ID `test.thatfridge.app`.
   - [X] **Google** — Cloud project + OAuth consent (Google Auth Platform) created, iOS + Web
     OAuth clients created. `GOOGLE_IOS_URL_SCHEME` + `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` set on
@@ -57,6 +60,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started · 🔒 blocked on external 
     (confirmed via `php artisan config:show services.google.client_ids`). New native build
     shipped with both. Google's sign-in button also restyled to match Apple's exact button
     metrics (fixed height 48, pure white, same corner radius — was visibly mismatched before).
+
   - Details: `apps/mobile/RELEASE.md` → "Sign in with Apple / Google".
 
 **Don't:** market ThatFridge as "launched" anywhere (public TestFlight link, ProductHunt,
@@ -69,19 +73,19 @@ Private TestFlight is fine.
 
 All USD, approximate. "Recurring" = keep paying to keep the app live.
 
-| Item                                    | Cost         | Type      | Status   | Notes                                                                        |
-| --------------------------------------- | ------------ | --------- | -------- | ---------------------------------------------------------------------------- |
-| Apple Developer Program                 | $99 / yr     | Recurring | ✅ Paid  | Individual enrollment                                                        |
-| Domain —`thatfridge.com`             | ~$10.46 / yr | Recurring | ✅ Paid  | API host + privacy/terms/support pages                                       |
-| PixelMix commercial font licence        | $25          | One-time  | ✅ Paid  | via Sellfy 2026-08-28; embedding confirmation still pending (§1)            |
-| VPS — Laravel API + Postgres + Redis   | $21.60 / mo  | Recurring | ✅ Live  | DigitalOcean **SGP1**, 2 vCPU / 2 GB ($18) + weekly backups ($3.60). `api.thatfridge.com` → `167.172.88.75`. Deployed 2026-08-28. |
-| Privacy / terms / support pages hosting | $0           | —        | ✅ Live | Cloudflare Workers static assets (free), `thatfridge.com`                     |
-| Cloudflare Email Routing                 | $0           | —        | ✅ Live | `support@` / `privacy@thatfridge.com` → Gmail                                 |
-| Sentry (crash monitoring)               | $0           | —        | ⬜       | Free developer tier (§2)                                                    |
-| RevenueCat                              | $0           | —        | ✅       | Free under $2.5k tracked revenue / mo                                        |
-| Expo EAS builds                         | $0           | —        | ✅       | Free tier covers launch build cadence                                        |
-| Devpost / Shipaton entry                | $0           | —        | —       | Free                                                                         |
-| Google Play Console                     | $25          | One-time  | ⬜ Later | Post-launch — Android deferred                                              |
+| Item                                    | Cost         | Type      | Status   | Notes                                                                                                                                       |
+| --------------------------------------- | ------------ | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Apple Developer Program                 | $99 / yr     | Recurring | ✅ Paid  | Individual enrollment                                                                                                                       |
+| Domain —`thatfridge.com`             | ~$10.46 / yr | Recurring | ✅ Paid  | API host + privacy/terms/support pages                                                                                                      |
+| PixelMix commercial font licence        | $25          | One-time  | ✅ Paid  | via Sellfy 2026-08-28; embedding confirmation still pending (§1)                                                                           |
+| VPS — Laravel API + Postgres + Redis   | $21.60 / mo  | Recurring | ✅ Live  | DigitalOcean**SGP1**, 2 vCPU / 2 GB ($18) + weekly backups ($3.60). `api.thatfridge.com` → `167.172.88.75`. Deployed 2026-08-28. |
+| Privacy / terms / support pages hosting | $0           | —        | ✅ Live  | Cloudflare Workers static assets (free),`thatfridge.com`                                                                                  |
+| Cloudflare Email Routing                | $0           | —        | ✅ Live  | `support@` / `privacy@thatfridge.com` → Gmail                                                                                          |
+| Sentry (crash monitoring)               | $0           | —        | ⬜       | Free developer tier (§2)                                                                                                                   |
+| RevenueCat                              | $0           | —        | ✅       | Free under $2.5k tracked revenue / mo                                                                                                       |
+| Expo EAS builds                         | $0           | —        | ✅       | Free tier covers launch build cadence                                                                                                       |
+| Devpost / Shipaton entry                | $0           | —        | —       | Free                                                                                                                                        |
+| Google Play Console                     | $25          | One-time  | ⬜ Later | Post-launch — Android deferred                                                                                                             |
 
 **Paid to date: ~$135** (Apple $99 + domain ~$10.46 + PixelMix $25), plus the VPS now running
 at **$21.60/mo**. Possibly still due: a transactional-email plan (most have a free tier).
@@ -103,9 +107,11 @@ Ongoing after launch: ~$99/yr (Apple) + ~$10/yr (domain) + $21.60/mo (VPS) ≈ *
 - [ ] Copy backups off-box (DO weekly droplet snapshot is on — add pg_dump → object storage).
 - [X] Seed a stable **reviewer demo account** on prod — `keira@thatfridge.test` / `password123`
   with a seeded fridge + 7 curated recipes. **⚠ Change the password before submitting.**
+
 - [🟡] Sentry on the Laravel app — `sentry/sentry-laravel` installed, wired into
   `bootstrap/app.php`, no-ops until `SENTRY_LARAVEL_DSN` is set (2026-09-05). Left: create a
   Sentry project, paste the DSN into the server `.env`, redeploy.
+
 - [X] **Transactional email — mailer wired up and verified live** (2026-09-05). Went with
   **Resend**, not SMTP via `support@thatfridge.com` — that address is Cloudflare Email Routing
   (receive-only forwarding to Gmail), not an actual sendable mailbox, so the SMTP option in this
@@ -151,16 +157,20 @@ multiple / shared fridges, advanced notification tuning.
 
 - [🟡] **App Store Connect → Subscriptions.** One group ("ThatFridge Pro"), created. Two
   products, **permanent IDs** (never reusable — don't typo):
+
   - [X] `thatfridge_pro_monthly` — 1 month, price **$2.99**, 7-day free trial, English
     localization, review screenshot — status **Ready to Submit** (2026-09-05).
   - [X] `thatfridge_pro_yearly` — 1 year, price **$19.99**, 7-day free trial, English
     localization, review screenshot — status **Ready to Submit** (2026-09-05).
+
   - Both show Apple's "first subscription must be submitted with a new app version" notice —
     expected; they ride along with the real App Store version submission later (§5), not
     submitted standalone.
+
   - [ ] **Per-storefront price points** still not set: Malaysia `RM12.90` / `RM89`; South
     Korea `₩3,900` / `₩25,000` (round the ugly auto-conversions).
   - [ ] Korean + Malay localizations — skippable for v1, add later as a metadata update (§4a).
+
 - [X] RevenueCat: real **App Store app** added (`test.thatfridge.app`) alongside the test
   store — In-App Purchase key configured + validated (2026-09-05). `thatfridge_pro_monthly` /
   `thatfridge_pro_yearly` registered as RC products, attached to the `thatfridge_pro`
@@ -228,8 +238,7 @@ multiple / shared fridges, advanced notification tuning.
   - `.github/workflows/eas-update.yml` — merge to `main` touching `apps/mobile/**` /
     `packages/**` → typecheck → `eas update --branch production` (OTA, testers get it on
     next launch).
-  - `.github/workflows/testflight.yml` — `git tag v*` or manual → `eas build -p ios
-    --profile production --auto-submit` to TestFlight.
+  - `.github/workflows/testflight.yml` — `git tag v*` or manual → `eas build -p ios --profile production --auto-submit` to TestFlight.
   - One-time setup in `apps/mobile/RELEASE.md` (ASC API key → `eas credentials`, `EXPO_TOKEN`
     secret, `ascAppId` — **done**). Workflow: `apps/mobile/CONTRIBUTING.md`.
 
@@ -256,6 +265,7 @@ post-launch OTA fast-follow.**
   region set — no reason to geo-restrict).
 - [ ] **Pricing:** create the sub price points; App Store + RevenueCat auto-localize to MYR /
   KRW. Confirm the KRW price reads as a clean number and is VAT-inclusive (Apple handles VAT).
+
 - [🟡] **Korea PIPA:** privacy contact already named (`apps/legal/privacy/index.html` §10 —
   Muhammad Naufal Kamaruddin, privacy@thatfridge.com), checked 2026-09-05. Still genuinely open:
   - [ ] **Korean-language privacy policy** — `/privacy/ko/` is still a 404 (confirmed live,
@@ -271,6 +281,7 @@ post-launch OTA fast-follow.**
     **Known gap:** only covers email/password sign-up — `AuthController::apple()`/`google()`
     create users too (social sign-in) and don't go through this consent gate. Fixing that needs
     a pre-OAuth consent interstitial for new users, a bigger UX task not done here.
+
 - [X] **Malaysia PDPA (2010, amended 2024):** already covered — consent-at-sign-up language,
   breach-notification commitment, and a named contact (privacy@thatfridge.com) all already in
   `apps/legal/privacy/index.html` §10. Checked 2026-09-05, nothing to add.
@@ -296,12 +307,14 @@ post-launch OTA fast-follow.**
   rejects *any* alpha channel on the 1024² upload regardless). Flattened to RGB 2026-09-05 —
   same art, ready to upload as-is. Corners are already square (Apple applies its own mask).
 - [ ] iPhone **6.9" + 6.5"** screenshots — **no device frame**, 1179×2556.
+
 - [🟡] Store listing: description, subtitle, keywords, support URL — **drafted** in
   `apps/mobile/STORE_LISTING.md` (2026-09-05), needs a review pass before pasting into ASC.
 - [🟡] App Privacy ("nutrition labels") form — **drafted** in `apps/mobile/STORE_LISTING.md`,
   grounded in the actual data the app/backend collect. Caught and fixed one real gap while
   drafting: voice dictation wasn't actually on-device (RELEASE.md's claim didn't match
   `voice.ts`) — `requiresOnDeviceRecognition: true` added 2026-09-05, now true.
+
 - [ ] Age rating.
 - [ ] App Review notes with demo credentials.
 - [ ] Guideline 4.2 rebuttal ready (native camera, notifications, haptics, native nav) in case
@@ -405,7 +418,9 @@ open; code already had both.)
 - [ ] Icon 1024², splash, iPhone 6.9" + 6.5" screenshots (no device frame — 1179×2556)
 - [ ] App Privacy form complete and accurate · Age rating done
 - [ ] Demo account + review notes filled in
+
 - [🟡] TestFlight build validated by all 4 members on real devices — **build 1 (v1.0.0) submitted 2026-08-28** via `eas build/submit`; processing at App Store Connect. Add internal testers + a "What to Test" note.
+
 - [ ] Crash-free session confirmed in Sentry
 - [ ] Version 1.0.0, build number set, release set to **manual**
 - [X] EAS Update production channel wired · TestFlight CI (`.github/workflows/testflight.yml`)
