@@ -19,6 +19,19 @@ class DatabaseSeeder extends Seeder
         // Explicit create (not User::factory()) so this seeder runs on a production box
         // where fakerphp/faker — a require-dev package — isn't installed. updateOrCreate
         // keyed on email keeps re-runs idempotent.
+        // Demo/reviewer accounts. The password is never committed — set DEMO_USER_PASSWORD in
+        // the server .env (it's in a shared password manager) and re-run `db:seed --force` to
+        // rotate it. The 'password123' fallback is for local dev only, where these boxes are
+        // throwaway. Keira is the App Review demo account (see apps/mobile/STORE_LISTING.md §5).
+        // Guard against silently reseeding the old public 'password123' onto prod. `env()` is
+        // read here (not config()) so it works right after `config:clear` during a rotation.
+        if (app()->environment('production') && empty(env('DEMO_USER_PASSWORD'))) {
+            throw new \RuntimeException(
+                'Set DEMO_USER_PASSWORD in .env before seeding in production '
+                . '(then: php artisan config:clear && php artisan db:seed --force).'
+            );
+        }
+        $demoPassword = env('DEMO_USER_PASSWORD', 'password123');
         foreach ([
             ['name' => 'Keira', 'email' => 'keira@thatfridge.test', 'username' => 'keira'],
             ['name' => 'Hazim', 'email' => 'hazim@thatfridge.test', 'username' => 'hazim'],
@@ -27,7 +40,7 @@ class DatabaseSeeder extends Seeder
         ] as $attrs) {
             User::updateOrCreate(
                 ['email' => $attrs['email']],
-                [...$attrs, 'password' => 'password123', 'email_verified_at' => now()],
+                [...$attrs, 'password' => $demoPassword, 'email_verified_at' => now()],
             );
         }
 
