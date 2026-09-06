@@ -84,6 +84,17 @@ Korea localization is a post-approval fast-follow.
   Reset on the RevenueCat renewal date (or ISO-month). Update paywall + App Store copy: drop
   the literal "unlimited", use fair-use wording or an allowance. Floor `throttle:15,1` already
   covers hammering; this is margin protection against the heavy-browsing tail.
+  - Stopgap now: set a hard monthly credit limit on the OpenRouter *and* fal.ai keys so total
+    spend is bounded regardless.
+- [ ] AI recipe images + one shared image budget. Give recipes an AI-generated hero image
+  (`image_url` on `recipes`, migration, regenerate button in `recipe-form`, render on the card
+  + detail). Generate with `fal-ai/flux/schnell` (same model as icons, no rembg pass → ~$0.003).
+  **All AI image generation shares one weekly free budget**, not a per-feature limit: rename the
+  `generated_icons` concept to a shared `generated_images` table with a `kind` (`icon`/`recipe`)
+  and a `credits` int; the free-tier check becomes `SUM(credits) since weekStart <= 5` instead
+  of `COUNT(*)`. Icon = 1 credit, recipe image (schnell) = 1 credit. Only bump the recipe image
+  to 2 credits if it's ever moved to `flux/dev`/pro (~5-8× the cost). Pro folds under the spend
+  ceiling above.
 - [ ] Sentry DSN (crash monitoring is scaffolded, currently a no-op).
 - [ ] `apps/web/lib/thatfridge` → `packages/core` extraction (most already moved).
 - [ ] `react-i18next` + `expo-localization` — ship Korean (and optionally Malay) UI as an OTA,
