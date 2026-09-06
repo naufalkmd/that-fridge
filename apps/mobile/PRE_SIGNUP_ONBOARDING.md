@@ -210,9 +210,11 @@ funnel = flying blind), Phase 2 is the first user-visible cut, Phases 3–5 are 
 - Wired: `_layout` (`initAnalytics` + `app_open`), `auth` (`signup_completed` / `login_completed`
   / `auth_completed` with method + `from: "direct"`), `onboarding` (`onboarding_started`,
   `_slide_viewed`, `_fridge_step_viewed`, `_fridge_created` / `_skipped`, `_finished` / `_skipped`).
-- Tests: `AnalyticsControllerTest` (guest, attributed, batch cap, missing name, props clamp).
-- **Left for later:** a query/dashboard to actually read the funnel; a couple of weeks of
-  baseline `direct` data before Phase 3 ships.
+- `php artisan app:onboarding-funnel [--days=14]` — reads the funnel straight from
+  `analytics_events` (step counts + unique installs, auth-method split, unknown-event
+  surfacing). Run it on the VPS (`cd /var/www/thatfridge/backend && php artisan …`).
+- Tests: `AnalyticsControllerTest` + `OnboardingFunnelTest`.
+- **Left for later:** a couple of weeks of baseline `direct` data before Phase 3 ships.
 
 ### Phase 2 — Plumbing  ·  DONE 2026-09-07  ·  no user-visible change
 
