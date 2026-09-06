@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -15,6 +15,7 @@ import {
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useInventory } from "@/lib/inventory";
+import { useScope } from "@/lib/scope";
 import { useSocial } from "@/lib/social";
 import { SheetHeader } from "@/components/sheet";
 
@@ -42,6 +43,7 @@ export default function ManageFridge() {
   const router = useRouter();
   const { user } = useAuth();
   const { fridges, refresh } = useInventory();
+  const { scope, setScope } = useScope();
   const { refresh: refreshSocial } = useSocial();
 
   const fridge = fridges.find((f) => f.id === id);
@@ -141,10 +143,13 @@ export default function ManageFridge() {
 
   function confirmLeaveOrDelete() {
     const owner = isOwner;
+    const isLast = fridges.length <= 1;
     Alert.alert(
       owner ? "Delete fridge" : "Leave fridge",
       owner
-        ? "This permanently deletes the fridge and everything in it."
+        ? isLast
+          ? "This is your only fridge. Deleting it removes everything in it — a fresh empty fridge is made the next time you add an item."
+          : "This permanently deletes the fridge and everything in it."
         : "You'll lose access to this shared fridge.",
       [
         { text: "Cancel", style: "cancel" },
@@ -157,8 +162,9 @@ export default function ManageFridge() {
               await Haptics.notificationAsync(
                 Haptics.NotificationFeedbackType.Success,
               );
-              await refresh();
+              if (scope === id) setScope("all");
               router.back();
+              await refresh();
             } catch (e) {
               Alert.alert("Error", describeError(e, "Couldn't do that."));
             }
@@ -167,8 +173,6 @@ export default function ManageFridge() {
       ],
     );
   }
-
-  const canRemove = useMemo(() => fridges.length > 1, [fridges]);
 
   if (!fridge) {
     return (
@@ -364,16 +368,14 @@ export default function ManageFridge() {
           </>
         )}
 
-        {(!isOwner || canRemove) && (
-          <Pressable
-            onPress={confirmLeaveOrDelete}
-            style={{ alignItems: "center", paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: `${BAD}66` }}
-          >
-            <Text style={{ fontSize: 13, fontWeight: "700", color: BAD }}>
-              {isOwner ? "Delete fridge" : "Leave fridge"}
-            </Text>
-          </Pressable>
-        )}
+        <Pressable
+          onPress={confirmLeaveOrDelete}
+          style={{ alignItems: "center", paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: `${BAD}66` }}
+        >
+          <Text style={{ fontSize: 13, fontWeight: "700", color: BAD }}>
+            {isOwner ? "Delete fridge" : "Leave fridge"}
+          </Text>
+        </Pressable>
       </ScrollView>
     </>
   );
