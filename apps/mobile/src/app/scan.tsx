@@ -5,7 +5,6 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -16,10 +15,16 @@ import * as Haptics from "expo-haptics";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Animated, { FadeIn } from "react-native-reanimated";
 
-import { ApiError, guessFoodIcon, STORAGE_LOCATIONS } from "@thatfridge/core";
+import { ApiError, guessFoodIcon } from "@thatfridge/core";
 import { useInventory } from "@/lib/inventory";
 import { FoodIcon } from "@/components/food-icon";
-import { stashScans, type ScannedItem } from "@/lib/scanQueue";
+import {
+  ItemCard,
+  blankDraft,
+  isoInDays,
+  stashDrafts,
+  useDraftItems,
+} from "@/components/draft-item";
 
 const isExpoGo = Constants.appOwnership === "expo";
 // A barcode sits in frame for many consecutive callbacks — ignore repeats of the same
@@ -27,11 +32,8 @@ const isExpoGo = Constants.appOwnership === "expo";
 const DEDUPE_MS = 2500;
 
 const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
 const HAIRLINE = "rgba(255,255,255,0.12)";
-const ACCENT = "#26c6da";
 const INK = "#eaeaec";
-const FAINT = "rgba(234,234,236,0.4)";
 
 type ScanResult =
   | { kind: "ok"; code: string; name: string }
@@ -42,20 +44,22 @@ type ScanResult =
 export default function Scan() {
   const router = useRouter();
   const { lookupBarcode } = useInventory();
+  const drafts = useDraftItems(() => []);
   const [permission, requestPermission] = useCameraPermissions();
-  const [scanned, setScanned] = useState<ScannedItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
-  const [editing, setEditing] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const lastRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
+  const codesRef = useRef<Set<string>>(new Set());
   const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    drafts.refetchLibrary();
+    return () => {
       if (resultTimer.current) clearTimeout(resultTimer.current);
-    },
-    [],
-  );
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showResult = useCallback((r: ScanResult) => {
     setResult(r);
@@ -63,29 +67,16 @@ export default function Scan() {
     resultTimer.current = setTimeout(() => setResult(null), 2600);
   }, []);
 
-  const patch = useCallback(
-    (i: number, next: Partial<ScannedItem>) =>
-      setScanned((prev) =>
-        prev.map((s, idx) => (idx === i ? { ...s, ...next } : s)),
-      ),
-    [],
-  );
-
-  const removeAt = useCallback((i: number) => {
-    setScanned((prev) => prev.filter((_, idx) => idx !== i));
-    setEditing(null);
-  }, []);
-
   const onScanned = useCallback(
     async ({ data }: { data: string }) => {
       const now = Date.now();
-      if (busy || editing !== null) return;
+      if (busy || editingId !== null) return;
       if (lastRef.current.code === data && now - lastRef.current.at < DEDUPE_MS) {
         return;
       }
       lastRef.current = { code: data, at: now };
 
-      if (scanned.some((s) => s.barcode === data)) {
+      if (codesRef.current.has(data)) {
         void Haptics.selectionAsync();
         showResult({ kind: "dupe", code: data });
         return;
@@ -95,36 +86,25 @@ export default function Scan() {
       try {
         const s = await lookupBarcode(data);
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setScanned((prev) => [
-          ...prev,
-          {
-            barcode: data,
+        codesRef.current.add(data);
+        drafts.append(
+          blankDraft({
             name: s.name,
             icon: s.icon || guessFoodIcon(s.name) || "generic",
-            iconUrl: s.image_url ?? null,
-            qty: 1,
-            location: s.location ?? null,
-            shelfLifeDays: s.default_shelf_life_days ?? null,
-          },
-        ]);
+            location: s.location ?? "fridge",
+            expiryDate: s.default_shelf_life_days
+              ? isoInDays(s.default_shelf_life_days)
+              : null,
+          }),
+        );
         showResult({ kind: "ok", code: data, name: s.name });
       } catch (err) {
         if (err instanceof ApiError && err.status === 404) {
           void Haptics.notificationAsync(
             Haptics.NotificationFeedbackType.Warning,
           );
-          setScanned((prev) => [
-            ...prev,
-            {
-              barcode: data,
-              name: "",
-              icon: "generic",
-              iconUrl: null,
-              qty: 1,
-              location: null,
-              shelfLifeDays: null,
-            },
-          ]);
+          codesRef.current.add(data);
+          drafts.append(blankDraft({ name: "" }));
           showResult({ kind: "unknown", code: data });
         } else {
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -134,15 +114,16 @@ export default function Scan() {
         setBusy(false);
       }
     },
-    [busy, editing, scanned, lookupBarcode, showResult],
+    [busy, editingId, lookupBarcode, drafts, showResult],
   );
 
   function done() {
-    if (scanned.length === 0) {
+    const items = drafts.items;
+    if (items.length === 0) {
       router.back();
       return;
     }
-    stashScans(scanned);
+    stashDrafts(items);
     router.replace("/add?method=barcode-batch");
   }
 
@@ -189,7 +170,8 @@ export default function Scan() {
     );
   }
 
-  const editItem = editing !== null ? scanned[editing] : null;
+  const items = drafts.items;
+  const editing = editingId ? items.find((d) => d.id === editingId) : undefined;
 
   return (
     <View className="flex-1 bg-black">
@@ -209,19 +191,18 @@ export default function Scan() {
         <Text className="rounded-lg bg-black/60 px-4 py-2 text-center text-[13px] font-semibold text-white">
           {busy
             ? "Looking up…"
-            : editing !== null
+            : editing
               ? "Editing — scanning paused"
-              : scanned.length > 0
-                ? `${scanned.length} scanned — tap one to edit, or keep going`
+              : items.length > 0
+                ? `${items.length} scanned — tap one to edit, or keep going`
                 : "Point at a barcode"}
         </Text>
       </SafeAreaView>
 
-      {/* per-scan result card */}
-      {result && editing === null && (
+      {result && !editing && (
         <View
           className="absolute inset-x-0 items-center"
-          style={{ top: "34%" }}
+          style={{ top: "32%" }}
           pointerEvents="none"
         >
           <ScanResultCard result={result} />
@@ -232,27 +213,49 @@ export default function Scan() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="absolute inset-x-0 bottom-0"
       >
-        <SafeAreaView className="items-stretch gap-3 p-4" edges={["bottom"]}>
-          {editItem ? (
-            <EditPanel
-              key={editing}
-              item={editItem}
-              onChange={(next) => patch(editing!, next)}
-              onRemove={() => removeAt(editing!)}
-              onClose={() => setEditing(null)}
-            />
+        <SafeAreaView className="gap-3 p-4" edges={["bottom"]}>
+          {editing ? (
+            <ScrollView
+              style={{ maxHeight: 440 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <ItemCard
+                item={editing}
+                autoFocus={!editing.name}
+                onChange={(p) => drafts.set(editing.id, p)}
+                onRemove={() => {
+                  drafts.remove(editing.id);
+                  setEditingId(null);
+                }}
+                onAutoFill={() => drafts.fillOne(editing)}
+                autoFilling={drafts.fillingId === editing.id || drafts.fillingAll}
+                onScanDate={() => drafts.scanDate(editing)}
+                scanningDate={drafts.scanningDateId === editing.id}
+                library={drafts.library}
+                refetchLibrary={drafts.refetchLibrary}
+              />
+              <Pressable
+                onPress={() => setEditingId(null)}
+                className="mt-2 items-center rounded-lg bg-accent py-3 active:opacity-80"
+              >
+                <Text className="font-bold uppercase tracking-wide text-[#0a0a0c]">
+                  Done editing
+                </Text>
+              </Pressable>
+            </ScrollView>
           ) : (
             <>
-              {scanned.length > 0 && (
+              {items.length > 0 && (
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={{ gap: 8, paddingHorizontal: 4 }}
                 >
-                  {scanned.map((s, i) => (
+                  {items.map((d) => (
                     <Pressable
-                      key={s.barcode}
-                      onPress={() => setEditing(i)}
+                      key={d.id}
+                      onPress={() => setEditingId(d.id)}
                       style={{
                         flexDirection: "row",
                         alignItems: "center",
@@ -267,21 +270,21 @@ export default function Scan() {
                       }}
                     >
                       <FoodIcon
-                        icon={s.icon}
-                        iconUrl={s.iconUrl}
-                        name={s.name || "item"}
+                        icon={d.icon}
+                        iconUrl={d.iconUrl}
+                        name={d.name || "item"}
                         size={20}
                       />
                       <Text
                         style={{
                           fontSize: 12.5,
                           fontWeight: "700",
-                          color: s.name ? INK : "#f5a623",
+                          color: d.name ? INK : "#f5a623",
                         }}
                         numberOfLines={1}
                       >
-                        {s.name || "Name it"}
-                        {s.qty > 1 ? ` ×${s.qty}` : ""}
+                        {d.name || "Name it"}
+                        {d.qty > 1 ? ` ×${d.qty}` : ""}
                       </Text>
                     </Pressable>
                   ))}
@@ -296,13 +299,13 @@ export default function Scan() {
                 </Pressable>
                 <Pressable
                   onPress={done}
-                  disabled={scanned.length === 0}
+                  disabled={items.length === 0}
                   className="flex-row items-center gap-2 rounded-lg bg-accent px-6 py-3 active:opacity-80"
-                  style={scanned.length === 0 ? { opacity: 0.45 } : undefined}
+                  style={items.length === 0 ? { opacity: 0.45 } : undefined}
                 >
                   <MaterialCommunityIcons name="check" size={16} color="#0a0a0c" />
                   <Text className="font-bold uppercase tracking-wide text-[#0a0a0c]">
-                    {scanned.length > 0 ? `Done (${scanned.length})` : "Done"}
+                    {items.length > 0 ? `Done (${items.length})` : "Done"}
                   </Text>
                 </Pressable>
               </View>
@@ -310,138 +313,6 @@ export default function Scan() {
           )}
         </SafeAreaView>
       </KeyboardAvoidingView>
-    </View>
-  );
-}
-
-function EditPanel({
-  item,
-  onChange,
-  onRemove,
-  onClose,
-}: {
-  item: ScannedItem;
-  onChange: (next: Partial<ScannedItem>) => void;
-  onRemove: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <View
-      style={{
-        backgroundColor: SURFACE,
-        borderWidth: 1,
-        borderColor: HAIRLINE,
-        borderRadius: 16,
-        padding: 14,
-        gap: 12,
-      }}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <FoodIcon
-          icon={item.icon}
-          iconUrl={item.iconUrl}
-          name={item.name || "item"}
-          size={30}
-        />
-        <TextInput
-          value={item.name}
-          onChangeText={(name) => onChange({ name })}
-          placeholder="Item name"
-          placeholderTextColor={FAINT}
-          autoFocus={!item.name}
-          style={{
-            flex: 1,
-            fontSize: 15,
-            fontWeight: "600",
-            color: INK,
-            paddingVertical: 4,
-          }}
-        />
-        <Pressable onPress={onClose} hitSlop={10}>
-          <MaterialCommunityIcons name="check" size={20} color={ACCENT} />
-        </Pressable>
-      </View>
-
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: SURFACE2,
-            borderRadius: 8,
-            paddingHorizontal: 4,
-          }}
-        >
-          <Pressable
-            onPress={() => onChange({ qty: Math.max(1, item.qty - 1) })}
-            hitSlop={6}
-            style={{ padding: 9 }}
-          >
-            <MaterialCommunityIcons name="minus" size={15} color={INK} />
-          </Pressable>
-          <Text
-            style={{
-              minWidth: 18,
-              textAlign: "center",
-              fontSize: 14,
-              fontWeight: "800",
-              color: INK,
-            }}
-          >
-            {item.qty}
-          </Text>
-          <Pressable
-            onPress={() => onChange({ qty: item.qty + 1 })}
-            hitSlop={6}
-            style={{ padding: 9 }}
-          >
-            <MaterialCommunityIcons name="plus" size={15} color={INK} />
-          </Pressable>
-        </View>
-
-        <View style={{ flex: 1, flexDirection: "row", gap: 6 }}>
-          {STORAGE_LOCATIONS.map((l) => {
-            const on = item.location === l.key;
-            return (
-              <Pressable
-                key={l.key}
-                onPress={() => onChange({ location: l.key })}
-                style={{
-                  flex: 1,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: 8,
-                  paddingVertical: 10,
-                  backgroundColor: on ? l.color : SURFACE2,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 11.5,
-                    fontWeight: "700",
-                    color: on ? "#fff" : FAINT,
-                  }}
-                >
-                  {l.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <Pressable onPress={onRemove} hitSlop={6}>
-          <Text style={{ fontSize: 12.5, fontWeight: "700", color: "#ff5567" }}>
-            Remove
-          </Text>
-        </Pressable>
-        <Pressable onPress={onClose} hitSlop={6}>
-          <Text style={{ fontSize: 12.5, fontWeight: "700", color: ACCENT }}>
-            Done editing
-          </Text>
-        </Pressable>
-      </View>
     </View>
   );
 }
@@ -504,8 +375,7 @@ function ScanResultCard({ result }: { result: ScanResult }) {
       style={{
         backgroundColor: "#fff",
         borderRadius: 14,
-        paddingTop: 12,
-        paddingBottom: 12,
+        paddingVertical: 12,
         paddingHorizontal: 18,
         alignItems: "center",
         gap: 5,
