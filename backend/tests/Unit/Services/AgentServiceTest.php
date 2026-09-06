@@ -241,6 +241,92 @@ class AgentServiceTest extends TestCase
         });
     }
 
+    public function test_chat_offers_the_fetch_url_tool_on_a_normal_message(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'ok']]],
+        ], 200)]);
+
+        app(AgentService::class)->chat('what should I cook?', 'Chef');
+
+        Http::assertSent(function ($request) {
+            $tools = $request->data()['tools'] ?? [];
+
+            return count($tools) === 1 && $tools[0]['function']['name'] === 'fetch_url';
+        });
+    }
+
+    public function test_chat_does_not_offer_tools_on_a_compact_call(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'ok']]],
+        ], 200)]);
+
+        app(AgentService::class)->chat('hi', 'Chef', null, null, true);
+
+        Http::assertSent(fn ($request) => ! isset($request->data()['tools']));
+    }
+
+    public function test_chat_fetches_a_link_the_user_shares_and_answers_from_the_page(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake([
+            '1.1.1.1/*' => Http::response(
+                '<html><body><h1>Carbonara</h1><p>Spaghetti, eggs, pecorino, black pepper.</p></body></html>',
+                200,
+            ),
+            'openrouter.ai/*' => Http::sequence()
+                ->push(['choices' => [['message' => [
+                    'role' => 'assistant',
+                    'content' => null,
+                    'tool_calls' => [[
+                        'id' => 'call_1',
+                        'type' => 'function',
+                        'function' => ['name' => 'fetch_url', 'arguments' => '{"url":"https://1.1.1.1/recipe"}'],
+                    ]],
+                ]]]])
+                ->push(['choices' => [['message' => [
+                    'content' => 'That link is a carbonara - spaghetti, eggs, pecorino, black pepper.',
+                ]]]]),
+        ]);
+
+        $result = app(AgentService::class)->chat('save a recipe card from https://1.1.1.1/recipe', 'Chef');
+
+        $this->assertFalse($result['mocked']);
+        $this->assertSame(
+            'That link is a carbonara - spaghetti, eggs, pecorino, black pepper.',
+            $result['agent_response'],
+        );
+        Http::assertSent(fn ($request) => str_contains($request->url(), '1.1.1.1'));
+    }
+
+    public function test_chat_reports_back_when_a_shared_link_cannot_be_fetched(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake([
+            '1.0.0.1/*' => Http::response('bot wall', 403),
+            'openrouter.ai/*' => Http::sequence()
+                ->push(['choices' => [['message' => [
+                    'role' => 'assistant',
+                    'content' => null,
+                    'tool_calls' => [[
+                        'id' => 'call_1',
+                        'type' => 'function',
+                        'function' => ['name' => 'fetch_url', 'arguments' => '{"url":"https://1.0.0.1/v/123"}'],
+                    ]],
+                ]]]])
+                ->push(['choices' => [['message' => [
+                    'content' => "I couldn't open that link - paste the recipe text and I'll make the card.",
+                ]]]]),
+        ]);
+
+        $result = app(AgentService::class)->chat('recipe from https://1.0.0.1/v/123', 'Chef');
+
+        $this->assertStringContainsString('paste the recipe text', $result['agent_response']);
+    }
+
     public function test_suggest_item_details_falls_back_to_the_lookup_table_without_an_api_key(): void
     {
         config(['services.openrouter.key' => null]);

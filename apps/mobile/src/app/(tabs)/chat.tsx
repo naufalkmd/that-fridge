@@ -51,7 +51,7 @@ const FAINT = "rgba(234,234,236,0.34)";
 
 const GREETING: Msg = {
   role: "agent",
-  text: "Hi! Ask me anything about what's in your fridge.",
+  text: "Hi! Ask me anything about what's in your fridge — or paste a recipe link and I'll turn it into a card.",
 };
 
 type Msg = {

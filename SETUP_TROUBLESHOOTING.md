@@ -2,7 +2,7 @@
 
 Get ThatFridge running locally, plus every wall we've actually hit and the fix that worked.
 
-_Last updated: 2026-08-30._
+_Last updated: 2026-09-06._
 
 ## Where the other docs live
 
@@ -379,6 +379,26 @@ Entitlement id is `thatfridge_pro`. See `TO_DO.md` §3 for the full dashboard ch
 
 You hot-reloaded after installing `react-native-purchases`. Stop Metro, rebuild the dev
 client, restart.
+
+---
+
+## Quick Chat browsing
+
+### Chat replies that read a link 502/504 or hang for a minute
+
+Quick Chat can call the `fetch_url` tool to read a link the user shared (`AgentService::runWithTools`),
+which chains up to 3 model calls + 2 page fetches in one request. nginx's default
+`fastcgi_read_timeout` is 60s and that's occasionally not enough. Fix on the VPS: add
+`fastcgi_read_timeout 120s;` inside the `location ~ \.php$` block of
+`/etc/nginx/sites-available/api.thatfridge.com`, then `sudo nginx -t && sudo systemctl reload nginx`.
+(Already in `backend/DEPLOY.md`'s sample config.) The loop caps are `MAX_FETCHES` / `MAX_TOOL_ROUNDS`
+in `AgentService` if it needs tightening further.
+
+### A pasted TikTok / Instagram link "couldn't be read"
+
+Expected. Those sites serve a bot wall with no recipe text; `WebContentService` best-effort
+scrapes the caption JSON but usually gets nothing. YouTube works when the recipe is in the
+video description. Recipe blogs/sites work well. The chat tells the user to paste the text.
 
 ---
 

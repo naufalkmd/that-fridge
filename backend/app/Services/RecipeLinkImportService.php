@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -13,7 +12,10 @@ use Illuminate\Support\Facades\Log;
  */
 class RecipeLinkImportService
 {
-    public function __construct(protected OpenRouterClient $client) {}
+    public function __construct(
+        protected OpenRouterClient $client,
+        protected WebContentService $web,
+    ) {}
 
     private const CATEGORIES = ['breakfast', 'lunch', 'dinner', 'dessert', 'snack', 'quick'];
 
@@ -23,28 +25,14 @@ class RecipeLinkImportService
             return ['found' => false, 'reason' => 'no_api_key'];
         }
 
-        if (! $this->isSafeUrl($url)) {
-            return ['found' => false, 'reason' => 'unsafe_url'];
-        }
-
         try {
-            // Redirects are rejected outright rather than followed-and-revalidated - the
-            // simplest way to keep the SSRF check below meaningful (a redirect could
-            // otherwise point straight at an internal address after the check already passed).
-            $response = Http::withOptions(['allow_redirects' => false])
-                ->timeout(8)
-                ->withHeaders(['User-Agent' => 'ThatFridgeBot/1.0'])
-                ->get($url);
+            $fetched = $this->web->fetch($url);
 
-            if (! $response->successful()) {
-                return ['found' => false, 'reason' => 'fetch_failed'];
+            if (! $fetched['ok']) {
+                return ['found' => false, 'reason' => $fetched['reason'] === 'unsafe_url' ? 'unsafe_url' : 'fetch_failed'];
             }
 
-            $text = $this->extractReadableText($response->body());
-
-            if ($text === '') {
-                return ['found' => false, 'reason' => 'fetch_failed'];
-            }
+            $text = $fetched['text'];
 
             $result = $this->client->complete([
                 ['role' => 'user', 'content' => $this->buildPrompt($text)],
@@ -66,46 +54,6 @@ class RecipeLinkImportService
 
             return ['found' => false, 'reason' => 'exception'];
         }
-    }
-
-    /**
-     * Blocks the classic SSRF targets (localhost, cloud metadata endpoints, internal/private
-     * networks) by resolving the host and rejecting anything outside the public IP space,
-     * on top of only allowing http/https to begin with.
-     */
-    private function isSafeUrl(string $url): bool
-    {
-        $parts = parse_url($url);
-
-        if (! $parts || ! in_array($parts['scheme'] ?? null, ['http', 'https'], true) || empty($parts['host'])) {
-            return false;
-        }
-
-        $host = $parts['host'];
-        $ip = filter_var($host, FILTER_VALIDATE_IP) ? $host : gethostbyname($host);
-
-        // gethostbyname() returns the input unchanged when resolution fails.
-        if (! filter_var($ip, FILTER_VALIDATE_IP)) {
-            return false;
-        }
-
-        return (bool) filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE);
-    }
-
-    /**
-     * Strips a fetched page down to plain readable text before it goes into the prompt -
-     * script/style content is noise a recipe extractor doesn't need, and a hard length cap
-     * keeps the prompt (and token cost) bounded regardless of page size.
-     */
-    private function extractReadableText(string $html): string
-    {
-        $html = preg_replace('#<script\b[^>]*>.*?</script>#is', ' ', $html);
-        $html = preg_replace('#<style\b[^>]*>.*?</style>#is', ' ', $html);
-        $text = strip_tags($html);
-        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5);
-        $text = trim(preg_replace('/\s+/', ' ', $text));
-
-        return mb_substr($text, 0, 8000);
     }
 
     private function buildPrompt(string $pageText): string

@@ -29,33 +29,48 @@ class OpenRouterClient
 
     /**
      * Run a chat completion. Returns:
-     *   ['ok' => true, 'content' => string]
+     *   ['ok' => true, 'content' => string, 'tool_calls' => ?array, 'message' => array]
      * or, on failure:
      *   ['ok' => false, 'reason' => 'no_api_key'|'unauthorized'|'rate_limited'|'server_error'|'api_error'|'exception', 'status' => ?int]
      * so callers can react differently to a bad key vs. a rate limit vs. a transient
      * error instead of collapsing every failure into the same generic message.
+     *
+     * Pass $tools (OpenAI function-tool schema) to let the model request a tool call - the
+     * raw assistant `message` and any `tool_calls` come back so the caller can run the
+     * tool-use loop (see AgentService::chat). Callers that don't pass $tools can keep
+     * reading just `content` as before.
      */
-    public function complete(array $messages, int $maxTokens = 1000, string $model = 'anthropic/claude-haiku-4.5'): array
+    public function complete(array $messages, int $maxTokens = 1000, string $model = 'anthropic/claude-haiku-4.5', array $tools = []): array
     {
         if (! $this->available()) {
             return ['ok' => false, 'reason' => 'no_api_key'];
         }
 
         try {
+            $payload = [
+                'model' => $model,
+                'max_tokens' => $maxTokens,
+                'messages' => $messages,
+            ];
+
+            if ($tools) {
+                $payload['tools'] = $tools;
+            }
+
             $response = Http::withHeaders([
                 'Authorization' => "Bearer {$this->apiKey}",
                 'HTTP-Referer' => config('app.url'),
                 'X-Title' => 'ThatFridge',
-            ])->post($this->baseUrl, [
-                'model' => $model,
-                'max_tokens' => $maxTokens,
-                'messages' => $messages,
-            ]);
+            ])->post($this->baseUrl, $payload);
 
             if ($response->successful()) {
+                $message = $response->json('choices.0.message', []);
+
                 return [
                     'ok' => true,
-                    'content' => $response->json('choices.0.message.content', ''),
+                    'content' => $message['content'] ?? '',
+                    'tool_calls' => $message['tool_calls'] ?? null,
+                    'message' => $message,
                 ];
             }
 

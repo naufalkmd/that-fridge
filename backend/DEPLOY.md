@@ -220,6 +220,7 @@ server {
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:/run/php/php8.5-fpm.sock;
+        fastcgi_read_timeout 120s;         # Quick Chat browsing chains a few model calls + link fetches
     }
 
     location ~ /\.(?!well-known).* { deny all; }
