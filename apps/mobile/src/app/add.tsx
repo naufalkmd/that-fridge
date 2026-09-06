@@ -319,6 +319,7 @@ export default function Add() {
             name: s.name,
             icon: s.icon || guessFoodIcon(s.name) || "generic",
             iconUrl: s.iconUrl,
+            qty: Math.max(1, s.qty),
             location: s.location ?? "fridge",
             expiryDate: s.shelfLifeDays ? isoInDays(s.shelfLifeDays) : null,
           }),

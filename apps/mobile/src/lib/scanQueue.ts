@@ -7,6 +7,7 @@ export interface ScannedItem {
   name: string;
   icon: string;
   iconUrl: string | null;
+  qty: number;
   location: StorageLocation | null;
   shelfLifeDays: number | null;
 }
