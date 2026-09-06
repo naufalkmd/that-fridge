@@ -19,6 +19,8 @@ interface NotificationsContextValue {
   error: string | null;
   refresh: () => Promise<void>;
   markDone: (id: string, done: boolean) => Promise<void>;
+  remove: (id: string) => Promise<void>;
+  clearAll: () => Promise<void>;
   togglePref: (key: keyof NotificationPrefs) => Promise<void>;
 }
 
@@ -89,6 +91,29 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }
   }, []);
 
+  const remove = useCallback(async (id: string) => {
+    let removed: NotificationEvent | undefined;
+    setEvents((prev) => {
+      removed = prev.find((e) => e.id === id);
+      return prev.filter((e) => e.id !== id);
+    });
+    try {
+      await api.deleteNotificationEvent(id);
+    } catch {
+      if (removed) setEvents((prev) => [removed!, ...prev]);
+    }
+  }, []);
+
+  const clearAll = useCallback(async () => {
+    const snapshot = events;
+    setEvents([]);
+    try {
+      await api.clearNotificationEvents();
+    } catch {
+      setEvents(snapshot);
+    }
+  }, [events]);
+
   const togglePref = useCallback(
     async (key: keyof NotificationPrefs) => {
       if (!prefs) return;
@@ -106,8 +131,19 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const unread = useMemo(() => events.filter((e) => !e.done).length, [events]);
 
   const value = useMemo(
-    () => ({ events, unread, prefs, loading, error, refresh: load, markDone, togglePref }),
-    [events, unread, prefs, loading, error, load, markDone, togglePref],
+    () => ({
+      events,
+      unread,
+      prefs,
+      loading,
+      error,
+      refresh: load,
+      markDone,
+      remove,
+      clearAll,
+      togglePref,
+    }),
+    [events, unread, prefs, loading, error, load, markDone, remove, clearAll, togglePref],
   );
 
   return (

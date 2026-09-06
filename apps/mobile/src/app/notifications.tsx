@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -41,7 +49,7 @@ const KIND: Record<
 
 export default function Notifications() {
   const router = useRouter();
-  const { events, loading, error, refresh, markDone } = useNotifications();
+  const { events, loading, error, refresh, remove, clearAll } = useNotifications();
   const { myInvites, myJoinRequests, acceptInvite, declineInvite, approveRequest, declineRequest } =
     useSocial();
   const [refreshing, setRefreshing] = useState(false);
@@ -51,6 +59,17 @@ export default function Notifications() {
     setRefreshing(true);
     await refresh();
     setRefreshing(false);
+  }
+
+  function confirmClearAll() {
+    Alert.alert(
+      "Clear all notifications",
+      "This removes every notification from the list.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Clear all", style: "destructive", onPress: () => clearAll() },
+      ],
+    );
   }
 
   return (
@@ -72,26 +91,35 @@ export default function Notifications() {
           <View>
             <PixelText style={{ fontSize: 14, color: INK }}>Notifications</PixelText>
             <Text style={{ fontSize: 11.5, color: FAINT, marginTop: 3 }}>
-              Tap Clear to mark as done
+              Tap Clear to remove one
             </Text>
           </View>
         </View>
-        <Pressable onPress={() => router.push("/notification-settings")} hitSlop={8}>
-          <View
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: SURFACE,
-              borderWidth: 1,
-              borderColor: HAIRLINE,
-            }}
-          >
-            <Ionicons name="settings-outline" size={15} color={MUTED} />
-          </View>
-        </Pressable>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          {events.length > 0 && (
+            <Pressable onPress={confirmClearAll} hitSlop={8}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: "#ff5567" }}>
+                Clear all
+              </Text>
+            </Pressable>
+          )}
+          <Pressable onPress={() => router.push("/notification-settings")} hitSlop={8}>
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: SURFACE,
+                borderWidth: 1,
+                borderColor: HAIRLINE,
+              }}
+            >
+              <Ionicons name="settings-outline" size={15} color={MUTED} />
+            </View>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -142,12 +170,7 @@ export default function Notifications() {
           </Text>
         ) : (
           events.map((e) => (
-            <Row
-              key={e.id}
-              event={e}
-              onClear={() => markDone(e.id, true)}
-              onUndo={() => markDone(e.id, false)}
-            />
+            <Row key={e.id} event={e} onClear={() => remove(e.id)} />
           ))
         )}
       </ScrollView>
@@ -202,11 +225,9 @@ function PendingRow({
 function Row({
   event,
   onClear,
-  onUndo,
 }: {
   event: NotificationEvent;
   onClear: () => void;
-  onUndo: () => void;
 }) {
   const meta = KIND[event.kind];
   return (
@@ -220,7 +241,7 @@ function Row({
         borderRadius: 8,
         borderWidth: 1,
         borderColor: HAIRLINE,
-        backgroundColor: event.done ? SURFACE2 : SURFACE,
+        backgroundColor: SURFACE,
       }}
     >
       <View
@@ -230,26 +251,14 @@ function Row({
           borderRadius: 6,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: event.done ? SURFACE2 : `${meta.color}1a`,
+          backgroundColor: `${meta.color}1a`,
         }}
       >
-        <MaterialCommunityIcons
-          name={meta.icon}
-          size={17}
-          color={event.done ? FAINT : meta.color}
-        />
+        <MaterialCommunityIcons name={meta.icon} size={17} color={meta.color} />
       </View>
 
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text
-          style={{
-            fontSize: 13,
-            fontWeight: "700",
-            color: event.done ? FAINT : INK,
-            textDecorationLine: event.done ? "line-through" : "none",
-            marginBottom: 2,
-          }}
-        >
+        <Text style={{ fontSize: 13, fontWeight: "700", color: INK, marginBottom: 2 }}>
           {event.message}
         </Text>
         <Text style={{ fontSize: 11, color: FAINT }}>
@@ -257,16 +266,13 @@ function Row({
         </Text>
       </View>
 
-      {event.done ? (
-        <Pressable onPress={onUndo} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <MaterialCommunityIcons name="check" size={16} color={GOOD} />
-          <Text style={{ fontSize: 11, color: FAINT }}>Undo</Text>
-        </Pressable>
-      ) : (
-        <Pressable onPress={onClear} hitSlop={8} style={{ paddingHorizontal: 4, paddingVertical: 6 }}>
-          <Text style={{ fontSize: 11.5, fontWeight: "700", color: BLUE }}>Clear</Text>
-        </Pressable>
-      )}
+      <Pressable
+        onPress={onClear}
+        hitSlop={8}
+        style={{ paddingHorizontal: 4, paddingVertical: 6 }}
+      >
+        <Text style={{ fontSize: 11.5, fontWeight: "700", color: BLUE }}>Clear</Text>
+      </Pressable>
     </View>
   );
 }

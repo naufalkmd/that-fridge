@@ -39,6 +39,7 @@ interface InventoryContextValue {
   setItemQty: (itemId: string, qty: number) => Promise<void>;
   patchItem: (itemId: string, data: UpdateItemInput) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
+  removeManyItems: (itemIds: string[]) => Promise<void>;
   restoreItem: (item: FlatItem) => Promise<void>;
   itemById: (itemId: string) => FlatItem | undefined;
 }
@@ -201,6 +202,34 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     [fridges],
   );
 
+  const removeManyItems = useCallback(
+    async (itemIds: string[]) => {
+      if (itemIds.length === 0) return;
+      const ids = new Set(itemIds);
+      const snapshot = fridges;
+      setFridges((prev) =>
+        prev.map((f) => ({
+          ...f,
+          sections: f.sections.map((s) => ({
+            ...s,
+            items: s.items.filter((it) => !ids.has(it.id)),
+          })),
+        })),
+      );
+      const results = await Promise.allSettled(
+        itemIds.map((id) => api.deleteItem(id)),
+      );
+      if (results.some((r) => r.status === "rejected")) {
+        // Some deletes failed — restore and let the caller surface it. A reload would
+        // also work but this keeps whatever succeeded from flashing back.
+        setFridges(snapshot);
+        await load();
+        throw new Error("Couldn't delete some of those items.");
+      }
+    },
+    [fridges, load],
+  );
+
   // Re-create a just-deleted item (undo). A fresh row/id — the API has no un-delete.
   const restoreItem = useCallback(async (item: FlatItem) => {
     await api.createItem(item.sectionId, {
@@ -232,6 +261,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       setItemQty,
       patchItem,
       removeItem,
+      removeManyItems,
       restoreItem,
       itemById,
     }),
@@ -250,6 +280,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       patchItem,
       restoreItem,
       removeItem,
+      removeManyItems,
       itemById,
     ],
   );

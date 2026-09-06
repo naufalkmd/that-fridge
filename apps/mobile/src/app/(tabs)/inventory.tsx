@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   LayoutRectangle,
   Pressable,
   RefreshControl,
@@ -64,7 +65,7 @@ const SORT_OPTIONS: { key: Sort; label: string }[] = [
 export default function Inventory() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { items, loading, error, refresh } = useInventory();
+  const { items, loading, error, refresh, removeManyItems } = useInventory();
   const { categories, assign } = useCategories();
   const { scope } = useScope();
 
@@ -260,6 +261,37 @@ export default function Inventory() {
     } catch {
       /* assign() rolls nothing back locally; refresh on next load */
     }
+  }
+
+  function deleteSelected() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    Alert.alert(
+      `Delete ${ids.length} item${ids.length === 1 ? "" : "s"}?`,
+      "This removes them from your fridge. It can't be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setSelected(new Set());
+            setSelectMode(false);
+            try {
+              await removeManyItems(ids);
+              void Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
+            } catch (e) {
+              Alert.alert(
+                "Error",
+                e instanceof Error ? e.message : "Couldn't delete those items.",
+              );
+            }
+          },
+        },
+      ],
+    );
   }
 
   return (
@@ -644,6 +676,32 @@ export default function Inventory() {
             >
               {selected.size} selected
             </Text>
+            <Pressable
+              onPress={deleteSelected}
+              hitSlop={6}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 5,
+                backgroundColor: SURFACE2,
+                borderWidth: 1,
+                borderColor: "rgba(255,85,103,0.4)",
+                paddingVertical: 9,
+                paddingHorizontal: 12,
+                borderRadius: 8,
+              }}
+            >
+              <MaterialCommunityIcons
+                name="trash-can-outline"
+                size={15}
+                color="#ff5567"
+              />
+              <Text
+                style={{ fontSize: 12.5, fontWeight: "800", color: "#ff5567" }}
+              >
+                Delete
+              </Text>
+            </Pressable>
             <Pressable
               onPress={() => setMoveOpen(true)}
               style={{

@@ -1002,6 +1002,11 @@ function ItemCard({
             style={{ maxHeight: 200 }}
             keyboardShouldPersistTaps="handled"
           >
+            {library.length > 0 && (
+              <Text style={{ fontSize: 10, color: FAINT, marginBottom: 2 }}>
+                Your generated icons — long-press to delete
+              </Text>
+            )}
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
               {library.map((g) => (
                 <Pressable
@@ -1009,6 +1014,19 @@ function ItemCard({
                   onPress={() => {
                     onChange({ iconUrl: g.image_url });
                     setIconOpen(false);
+                  }}
+                  onLongPress={() => {
+                    Alert.alert("Delete this icon?", "Removes it from your library.", [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: () => {
+                          api.deleteGeneratedIcon(g.id).catch(() => {});
+                          refetchLibrary();
+                        },
+                      },
+                    ]);
                   }}
                   style={{
                     width: 42,

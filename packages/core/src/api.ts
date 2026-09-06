@@ -517,6 +517,14 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     });
   }
 
+  function deleteNotificationEvent(id: string): Promise<void> {
+    return http.del(`/notification-events/${id}`).then(() => undefined);
+  }
+
+  function clearNotificationEvents(): Promise<void> {
+    return http.del("/notification-events").then(() => undefined);
+  }
+
   function getNotificationPrefs(): Promise<NotificationPrefs> {
     return http.get<NotificationPrefs>("/notification-prefs");
   }
@@ -844,6 +852,9 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   function deleteChatSession(sessionId: string): Promise<void> {
     return http.del(`/chat/sessions/${sessionId}`).then(() => undefined);
   }
+  function deleteAllChatSessions(): Promise<void> {
+    return http.del("/chat/sessions").then(() => undefined);
+  }
 
   // Call when an item is used up (not thrown away) — increments/creates the usage entry the
   // Shopkeeper agent and the Food Balance / Waste scores read. daysRemaining/freshness/category
@@ -894,6 +905,8 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     suggestItemDetails,
     listNotificationEvents,
     markNotification,
+    deleteNotificationEvent,
+    clearNotificationEvents,
     getNotificationPrefs,
     updateNotificationPrefs,
     registerPushToken,
@@ -956,6 +969,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     listChatSessions,
     getChatSessionMessages,
     deleteChatSession,
+    deleteAllChatSessions,
   };
 }
 
