@@ -33,14 +33,24 @@ Legend: ✅ done · 🟡 partial / drafted, needs action · ⬜ not started
   in ASC only. **Also upload `apps/mobile/app-review.pdf`** at App Review Information →
   Attachment (source: `app-review.tex`, build with `tectonic`) — put the demo password on p.1
   there too.
-- [ ] Verify the **shipped RevenueCat paywall** (dashboard config, not the custom fallback)
-  shows price + billing period + trial terms + Restore + Terms/Privacy links — the App Review
-  guide tells the reviewer it does.
+- [ ] **Fix the shipped RevenueCat paywall** (dashboard "ThatFridge Paywall", rev 13 — this is
+  what ships, not the code fallback). Inspected 2026-09-06, four gaps: (a) Terms/Privacy point to
+  `thatfridge.app/*` — must be `thatfridge.com/terms/` + `/privacy/`; (b) no free-trial text (CTA
+  "Get Pro access", no "7-day free trial, then $X"); (c) no visible Restore control; (d) no
+  auto-renew disclaimer. Also shows $9.99/$79.99 placeholder prices because RevenueCat has no
+  App Store Connect API key.
+- [ ] **Add the App Store Connect API key to RevenueCat** (Project Settings → Apps → ThatFridge
+  (App Store) → App Store Connect API). Without it RevenueCat never imports the real $2.99/$19.99
+  price or the 7-day intro offer. The IAP/subscription key is already set; the ASC API key +
+  vendor number are not.
+- [x] ~~Intro offers~~ — Free / 1 week created in ASC for both products (2026-09-06). Still must
+  be included in the version submission, and verified on-device (below).
 - [ ] **Full real-device/simulator smoke test** against the live API — inventory, chat,
   notifications, social/blocking, icon-gen, expiry-scan, Activate button. Nothing dedicated
   since the parity port; only the paywall/purchase flow has been verified so far.
-- [ ] Confirm the 7-day free trial is actually active on the **live** subscription products
-  (not just configured in RevenueCat's dashboard) — it doubles as judge/reviewer access.
+- [ ] Verify the 7-day trial **on device**: fresh sandbox Apple ID that has never subscribed →
+  open paywall → the iOS purchase sheet must read "7 days free, then $X". If not, the intro
+  offer isn't attached to the version / approved. Doubles as judge/reviewer access.
 - [ ] Confirm account deletion works from a clean install against the live API.
 - [ ] Confirm local notifications fire correctly and route to the right screen on tap.
 - [ ] Confirm crash-free session in Sentry (needs the DSN set first — see Reference).
