@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -486,21 +486,13 @@ function ScanFlow({
   const [status, setStatus] = useState<"idle" | "scanning" | "review">("idle");
   const [saving, setSaving] = useState(false);
   const drafts = useDraftItems(() => []);
+  const autoOpened = useRef(false);
 
-  async function pickAndScan() {
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.7,
-    });
-    if (res.canceled || !res.assets[0]) return;
+  async function runScan(uri: string) {
     setStatus("scanning");
     try {
       const sectionId = await ensureSectionId();
-      const image = {
-        uri: res.assets[0].uri,
-        name: "scan.jpg",
-        type: "image/jpeg",
-      };
+      const image = { uri, name: "scan.jpg", type: "image/jpeg" };
       const scan =
         mode === "receipt"
           ? await api.scanReceipt(sectionId, image)
@@ -525,6 +517,40 @@ function ScanFlow({
       );
     }
   }
+
+  async function capture(source: "camera" | "library") {
+    let res: ImagePicker.ImagePickerResult;
+    if (source === "camera") {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Camera access needed",
+          "Allow camera access to take a photo, or upload one from your library instead.",
+        );
+        return;
+      }
+      res = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        quality: 0.7,
+      });
+    } else {
+      res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.7,
+      });
+    }
+    if (res.canceled || !res.assets[0]) return;
+    await runScan(res.assets[0].uri);
+  }
+
+  // Camera-first: jump straight to the camera on entry. If it's cancelled or
+  // denied, the idle screen below offers "Take a photo" again plus an upload option.
+  useEffect(() => {
+    if (autoOpened.current) return;
+    autoOpened.current = true;
+    void capture("camera");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function confirm() {
     const toAdd = drafts.items.filter((i) => i.checked && i.name.trim());
@@ -573,18 +599,22 @@ function ScanFlow({
           }}
         >
           {mode === "receipt"
-            ? "Snap a photo of your grocery receipt and we'll pull out the items."
+            ? "Take a photo of your grocery receipt and we'll pull out the items."
             : "Take a photo inside your fridge and the crew will spot what changed."}
         </Text>
         <Pressable
-          onPress={pickAndScan}
+          onPress={() => capture("camera")}
           style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
             backgroundColor: AMBER,
             paddingVertical: 12,
             paddingHorizontal: 24,
             borderRadius: 8,
           }}
         >
+          <MaterialCommunityIcons name="camera" size={16} color="#0a0a0c" />
           <Text
             style={{
               fontSize: 13.5,
@@ -594,7 +624,12 @@ function ScanFlow({
               color: "#0a0a0c",
             }}
           >
-            Choose a photo
+            Take a photo
+          </Text>
+        </Pressable>
+        <Pressable onPress={() => capture("library")} hitSlop={8}>
+          <Text style={{ fontSize: 12.5, fontWeight: "600", color: MUTED }}>
+            Upload from library instead
           </Text>
         </Pressable>
       </View>

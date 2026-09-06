@@ -70,7 +70,8 @@ const config: ExpoConfig = {
     [
       "expo-camera",
       {
-        cameraPermission: "ThatFridge uses the camera to scan grocery barcodes.",
+        cameraPermission:
+          "ThatFridge uses the camera to scan barcodes and take photos of receipts and your fridge.",
         // No `microphonePermission: false` here — expo-camera's plugin unconditionally
         // *deletes* NSMicrophoneUsageDescription from the Info.plist when this is `false`,
         // via a deferred mod that runs after every plugin's static config is applied. That
