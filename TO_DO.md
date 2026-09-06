@@ -88,11 +88,16 @@ Korea localization is a post-approval fast-follow.
   Score means. Plus lightweight analytics on carousel skip-rate + checklist completion to see
   if any of it earns its keep. (The 14-step forced tour idea is deliberately not this — see
   ONBOARDING_PLAN.md §4.)
-- [ ] Pre-sign-in onboarding (Duolingo-style) — move the intro before the auth wall: value
-  carousel + "what brings you here?" + a first-win demo on mock data + name-your-fridge, then
-  a soft signup wall ("save what you set up"), then hydrate the choices post-auth. ~1.5–2 week
-  rework of the auth/routing flow + a `preferences` column + analytics events (which must land
-  first, to judge conversion). Full plan: `apps/mobile/PRE_SIGNUP_ONBOARDING.md`.
+- [ ] Pre-sign-in onboarding (Duolingo-style) — move the intro before the auth wall. Full plan
+  + 5 build phases in `apps/mobile/PRE_SIGNUP_ONBOARDING.md`:
+  - [ ] Phase 1 — analytics foundation (`POST /events` + funnel events on the current flow;
+    also covers the standalone analytics TO_DO). Gates everything else.
+  - [ ] Phase 2 — plumbing: local `OnboardingDraft` + `hydrateFromOnboarding()` + a
+    `users.preferences` column. No user-visible change.
+  - [ ] Phase 3 — minimal `/welcome` (carousel + one question + first-win demo + name fridge
+    + soft wall) + routing swap. First shippable version; collect 2–3 weeks of funnel data.
+  - [ ] Phases 4–5 — expand questions / meet-the-crew / reminder from data, then payoff
+    (personalized copy, peak-end beat).
 - [ ] Pro AI spend ceiling — meter real OpenRouter token cost per Pro user per billing cycle
   and cap it at ~$1.00–1.50 of model spend (well under the ~$2.09 net on a $2.99 plan). Debit
   the actual `usage` from each response into a per-user counter; at the ceiling, disable only

@@ -9,6 +9,9 @@ flow plus new screens, backend, and analytics — and it's exactly the kind of t
 real funnel data to tune. The current post-sign-in flow (carousel → name fridge → "+" spotlight
 → nav tour → Getting Started checklist, see `ONBOARDING_PLAN.md`) stays as-is for launch.
 
+Build broken into 5 phases in §9 — **Phase 1 (analytics) → Phase 2 (plumbing) → Phase 3
+(minimal `/welcome`, first shippable)**, then Phases 4–5 are data-driven iteration.
+
 ---
 
 ## 1. Why pre-sign-in
@@ -190,32 +193,83 @@ Funnel = started → wall → signup. Watch per-step drop-off to decide which qu
 
 ---
 
-## 9. Effort & sequencing
+## 9. Build phases
 
-| Piece                                                                                               | Est.         | Notes                                                           |
-| --------------------------------------------------------------------------------------------------- | ------------ | --------------------------------------------------------------- |
-| Analytics events (`POST /events` + client helper)                                                 | ~1 day       | Do first — everything else is judged by it                     |
-| Local draft +`hydrateFromOnboarding()` + partial-failure handling                                 | ~1–1.5 days |                                                                 |
-| `/welcome` screen — carousel (reuse) + questions + meet-the-crew + demo + name + reminder + wall | ~3–4 days   | The demo screen and meet-the-crew are the only genuinely new UI |
-| Routing swap +`sign-in` hydrate hook + returning-user paths                                       | ~1 day       |                                                                 |
-| Backend:`preferences` column + endpoint                                                           | ~0.5 day     |                                                                 |
-| Iterate on step count / copy from funnel data                                                       | ongoing      | The real work                                                   |
+Five phases, each independently shippable. Do them in order — Phase 1 gates everything (no
+funnel = flying blind), Phase 2 is the first user-visible cut, Phases 3–5 are data-driven.
 
-**~1.5–2 weeks.** Post-launch. Ship the minimal version (carousel + "what brings you here" +
-demo + name + wall), instrument it, then expand.
+### Phase 1 — Analytics foundation  ·  ~1 day  ·  no user-visible change
+
+The prerequisite. Nothing else can be judged without it.
+
+- `POST /events` endpoint (or reuse the notification-events table) + a `track(event, props)`
+  client helper, fire-and-forget, batched.
+- Wire the funnel events from §8 into the *current* flow first (`onboarding_step_*`,
+  `signup_completed { from: "direct" }`) so there's a baseline to compare against.
+- **Exit:** events visible in a query/dashboard; a week of baseline `direct` signup data.
+- Also satisfies the standalone "Sentry DSN / analytics" TO_DO item.
+
+### Phase 2 — Plumbing  ·  ~1.5 days  ·  no user-visible change
+
+Everything except the screens, so Phase 3 is pure UI.
+
+- `OnboardingDraft` type + SecureStore read/write/clear helpers (mirror `lib/chatQuota.ts`).
+- `hydrateFromOnboarding(draft)` — the 5 best-effort steps from §4, each independent.
+- Backend: `users.preferences` JSON column + `POST /me/onboarding` (validated enums).
+- `api.saveOnboardingProfile()` in core.
+- Unit-test `hydrateFromOnboarding` for the partial-failure paths.
+- **Exit:** call `hydrate` with a hand-built draft in a dev build → fridge named, goal set,
+  preferences stored, reminder scheduled; a second call is a no-op.
+
+### Phase 3 — Minimal `/welcome`  ·  ~3–4 days  ·  first shippable version
+
+The leanest flow that still delivers the aha before the wall.
+
+- `app/welcome.tsx` — carousel (reuse `SLIDES`) → **one** question ("What brings you here?")
+  → **first-win demo** → name fridge (reuse `FridgeStep`) → soft wall.
+- Routing swap: `signedOut` → `/welcome`; `welcome` → `/sign-in`; `sign-in` calls `hydrate`
+  post-auth; "I already have an account" on every step; `welcome_seen` flag for return trips.
+- Absorb the post-auth `onboarding.tsx` carousel + name-fridge into `/welcome` (keep a thin
+  fallback for pre-existing accounts, or migrate them — decision §10.6).
+- Fire all §8 events.
+- **Exit:** clean cold-install → `/welcome` → demo → name → wall → signup → hydrated Home
+  with the spotlight + checklist (opens 2/7). Returning-user and skip paths both work.
+- **Ship it. Collect 2–3 weeks of funnel data before Phase 4.**
+
+### Phase 4 — Expand from data  ·  ~2–3 days  ·  data-driven
+
+Add back the pieces that earn their place; cut anything Phase 3 data shows bleeding users.
+
+- Add the **Guardian + Organizer question rows** (one screen, §3 step 2) if the single
+  question didn't hurt drop-off.
+- Add **Meet your crew** (§3 step 3) and the **reminder cadence** step (§3 step 6).
+- Re-check per-step drop-off after each addition; a step that costs >X% conversion comes back
+  out.
+- **Exit:** the flow matches §3 (or a justified subset), each step's drop-off is known.
+
+### Phase 5 — Payoff & polish  ·  ~2 days  ·  closes the loop
+
+Make the pre-auth choices visibly matter, so the investment feels rewarded.
+
+- Peak-end beat: "You're all set — [FridgeName] is ready" between the demo/wall and Home.
+- Personalized copy from the stored preferences: e.g. a `save_money` user sees savings framing
+  on the Kitchen Score / Home; a `roommates` household gets the shared-fridge nudge sooner.
+- Tune the demo (fixed vs. pick-3, decision §10.3) if data shows it's a weak point.
+
+---
+
+**Total ~1.5–2 weeks of build across Phases 1–3**, then Phases 4–5 are iterative and paced by
+data. Phase 3 is the milestone to aim for; everything after is optimization.
 
 ---
 
 ## 10. Open decisions
 
-1. **Guest mode** — can the app ever be used without an account? Leaning no; the demo delivers
-   the aha without one.
-2. **How many questions at launch** — just "what brings you here?", or also waste-frequency /
-   household? Start with one.
-3. **The demo** — fixed mock data, or let the user tap 3 items from a shortlist (more
-   investment, more friction)? Start fixed.
-4. **Goal mapping** — does the coarse onboarding tag seed a concrete `UserGoal`, or stay a
-   copy-personalization tag only? Probably the latter for v1.
-5. **Reminder cadence** — options and default. Ties into notification-permission timing.
-6. **The existing post-auth `onboarding.tsx`** — absorb fully, or keep as a fallback for
-   pre-existing accounts?
+| # | Decision | Needed by | Leaning |
+| --- | --- | --- | --- |
+| 1 | **Guest mode** — can the app ever be used with no account? | Phase 3 | No — the demo delivers the aha without one |
+| 2 | **How many questions at launch** — just "what brings you here?", or also waste-frequency / household? | Phase 3 (start), Phase 4 (expand) | One at Phase 3, add from data |
+| 3 | **The demo** — fixed mock data, or tap 3 items from a shortlist (more investment, more friction)? | Phase 3 | Fixed; revisit in Phase 5 |
+| 4 | **Goal mapping** — does the coarse tag seed a concrete `UserGoal`, or stay a copy-personalization tag only? | Phase 2 | Tag only for v1 |
+| 5 | **Reminder cadence** — options + default; ties into notif-permission timing. | Phase 4 | evening / twice-weekly / off; default off |
+| 6 | **Existing post-auth `onboarding.tsx`** — absorb fully, or keep as a fallback for pre-existing accounts? | Phase 3 | Absorb; thin fallback for old accounts |
