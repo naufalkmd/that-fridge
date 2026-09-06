@@ -12,6 +12,7 @@ import {
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { ensureOnboardingFridge } from "@/lib/hydrateOnboarding";
 
 interface InventoryContextValue {
   fridges: Fridge[];
@@ -95,11 +96,13 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     [load],
   );
 
-  // Ensure the account has at least one fridge, returning its id (creating "My Fridge"
-  // for a brand-new account).
+  // Ensure the account has at least one fridge, returning its id. Delegates to
+  // ensureOnboardingFridge, which server-checks first and honours the name the user chose
+  // in pre-sign-in onboarding — so this and hydrateOnboarding can't both create one.
   const ensureFridgeId = useCallback(async (): Promise<string> => {
     if (fridges.length > 0) return fridges[0].id;
-    const fridge = await api.createFridge("My Fridge");
+    const fridge =
+      (await ensureOnboardingFridge()) ?? (await api.createFridge("My Fridge"));
     setFridges([fridge]);
     return fridge.id;
   }, [fridges]);

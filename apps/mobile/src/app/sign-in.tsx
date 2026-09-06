@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as AppleAuthentication from "expo-apple-authentication";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -26,6 +26,7 @@ const USERNAME_RE = /^[a-zA-Z0-9_-]+$/;
 
 export default function SignIn() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ mode?: string }>();
   const { signIn, signUp, signInWithApple, signInWithGoogle } = useAuth();
 
   const [appleAvailable, setAppleAvailable] = useState(false);
@@ -35,7 +36,9 @@ export default function SignIn() {
       .catch(() => setAppleAvailable(false));
   }, []);
 
-  const [mode, setMode] = useState<Mode>("login");
+  const [mode, setMode] = useState<Mode>(
+    params.mode === "signup" ? "signup" : "login",
+  );
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");

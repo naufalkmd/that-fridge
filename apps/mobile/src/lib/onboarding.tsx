@@ -8,6 +8,8 @@ import {
 } from "react";
 import * as SecureStore from "expo-secure-store";
 
+import { clearOnboardingDraft } from "@/lib/onboardingDraft";
+
 // First-run onboarding is a per-device, local-only flag — same pattern as
 // `lib/chatQuota.ts`. Seeing the intro again after a reinstall is acceptable.
 // Bump the key suffix if the carousel changes enough to be worth re-showing.
@@ -156,15 +158,16 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     setChecklistDismissed(false);
     setChecklistVisited([]);
     setCoachTourSeen(false);
-    await Promise.all(
-      [
+    await Promise.all([
+      ...[
         SEEN_KEY,
         COACH_DISMISSED_KEY,
         CHECKLIST_DISMISSED_KEY,
         CHECKLIST_VISITED_KEY,
         COACH_TOUR_SEEN_KEY,
       ].map((k) => SecureStore.deleteItemAsync(k).catch(() => {})),
-    );
+      clearOnboardingDraft(),
+    ]);
   }, []);
 
   const value = useMemo(

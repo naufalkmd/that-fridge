@@ -1,16 +1,34 @@
-import type { OnboardingPrefs } from "@thatfridge/core";
+import type { Fridge, OnboardingPrefs } from "@thatfridge/core";
 
 import { api } from "@/lib/api";
 import { track } from "@/lib/analytics";
 import { clearOnboardingDraft, getOnboardingDraft } from "@/lib/onboardingDraft";
 
-// Replays the pre-sign-in onboarding draft to the server, exactly once, right after the
-// first successful auth. Every step is independent and best-effort — a failure logs a
-// beacon and moves on; the Home "Getting started" checklist is the backstop for anything
-// that didn't land. Safe to call on every sign-in: a no-op when there's no draft.
-//
-// Wired into the auth flow but currently inert — no screen writes a draft until the
-// pre-sign-in flow ships (PRE_SIGNUP_ONBOARDING.md Phase 3).
+// Replays the pre-sign-in onboarding draft to the server after the first successful auth.
+// See PRE_SIGNUP_ONBOARDING.md. Best-effort throughout — a failure logs a beacon and moves
+// on; the Home "Getting started" checklist is the backstop.
+
+/**
+ * Create the user's first fridge with the name they chose in onboarding — or return an
+ * existing one. Always checks the server first, so the two callers (hydrateOnboarding
+ * right after auth, and inventory's ensureFridgeId on first-item-add) can never both
+ * create one. Clears the draft once a fridge is confirmed.
+ */
+export async function ensureOnboardingFridge(): Promise<Fridge | null> {
+  try {
+    const existing = await api.listFridges();
+    if (existing.length > 0) {
+      await clearOnboardingDraft();
+      return existing[0];
+    }
+    const draft = await getOnboardingDraft();
+    const fridge = await api.createFridge(draft?.fridgeName?.trim() || "My Fridge");
+    await clearOnboardingDraft();
+    return fridge;
+  } catch {
+    return null; // leave the draft — ensureFridgeId will retry on first item add
+  }
+}
 
 export async function hydrateOnboarding(): Promise<void> {
   const draft = await getOnboardingDraft();
@@ -18,19 +36,7 @@ export async function hydrateOnboarding(): Promise<void> {
 
   const failures: string[] = [];
 
-  // 1. Fridge — only if the account has none (a returning user keeps theirs).
-  if (draft.fridgeName) {
-    try {
-      const fridges = await api.listFridges();
-      if (fridges.length === 0) {
-        await api.createFridge(draft.fridgeName.trim() || "My Fridge");
-      }
-    } catch {
-      failures.push("fridge");
-    }
-  }
-
-  // 2. Preference tags (kept as tags — no concrete UserGoal is seeded, see decision §10.4).
+  // 1. Preference tags (kept as tags — no concrete UserGoal is seeded, decision §10.4).
   const prefs: OnboardingPrefs = {};
   if (draft.goal) prefs.goal = draft.goal;
   if (draft.wasteFrequency) prefs.waste_frequency = draft.wasteFrequency;
@@ -43,10 +49,12 @@ export async function hydrateOnboarding(): Promise<void> {
     }
   }
 
-  // 3. Reminder — the draft records the intent; scheduling + the permission prompt are
-  //    wired in Phase 4 (they need the notification-scheduling helper and careful timing).
+  // 2. First fridge (server-checked, so it can't collide with ensureFridgeId).
+  if (!(await ensureOnboardingFridge())) failures.push("fridge");
 
-  await clearOnboardingDraft();
+  // 3. Reminder — the draft records the intent; scheduling + the permission prompt land
+  //    in Phase 4 (they need the notification-scheduling helper and careful timing).
+
   track("onboarding_hydrated", {
     named_fridge: !!draft.fridgeName,
     goal: draft.goal ?? null,

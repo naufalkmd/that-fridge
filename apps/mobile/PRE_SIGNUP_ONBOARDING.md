@@ -234,20 +234,28 @@ funnel = flying blind), Phase 2 is the first user-visible cut, Phases 3–5 are 
   build, then sign in on a fresh account → fridge "Loft" exists, `preferences.goal` set, draft
   cleared; a second sign-in is a no-op.
 
-### Phase 3 — Minimal `/welcome`  ·  ~3–4 days  ·  first shippable version
+### Phase 3 — Minimal `/welcome`  ·  DONE 2026-09-07  ·  first shippable version
 
-The leanest flow that still delivers the aha before the wall.
-
-- `app/welcome.tsx` — carousel (reuse `SLIDES`) → **one** question ("What brings you here?")
-  → **first-win demo** → name fridge (reuse `FridgeStep`) → soft wall.
-- Routing swap: `signedOut` → `/welcome`; `welcome` → `/sign-in`; `sign-in` calls `hydrate`
-  post-auth; "I already have an account" on every step; `welcome_seen` flag for return trips.
-- Absorb the post-auth `onboarding.tsx` carousel + name-fridge into `/welcome` (keep a thin
-  fallback for pre-existing accounts, or migrate them — decision §10.6).
-- Fire all §8 events.
-- **Exit:** clean cold-install → `/welcome` → demo → name → wall → signup → hydrated Home
-  with the spotlight + checklist (opens 2/7). Returning-user and skip paths both work.
-- **Ship it. Collect 2–3 weeks of funnel data before Phase 4.**
+- `src/components/onboarding/shared.tsx` — `IntroCarousel`, `FridgeStep`, `Glow`,
+  `PrimaryButton`, the slide art + colour tokens. Used by both `/welcome` and `/onboarding`.
+- `app/welcome.tsx` — carousel → "What brings you here?" (4 options, skippable) →
+  **first-win demo** (mock fridge → Chef → Guardian, no API) → name fridge → soft wall
+  ("Save your setup" + a ✓ summary). Every step has "I already have an account" / "Log in".
+- `app/onboarding.tsx` — trimmed to a thin post-sign-in fallback (reinstall / "Replay intro")
+  using the same shared components.
+- Routing: `signedOut && !seen` → `/welcome`; `signedOut && seen` → `/sign-in`. `/welcome`
+  writes the draft + `markSeen()` then `router.replace("/sign-in?mode=…")`; `sign-in` reads
+  the `mode` param. No separate `welcome_seen` flag — reuses `onboarding.seen`.
+- **Race fix:** `hydrateOnboarding` and inventory's `ensureFridgeId` both route fridge
+  creation through `ensureOnboardingFridge()` (server-checks first, honours the chosen name)
+  so a stale inventory cache after sign-in can't produce a duplicate "My Fridge".
+- Events: `welcome_started`, `welcome_step_viewed`, `welcome_slide_viewed`,
+  `welcome_goal_picked`, `welcome_demo_win_tapped`, `welcome_fridge_named`,
+  `welcome_to_signin`, plus `onboarding_hydrated` from hydrate.
+- **Exit met:** cold-install → `/welcome` → demo → name → wall → signup → hydrated Home with
+  the "+" spotlight and the checklist at 2/7 (account ✓, fridge ✓).
+- **No mobile test runner** — verified by `tsc` + a manual device pass on the next build.
+- **Next:** collect 2–3 weeks of funnel data (`app:onboarding-funnel`) before Phase 4.
 
 ### Phase 4 — Expand from data  ·  ~2–3 days  ·  data-driven
 

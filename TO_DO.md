@@ -96,10 +96,13 @@ Korea localization is a post-approval fast-follow.
   - [x] Phase 2 — plumbing. `users.preferences` JSON column + `POST /me/onboarding`,
     `lib/onboardingDraft.ts` + `lib/hydrateOnboarding.ts` (wired into auth, inert until a
     screen writes a draft). 2026-09-07.
-  - [ ] Phase 3 — minimal `/welcome` (carousel + one question + first-win demo + name fridge
-    + soft wall) + routing swap. First shippable version; collect 2–3 weeks of funnel data.
-  - [ ] Phases 4–5 — expand questions / meet-the-crew / reminder from data, then payoff
-    (personalized copy, peak-end beat).
+  - [x] Phase 3 — `/welcome` flow (carousel → "what brings you here?" → first-win demo →
+    name fridge → soft wall) + routing swap (`signedOut && !seen` → `/welcome`). Shared
+    onboarding components extracted; `onboarding.tsx` now the post-auth fallback. Race-safe
+    fridge creation via `ensureOnboardingFridge`. `welcome_*` events. 2026-09-07.
+    **Needs a real-device pass on the next build** (no mobile test runner).
+  - [ ] Phases 4–5 — expand questions / meet-the-crew / reminder from funnel data, then
+    payoff (personalized copy, peak-end beat). Wait for ~2–3 weeks of Phase 3 data first.
 - [ ] Pro AI spend ceiling — meter real OpenRouter token cost per Pro user per billing cycle
   and cap it at ~$1.00–1.50 of model spend (well under the ~$2.09 net on a $2.99 plan). Debit
   the actual `usage` from each response into a per-user counter; at the ceiling, disable only
