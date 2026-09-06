@@ -10,77 +10,48 @@ localized store listings + Korean UI fast-follow.
 **Hard deadline: Sep 30, 2026, 11:45 pm PDT.** The app must be **fully published and live**
 (Apple review passed), not just submitted — review takes days, so submit ~2 weeks early.
 
-**Where we are (2026-09-06):** backend, RevenueCat, and the mobile app are all functionally
-complete and live. Every AI-calling / monetization-relevant endpoint is now Pro-gated and
-rate-limited server-side (not just client-side). What's left is almost entirely App Store
-submission mechanics (screenshots, pasting drafted content into ASC) plus the Devpost/Shipaton
-track — see below.
-
-Legend: ✅ done · 🟡 partial / drafted, needs action · ⬜ not started
+**Where we are (2026-09-06):** backend, RevenueCat, and the mobile app are functionally complete
+and live. App Store Connect is largely set up — listing copy, age rating (9+), App Privacy, App
+Review notes + `app-review.pdf` attachment, subscriptions priced and "Ready to Submit", intro
+offers attached, paywall published (RC rev 17). What's left is a fresh native build, a
+real-device smoke test, screenshots, and the submission. **v1 ships an English-only listing;**
+Korea localization is a post-approval fast-follow.
 
 ---
 
 ## What's left to do
 
-### Blocking App Store submission
-- [ ] **Capture iPhone screenshots** — full plan in `apps/mobile/SCREENSHOTS.md` (10-frame set,
-  1320×2868px 6.9"-only, frame design + capture/assembly/localization steps). Blocked on: new
-  demo password (done — hand it over) + a Release build against prod API.
-- [ ] **Finish App Store Connect content** (partly done 2026-09-06):
-  - [x] App record + name saved (the "name already used" error was the U+200B invisible char —
-    cleared once fields were retyped through a plain-text editor).
-  - [x] Store listing copy (name/subtitle/description/keywords/promo), verified char counts.
-  - [x] Age rating questionnaire — walked through live, result **9+** (see `STORE_LISTING.md` §4).
-  - [x] App Privacy form (`STORE_LISTING.md` §1).
-  - [x] App Review notes + demo account + `app-review.pdf` attachment (2026-09-06).
-  - [ ] Localized `ko` (and `ms`) metadata — at minimum Korean.
-- [x] ~~RevenueCat paywall~~ — "ThatFridge Paywall" `pwec1165df9a414243` **published rev 17**
-  (2026-09-06). Trial line + full auto-renew disclosure + `thatfridge.com` Terms/Privacy +
-  Yearly default all live; Restore link + "Start 7-Day Free Trial" offer-state CTA confirmed in
-  the builder. **On-device check still owed:** CTA reads "Start 7-Day Free Trial" for an eligible
-  user, Restore is tappable, Terms/Privacy open `thatfridge.com`, real $2.99/$19.99 prices show.
-- [x] ~~ASC API key in RevenueCat~~ — API key + vendor number `94767188` added 2026-09-06
-  (`app_store_connect_api_key_configured: true`). **Product sync still pending** — trigger an
-  Import in RC or wait a few hours; check the key role is App Manager+. Not blocking: StoreKit
-  gives the SDK the real $2.99/$19.99 price and the trial on-device regardless.
-- [x] ~~Subscriptions + intro offers~~ — both subs priced ($2.99 / $19.99, "1 Year Upfront" for
-  the annual — skipped the optional "Monthly w/ 12-Month Commitment"), availability set,
-  "Ready to Submit", and both + the Free/1-week intro offers attached to the version. RevenueCat
-  links them and shows "Ready to Submit". RC's `indicative_price`/duration fields still read null
-  via API — known ~24h derived-data lag, non-blocking (sandbox paywall already showed real price
-  + trial). Will fill in on its own.
-- [ ] **Full real-device smoke test** against the live API — inventory, chat, notifications,
-  social/blocking, icon-gen, expiry-scan, Activate button. Nothing dedicated since the parity
-  port; only the paywall/purchase flow has been checked. Include the Add flow: "Scan receipt"
-  and "Photo of fridge" now open the camera on entry (needs a **native rebuild**, not OTA —
-  camera purpose string changed; test on a real device, the simulator has no camera).
-- [ ] Verify the 7-day trial **on device**: fresh sandbox Apple ID that has never subscribed →
-  open paywall → the iOS purchase sheet must read "7 days free, then $X". If not, the intro
-  offer isn't attached to the version / approved. Doubles as judge/reviewer access.
-- [ ] Confirm account deletion works from a clean install against the live API.
-- [ ] Confirm local notifications fire correctly and route to the right screen on tap.
-- [ ] Confirm crash-free session in Sentry (needs the DSN set first — see Reference).
-- [ ] App built against prod `EXPO_PUBLIC_API_URL`, no localhost reachable — verify at build
-  time (`eas.json` profiles already correct).
-- [ ] TestFlight build validated by the whole team on real devices; add internal testers + a
-  "What to Test" note.
-- [ ] Set release to **manual** in ASC once the real version submission exists (not applicable
-  yet — only TestFlight builds so far).
+### Blocking submission
+- [ ] **New native build** — `apps/mobile` against prod `EXPO_PUBLIC_API_URL`, includes the
+  camera-first Add fix (needs a rebuild, not an OTA — Info.plist camera string changed). Push to
+  TestFlight.
+- [ ] **Screenshots** — 10-frame set per `apps/mobile/SCREENSHOTS.md`, captured from that build
+  on the demo account (`keira@thatfridge.test`, hand over the new password).
+- [ ] **Full real-device smoke test** on that build against the live API — run the QA matrix
+  (Reference). Nothing dedicated since the parity port. Must pass:
+  - Core loop: add item, barcode scan, inventory edit, mark-made decrements stock
+  - Add flow: "Scan receipt" / "Photo of fridge" open the camera directly
+  - Paywall on device: "Start 7-Day Free Trial" CTA, real $2.99 / $19.99 prices, Restore works,
+    Terms/Privacy open `thatfridge.com`
+  - Purchase sheet shows "7 days free, then $X" (fresh sandbox Apple ID, never subscribed)
+  - Account deletion from a clean install
+  - Local notifications fire and route to the right screen on tap
+- [ ] **App Store availability** — MY + KR (or MY-first, see Korea section); exclude EU/EEA
+  (keeps the DSA "trader" declaration moot — leave the status "non-trader", don't start the
+  flow). Confirm primary category = Food & Drink.
+- [ ] **TestFlight validated by the team** on real devices — add internal testers + a "What to
+  Test" note.
+- [ ] **Submit** — set release to **manual** in ASC, submit the version.
 
-### Market expansion (Malaysia + Korea)
-- [ ] Set per-storefront subscription prices: Malaysia `RM12.90`/`RM89`, Korea `₩3,900`/`₩25,000`.
-- [ ] App Store Connect localized metadata for `en`/`ko`/`ms` (name, subtitle, description,
-  keywords, screenshots — at minimum `ko`, Korean downloads depend on it).
-- [ ] Set App Store availability to **Malaysia + Korea only, and explicitly exclude the EU/EEA**
-  — no EU storefront means the DSA "trader" declaration stays moot. With paid IAP, going trader
-  would force our legal name + residential address + phone to be published on the EU listing
-  (Individual account, no company to shield it). Revisit EU + trader verification post-launch.
-  In ASC the current status shows as "non-trader" — leave it, don't start the DSA compliance flow.
-- [ ] **Korean-language privacy policy** — `/privacy/ko/` is still a 404. Needs a real
-  translation, not unsupervised machine translation for a legal document.
-- [ ] **Known compliance gap:** the cross-border-transfer consent checkbox (Korea PIPA) only
-  covers email/password sign-up — Apple/Google social sign-in creates users too and skips it.
-  Needs a pre-OAuth consent interstitial for new social-signin users.
+### Korea rollout (whenever the KR storefront ships — can trail the English launch)
+- [ ] Per-storefront subscription prices: Malaysia `RM12.90` / `RM89`, Korea `₩3,900` / `₩25,000`.
+- [ ] Korean listing metadata (subtitle, description, keywords, screenshots) — metadata-only,
+  lands after English approval with no binary re-review. Draft screenshot captions in
+  `SCREENSHOTS.md` §6.
+- [ ] **Korean privacy policy** — `/privacy/ko/` is a 404. Legal requirement for KR (PIPA),
+  needs a real translation. If it's not ready, launch **MY-first** and add KR later.
+- [ ] Korea PIPA gap: the cross-border-transfer consent checkbox only covers email/password
+  sign-up — Apple/Google social sign-in skips it. Needs a pre-OAuth consent interstitial.
 
 ### Shipaton / Devpost (deadline: same Sep 30, 11:45pm PDT)
 - [ ] Devpost project page + feature description.
@@ -146,9 +117,11 @@ acquisition cost is ≈$0 but also caps growth speed), your own time, refunds.
 ### RevenueCat / subscriptions
 
 Two products, **permanent IDs — never reusable, don't typo**: `thatfridge_pro_monthly`
-($2.99/mo) and `thatfridge_pro_yearly` ($19.99/yr), both with a 7-day free trial, both status
-"Ready to Submit" in ASC. Pro unlocks: unlimited AI chat/what-to-eat, receipt & photo bulk-add,
-multiple/shared fridges. Sandbox purchase + restore verified end-to-end 2026-09-05.
+($2.99/mo) and `thatfridge_pro_yearly` ($19.99/yr, "1 Year Upfront"), both with a Free / 1-week
+intro offer, both "Ready to Submit" and attached to the version. Pro unlocks: unlimited AI
+chat/what-to-eat, receipt & photo bulk-add, multiple/shared fridges. Paywall = the RevenueCat
+dashboard paywall (`RevenueCatUI.Paywall`), published rev 17. Sandbox purchase + restore
+verified 2026-09-06. ASC API key + vendor number `94767188` set in RevenueCat.
 
 ### Free-tier limits (all enforced server-side, not just client-side)
 
@@ -165,8 +138,9 @@ protection against direct API hammering.
 
 ### Demo / reviewer account
 
-`keira@thatfridge.test` — pre-seeded with a fridge + 7 curated recipes (no alcohol references,
-relevant for the age-rating answer). **Change the password before submitting** (see checklist).
+`keira@thatfridge.test` — pre-seeded shared fridge ("Home Fridge") with items across all zones +
+11 recipes (no alcohol references). Password is now an env var (`DEMO_USER_PASSWORD`) — rotated
+2026-09-06, live value in the shared password manager, and pasted into ASC's Sign-In fields.
 
 ### Locked decisions — no re-litigation
 
