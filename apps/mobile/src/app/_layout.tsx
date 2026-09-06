@@ -22,6 +22,7 @@ import { SocialProvider } from "@/lib/social";
 import { NotesProvider } from "@/lib/notes";
 import { ToastProvider } from "@/lib/toast";
 import { ExpiryReminderSync } from "@/lib/ExpiryReminderSync";
+import { initAnalytics, track } from "@/lib/analytics";
 import { UpdateBanner } from "@/components/update-banner";
 import { OfflineBanner } from "@/components/offline-banner";
 
@@ -35,6 +36,11 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded || fontError) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    initAnalytics();
+    track("app_open");
+  }, []);
 
   if (!fontsLoaded && !fontError) return null;
 

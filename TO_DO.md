@@ -90,10 +90,12 @@ Korea localization is a post-approval fast-follow.
   ONBOARDING_PLAN.md §4.)
 - [ ] Pre-sign-in onboarding (Duolingo-style) — move the intro before the auth wall. Full plan
   + 5 build phases in `apps/mobile/PRE_SIGNUP_ONBOARDING.md`:
-  - [ ] Phase 1 — analytics foundation (`POST /events` + funnel events on the current flow;
-    also covers the standalone analytics TO_DO). Gates everything else.
-  - [ ] Phase 2 — plumbing: local `OnboardingDraft` + `hydrateFromOnboarding()` + a
-    `users.preferences` column. No user-visible change.
+  - [x] Phase 1 — analytics foundation. `POST /events` (public, optional-auth, batched),
+    `AnalyticsEvent` model, `lib/analytics.ts` (`track`/`flush`/`initAnalytics` + per-install
+    `anon_id`). Funnel events wired into `_layout` / `auth` / `onboarding`. 2026-09-07.
+  - [x] Phase 2 — plumbing. `users.preferences` JSON column + `POST /me/onboarding`,
+    `lib/onboardingDraft.ts` + `lib/hydrateOnboarding.ts` (wired into auth, inert until a
+    screen writes a draft). 2026-09-07.
   - [ ] Phase 3 — minimal `/welcome` (carousel + one question + first-win demo + name fridge
     + soft wall) + routing swap. First shippable version; collect 2–3 weeks of funnel data.
   - [ ] Phases 4–5 — expand questions / meet-the-crew / reminder from data, then payoff

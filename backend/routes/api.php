@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AgentController;
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\BadgeController;
@@ -38,6 +39,9 @@ Route::post('/auth/google', [AuthController::class, 'google']);
 // RevenueCat calls this directly, not a logged-in app user - auth is the Authorization header
 // secret checked inside the controller, not auth:sanctum. See services.revenuecat.webhook_secret.
 Route::post('/webhooks/revenuecat', [RevenueCatWebhookController::class, 'handle']);
+// First-party analytics ingest. Public so pre-sign-in onboarding events get through;
+// batched client-side, so 20 requests/min per IP is generous (each carries up to 50 events).
+Route::middleware('throttle:20,1')->post('/events', [AnalyticsController::class, 'store']);
 // Rate-limited: /register and /login are brute-forceable; /forgot-password sends an
 // email, /reset-password is brute-forceable too.
 Route::middleware('throttle:6,1')->group(function () {
@@ -51,6 +55,7 @@ Route::middleware('throttle:6,1')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/me/onboarding', [AuthController::class, 'onboarding']);
     Route::delete('/me', [AuthController::class, 'destroy']);
 
     // TRACK B: Ingestion & Agents

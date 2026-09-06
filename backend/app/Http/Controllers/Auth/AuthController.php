@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -110,6 +111,27 @@ class AuthController extends Controller
         return response()->json([
             'user' => $this->userPayload($request->user()),
         ]);
+    }
+
+    /**
+     * Merge the coarse onboarding answer tags into the user's `preferences` bag. Sent once
+     * on first sign-in by hydrateFromOnboarding (see apps/mobile/PRE_SIGNUP_ONBOARDING.md);
+     * every field optional so a user who skipped the questions still gets a clean 200.
+     */
+    public function onboarding(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'goal' => ['nullable', Rule::in(['waste_less', 'cook_smarter', 'organize', 'save_money'])],
+            'waste_frequency' => ['nullable', Rule::in(['weekly', 'monthly', 'rarely'])],
+            'household' => ['nullable', Rule::in(['solo', 'partner', 'household', 'roommates'])],
+        ]);
+
+        $user = $request->user();
+        $incoming = array_filter($data, fn ($value) => $value !== null);
+        $user->preferences = array_merge($user->preferences ?? [], $incoming);
+        $user->save();
+
+        return response()->json(['user' => $this->userPayload($user)]);
     }
 
     /**
@@ -236,6 +258,7 @@ class AuthController extends Controller
             'name' => $user->name,
             'username' => $user->username,
             'email' => $user->email,
+            'preferences' => $user->preferences ?? null,
         ];
     }
 }

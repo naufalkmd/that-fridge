@@ -5,7 +5,16 @@ import type { CurrentUser } from "@thatfridge/core";
 import { api, secureTokenStore } from "@/lib/api";
 import { unregisterPush } from "@/lib/push";
 import { resetChatUsed } from "@/lib/chatQuota";
+import { track } from "@/lib/analytics";
+import { hydrateOnboarding } from "@/lib/hydrateOnboarding";
 import { googleSignInIdToken, googleSignOut } from "@/lib/google-auth";
+
+// Fired once after any successful auth: replays a pre-sign-in onboarding draft to the
+// server (a no-op when there's none) and beacons the funnel event. Fire-and-forget.
+function afterAuth(event: string, props?: Record<string, unknown>) {
+  track(event, props);
+  void hydrateOnboarding();
+}
 
 type Status = "loading" | "signedOut" | "signedIn";
 
@@ -61,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { user } = await api.login(email, password);
     setUser(user);
     setStatus("signedIn");
+    afterAuth("login_completed", { method: "email" });
   }, []);
 
   const signUp = useCallback(
@@ -81,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await resetChatUsed(); // a brand-new account starts with a full weekly allowance
       setUser(user);
       setStatus("signedIn");
+      afterAuth("signup_completed", { from: "direct", method: "email" });
     },
     [],
   );
@@ -90,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { user } = await api.resetPassword(email.trim(), code.trim(), password);
       setUser(user);
       setStatus("signedIn");
+      afterAuth("login_completed", { method: "password_reset" });
     },
     [],
   );
@@ -109,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { user } = await api.loginWithApple(cred.identityToken, name || undefined);
     setUser(user);
     setStatus("signedIn");
+    afterAuth("auth_completed", { from: "direct", method: "apple" });
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
@@ -117,6 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { user } = await api.loginWithGoogle(idToken);
     setUser(user);
     setStatus("signedIn");
+    afterAuth("auth_completed", { from: "direct", method: "google" });
   }, []);
 
   const signOut = useCallback(async () => {

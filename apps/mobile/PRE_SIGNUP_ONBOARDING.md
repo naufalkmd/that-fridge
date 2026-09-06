@@ -198,28 +198,39 @@ Funnel = started → wall → signup. Watch per-step drop-off to decide which qu
 Five phases, each independently shippable. Do them in order — Phase 1 gates everything (no
 funnel = flying blind), Phase 2 is the first user-visible cut, Phases 3–5 are data-driven.
 
-### Phase 1 — Analytics foundation  ·  ~1 day  ·  no user-visible change
+### Phase 1 — Analytics foundation  ·  DONE 2026-09-07  ·  no user-visible change
 
-The prerequisite. Nothing else can be judged without it.
+- `POST /events` — public route, optional auth (session guard → falls through to the sanctum
+  token so a logged-in client's events are still attributed), batched (≤50/request), oversized
+  props dropped not rejected. `AnalyticsEvent` model + migration; `user_id` nullable + `anon_id`.
+- `apps/mobile/src/lib/analytics.ts` — `track(name, props?)` buffers in memory, flushes on an
+  8s timer / at 20 events / on app background; `getAnonId()` (stable per-install id in
+  SecureStore, survives the auth boundary); all failures swallowed.
+- `core`: `AnalyticsEventInput` type + `api.trackEvents()`.
+- Wired: `_layout` (`initAnalytics` + `app_open`), `auth` (`signup_completed` / `login_completed`
+  / `auth_completed` with method + `from: "direct"`), `onboarding` (`onboarding_started`,
+  `_slide_viewed`, `_fridge_step_viewed`, `_fridge_created` / `_skipped`, `_finished` / `_skipped`).
+- Tests: `AnalyticsControllerTest` (guest, attributed, batch cap, missing name, props clamp).
+- **Left for later:** a query/dashboard to actually read the funnel; a couple of weeks of
+  baseline `direct` data before Phase 3 ships.
 
-- `POST /events` endpoint (or reuse the notification-events table) + a `track(event, props)`
-  client helper, fire-and-forget, batched.
-- Wire the funnel events from §8 into the *current* flow first (`onboarding_step_*`,
-  `signup_completed { from: "direct" }`) so there's a baseline to compare against.
-- **Exit:** events visible in a query/dashboard; a week of baseline `direct` signup data.
-- Also satisfies the standalone "Sentry DSN / analytics" TO_DO item.
+### Phase 2 — Plumbing  ·  DONE 2026-09-07  ·  no user-visible change
 
-### Phase 2 — Plumbing  ·  ~1.5 days  ·  no user-visible change
-
-Everything except the screens, so Phase 3 is pure UI.
-
-- `OnboardingDraft` type + SecureStore read/write/clear helpers (mirror `lib/chatQuota.ts`).
-- `hydrateFromOnboarding(draft)` — the 5 best-effort steps from §4, each independent.
-- Backend: `users.preferences` JSON column + `POST /me/onboarding` (validated enums).
-- `api.saveOnboardingProfile()` in core.
-- Unit-test `hydrateFromOnboarding` for the partial-failure paths.
-- **Exit:** call `hydrate` with a hand-built draft in a dev build → fridge named, goal set,
-  preferences stored, reminder scheduled; a second call is a no-op.
+- `apps/mobile/src/lib/onboardingDraft.ts` — `OnboardingDraft` type + `get` / `patch` / `clear`
+  (SecureStore, best-effort, mirrors `lib/chatQuota.ts`).
+- `apps/mobile/src/lib/hydrateOnboarding.ts` — replays the draft once after first auth:
+  create fridge (only if the account has none), `saveOnboardingProfile()` for the tags. Each
+  step independent + best-effort; clears the draft; beacons `onboarding_hydrated`. **Wired into
+  `auth.tsx` but inert** — nothing writes a draft until Phase 3.
+- Backend: `users.preferences` JSON column, `POST /me/onboarding` (merges validated enum tags),
+  `preferences` returned in the `/me` payload + on `CurrentUser`.
+- `core`: `OnboardingPrefs` / `OnboardingGoal` types + `api.saveOnboardingProfile()`.
+- Tests: `AuthControllerTest` (merge, empty body, bad tag, auth required).
+- **Deviation from plan:** no concrete `UserGoal` is seeded from the coarse tag (decision §10.4
+  — tag only for v1). Reminder scheduling deferred to Phase 4.
+- **Manual check:** `patchOnboardingDraft({ fridgeName: "Loft", goal: "save_money" })` in a dev
+  build, then sign in on a fresh account → fridge "Loft" exists, `preferences.goal` set, draft
+  cleared; a second sign-in is a no-op.
 
 ### Phase 3 — Minimal `/welcome`  ·  ~3–4 days  ·  first shippable version
 

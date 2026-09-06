@@ -311,6 +311,32 @@ export interface CurrentUser {
   name: string;
   username: string;
   email: string;
+  /** Coarse onboarding answer tags (see PRE_SIGNUP_ONBOARDING.md); flavours later copy. */
+  preferences?: OnboardingPrefs | null;
+}
+
+export type OnboardingGoal =
+  | "waste_less"
+  | "cook_smarter"
+  | "organize"
+  | "save_money";
+
+export interface OnboardingPrefs {
+  goal?: OnboardingGoal;
+  waste_frequency?: "weekly" | "monthly" | "rarely";
+  household?: "solo" | "partner" | "household" | "roommates";
+}
+
+/** One event for the first-party analytics ingest (`POST /events`). */
+export interface AnalyticsEventInput {
+  name: string;
+  props?: Record<string, unknown>;
+  /** Stable per-install id, kept across the sign-in boundary to stitch the funnel. */
+  anon_id?: string;
+  platform?: string;
+  app_version?: string;
+  /** Client epoch milliseconds when the event happened. */
+  ts?: number;
 }
 
 export interface UserSearchResult {

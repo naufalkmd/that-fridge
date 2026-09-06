@@ -5,6 +5,7 @@ import type {
   Category,
   CurrentUser,
   FoodFocus,
+  AnalyticsEventInput,
   FriendProfile,
   Fridge,
   FridgeJoinRequest,
@@ -20,6 +21,7 @@ import type {
   NotificationEvent,
   NotificationPrefs,
   NutritionCategory,
+  OnboardingPrefs,
   OrganizerTally,
   Recipe,
   RecipeAttachment,
@@ -357,6 +359,19 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   async function me(): Promise<CurrentUser> {
     const res = await http.get<{ user: CurrentUser }>("/me");
     return res.user;
+  }
+
+  /** Merge the coarse onboarding answer tags into the user's preferences. */
+  async function saveOnboardingProfile(
+    prefs: OnboardingPrefs,
+  ): Promise<CurrentUser> {
+    const res = await http.post<{ user: CurrentUser }>("/me/onboarding", prefs);
+    return res.user;
+  }
+
+  /** Fire-and-forget batch of first-party analytics events. */
+  function trackEvents(events: AnalyticsEventInput[]): Promise<unknown> {
+    return http.post("/events", { events });
   }
 
   async function deleteAccount(): Promise<void> {
@@ -972,6 +987,8 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     getChatSessionMessages,
     deleteChatSession,
     deleteAllChatSessions,
+    saveOnboardingProfile,
+    trackEvents,
   };
 }
 

@@ -108,6 +108,48 @@ class AuthControllerTest extends TestCase
         $meResponse->assertJson(['user' => ['username' => 'jordan']]);
     }
 
+    public function test_onboarding_merges_preference_tags_and_returns_them(): void
+    {
+        $user = User::factory()->create();
+
+        $first = $this->actingAs($user)->postJson('/api/me/onboarding', [
+            'goal' => 'save_money',
+            'household' => 'roommates',
+        ]);
+        $first->assertStatus(200);
+        $first->assertJson(['user' => ['preferences' => ['goal' => 'save_money', 'household' => 'roommates']]]);
+
+        // A later call merges rather than replaces.
+        $this->actingAs($user)->postJson('/api/me/onboarding', ['waste_frequency' => 'weekly'])
+            ->assertStatus(200);
+
+        $this->assertSame(
+            ['goal' => 'save_money', 'household' => 'roommates', 'waste_frequency' => 'weekly'],
+            $user->fresh()->preferences,
+        );
+    }
+
+    public function test_onboarding_accepts_an_empty_body_for_a_user_who_skipped_the_questions(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/me/onboarding', [])->assertStatus(200);
+    }
+
+    public function test_onboarding_rejects_a_tag_outside_the_known_set(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/me/onboarding', ['goal' => 'get_rich'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('goal');
+    }
+
+    public function test_onboarding_requires_auth(): void
+    {
+        $this->postJson('/api/me/onboarding', ['goal' => 'save_money'])->assertStatus(401);
+    }
+
     public function test_delete_me_removes_the_user_their_tokens_and_owned_fridges(): void
     {
         $user = User::factory()->create();

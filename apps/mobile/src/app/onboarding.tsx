@@ -20,6 +20,7 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import Animated, { FadeIn } from "react-native-reanimated";
 
 import { api } from "@/lib/api";
+import { track } from "@/lib/analytics";
 import { useInventory } from "@/lib/inventory";
 import { useOnboarding } from "@/lib/onboarding";
 import { PixelText } from "@/components/brand";
@@ -82,21 +83,36 @@ export default function Onboarding() {
 
   const last = index === SLIDES.length - 1;
 
+  useEffect(() => {
+    track("onboarding_started");
+  }, []);
+
+  useEffect(() => {
+    if (phase === "slides") track("onboarding_slide_viewed", { index });
+  }, [index, phase]);
+
   const finish = useCallback(
-    async (opts?: { thenAdd?: boolean }) => {
+    async (opts?: { thenAdd?: boolean; reason: "skip" | "complete" }) => {
+      track(
+        opts?.reason === "skip" ? "onboarding_skipped" : "onboarding_finished",
+        { at_step: index, phase },
+      );
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       await markSeen();
       router.replace("/home");
       if (opts?.thenAdd) setTimeout(() => router.push("/add"), 250);
     },
-    [markSeen, router],
+    [markSeen, router, index, phase],
   );
 
   const next = useCallback(() => {
     if (last) {
       // Already have a fridge (a returning user re-seeing the intro) → skip naming.
-      if (fridges.length > 0) void finish({ thenAdd: true });
-      else setPhase("fridge");
+      if (fridges.length > 0) void finish({ thenAdd: true, reason: "complete" });
+      else {
+        track("onboarding_fridge_step_viewed");
+        setPhase("fridge");
+      }
       return;
     }
     Haptics.selectionAsync().catch(() => {});
@@ -112,12 +128,16 @@ export default function Onboarding() {
           try {
             await api.createFridge(name);
             await refresh();
+            track("onboarding_fridge_created");
           } catch {
             /* the add-item flow will create "My Fridge" if this didn't land */
           }
-          void finish({ thenAdd: true });
+          void finish({ thenAdd: true, reason: "complete" });
         }}
-        onSkip={() => finish({ thenAdd: true })}
+        onSkip={() => {
+          track("onboarding_fridge_skipped");
+          void finish({ thenAdd: true, reason: "complete" });
+        }}
       />
     );
   }
@@ -153,7 +173,7 @@ export default function Onboarding() {
             />
           ))}
         </View>
-        <Pressable onPress={() => finish()} hitSlop={12}>
+        <Pressable onPress={() => finish({ reason: "skip" })} hitSlop={12}>
           <Text style={{ fontSize: 13, fontWeight: "700", color: MUTED }}>Skip</Text>
         </Pressable>
       </View>
@@ -234,7 +254,7 @@ export default function Onboarding() {
 
         {last ? (
           <Pressable
-            onPress={() => finish()}
+            onPress={() => finish({ reason: "skip" })}
             hitSlop={8}
             style={{ alignItems: "center", paddingVertical: 4 }}
           >
