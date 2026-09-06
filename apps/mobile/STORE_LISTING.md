@@ -267,6 +267,9 @@ DEMO ACCOUNT (no sign-up required)
 Email: keira@thatfridge.test
 Password: [PASSWORD]
 
+On first sign-in a short 3-slide intro carousel appears - tap "Skip" (top right) to go
+straight to the app.
+
 This account already has a shared fridge populated with items across the fridge, freezer and
 pantry zones, plus recipes in the recipe book, so every core screen has real content on first
 login.
