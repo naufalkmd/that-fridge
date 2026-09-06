@@ -33,18 +33,18 @@ ThatFridge is well suited to copy this, and has advantages Duolingo doesn't:
 
 ## 2. The psychology, and how we adapt each piece
 
-| Mechanism (research) | What Duolingo does | Our adaptation |
-| --- | --- | --- |
-| **Value before commitment** | Full first lesson before signup | The "first win" demo (§3 step 6): mock fridge → Chef suggests a recipe → Guardian flags an item. The loop, on fake data, in ~10s. |
-| **Endowed progress** (Nunes & Drèze 2006) | Streak starts at 1; XP from lesson 1 | The signup screen shows "✓ Goal set · ✓ Fridge named · ✓ Crew ready". The post-signup Getting Started checklist then opens at **3/7** with those pre-ticked. |
-| **IKEA effect** (you value what you build) | You "built" a lesson's worth of progress | By the signup ask the user has named their fridge, picked a goal, chosen a reminder — five+ small authored choices. |
-| **Sunk cost / escalation of commitment** | Abandoning loses your lesson | Same — abandoning at the wall discards named fridge + goal + answers. Kept honest: the wall says *"keep what you set up"*, never *"you must"*. |
-| **Foot-in-the-door** | Tiny taps precede the signup ask | Every pre-auth step is one tap and skippable. The signup ask is the first "real" commitment, and it arrives after a string of trivial yeses. |
-| **Personalization = agency** | "Why are you learning?" | "What brings you here?" / "How often does food get thrown out?" / "Who's it for?" — answers visibly shape later copy and the crew's tone. Not a form; a conversation. |
-| **Commitment device** | "Practice 5 min/day" + reminder time | "Remind me to check my fridge" → evening / twice a week / off. A promise to self; the notification permission is asked *after* signup, in context. |
-| **Loss aversion** (Kahneman & Tversky) | "Don't lose your streak!" | The Waste Saver streak already exists — keep it **positive** ("3 weeks strong"), never "Duo is sad". The signup framing leans on *protecting* setup, not fear. |
-| **Peak-end rule** | Lesson ends on confetti | End onboarding on the first-win demo + a "You're all set, [FridgeName] is ready" beat — not on the signup form. |
-| **Zeigarnik effect** (open loops nag) | The lesson path with locked nodes ahead | The Getting Started checklist post-signup; the visible "3 of 7". |
+| Mechanism (research)                             | What Duolingo does                       | Our adaptation                                                                                                                                                         |
+| ------------------------------------------------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Value before commitment**                | Full first lesson before signup          | The "first win" demo (§3 step 4): mock fridge → Chef suggests a recipe → Guardian flags an item. The loop, on fake data, in ~10s.                                   |
+| **Endowed progress** (Nunes & Drèze 2006) | Streak starts at 1; XP from lesson 1     | The signup screen shows "✓ Goal set · ✓ Fridge named · ✓ Crew ready". The post-signup Getting Started checklist then opens at**3/7** with those pre-ticked. |
+| **IKEA effect** (you value what you build) | You "built" a lesson's worth of progress | By the signup ask the user has named their fridge, picked a goal, chosen a reminder — five+ small authored choices.                                                   |
+| **Sunk cost / escalation of commitment**   | Abandoning loses your lesson             | Same — abandoning at the wall discards named fridge + goal + answers. Kept honest: the wall says*"keep what you set up"*, never*"you must"*.                        |
+| **Foot-in-the-door**                       | Tiny taps precede the signup ask         | Every pre-auth step is one tap and skippable. The signup ask is the first "real" commitment, and it arrives after a string of trivial yeses.                           |
+| **Personalization = agency**               | "Why are you learning?"                  | "What brings you here?" / "How often does food get thrown out?" / "Who's it for?" — answers visibly shape later copy and the crew's tone. Not a form; a conversation. |
+| **Commitment device**                      | "Practice 5 min/day" + reminder time     | "Remind me to check my fridge" → evening / twice a week / off. A promise to self; the notification permission is asked*after* signup, in context.                   |
+| **Loss aversion** (Kahneman & Tversky)     | "Don't lose your streak!"                | The Waste Saver streak already exists — keep it**positive** ("3 weeks strong"), never "Duo is sad". The signup framing leans on *protecting* setup, not fear. |
+| **Peak-end rule**                          | Lesson ends on confetti                  | End onboarding on the first-win demo + a "You're all set, [FridgeName] is ready" beat — not on the signup form.                                                       |
+| **Zeigarnik effect** (open loops nag)      | The lesson path with locked nodes ahead  | The Getting Started checklist post-signup; the visible "3 of 7".                                                                                                       |
 
 ---
 
@@ -54,16 +54,21 @@ ThatFridge is well suited to copy this, and has advantages Duolingo doesn't:
 app launch, signedOut ──► /welcome
    │
    1. Value carousel — 3 slides (existing SLIDES)            "Skip" ─┐
-   2. "What brings you here?"  waste · cook · organize · save        │
-   3. "How often does food get thrown out?"  weekly · monthly · rarely
-   4. "Who's it for?"  just me · me + partner · household · roommates │
-   5. Meet your crew — 4 cards, tap each for its one-liner           │
-   6. First-win demo — mock fridge (eggs, spinach, yogurt);          │
+   2. "A few quick things" — ONE screen, 3 crew-asked chip rows:     │
+        Shopkeeper · "What brings you here?"                         │
+          waste · cook · organize · save                            │
+        Guardian · "How often does food get thrown out?"            │
+          weekly · monthly · rarely                                 │
+        Organizer · "Who's this fridge for?"                        │
+          just me · partner · household · roommates                 │
+        one "Continue" (works with any/none answered)               │
+   3. Meet your crew — 4 cards, tap each for its one-liner           │
+   4. First-win demo — mock fridge (eggs, spinach, yogurt);          │
       Chef: "15-min frittata uses all three." Guardian: "yogurt      │
       goes tomorrow." One button: "Nice — let's do mine"             │
-   7. Name your fridge  (existing FridgeStep; stored locally)        │
-   8. Set your intention — reminder cadence (stored locally)         │
-   9. Soft wall — "Save your fridge & crew"                          │
+   5. Name your fridge  (existing FridgeStep; stored locally)        │
+   6. Set your intention — reminder cadence (stored locally)         │
+   7. Soft wall — "Save your fridge & crew"                          │
       Apple · Google · email  ·  small "I already have an account" ◄─┘
    │  (every step also has "I already have an account" → /sign-in)
    ▼ auth success
@@ -73,9 +78,14 @@ app launch, signedOut ──► /welcome
  Home ─► "+" spotlight ─► 3-stop nav tour ─► Getting Started (opens 3/7)
 ```
 
-Steps 2–4 and 8 are **skippable and A/B / cut candidates** — 9 screens risks fatigue. Ship
-with step 2 only, add 3/4/8 back if funnel data says they don't drop people. Duolingo landed
-on ~7 after heavy testing; we won't get it right first try without data.
+7 steps. The three questions live on **one screen** (step 2) — stacked single-tap chip rows,
+each "asked" by the relevant crew member, so it reads as one conversational beat and doubles
+as a warm-up for step 3. Nothing on it is required; "Continue" is always live.
+
+**Cut candidates** if funnel data shows drop-off: the Guardian + Organizer rows on step 2
+(keep only "What brings you here?"), and step 6 (reminder). Ship the leanest version first —
+carousel, "what brings you here?", demo, name fridge, wall — and add back only what earns it.
+Duolingo landed on ~7 screens after heavy A/B testing; we won't nail the count first try.
 
 ### Returning users
 
@@ -182,14 +192,14 @@ Funnel = started → wall → signup. Watch per-step drop-off to decide which qu
 
 ## 9. Effort & sequencing
 
-| Piece | Est. | Notes |
-| --- | --- | --- |
-| Analytics events (`POST /events` + client helper) | ~1 day | Do first — everything else is judged by it |
-| Local draft + `hydrateFromOnboarding()` + partial-failure handling | ~1–1.5 days | |
-| `/welcome` screen — carousel (reuse) + questions + meet-the-crew + demo + name + reminder + wall | ~3–4 days | The demo screen and meet-the-crew are the only genuinely new UI |
-| Routing swap + `sign-in` hydrate hook + returning-user paths | ~1 day | |
-| Backend: `preferences` column + endpoint | ~0.5 day | |
-| Iterate on step count / copy from funnel data | ongoing | The real work |
+| Piece                                                                                               | Est.         | Notes                                                           |
+| --------------------------------------------------------------------------------------------------- | ------------ | --------------------------------------------------------------- |
+| Analytics events (`POST /events` + client helper)                                                 | ~1 day       | Do first — everything else is judged by it                     |
+| Local draft +`hydrateFromOnboarding()` + partial-failure handling                                 | ~1–1.5 days |                                                                 |
+| `/welcome` screen — carousel (reuse) + questions + meet-the-crew + demo + name + reminder + wall | ~3–4 days   | The demo screen and meet-the-crew are the only genuinely new UI |
+| Routing swap +`sign-in` hydrate hook + returning-user paths                                       | ~1 day       |                                                                 |
+| Backend:`preferences` column + endpoint                                                           | ~0.5 day     |                                                                 |
+| Iterate on step count / copy from funnel data                                                       | ongoing      | The real work                                                   |
 
 **~1.5–2 weeks.** Post-launch. Ship the minimal version (carousel + "what brings you here" +
 demo + name + wall), instrument it, then expand.
