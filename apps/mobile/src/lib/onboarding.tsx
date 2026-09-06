@@ -11,7 +11,10 @@ import * as SecureStore from "expo-secure-store";
 // `lib/chatQuota.ts`. Seeing the intro again after a reinstall is acceptable.
 // Bump the key suffix if the carousel changes enough to be worth re-showing.
 const SEEN_KEY = "thatfridge_onboarding_v1";
-const CHECKLIST_DISMISSED_KEY = "thatfridge_onboarding_checklist_dismissed_v1";
+const COACH_DISMISSED_KEY = "thatfridge_onboarding_coach_dismissed_v1";
+
+/** Screen rect of the Add (+) tab-bar button, published by the tab bar for the coach spotlight. */
+export type Rect = { x: number; y: number; width: number; height: number };
 
 interface OnboardingValue {
   /** Storage reads have completed — routing shouldn't decide before this. */
@@ -19,9 +22,12 @@ interface OnboardingValue {
   /** The intro carousel has been seen (finished or skipped). */
   seen: boolean;
   markSeen: () => Promise<void>;
-  /** The Home first-run checklist card was dismissed. */
-  checklistDismissed: boolean;
-  dismissChecklist: () => Promise<void>;
+  /** The "add your first item" coach spotlight was dismissed / satisfied. */
+  coachDismissed: boolean;
+  dismissCoach: () => Promise<void>;
+  /** Where the "+" button is on screen, for the spotlight to draw over. */
+  addButtonRect: Rect | null;
+  setAddButtonRect: (r: Rect | null) => void;
 }
 
 const OnboardingContext = createContext<OnboardingValue | null>(null);
@@ -29,16 +35,17 @@ const OnboardingContext = createContext<OnboardingValue | null>(null);
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [seen, setSeen] = useState(false);
-  const [checklistDismissed, setChecklistDismissed] = useState(false);
+  const [coachDismissed, setCoachDismissed] = useState(false);
+  const [addButtonRect, setAddButtonRect] = useState<Rect | null>(null);
 
   useEffect(() => {
     Promise.all([
       SecureStore.getItemAsync(SEEN_KEY).catch(() => null),
-      SecureStore.getItemAsync(CHECKLIST_DISMISSED_KEY).catch(() => null),
+      SecureStore.getItemAsync(COACH_DISMISSED_KEY).catch(() => null),
     ])
       .then(([s, d]) => {
         setSeen(s === "1");
-        setChecklistDismissed(d === "1");
+        setCoachDismissed(d === "1");
       })
       .finally(() => setReady(true));
   }, []);
@@ -52,10 +59,10 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     }
   }, []);
 
-  const dismissChecklist = useCallback(async () => {
-    setChecklistDismissed(true);
+  const dismissCoach = useCallback(async () => {
+    setCoachDismissed(true);
     try {
-      await SecureStore.setItemAsync(CHECKLIST_DISMISSED_KEY, "1");
+      await SecureStore.setItemAsync(COACH_DISMISSED_KEY, "1");
     } catch {
       /* best effort */
     }
@@ -63,7 +70,15 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <OnboardingContext.Provider
-      value={{ ready, seen, markSeen, checklistDismissed, dismissChecklist }}
+      value={{
+        ready,
+        seen,
+        markSeen,
+        coachDismissed,
+        dismissCoach,
+        addButtonRect,
+        setAddButtonRect,
+      }}
     >
       {children}
     </OnboardingContext.Provider>

@@ -1,8 +1,10 @@
-import { type ComponentProps, memo, useCallback } from "react";
+import { type ComponentProps, memo, useCallback, useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Tabs, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
+
+import { useOnboarding } from "@/lib/onboarding";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Animated, {
   FadeIn,
@@ -112,13 +114,24 @@ const Tab = memo(function Tab({
 
 function AddFab() {
   const router = useRouter();
+  const { setAddButtonRect } = useOnboarding();
+  const slotRef = useRef<View>(null);
   const scale = useSharedValue(1);
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
+  const reportRect = useCallback(() => {
+    // Deferred a frame so the floating bar has settled into place before we measure.
+    requestAnimationFrame(() => {
+      slotRef.current?.measureInWindow((x, y, width, height) => {
+        if (width && height) setAddButtonRect({ x, y, width, height });
+      });
+    });
+  }, [setAddButtonRect]);
+
   return (
-    <View style={styles.fabSlot}>
+    <View ref={slotRef} style={styles.fabSlot} onLayout={reportRect}>
       <Animated.View style={[styles.fab, style]}>
         <Pressable
           onPress={() => {
