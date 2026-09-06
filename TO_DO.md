@@ -84,8 +84,12 @@ Korea localization is a post-approval fast-follow.
   Reset on the RevenueCat renewal date (or ISO-month). Update paywall + App Store copy: drop
   the literal "unlimited", use fair-use wording or an allowance. Floor `throttle:15,1` already
   covers hammering; this is margin protection against the heavy-browsing tail.
-  - Stopgap now: set a hard monthly credit limit on the OpenRouter *and* fal.ai keys so total
-    spend is bounded regardless.
+  - Stopgap now: pre-load a fixed ~$20–30 on the OpenRouter key and set the low-balance email
+    alert; do the same on fal.ai. **Leave auto top-up OFF** — a drained balance is a degraded
+    app, but auto top-up removes the only hard ceiling and lets a scripted trial-abuser or a
+    bug bill your card with no cap. Top up manually as real usage grows. Flip auto top-up on
+    only once the per-user spend ceiling below ships (then spend scales predictably with
+    paying users and the runaway cases are capped per account).
 - [ ] AI recipe images + one shared image budget. Give recipes an AI-generated hero image
   (`image_url` on `recipes`, migration, regenerate button in `recipe-form`, render on the card
   + detail). Generate with `fal-ai/flux/schnell` (same model as icons, no rembg pass → ~$0.003).
