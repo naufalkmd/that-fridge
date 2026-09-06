@@ -197,20 +197,20 @@ questionnaire on 2026-09-06 — the result was 9+ (see bottom).**
 
 ### Content frequency
 
-| Topic                                       | Answer        | Why                                                                                                                                                                                                                                                                                                                                                                |
-| ------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Violence (any)                              | None          | Nothing in the app depicts violence                                                                                                                                                                                                                                                                                                                                |
-| Sexual content or nudity                    | None          | —                                                                                                                                                                                                                                                                                                                                                                 |
-| Profanity or Crude Humor                    | None          | AI crew is a constrained food assistant; user notes are kitchen labels                                                                                                                                                                                                                                                                                             |
-| Horror/Fear Themes                          | None          | It's a fridge inventory app                                                                                                                                                                                                                                                                                                                                        |
-| Alcohol, Tobacco, or Drug Use or References | None          | Seeded recipes + demo account vetted clean (`DatabaseSeeder.php`). Culinary ingredient mentions in a Food & Drink app aren't what this descriptor targets — matches every major recipe app. *(If a reviewer objects to an AI-suggested wine recipe, that's a conversation, not a rejection — don't pre-emptively take Infrequent, which would push to 13+.)* |
-| Mature or Suggestive Themes                 | None          | —                                                                                                                                                                                                                                                                                                                                                                 |
-| Medical or Treatment Information            | None          | Guardian's flags are food spoilage/freshness, not health-condition or treatment guidance                                                                                                                                                                                                                                                                           |
-| Health or Wellness Topics                   | **Yes** | Guardian gives food-safety recommendations; Chef recommends meals; Kitchen Score nudges a food-waste habit — lifestyle/self-care guidance. Benign descriptor, does not raise the band                                                                                                                                                                             |
-| Simulated Gambling                          | None          | No betting/wagering mechanics                                                                                                                                                                                                                                                                                                                                      |
-| Contests                                    | None          | Kitchen Score / streaks / badges / goals are personal and private — no leaderboard, no user-vs-user ranking (verified: no such code)                                                                                                                                                                                                                              |
-| Gambling (real money)                       | No            | —                                                                                                                                                                                                                                                                                                                                                                 |
-| Loot Boxes                                  | No            | Pro unlocks a fixed feature set; nothing randomized-for-purchase                                                                                                                                                                                                                                                                                                   |
+| Topic                                       | Answer        | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Violence (any)                              | None          | Nothing in the app depicts violence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Sexual content or nudity                    | None          | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Profanity or Crude Humor                    | None          | AI crew is a constrained food assistant; user notes are kitchen labels                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Horror/Fear Themes                          | None          | It's a fridge inventory app                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Alcohol, Tobacco, or Drug Use or References | None          | All 11 recipes visible on the demo account vetted clean 2026-09-06 (the `DatabaseSeeder.php` curated set plus a few added on the account, incl. Chicken Rendang / Roti Canai — none reference alcohol, tobacco or drugs). Culinary ingredient mentions in a Food & Drink app aren't what this descriptor targets — matches every major recipe app. *(If a reviewer objects to an AI-suggested wine recipe, that's a conversation, not a rejection — don't pre-emptively take Infrequent, which would push to 13+.)* |
+| Mature or Suggestive Themes                 | None          | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Medical or Treatment Information            | None          | Guardian's flags are food spoilage/freshness, not health-condition or treatment guidance                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Health or Wellness Topics                   | **Yes** | Guardian gives food-safety recommendations; Chef recommends meals; Kitchen Score nudges a food-waste habit — lifestyle/self-care guidance. Benign descriptor, does not raise the band                                                                                                                                                                                                                                                                                                                                    |
+| Simulated Gambling                          | None          | No betting/wagering mechanics                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Contests                                    | None          | Kitchen Score / streaks / badges / goals are personal and private — no leaderboard, no user-vs-user ranking (verified: no such code)                                                                                                                                                                                                                                                                                                                                                                                     |
+| Gambling (real money)                       | No            | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Loot Boxes                                  | No            | Pro unlocks a fixed feature set; nothing randomized-for-purchase                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 **Calculated result: 9+** (walked through 2026-09-06). Under the reworked system, declaring
 **User-Generated Content = Yes** floors a general-audience app around 9+ even when the UGC is
@@ -252,28 +252,48 @@ it must be rotated. The demo password is now an env var, not a committed literal
 
 ### Notes for the reviewer (draft — paste into App Store Connect → App Review Information → Notes)
 
+> Before pasting: replace `[PASSWORD]` with the real `DEMO_USER_PASSWORD` (from the password
+> manager) **in App Store Connect only** — do not commit it back into this file. The demo
+> account's fridge, items and recipes were verified live on 2026-09-06 (fridge is currently
+> named "Home Fridge"; rename it to something friendlier before submitting if you like — the
+> notes below don't depend on the name).
+
 ```
-Demo account: keira@thatfridge.test / [password set at submission]
+ThatFridge is a household fridge, freezer and pantry inventory app with an AI "crew" (Chef,
+Guardian, Organizer, Shopkeeper) that suggests meals from what you have, flags food about to
+expire, and builds shopping lists. iOS only, English-language UI.
 
-This account has a pre-seeded fridge ("Keira's Kitchen") with sample items across every storage
-zone (fridge/freezer/pantry) and 7 curated recipes already in the recipe book, so every core
-screen has real content on first login - no empty states to work around.
+DEMO ACCOUNT (no sign-up required)
+Email: keira@thatfridge.test
+Password: [PASSWORD]
 
-What to test:
-- Home: shows the AI "crew" (Chef, Guardian, Organizer, Shopkeeper) with tips based on the
-  seeded inventory, and a Kitchen Score.
-- Inventory: tap any item to see freshness/expiry; try adding one manually (barcode/receipt/
-  photo scanning require a Pro subscription - see below).
-- Chat: ask any crew member a question, e.g. "what should I cook tonight?" (free tier: 5
-  messages/week).
-- Recipes: the 7 seeded recipes are visible in the recipe book from first login.
+This account already has a shared fridge populated with items across the fridge, freezer and
+pantry zones, plus recipes in the recipe book, so every core screen has real content on first
+login.
 
-To test Pro features (unlimited AI chat, receipt/photo scanning, multiple/shared fridges): the
-app offers a 7-day free trial with no promo code needed - starting the trial from the paywall
-(Profile tab -> Upgrade) unlocks every Pro feature immediately in the App Store sandbox review
-environment.
+WHAT TO TEST
+- Home: AI crew tips based on the current inventory, and a Kitchen Score.
+- Inventory: tap an item for its freshness / expiry detail. Add an item with the "Add" button -
+  barcode scan and manual entry are free.
+- Chat: ask a crew member something, e.g. "what should I cook tonight?" (free tier: 5 messages
+  per week, shared across the whole crew).
+- Recipes: sample recipes are visible in the recipe book from first login.
 
-No account creation is required to review the app - the demo account above covers every core
-flow. If you'd like to test sign-up instead, Sign in with Apple and Google are both available
-on the sign-in screen.
+PRO FEATURES AND THE FREE TRIAL
+Pro unlocks unlimited AI chat, receipt scanning, fridge-photo scanning, and multiple/shared
+fridges. The app offers a 7-day free trial with no promo code needed - start it from
+Profile tab -> Upgrade. In the App Store sandbox environment this grants all Pro features
+immediately. (Receipt and fridge-photo scanning are Pro-only and will show an upgrade prompt
+on the free tier; barcode scanning and manual add are always free; expiry-date photo scan and
+AI icon generation are limited on the free tier and unlimited on Pro.)
+
+SHARED CONTENT / USER-GENERATED CONTENT
+Fridge names, sticky notes and recipe notes are visible only to members that a fridge owner has
+explicitly invited and approved - there is no public feed, profile browsing or content
+discovery. A user can block another user from that user's profile, which stops all contact in
+both directions.
+
+SIGN-UP (optional)
+Not required for review. If you want to test account creation, Sign in with Apple and Sign in
+with Google are both on the sign-in screen.
 ```
