@@ -1,10 +1,12 @@
+import { useEffect, useRef, useState } from "react";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
+import type { EdgeInsets } from "react-native-safe-area-context";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { useInventory } from "@/lib/inventory";
-import { useOnboarding } from "@/lib/onboarding";
+import { type CoachTarget, useOnboarding } from "@/lib/onboarding";
 
 const CANVAS = "#0a0a0c";
 const SURFACE = "#131316";
@@ -12,53 +14,163 @@ const HAIRLINE = "rgba(255,255,255,0.09)";
 const ACCENT = "#26c6da";
 const INK = "#eaeaec";
 const MUTED = "rgba(234,234,236,0.58)";
+const FAINT = "rgba(234,234,236,0.34)";
 
 const FAB_SIZE = 58;
 const RING = 96;
 
+// Beyond this many items the fridge is clearly established (a reinstall, or the demo
+// account) — the intro can re-run there but the beginner tour shouldn't.
+const ESTABLISHED = 6;
+
+const LOOK_AROUND: { target: Exclude<CoachTarget, "add" | "home">; title: string; body: string }[] = [
+  {
+    target: "inventory",
+    title: "Your inventory",
+    body: "Everything you add lives here with a freshness bar — green fading to red as it ages.",
+  },
+  {
+    target: "eat",
+    title: "Meet the crew",
+    body: "Chef, Guardian, Organizer and Shopkeeper — recipes, expiry warnings, storage tips and your shopping list.",
+  },
+  {
+    target: "chat",
+    title: "Ask anything",
+    body: "Quick Chat answers questions about your fridge, and turns a recipe link into a card.",
+  },
+];
+
 /**
- * One-time spotlight shown right after the intro carousel, for a user with an empty
- * fridge: dims the whole screen and highlights the "+" button so the very first
- * action is unmissable. Dismisses on any tap and never returns once an item exists.
- * Rendered from `(tabs)/_layout` as a sibling of <Tabs> so it covers the tab bar.
+ * One-time onboarding spotlight, rendered from `(tabs)/_layout` over the tab bar.
+ *
+ * Phase A — empty fridge: dims the screen and highlights the "+" so the first action
+ * is unmissable. Phase B — once an item exists: a short 3-stop "look around" of the
+ * nav (inventory, crew, chat). Either phase ends permanently on Skip / Got it, and
+ * the whole thing is suppressed for an already-established fridge.
  */
 export function CoachSpotlight() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const { items, loading } = useInventory();
-  const { seen, coachDismissed, dismissCoach, addButtonRect } = useOnboarding();
+  const {
+    ready,
+    seen,
+    coachDismissed,
+    dismissCoach,
+    coachRects,
+    coachTourSeen,
+    markCoachTourSeen,
+  } = useOnboarding();
+  const [step, setStep] = useState(0);
 
-  const visible = seen && !coachDismissed && !loading && items.length === 0;
-  if (!visible) return null;
+  // Whether the look-around had already run in a previous session — captured once,
+  // so marking it "seen" now doesn't hide it out from under the current session.
+  const ranBefore = useRef<boolean | null>(null);
+  if (ready && ranBefore.current === null) ranBefore.current = coachTourSeen;
 
-  // Prefer the tab bar's measured "+" rect; fall back to where the floating bar
-  // sits (centered, just above the home-indicator inset).
-  const cx = addButtonRect ? addButtonRect.x + addButtonRect.width / 2 : width / 2;
-  const cy = addButtonRect
-    ? addButtonRect.y + addButtonRect.height / 2 - 22
-    : height - (insets.bottom || 10) - 34;
+  const inLookAround =
+    seen &&
+    !coachDismissed &&
+    !loading &&
+    items.length > 0 &&
+    items.length <= ESTABLISHED;
 
-  const goAdd = () => {
-    void dismissCoach();
-    router.push("/add");
-  };
+  useEffect(() => {
+    if (!inLookAround) return;
+    // Shown-and-abandoned in an earlier session → stop nagging. First run → persist
+    // the marker so it only ever gets this one session.
+    if (ranBefore.current) void dismissCoach();
+    else void markCoachTourSeen();
+  }, [inLookAround, dismissCoach, markCoachTourSeen]);
+
+  if (!seen || coachDismissed || loading || items.length > ESTABLISHED) {
+    return null;
+  }
+  if (items.length > 0 && ranBefore.current) return null;
+
+  const fallbackY = height - (insets.bottom || 10) - 34;
+
+  // ── Phase A — "add your first item" ──────────────────────────────────────
+  if (items.length === 0) {
+    const rect = coachRects.add;
+    const cx = rect ? rect.x + rect.width / 2 : width / 2;
+    const cy = rect ? rect.y + rect.height / 2 - 22 : fallbackY;
+    return (
+      <Overlay
+        insets={insets}
+        cx={cx}
+        cy={cy}
+        title="Add your first item"
+        body="Tap + — scan a barcode or just type it in. Your fridge fills in from there."
+        primaryLabel="Add an item"
+        onPrimary={() => router.push("/add")}
+        onSkip={dismissCoach}
+        fab
+      />
+    );
+  }
+
+  // ── Phase B — look around ───────────────────────────────────────────────
+  const stop = LOOK_AROUND[Math.min(step, LOOK_AROUND.length - 1)];
+  const last = step >= LOOK_AROUND.length - 1;
+  const rect = coachRects[stop.target];
+  const cx = rect ? rect.x + rect.width / 2 : width / 2;
+  const cy = rect ? rect.y + rect.height / 2 : fallbackY;
 
   return (
+    <Overlay
+      insets={insets}
+      cx={cx}
+      cy={cy}
+      title={stop.title}
+      body={stop.body}
+      progress={`${step + 1} / ${LOOK_AROUND.length}`}
+      primaryLabel={last ? "Got it" : "Next"}
+      onPrimary={() => (last ? void dismissCoach() : setStep(step + 1))}
+      onSkip={last ? undefined : dismissCoach}
+    />
+  );
+}
+
+function Overlay({
+  insets,
+  cx,
+  cy,
+  title,
+  body,
+  progress,
+  primaryLabel,
+  onPrimary,
+  onSkip,
+  fab,
+}: {
+  insets: EdgeInsets;
+  cx: number;
+  cy: number;
+  title: string;
+  body: string;
+  progress?: string;
+  primaryLabel: string;
+  onPrimary: () => void;
+  onSkip?: () => void;
+  fab?: boolean;
+}) {
+  return (
     <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-      {/* full-screen dim; tap anywhere to dismiss */}
       <Pressable
-        onPress={() => dismissCoach()}
+        onPress={onSkip}
         style={{ flex: 1, backgroundColor: "rgba(6,6,9,0.88)" }}
       >
-        {/* tooltip, anchored above the button */}
+        {/* tooltip, anchored above the highlighted target */}
         <View
           pointerEvents="box-none"
           style={{
             position: "absolute",
             left: 24,
             right: 24,
-            top: cy - RING / 2 - 116,
+            top: Math.max((insets.top || 20) + 44, cy - RING / 2 - 150),
             alignItems: "center",
           }}
         >
@@ -70,9 +182,24 @@ export function CoachSpotlight() {
               borderRadius: 14,
               paddingVertical: 14,
               paddingHorizontal: 18,
-              maxWidth: 300,
+              maxWidth: 320,
+              width: "100%",
             }}
           >
+            {progress && (
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: "800",
+                  letterSpacing: 0.6,
+                  color: FAINT,
+                  textAlign: "center",
+                  marginBottom: 5,
+                }}
+              >
+                {progress}
+              </Text>
+            )}
             <Text
               style={{
                 fontSize: 15,
@@ -81,7 +208,7 @@ export function CoachSpotlight() {
                 textAlign: "center",
               }}
             >
-              Add your first item
+              {title}
             </Text>
             <Text
               style={{
@@ -92,9 +219,25 @@ export function CoachSpotlight() {
                 marginTop: 4,
               }}
             >
-              Tap the + button — scan a barcode or just type it in. Your fridge fills
-              in from there.
+              {body}
             </Text>
+            <Pressable
+              onPress={onPrimary}
+              style={{
+                marginTop: 12,
+                alignSelf: "center",
+                backgroundColor: ACCENT,
+                borderRadius: 9,
+                paddingVertical: 9,
+                paddingHorizontal: 22,
+              }}
+            >
+              <Text
+                style={{ fontSize: 13, fontWeight: "800", color: CANVAS }}
+              >
+                {primaryLabel}
+              </Text>
+            </Pressable>
           </View>
           <View
             style={{
@@ -110,7 +253,7 @@ export function CoachSpotlight() {
           />
         </View>
 
-        {/* pulsing-style halo + ring around the "+" */}
+        {/* halo + ring around the target */}
         <View
           pointerEvents="none"
           style={{
@@ -138,34 +281,43 @@ export function CoachSpotlight() {
           }}
         />
 
-        {/* bright copy of the FAB, tappable → opens Add */}
-        <Pressable
-          onPress={goAdd}
-          style={{
-            position: "absolute",
-            left: cx - FAB_SIZE / 2,
-            top: cy - FAB_SIZE / 2,
-            width: FAB_SIZE,
-            height: FAB_SIZE,
-            borderRadius: FAB_SIZE / 2,
-            backgroundColor: ACCENT,
-            borderWidth: 4,
-            borderColor: SURFACE,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="add" size={26} color={CANVAS} />
-        </Pressable>
+        {/* bright copy of the FAB (phase A only), tappable → opens Add */}
+        {fab && (
+          <Pressable
+            onPress={onPrimary}
+            style={{
+              position: "absolute",
+              left: cx - FAB_SIZE / 2,
+              top: cy - FAB_SIZE / 2,
+              width: FAB_SIZE,
+              height: FAB_SIZE,
+              borderRadius: FAB_SIZE / 2,
+              backgroundColor: ACCENT,
+              borderWidth: 4,
+              borderColor: SURFACE,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="add" size={26} color={CANVAS} />
+          </Pressable>
+        )}
 
-        {/* skip */}
-        <Pressable
-          onPress={() => dismissCoach()}
-          hitSlop={12}
-          style={{ position: "absolute", top: (insets.top || 20) + 8, right: 24 }}
-        >
-          <Text style={{ fontSize: 13, fontWeight: "700", color: MUTED }}>Skip</Text>
-        </Pressable>
+        {onSkip && (
+          <Pressable
+            onPress={onSkip}
+            hitSlop={12}
+            style={{
+              position: "absolute",
+              top: (insets.top || 20) + 8,
+              right: 24,
+            }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "700", color: MUTED }}>
+              Skip
+            </Text>
+          </Pressable>
+        )}
       </Pressable>
     </View>
   );

@@ -73,6 +73,18 @@ const Tab = memo(function Tab({
   onPress: () => void;
 }) {
   const meta = META[name];
+  const { setCoachRect } = useOnboarding();
+  const ref = useRef<View>(null);
+
+  // Publish this pill's screen rect so the onboarding spotlight can point at it.
+  const reportRect = useCallback(() => {
+    requestAnimationFrame(() => {
+      ref.current?.measureInWindow((x, y, width, height) => {
+        if (width && height) setCoachRect(name, { x, y, width, height });
+      });
+    });
+  }, [name, setCoachRect]);
+
   const progress = useDerivedValue(
     () => withTiming(active ? 1 : 0, { duration: 200 }),
     [active],
@@ -88,8 +100,10 @@ const Tab = memo(function Tab({
 
   return (
     <AnimatedPressable
+      ref={ref}
       layout={PILL}
       onPress={onPress}
+      onLayout={reportRect}
       hitSlop={TAB_HIT_SLOP}
       style={[styles.tab, { paddingHorizontal: active ? 14 : 12 }, pillStyle]}
     >
@@ -114,7 +128,7 @@ const Tab = memo(function Tab({
 
 function AddFab() {
   const router = useRouter();
-  const { setAddButtonRect } = useOnboarding();
+  const { setCoachRect } = useOnboarding();
   const slotRef = useRef<View>(null);
   const scale = useSharedValue(1);
   const style = useAnimatedStyle(() => ({
@@ -125,10 +139,10 @@ function AddFab() {
     // Deferred a frame so the floating bar has settled into place before we measure.
     requestAnimationFrame(() => {
       slotRef.current?.measureInWindow((x, y, width, height) => {
-        if (width && height) setAddButtonRect({ x, y, width, height });
+        if (width && height) setCoachRect("add", { x, y, width, height });
       });
     });
-  }, [setAddButtonRect]);
+  }, [setCoachRect]);
 
   return (
     <View ref={slotRef} style={styles.fabSlot} onLayout={reportRect}>

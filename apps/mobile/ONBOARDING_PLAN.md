@@ -74,15 +74,23 @@ Store the answer on the user (`data.onboarding_goal`) for later use (e.g. which 
 lead with, or a tailored empty-state line). **v1: only build this if it's genuinely one extra
 screen.** Skip entirely if it risks the deadline — it's the least important piece.
 
-### 2c. Post-carousel spotlight (BUILT 2026-09-06)
+### 2c. Post-carousel spotlight tour (BUILT 2026-09-06, expanded 2026-09-06)
 
-The checklist card below was tried first and felt too easy to miss. Replaced with a
-**single spotlight coach-mark**: for a signed-in user with an empty fridge who has seen the
-carousel, the whole screen dims and the "+" button is highlighted with a ring + a tooltip
-("Add your first item"). Tap the button/tooltip → Add; tap anywhere else or Skip → dismiss.
-Never returns once an item exists. Lives in `components/home/CoachSpotlight.tsx`, rendered
-from `(tabs)/_layout` above the tab bar; the tab bar publishes its "+" rect via
-`useOnboarding()`.
+`components/home/CoachSpotlight.tsx`, rendered from `(tabs)/_layout` above the tab bar. The
+tab bar measures each pill + the "+" FAB and publishes their screen rects via
+`useOnboarding().setCoachRect(target, rect)` (`coachRects` map).
+
+**Phase A — empty fridge:** dims the screen, highlights the "+" with a ring + tooltip
+("Add your first item"), plus a bright tappable FAB copy → `/add`. Tap dim / Skip → dismiss.
+
+**Phase B — once an item exists** (and ≤ 6 items, i.e. not an established fridge / demo
+account): a 3-stop "look around" pointing at the **Inventory**, **Crew** and **Chat** tabs
+with a one-line explainer each and Next / Skip / Got it. Non-navigating — the user stays on
+Home. Gets exactly one session: `coach_tour_seen_v1` is persisted on first show, so a
+force-quit mid-tour doesn't make it nag on every launch.
+
+Both phases end permanently on Skip / Got it (`coachDismissed`). "Replay intro & tips" in
+Profile → Settings (`resetOnboarding()`) clears all of it.
 
 ### 2c-alt. Home "Getting started" checklist (BUILT 2026-09-06)
 

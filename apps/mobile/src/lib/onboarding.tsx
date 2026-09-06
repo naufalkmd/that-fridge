@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import * as SecureStore from "expo-secure-store";
@@ -14,9 +15,13 @@ const SEEN_KEY = "thatfridge_onboarding_v1";
 const COACH_DISMISSED_KEY = "thatfridge_onboarding_coach_dismissed_v1";
 const CHECKLIST_DISMISSED_KEY = "thatfridge_onboarding_checklist_dismissed_v1";
 const CHECKLIST_VISITED_KEY = "thatfridge_onboarding_checklist_visited_v1";
+const COACH_TOUR_SEEN_KEY = "thatfridge_onboarding_coach_tour_seen_v1";
 
-/** Screen rect of the Add (+) tab-bar button, published by the tab bar for the coach spotlight. */
+/** Screen rect of a tab-bar button, published by the tab bar for the coach spotlight. */
 export type Rect = { x: number; y: number; width: number; height: number };
+
+/** Tab-bar targets the spotlight tour can point at. "add" is the centre "+" FAB. */
+export type CoachTarget = "add" | "home" | "inventory" | "chat" | "eat";
 
 interface OnboardingValue {
   /** Storage reads have completed — routing shouldn't decide before this. */
@@ -24,12 +29,15 @@ interface OnboardingValue {
   /** The intro carousel has been seen (finished or skipped). */
   seen: boolean;
   markSeen: () => Promise<void>;
-  /** The "add your first item" coach spotlight was dismissed / satisfied. */
+  /** The coach spotlight tour was dismissed / finished. */
   coachDismissed: boolean;
   dismissCoach: () => Promise<void>;
-  /** Where the "+" button is on screen, for the spotlight to draw over. */
-  addButtonRect: Rect | null;
-  setAddButtonRect: (r: Rect | null) => void;
+  /** Measured screen rects of the tab-bar buttons, for the spotlight to draw over. */
+  coachRects: Partial<Record<CoachTarget, Rect>>;
+  setCoachRect: (target: CoachTarget, r: Rect | null) => void;
+  /** The post-first-item "look around" tour has been shown for a session already. */
+  coachTourSeen: boolean;
+  markCoachTourSeen: () => Promise<void>;
   /** The Home "Getting started" checklist card was hidden by the user. */
   checklistDismissed: boolean;
   dismissChecklist: () => Promise<void>;
@@ -46,9 +54,12 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   const [ready, setReady] = useState(false);
   const [seen, setSeen] = useState(false);
   const [coachDismissed, setCoachDismissed] = useState(false);
-  const [addButtonRect, setAddButtonRect] = useState<Rect | null>(null);
+  const [coachRects, setCoachRects] = useState<Partial<Record<CoachTarget, Rect>>>(
+    {},
+  );
   const [checklistDismissed, setChecklistDismissed] = useState(false);
   const [checklistVisited, setChecklistVisited] = useState<string[]>([]);
+  const [coachTourSeen, setCoachTourSeen] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -56,12 +67,14 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       SecureStore.getItemAsync(COACH_DISMISSED_KEY).catch(() => null),
       SecureStore.getItemAsync(CHECKLIST_DISMISSED_KEY).catch(() => null),
       SecureStore.getItemAsync(CHECKLIST_VISITED_KEY).catch(() => null),
+      SecureStore.getItemAsync(COACH_TOUR_SEEN_KEY).catch(() => null),
     ])
-      .then(([s, d, cd, cv]) => {
+      .then(([s, d, cd, cv, ct]) => {
         setSeen(s === "1");
         setCoachDismissed(d === "1");
         setChecklistDismissed(cd === "1");
         setChecklistVisited(cv ? cv.split(",").filter(Boolean) : []);
+        setCoachTourSeen(ct === "1");
       })
       .finally(() => setReady(true));
   }, []);
@@ -79,6 +92,37 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     setCoachDismissed(true);
     try {
       await SecureStore.setItemAsync(COACH_DISMISSED_KEY, "1");
+    } catch {
+      /* best effort */
+    }
+  }, []);
+
+  const setCoachRect = useCallback((target: CoachTarget, r: Rect | null) => {
+    setCoachRects((prev) => {
+      if (r === null) {
+        if (!(target in prev)) return prev;
+        const next = { ...prev };
+        delete next[target];
+        return next;
+      }
+      const cur = prev[target];
+      if (
+        cur &&
+        cur.x === r.x &&
+        cur.y === r.y &&
+        cur.width === r.width &&
+        cur.height === r.height
+      ) {
+        return prev;
+      }
+      return { ...prev, [target]: r };
+    });
+  }, []);
+
+  const markCoachTourSeen = useCallback(async () => {
+    setCoachTourSeen(true);
+    try {
+      await SecureStore.setItemAsync(COACH_TOUR_SEEN_KEY, "1");
     } catch {
       /* best effort */
     }
@@ -111,33 +155,55 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     setCoachDismissed(false);
     setChecklistDismissed(false);
     setChecklistVisited([]);
+    setCoachTourSeen(false);
     await Promise.all(
       [
         SEEN_KEY,
         COACH_DISMISSED_KEY,
         CHECKLIST_DISMISSED_KEY,
         CHECKLIST_VISITED_KEY,
+        COACH_TOUR_SEEN_KEY,
       ].map((k) => SecureStore.deleteItemAsync(k).catch(() => {})),
     );
   }, []);
 
+  const value = useMemo(
+    () => ({
+      ready,
+      seen,
+      markSeen,
+      coachDismissed,
+      dismissCoach,
+      coachRects,
+      setCoachRect,
+      coachTourSeen,
+      markCoachTourSeen,
+      checklistDismissed,
+      dismissChecklist,
+      checklistVisited,
+      markChecklistVisited,
+      resetOnboarding,
+    }),
+    [
+      ready,
+      seen,
+      markSeen,
+      coachDismissed,
+      dismissCoach,
+      coachRects,
+      setCoachRect,
+      coachTourSeen,
+      markCoachTourSeen,
+      checklistDismissed,
+      dismissChecklist,
+      checklistVisited,
+      markChecklistVisited,
+      resetOnboarding,
+    ],
+  );
+
   return (
-    <OnboardingContext.Provider
-      value={{
-        ready,
-        seen,
-        markSeen,
-        coachDismissed,
-        dismissCoach,
-        addButtonRect,
-        setAddButtonRect,
-        checklistDismissed,
-        dismissChecklist,
-        checklistVisited,
-        markChecklistVisited,
-        resetOnboarding,
-      }}
-    >
+    <OnboardingContext.Provider value={value}>
       {children}
     </OnboardingContext.Provider>
   );
