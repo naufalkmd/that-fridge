@@ -32,6 +32,7 @@ import {
   type StorageLocation,
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
+import { takeScans } from "@/lib/scanQueue";
 import { useInventory } from "@/lib/inventory";
 import { usePro } from "@/lib/pro";
 import { FoodIcon } from "@/components/food-icon";
@@ -299,20 +300,43 @@ export default function Add() {
     method?: string;
   }>();
 
-  // Jump straight to the manual card when prefilled from a barcode scan.
-  const [method, setMethod] = useState<Method | null>(
-    params.name ? "manual" : (params.method as Method) || null,
+  // Items handed over from a multi-scan barcode session (/scan → "Done"). Read once.
+  const [batchScans] = useState(() =>
+    params.method === "barcode-batch" ? takeScans() : [],
   );
 
-  const drafts = useDraftItems(() => [
-    blankDraft({
-      name: params.name ?? "",
-      icon: params.name ? (guessFoodIcon(params.name) ?? "generic") : "generic",
-      location: (params.location as StorageLocation) ?? "fridge",
-      category: (params.category as NutritionCategory) ?? null,
-      expiryDate: params.shelfLife ? isoInDays(Number(params.shelfLife)) : null,
-    }),
-  ]);
+  // Jump straight to the review list when prefilled from a barcode scan (single or batch).
+  const [method, setMethod] = useState<Method | null>(
+    params.name || batchScans.length
+      ? "manual"
+      : (params.method as Method) || null,
+  );
+
+  const drafts = useDraftItems(() =>
+    batchScans.length
+      ? batchScans.map((s) =>
+          blankDraft({
+            name: s.name,
+            icon: s.icon || guessFoodIcon(s.name) || "generic",
+            iconUrl: s.iconUrl,
+            location: s.location ?? "fridge",
+            expiryDate: s.shelfLifeDays ? isoInDays(s.shelfLifeDays) : null,
+          }),
+        )
+      : [
+          blankDraft({
+            name: params.name ?? "",
+            icon: params.name
+              ? (guessFoodIcon(params.name) ?? "generic")
+              : "generic",
+            location: (params.location as StorageLocation) ?? "fridge",
+            category: (params.category as NutritionCategory) ?? null,
+            expiryDate: params.shelfLife
+              ? isoInDays(Number(params.shelfLife))
+              : null,
+          }),
+        ],
+  );
   const [saving, setSaving] = useState(false);
 
   async function submitManual() {
