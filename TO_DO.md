@@ -23,10 +23,9 @@ Legend: ✅ done · 🟡 partial / drafted, needs action · ⬜ not started
 ## What's left to do
 
 ### Blocking App Store submission
-- [ ] **Confirm Paid Applications agreement shows "Active"** in App Store Connect (bank + tax
-  rows green) — IAPs can't be tested/submitted until it's Active.
-- [ ] **Change the demo account's password** (`keira@thatfridge.test`, currently `password123`
-  — treat as public, it's been in a committed file) before submitting.
+- [ ] **Rotate the demo account password.** `password123` was committed (public). It's now an
+  env var (`DEMO_USER_PASSWORD`): set it in the prod `.env`, save to the password manager, run
+  `php artisan config:clear && php artisan db:seed --force`. Full steps in `STORE_LISTING.md` §5.
 - [ ] **Capture iPhone screenshots** — 1320×2868px, **6.9" size only** (this alone satisfies
   every smaller size via Apple's auto-scaling — verified against Apple's current spec
   2026-09-05). No device frame, no alpha channel. 1-10 images; suggest paywall + Home + Chat +
@@ -55,7 +54,11 @@ Legend: ✅ done · 🟡 partial / drafted, needs action · ⬜ not started
 - [ ] Set per-storefront subscription prices: Malaysia `RM12.90`/`RM89`, Korea `₩3,900`/`₩25,000`.
 - [ ] App Store Connect localized metadata for `en`/`ko`/`ms` (name, subtitle, description,
   keywords, screenshots — at minimum `ko`, Korean downloads depend on it).
-- [ ] Set App Store availability to include Malaysia + Korea.
+- [ ] Set App Store availability to **Malaysia + Korea only, and explicitly exclude the EU/EEA**
+  — no EU storefront means the DSA "trader" declaration stays moot. With paid IAP, going trader
+  would force our legal name + residential address + phone to be published on the EU listing
+  (Individual account, no company to shield it). Revisit EU + trader verification post-launch.
+  In ASC the current status shows as "non-trader" — leave it, don't start the DSA compliance flow.
 - [ ] **Korean-language privacy policy** — `/privacy/ko/` is still a 404. Needs a real
   translation, not unsupervised machine translation for a legal document.
 - [ ] **Known compliance gap:** the cross-border-transfer consent checkbox (Korea PIPA) only

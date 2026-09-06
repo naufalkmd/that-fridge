@@ -55,42 +55,47 @@ tracking SDK anywhere in `package.json`.
 
 ### Promotional Text (170 char max, editable without a review — use for the trial/launch hook)
 
-`Free 7-day trial. See what's in your fridge before you open the door — and never let good food go to waste again.`
+`Free 7-day trial. See what's in your fridge before you open the door, and never let good food go to waste again.`
+
+*(ASCII only, straight apostrophe, no em dash — same reason as the description.)*
 
 ### Description (4000 char max)
+
+**Plain ASCII only** — no emoji, no em dashes, no bullet glyphs, straight apostrophes. App
+Store Connect rejected the earlier emoji/em-dash version with "invalid characters" (the cook
+emoji `🧑‍🍳` is a zero-width-joiner sequence; ASC's description field also chokes on stray
+U+200B pasted in from a drafting app). Paste this block as-is. If you re-add anything fancy,
+paste through a plain-text editor first and re-verify.
 
 ```
 Know what's inside before you even open the door.
 
-ThatFridge tracks what's in your fridge, freezer, and pantry — and puts four AI crew members
-to work keeping it that way.
+ThatFridge tracks what's in your fridge, freezer, and pantry, and puts four AI crew members to work keeping it that way.
 
 MEET THE CREW
-🧑‍🍳 Chef — suggests meals from what you already have, prioritizing what's closest to expiry
-🛡️ Guardian — watches food safety and flags risky or uncertain items before they go bad
-📦 Organizer — tells you where to store each item and keeps every zone tidy
-🛒 Shopkeeper — builds your next grocery list and tells you what not to rebuy
+
+Chef - suggests meals from what you already have, prioritizing what's closest to expiry.
+Guardian - watches food safety and flags risky or uncertain items before they go bad.
+Organizer - tells you where to store each item and keeps every zone tidy.
+Shopkeeper - builds your next grocery list and tells you what not to rebuy.
 
 WHAT YOU CAN DO
-• Add items in seconds — scan a barcode, snap a receipt, or photograph your fridge and let AI
-  read what's inside
-• Get expiry reminders before food goes bad, not after
-• Ask the crew anything about your fridge in plain language — "what can I cook tonight?"
-• Share a fridge with roommates or family — everyone sees the same live inventory
-• Track your Kitchen Score and build streaks for reducing food waste
-• Build a recipe book from what you cook, with photos and notes
+
+- Add items in seconds: scan a barcode, snap a receipt, or photograph your fridge and let AI read what's inside.
+- Get expiry reminders before food goes bad, not after.
+- Ask the crew anything about your fridge in plain language, like "what can I cook tonight?"
+- Share a fridge with roommates or family so everyone sees the same live inventory.
+- Track your Kitchen Score and build streaks for reducing food waste.
+- Build a recipe book from what you cook, with photos and notes.
 
 THATFRIDGE PRO
-Unlock unlimited AI chat, receipt & photo bulk-add, and multiple shared fridges. Every plan
-starts with a 7-day free trial.
 
-• ThatFridge Pro Monthly — auto-renews monthly after the free trial
-• ThatFridge Pro Yearly — auto-renews yearly after the free trial, save vs. monthly
+Unlock unlimited AI chat, receipt and photo bulk-add, and multiple shared fridges. Every plan starts with a 7-day free trial.
 
-Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions
-auto-renew unless cancelled at least 24 hours before the end of the current period. Manage or
-cancel anytime in your Apple ID account settings. See our Terms and Privacy Policy at
-thatfridge.com.
+- ThatFridge Pro Monthly: auto-renews monthly after the free trial.
+- ThatFridge Pro Yearly: auto-renews yearly after the free trial, save vs. monthly.
+
+Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your Apple ID account settings. See our Terms and Privacy Policy at thatfridge.com.
 
 Less guessing. Less waste. Just open the app before you open the door.
 ```
@@ -166,46 +171,84 @@ marketing site or content wrapper.
 
 ## 4. Age rating questionnaire
 
-App Store Connect → your app → **App Rating**. Apple's system was substantially reworked in
-2026 — bands are now **4+, 9+, 13+, 16+, 18+, Unrated** (not the old 4+/9+/12+/17+), and as of
-**September 2026** a new mandatory **Social Media** content descriptor was added, checking
-whether the app has "the ability to redistribute, amplify, or interact with user-generated
-content through a social feed or similar discovery method." **I can't verify the exact live
-wording/flow of this questionnaire myself (too recent, changing) — sanity-check my answers
-below against what ASC actually shows you before submitting.**
+App Store Connect → your app → **App Rating**. Apple's system was reworked in 2026 — bands are
+now **4+, 9+, 13+, 16+, 18+, Unrated**, the questionnaire is split into "In-App Controls",
+"Capabilities", and per-topic frequency (None / Infrequent / Frequent), and it re-computes many
+former-4+ utilities upward. **Answers below were walked through against the live ASC
+questionnaire on 2026-09-06 — the result was 9+ (see bottom).**
 
-Reasoning, grounded in what the app actually does (checked against the codebase, not guessed):
+### In-App Controls
 
-| Question | Answer | Why |
-| --- | --- | --- |
-| Violence (cartoon/fantasy or realistic) | None | Nothing in the app depicts violence |
-| Sexual content or nudity | None | — |
-| Profanity or crude humor | None | AI crew responses are food-focused, no profanity |
-| Alcohol, tobacco, or drug use/references | None | Checked all 7 seeded recipes (`DatabaseSeeder.php`) — none reference alcohol, tobacco, or drugs |
-| Mature or suggestive themes | None | — |
-| Horror or fear themes | None | — |
-| Medical/treatment information | None | Guardian's food-safety flags are about freshness, not medical advice |
-| Gambling or contests | None | — |
-| Unrestricted web access | No | No in-app browser, no unrestricted web access anywhere |
-| User-generated content | **Yes** | Fridge names, sticky notes, recipe notes — but only visible to people already approved into that specific shared fridge, never public |
-| **Social Media** (new, 2026) | **No** | No public feed, no content discovery/redistribution/amplification mechanism — sharing is scoped to a closed group of approved fridge members you invited yourself, the opposite of the "social feed" this descriptor targets |
-| Messaging/communication with other users | No | The only "chat" is with the AI crew; there's no direct messaging between two real users (fridge notes are shared-space, not DMs) |
+| Control           | Answer | Why                                                            |
+| ----------------- | ------ | -------------------------------------------------------------- |
+| Parental Controls | No     | No monitoring/restriction tools for guardians exist in the app |
+| Age Assurance     | No     | No age-verification mechanism, no Declared Age Range API call  |
 
-**Expected result: 4+.** Nothing here should push it higher — this is a clean household
-utility app with closed-group, approval-gated sharing, not an open social product.
+### Capabilities
+
+| Capability                               | Answer        | Why                                                                                                                                                          |
+| ---------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Unrestricted Web Access                  | No            | No in-app browser, no WebView, no arbitrary URL navigation                                                                                                   |
+| User-Generated Content                   | **Yes** | Fridge names, sticky notes, recipe notes, chat messages — only visible to people already approved into that specific shared fridge, never public            |
+| Social Media                             | No            | No public feed, no discovery/redistribution/amplification — sharing is a closed, invite-only group, the opposite of "visibly spreads content to many users" |
+| Social Media Disabled for Users Under 13 | No            | N/A — there is no social-media capability to disable                                                                                                        |
+| Messaging and Chat                       | No            | The only "chat" is with the AI crew; no direct user-to-user messaging (shared fridge notes are a shared workspace, not DMs)                                  |
+| Advertising                              | No            | No ad SDK anywhere in`package.json`; the subscription paywall is first-party IAP, not advertising                                                          |
+
+### Content frequency
+
+| Topic                                       | Answer        | Why                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Violence (any)                              | None          | Nothing in the app depicts violence                                                                                                                                                                                                                                                                                                                                |
+| Sexual content or nudity                    | None          | —                                                                                                                                                                                                                                                                                                                                                                 |
+| Profanity or Crude Humor                    | None          | AI crew is a constrained food assistant; user notes are kitchen labels                                                                                                                                                                                                                                                                                             |
+| Horror/Fear Themes                          | None          | It's a fridge inventory app                                                                                                                                                                                                                                                                                                                                        |
+| Alcohol, Tobacco, or Drug Use or References | None          | Seeded recipes + demo account vetted clean (`DatabaseSeeder.php`). Culinary ingredient mentions in a Food & Drink app aren't what this descriptor targets — matches every major recipe app. *(If a reviewer objects to an AI-suggested wine recipe, that's a conversation, not a rejection — don't pre-emptively take Infrequent, which would push to 13+.)* |
+| Mature or Suggestive Themes                 | None          | —                                                                                                                                                                                                                                                                                                                                                                 |
+| Medical or Treatment Information            | None          | Guardian's flags are food spoilage/freshness, not health-condition or treatment guidance                                                                                                                                                                                                                                                                           |
+| Health or Wellness Topics                   | **Yes** | Guardian gives food-safety recommendations; Chef recommends meals; Kitchen Score nudges a food-waste habit — lifestyle/self-care guidance. Benign descriptor, does not raise the band                                                                                                                                                                             |
+| Simulated Gambling                          | None          | No betting/wagering mechanics                                                                                                                                                                                                                                                                                                                                      |
+| Contests                                    | None          | Kitchen Score / streaks / badges / goals are personal and private — no leaderboard, no user-vs-user ranking (verified: no such code)                                                                                                                                                                                                                              |
+| Gambling (real money)                       | No            | —                                                                                                                                                                                                                                                                                                                                                                 |
+| Loot Boxes                                  | No            | Pro unlocks a fixed feature set; nothing randomized-for-purchase                                                                                                                                                                                                                                                                                                   |
+
+**Calculated result: 9+** (walked through 2026-09-06). Under the reworked system, declaring
+**User-Generated Content = Yes** floors a general-audience app around 9+ even when the UGC is
+private and invite-only — this is expected, not a mistake in the answers, and many former-4+
+utilities now land at 9+. **Do not lie the UGC answer down to chase 4+.**
+
+- ASC only allows overriding *up*, never down — 9+ is the floor from these answers.
+- **Do not** pick "Made for Kids" — that opts into the Kids Category's COPPA obligations
+  (no third-party analytics, parental gates, restricted data collection); user accounts + AI
+  chat + subscriptions would get it rejected from that category anyway.
+- 9+ does not restrict downloads for the general audience and is not "mature" — leave it at the
+  calculated 9+ and move on. If chasing 4+ is ever worth it, the only honest levers are the two
+  `Yes` answers above (UGC, Health/Wellness); toggling them live in ASC shows which one holds
+  the 9+ — but UGC is not negotiable, so 4+ is likely unreachable without removing shared notes.
 
 ---
 
 ## 5. App Review information
 
-**Before submitting:** the reviewer account already exists — `keira@thatfridge.test` /
-`password123` (TO_DO.md §2), pre-seeded with a fridge + 7 curated recipes. **⚠ Change this
-password before submitting** (it's been sitting in a committed TO_DO.md, effectively public) —
-update it directly on prod, then use the new one below.
+**Before submitting:** the reviewer account already exists — `keira@thatfridge.test`,
+pre-seeded with a fridge + 7 curated recipes. The old `password123` was public (committed), so
+it must be rotated. The demo password is now an env var, not a committed literal:
+
+1. On the prod box, add to `/var/www/thatfridge-api/.env` (or wherever the app lives):
+   `DEMO_USER_PASSWORD=<the new secret>`
+2. Save that secret in the shared password manager.
+3. Re-apply config + reseed the demo users (safe — `updateOrCreate` keyed on email, doesn't
+   touch Keira's fridge/items):
+   ```
+   php artisan config:clear
+   php artisan db:seed --force
+   ```
+4. Verify: `curl -sX POST https://api.thatfridge.com/api/login -H 'Content-Type: application/json' -d '{"email":"keira@thatfridge.test","password":"<new secret>"}'` returns a token.
 
 ### Demo account
+
 - Email: `keira@thatfridge.test`
-- Password: *(set a new one before submitting — don't reuse `password123`)*
+- Password: *(the `DEMO_USER_PASSWORD` value from the password manager — set before submitting)*
 
 ### Notes for the reviewer (draft — paste into App Store Connect → App Review Information → Notes)
 
