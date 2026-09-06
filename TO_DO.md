@@ -22,9 +22,11 @@ Korea localization is a post-approval fast-follow.
 ## What's left to do
 
 ### Blocking submission
-- [ ] **New native build** — `apps/mobile` against prod `EXPO_PUBLIC_API_URL`, includes the
-  camera-first Add fix (needs a rebuild, not an OTA — Info.plist camera string changed). Push to
-  TestFlight.
+- [x] **New native build** — `v1.2.1` (commit `7a1db9a`, the camera-string bump) built on EAS
+  `production` profile (prod `EXPO_PUBLIC_API_URL`, `production` OTA channel) and auto-submitted;
+  confirmed listed + processed in TestFlight 2026-09-06. All JS since is OTA on the same runtime.
+  - Before the final App Store submit, cut one more build (bump to `1.2.2`, tag) so the reviewed
+    binary natively matches the current JS rather than only via OTA.
 - [ ] **Screenshots** — 10-frame marketing set (designed, not plain), plan in
   `apps/mobile/SCREENSHOTS.md`. Friend captures the 9 raw screens from the new build on the demo
   account (`keira@thatfridge.test`, hand over the new password) → send to Claude → Claude
