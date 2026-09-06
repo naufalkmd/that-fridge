@@ -35,14 +35,11 @@ Legend: ✅ done · 🟡 partial / drafted, needs action · ⬜ not started
   - [ ] App Review notes + demo account (`STORE_LISTING.md` §5) — fill the demo password in ASC only.
   - [ ] Upload `apps/mobile/app-review.pdf` at App Review Information → Attachment.
   - [ ] Localized `ko` (and `ms`) metadata — at minimum Korean.
-- [ ] **Publish the RevenueCat paywall draft** (dashboard "ThatFridge Paywall" `pwec1165df9a414243`
-  — this is what ships, `RevenueCatUI.Paywall`, not the code fallback). AI-editor draft done
-  2026-09-06 and verified in the component JSON: Terms → `thatfridge.com/terms/` ✅, Privacy →
-  `thatfridge.com/privacy/` ✅, trial line above the CTA ✅, full auto-renew disclosure below ✅,
-  "Start 7-Day Free Trial" offer-state CTA ✅, Yearly default ✅, a "Restore" link wired to
-  `restore_purchases` ✅ (the MCP preview renderer doesn't paint it). **Before publishing, in the
-  RC builder:** confirm the Restore link renders, and bump the footer font (~6-8pt → ~11pt) for
-  Apple's legibility bar. Then Publish.
+- [x] ~~RevenueCat paywall~~ — "ThatFridge Paywall" `pwec1165df9a414243` **published rev 17**
+  (2026-09-06). Trial line + full auto-renew disclosure + `thatfridge.com` Terms/Privacy +
+  Yearly default all live; Restore link + "Start 7-Day Free Trial" offer-state CTA confirmed in
+  the builder. **On-device check still owed:** CTA reads "Start 7-Day Free Trial" for an eligible
+  user, Restore is tappable, Terms/Privacy open `thatfridge.com`, real $2.99/$19.99 prices show.
 - [x] ~~ASC API key in RevenueCat~~ — API key + vendor number `94767188` added 2026-09-06
   (`app_store_connect_api_key_configured: true`). **Product sync still pending** — trigger an
   Import in RC or wait a few hours; check the key role is App Manager+. Not blocking: StoreKit
