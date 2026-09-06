@@ -23,7 +23,8 @@ type Step = {
   id: string;
   label: string;
   hint: string;
-  route: Route;
+  /** null = not a task, just a pre-checked affirmation (endowed-progress head start). */
+  route: Route | null;
   /** true = completion is read from real data; false = "you visited it" is the best signal. */
   auto: boolean;
   done: boolean;
@@ -31,8 +32,8 @@ type Step = {
 
 /**
  * Self-paced "get started" card on Home — appears once the intro carousel is done and
- * hides itself when every step is complete or the user taps Hide. Deliberately small
- * (5 milestones, mostly data-derived) instead of a forced multi-step tour.
+ * hides itself when every step is complete or the user taps Hide. Opens with one row
+ * already ticked (endowed progress) so it never reads as a daunting 0/N.
  */
 export function GettingStarted() {
   const router = useRouter();
@@ -51,6 +52,14 @@ export function GettingStarted() {
     const shared = fridges.some((f) => (f.memberCount ?? 1) > 1);
     const visited = (id: string) => checklistVisited.includes(id);
     return [
+      {
+        id: "welcome",
+        label: "Joined ThatFridge",
+        hint: "",
+        route: null,
+        auto: true,
+        done: true,
+      },
       {
         id: "item",
         label: "Add your first item",
@@ -94,7 +103,7 @@ export function GettingStarted() {
         done: shared || visited("invite"),
       },
     ];
-  }, [items.length, recipes.length, shopping.length, fridges, checklistVisited]);
+  }, [items, recipes, shopping, fridges, checklistVisited]);
 
   const doneCount = steps.filter((s) => s.done).length;
 
@@ -110,6 +119,7 @@ export function GettingStarted() {
   }
 
   const go = (step: Step) => {
+    if (!step.route) return; // the pre-checked "welcome" row isn't a task
     if (!step.auto) void markChecklistVisited(step.id);
     router.push(step.route);
   };
