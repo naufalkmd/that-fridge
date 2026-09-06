@@ -2,12 +2,14 @@ import { Redirect, Tabs } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 
 import { useAuth } from "@/lib/auth";
+import { useOnboarding } from "@/lib/onboarding";
 import { FloatingTabBar } from "@/components/tab-bar";
 
 export default function TabsLayout() {
   const { status } = useAuth();
+  const onboarding = useOnboarding();
 
-  if (status === "loading") {
+  if (status === "loading" || (status === "signedIn" && !onboarding.ready)) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
         <ActivityIndicator color="#26c6da" />
@@ -15,6 +17,7 @@ export default function TabsLayout() {
     );
   }
   if (status === "signedOut") return <Redirect href="/sign-in" />;
+  if (!onboarding.seen) return <Redirect href="/onboarding" />;
 
   return (
     <Tabs

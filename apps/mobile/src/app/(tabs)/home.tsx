@@ -44,6 +44,7 @@ import { FridgeScopePicker } from "@/components/fridge-scope";
 import { KitchenScore } from "@/components/home/KitchenScore";
 import { CrewScene } from "@/components/home/CrewScene";
 import { FridgeNotes } from "@/components/home/FridgeNotes";
+import { FirstRunChecklist } from "@/components/home/FirstRunChecklist";
 
 const BLUE = "#5b8dee";
 const PRO_PURPLE = "#a78bfa";
@@ -242,6 +243,9 @@ export default function Home() {
 
         {/* fridge scope picker */}
         <FridgeScopePicker />
+
+        {/* first-run nudge — hides itself once the basics are done or dismissed */}
+        <FirstRunChecklist />
 
         {/* overview */}
         <View>
