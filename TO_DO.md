@@ -49,7 +49,7 @@ Korea localization is a post-approval fast-follow.
   Norway (avoids the DSA trader declaration; Switzerland + UK kept) and China. Subscriptions
   (monthly + yearly) set to all storefronts — capped by app availability anyway. Base price
   USD $2.99 / $19.99, MY + KR set manually, rest auto-converted.
-  - [ ] Still confirm primary category = **Food & Drink** (App Information → Category).
+  - Primary category confirmed **Food & Drink** 2026-09-06.
   - Drop South Korea if the KR privacy policy (`/privacy/ko/`) isn't live at submission.
 - [ ] **TestFlight validated by the team** on real devices — add internal testers + a "What to
   Test" note.
