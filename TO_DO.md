@@ -34,6 +34,10 @@ Korea localization is a post-approval fast-follow.
   (Reference). Nothing dedicated since the parity port. Must pass:
   - Core loop: add item, barcode scan, inventory edit, mark-made decrements stock
   - Add flow: "Scan receipt" / "Photo of fridge" open the camera directly
+  - New deletion flows (2026-09-06): inventory bulk-delete in select mode; chat-history
+    delete + "Clear all" actually stick after a refresh; notification "Clear" / "Clear all"
+    removes rows (not grey-out); long-press a generated icon in the Add picker to delete it
+  - First-run: fresh no-items account → carousel, then the "+" spotlight on Home
   - Paywall on device: "Start 7-Day Free Trial" CTA, real $2.99 / $19.99 prices, Restore works,
     Terms/Privacy open `thatfridge.com`
   - Purchase sheet shows "7 days free, then $X" (fresh sandbox Apple ID, never subscribed)
