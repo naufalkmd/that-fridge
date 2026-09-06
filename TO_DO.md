@@ -26,28 +26,27 @@ Legend: ✅ done · 🟡 partial / drafted, needs action · ⬜ not started
 - [ ] **Capture iPhone screenshots** — full plan in `apps/mobile/SCREENSHOTS.md` (10-frame set,
   1320×2868px 6.9"-only, frame design + capture/assembly/localization steps). Blocked on: new
   demo password (done — hand it over) + a Release build against prod API.
-- [ ] **Paste drafted content into App Store Connect** — all in `apps/mobile/STORE_LISTING.md`:
-  store listing copy (§2, ASCII-safe), App Privacy form (§1), age rating (§4 — walked through
-  live, result **9+**), App Review notes + demo instructions (§5). Paste copy through a
-  plain-text editor (an invisible U+200B kept failing the validators). Fill the demo password
-  in ASC only. **Also upload `apps/mobile/app-review.pdf`** at App Review Information →
-  Attachment (source: `app-review.tex`, build with `tectonic`) — put the demo password on p.1
-  there too.
-- [ ] **Fix the shipped RevenueCat paywall** (dashboard "ThatFridge Paywall" `pwec1165df9a414243`
-  — this is what ships, `RevenueCatUI.Paywall`, not the code fallback). Edited via the AI paywall
-  editor 2026-09-06 into an **unpublished draft**: (a) Terms → `thatfridge.com/terms/`, Privacy →
-  `thatfridge.com/privacy/` ✅; (b) trial line "7-day free trial, then {price}. Renews
-  automatically until you cancel." added above the CTA ✅; (c) full auto-renew disclosure added
-  below the CTA ✅; (d) Yearly is now the default ✅; (e) **visible Restore Purchases link** — 2nd
-  pass in progress; (f) CTA → "Start 7-Day Free Trial" in the offer state — verifying.
-  **Still to do:** finish (e)/(f), review the draft in the RC builder, then **publish** it.
-  Prices render as $9.99/$79.99 (Test Store placeholders) and the % saved is computed off those —
-  both self-correct once the ASC API key syncs the real $2.99/$19.99 (next item). Verify real
-  prices on a TestFlight build regardless.
-- [ ] **Add the App Store Connect API key to RevenueCat** (Project Settings → Apps → ThatFridge
-  (App Store) → App Store Connect API). Without it RevenueCat never imports the real $2.99/$19.99
-  price or the 7-day intro offer. The IAP/subscription key is already set; the ASC API key +
-  vendor number are not.
+- [ ] **Finish App Store Connect content** (partly done 2026-09-06):
+  - [x] App record + name saved (the "name already used" error was the U+200B invisible char —
+    cleared once fields were retyped through a plain-text editor).
+  - [x] Store listing copy (name/subtitle/description/keywords/promo), verified char counts.
+  - [x] Age rating questionnaire — walked through live, result **9+** (see `STORE_LISTING.md` §4).
+  - [ ] App Privacy form (`STORE_LISTING.md` §1).
+  - [ ] App Review notes + demo account (`STORE_LISTING.md` §5) — fill the demo password in ASC only.
+  - [ ] Upload `apps/mobile/app-review.pdf` at App Review Information → Attachment.
+  - [ ] Localized `ko` (and `ms`) metadata — at minimum Korean.
+- [ ] **Publish the RevenueCat paywall draft** (dashboard "ThatFridge Paywall" `pwec1165df9a414243`
+  — this is what ships, `RevenueCatUI.Paywall`, not the code fallback). AI-editor draft done
+  2026-09-06 and verified in the component JSON: Terms → `thatfridge.com/terms/` ✅, Privacy →
+  `thatfridge.com/privacy/` ✅, trial line above the CTA ✅, full auto-renew disclosure below ✅,
+  "Start 7-Day Free Trial" offer-state CTA ✅, Yearly default ✅, a "Restore" link wired to
+  `restore_purchases` ✅ (the MCP preview renderer doesn't paint it). **Before publishing, in the
+  RC builder:** confirm the Restore link renders, and bump the footer font (~6-8pt → ~11pt) for
+  Apple's legibility bar. Then Publish.
+- [x] ~~ASC API key in RevenueCat~~ — API key + vendor number `94767188` added 2026-09-06
+  (`app_store_connect_api_key_configured: true`). **Product sync still pending** — trigger an
+  Import in RC or wait a few hours; check the key role is App Manager+. Not blocking: StoreKit
+  gives the SDK the real $2.99/$19.99 price and the trial on-device regardless.
 - [x] ~~Intro offers~~ — Free / 1 week created in ASC for both products (2026-09-06). Still must
   be included in the version submission, and verified on-device (below).
 - [ ] **Full real-device/simulator smoke test** against the live API — inventory, chat,
