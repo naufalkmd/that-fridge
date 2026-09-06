@@ -1,0 +1,284 @@
+\documentclass[11pt]{article}
+
+% ThatFridge -- App Review Guide
+% Attach the compiled PDF to App Store Connect -> App Review Information -> Attachment.
+% It supplements (does not replace) the Notes field and the demo account there.
+% Build:  tectonic app-review.tex        (or: latexmk -pdf app-review.tex)
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=22mm]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+
+\definecolor{brand}{HTML}{0B7285}
+\definecolor{rule}{HTML}{CBD5E1}
+
+\titleformat{\section}{\Large\bfseries\color{brand}}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{16pt}{6pt}
+\titlespacing*{\subsection}{0pt}{12pt}{4pt}
+
+\setlist[itemize]{leftmargin=1.4em,itemsep=2pt,topsep=3pt}
+\setlist[enumerate]{leftmargin=1.6em,itemsep=3pt,topsep=3pt}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small\color{brand}ThatFridge --- App Review Guide}
+\rhead{\small v1.2.0}
+\cfoot{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\hypersetup{
+  pdftitle={ThatFridge -- App Review Guide},
+  pdfauthor={Muhammad Naufal Kamaruddin},
+}
+
+\begin{document}
+
+\begin{center}
+  {\huge\bfseries\color{brand} ThatFridge}\\[2pt]
+  {\large App Review Guide for Apple App Review}\\[6pt]
+  {\small This document supplements the \emph{App Review Information} notes and demo
+  account in App Store Connect. Its purpose is to answer likely review questions up front
+  and prevent avoidable review cycles.}
+\end{center}
+
+\vspace{4pt}
+\hrule height 0.6pt
+\vspace{10pt}
+
+\section{At a glance}
+
+\begin{tabular}{@{}L{0.32\linewidth} L{0.6\linewidth}@{}}
+\toprule
+App name            & ThatFridge \\
+Bundle ID           & \texttt{test.thatfridge.app} \\
+Version             & 1.2.0 (build number auto-incremented by EAS) \\
+Platform            & iOS only, iPhone; minimum iOS 15.1 \\
+Category            & Food \& Drink \\
+Age rating          & 9+ \\
+Primary markets     & Malaysia and South Korea; English-language UI \\
+Account             & Required for full use --- demo account provided below \\
+In-app purchases    & One auto-renewable subscription (ThatFridge Pro) with a 7-day free trial \\
+Third-party login   & Sign in with Apple (native) and email/password; Google Sign-In where available \\
+Backend             & Live production REST API at \texttt{api.thatfridge.com} (hosted in Singapore) \\
+Advertising / tracking & None. No ad SDK, no analytics SDK, no tracking. \\
+\bottomrule
+\end{tabular}
+
+\section{What ThatFridge does}
+
+ThatFridge is a household food-inventory app. Users track what is in their fridge, freezer
+and pantry; the app sends expiry reminders and an AI ``crew'' of four assistants ---
+\textbf{Chef}, \textbf{Guardian}, \textbf{Organizer} and \textbf{Shopkeeper} --- suggests
+meals from current stock, flags food about to spoil, advises on storage, and builds a
+shopping list. A household can share one fridge so every member sees the same live
+inventory. Pro unlocks unlimited AI use, receipt/photo bulk-add, and multiple shared
+fridges.
+
+\section{Demo account and sign-in}
+
+\begin{tabular}{@{}L{0.32\linewidth} L{0.6\linewidth}@{}}
+\toprule
+Email    & \texttt{keira@thatfridge.test} \\
+Password & \textbf{[INSERT PASSWORD AT SUBMISSION]} \\
+\bottomrule
+\end{tabular}
+
+\begin{itemize}
+  \item Launch the app $\rightarrow$ the \textbf{Sign in} screen $\rightarrow$ enter the
+        credentials above $\rightarrow$ \textbf{Sign In}. No email verification, no
+        two-factor step, and no invitation code is required.
+  \item The account is pre-populated: a shared fridge with items across all three storage
+        zones (fridge, freezer, pantry) and a recipe book with sample recipes. Every screen
+        has real content on first launch --- there are no empty states to work around.
+  \item Alternatively, \textbf{Sign in with Apple} on the same screen creates a fresh
+        account with no data.
+\end{itemize}
+
+\section{Guided walkthrough}
+
+\begin{enumerate}
+  \item \textbf{Home tab.} The four crew members, a Kitchen Score, the fridge image
+        carousel, and ``crew tip'' cards generated from the seeded inventory (e.g.\ an item
+        near expiry, a low-stock item, a recipe suggestion).
+  \item \textbf{Inventory tab.} The full item list grouped by storage zone. Tap any item
+        for its freshness percentage, expiry date, quantity and notes. Freshness colour:
+        green = fresh, amber = due soon, red = overdue.
+  \item \textbf{Add (centre ``+'' button).} Four ways to add stock: \emph{Scan barcode}
+        (free), \emph{Add manually} (free), \emph{Scan receipt} (Pro), \emph{Photo of
+        fridge} (Pro). Barcode and manual entry work on the demo account without a
+        subscription.
+  \item \textbf{Chat tab.} Ask the crew in plain language, e.g.\ ``what can I cook
+        tonight?''. The free tier allows 5 messages per week shared across the crew.
+        Responses are produced server-side (see \S\ref{sec:third-party}).
+  \item \textbf{Crew tab.} One panel per assistant: Chef (recipes ranked by expiry),
+        Guardian (food-safety flags), Organizer (storage guidance and a ``misplaced items''
+        sweep), Shopkeeper (shopping list and ``don't rebuy'' hints).
+  \item \textbf{Recipes} (from Home or Crew $\rightarrow$ Chef). A recipe book with the
+        seeded recipes; open one for ingredients and steps. ``Mark as made'' decrements
+        matching items from stock.
+  \item \textbf{Sharing} (Profile $\rightarrow$ Fridges, or the ``+'' on the Home fridge
+        carousel). Create or rename fridges, invite another user by exact username, and
+        approve join requests. Content in a fridge is visible only to approved members.
+  \item \textbf{Profile tab.} Subscription status, the upgrade entry point, notification
+        settings, ``AI Data \& Memory'' controls, Sign out, and \textbf{Delete account}.
+\end{enumerate}
+
+\section{Reviewing the subscription (Guideline 3.1)}
+
+\begin{itemize}
+  \item \textbf{Products.} \emph{ThatFridge Pro Monthly} (\texttt{thatfridge\_pro\_monthly})
+        and \emph{ThatFridge Pro Yearly} (\texttt{thatfridge\_pro\_yearly}). Both are
+        auto-renewable and both include a 7-day free trial.
+  \item \textbf{Purchase path.} StoreKit only, via RevenueCat. There is no external or
+        alternative purchase mechanism anywhere in the app.
+  \item \textbf{Opening the paywall.} Profile tab $\rightarrow$ \textbf{Upgrade to Pro}, or
+        attempt a Pro-only action such as \emph{Scan receipt}.
+  \item \textbf{The paywall shows} each plan's price and billing period, the 7-day
+        free-trial terms, a \textbf{Restore Purchases} control, and links to the
+        \href{https://thatfridge.com/terms/}{Terms of Use} and
+        \href{https://thatfridge.com/privacy/}{Privacy Policy}. Auto-renewal and
+        cancellation terms are stated on screen and repeated in the App Store description.
+  \item \textbf{Sandbox.} Starting the free trial in the review environment grants all Pro
+        entitlements immediately; no promo code is required. \textbf{Restore Purchases}
+        re-syncs entitlements for the signed-in Apple ID.
+  \item \textbf{Cancellation.} Deleting the ThatFridge account does \emph{not} cancel the
+        Apple subscription --- that is managed by the user in iOS Settings, per Apple's
+        requirements. The app states this at the point of deletion.
+\end{itemize}
+
+\section{Answers to likely review questions}
+
+\subsection{Guideline 2.1 --- App completeness}
+The demo account is fully seeded, the production API is live, and every AI feature calls a
+real service. There are no placeholder screens, debug menus, or ``coming soon'' features in
+this build.
+
+\subsection{Guideline 4.2 --- Minimum functionality (not a web wrapper)}
+ThatFridge is a native Expo / React Native app. There is \emph{no} web view and no wrapped
+website. It makes substantive use of native iOS capabilities:
+\begin{itemize}
+  \item Camera with its own permission flow (barcode scanning).
+  \item Photo library access (receipt and fridge photos, recipe attachments).
+  \item On-device speech recognition (Apple's Speech framework, forced on-device --- audio
+        never leaves the phone) for voice dictation in chat.
+  \item Local notifications scheduled and delivered on-device for expiry and low-stock
+        reminders.
+  \item Remote push notifications (APNs via Expo) for shared-fridge activity.
+  \item Haptics, gesture-driven drag-and-drop, a native navigation stack, and native modal
+        sheets.
+  \item Sign in with Apple through the native framework.
+  \item StoreKit in-app purchases with a native paywall.
+\end{itemize}
+It also provides functionality with no meaningful web equivalent: AI inventory extraction
+from photographed receipts and fridge contents, multi-user shared-fridge sync, and
+personalised meal suggestions from the household's live stock.
+
+\subsection{Guideline 4.8 --- Login services}
+The app offers \textbf{Sign in with Apple} alongside email/password. Sign in with Apple
+meets the requirements: data is limited to name and email, it is not used for advertising,
+and there is no associated tracking.
+
+\subsection{Guideline 5.1.1 --- Data collection and storage}
+\textbf{Collected:} account name, username and email; user-created content (items, notes,
+chat messages); photos the user chooses to attach; subscription status (via RevenueCat); an
+Expo push token; and product-interaction history used to compute the Kitchen Score.
+\textbf{Not collected:} location, contacts, health data, and card/financial data (Apple
+handles payment). No advertising identifiers, no third-party analytics, no tracking SDKs.
+The App Privacy section and \href{https://thatfridge.com/privacy/}{thatfridge.com/privacy}
+carry the full detail.
+
+\subsection{Guideline 5.1.1(v) --- Account deletion}
+Profile tab $\rightarrow$ \textbf{Delete account}, behind a two-step confirmation. This
+permanently deletes the account and all associated data on the server; owned fridges,
+items, shopping list, recipes and chat history are removed by database cascade. There is no
+soft-delete and no hidden retention period --- deletion is immediate and irreversible.
+
+\subsection{Guidelines 1.2 and 5.1.2 --- User-generated content and safety}
+The only user-generated content is text (fridge names, sticky notes, recipe notes) and chat
+messages. \textbf{None of it is public.} Content in a shared fridge is visible only to
+members that the fridge owner has explicitly invited and approved; there is no public feed,
+no content discovery, and no browsing of other users beyond an exact-username search.
+Safety controls:
+\begin{itemize}
+  \item \textbf{Block:} a user can block another user from that user's profile. Blocking is
+        bidirectional and prevents search, invitations and join requests in both
+        directions.
+  \item \textbf{Report:} a \emph{Report} action on a profile sends a report to our support
+        team.
+  \item \textbf{Contact:} our support address is published in the app and at
+        \href{https://thatfridge.com/support}{thatfridge.com/support}.
+\end{itemize}
+Because sharing is confined to a small, self-selected group, there is no public surface
+that would require automated content filtering.
+
+\subsection{Guideline 2.3 --- Accurate metadata}
+The description, screenshots and keywords describe only features present in this build. The
+app contains no advertising. ``AI crew'' refers to the four in-app assistants; every AI
+response is scoped to food and the kitchen.
+
+\section{Permissions and purpose strings}
+
+Every permission is optional --- the core inventory workflow functions with all of them
+denied.
+
+\begin{tabular}{@{}L{0.16\linewidth} L{0.28\linewidth} L{0.46\linewidth}@{}}
+\toprule
+Permission & Requested when & Purpose string shown \\
+\midrule
+Camera & First barcode scan & ``ThatFridge uses the camera to scan grocery barcodes.'' \\
+Photo Library & Attaching a receipt or fridge photo & ``ThatFridge lets you attach a photo of your fridge or a receipt to a chat.'' \\
+Microphone & First voice dictation in chat & ``ThatFridge uses the microphone so you can talk to the chat instead of typing.'' \\
+Speech Recognition & First voice dictation in chat & ``ThatFridge turns your speech into text for the chat.'' (recognition runs on-device) \\
+Notifications & Setting up the first reminder & Expiry and low-stock reminders; shared-fridge activity \\
+\bottomrule
+\end{tabular}
+
+\section{Third-party services and data flow}
+\label{sec:third-party}
+
+\begin{tabular}{@{}L{0.18\linewidth} L{0.34\linewidth} L{0.38\linewidth}@{}}
+\toprule
+Service & Role & Data sent \\
+\midrule
+OpenRouter & LLM inference for chat, and OCR / vision for receipt and fridge-photo scanning &
+The user's message or the attached image, plus relevant fridge context. Not used for model
+training. \\
+fal.ai & Generates a custom food icon from a text prompt & The text prompt only \\
+RevenueCat & Subscription and entitlement management & An app-user identifier and purchase
+status \\
+Expo & Delivers push notifications & The device push token \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+No other services receive user data. There are no ad networks, analytics SDKs, or data
+brokers in the app.
+
+\section{Contact}
+
+\begin{tabular}{@{}L{0.28\linewidth} L{0.64\linewidth}@{}}
+\toprule
+Developer      & Muhammad Naufal Kamaruddin \\
+Support        & \href{https://thatfridge.com/support}{thatfridge.com/support} ---
+                 \href{mailto:hello@thatfridge.com}{hello@thatfridge.com} \\
+Privacy Policy & \href{https://thatfridge.com/privacy/}{thatfridge.com/privacy/} \\
+Terms of Use   & \href{https://thatfridge.com/terms/}{thatfridge.com/terms/} \\
+Response time  & Within 2 business days \\
+\bottomrule
+\end{tabular}
+
+\vspace{6pt}
+We are glad to provide a screen recording of any specific flow on request.
+
+\end{document}
