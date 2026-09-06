@@ -169,7 +169,7 @@ this build.
 ThatFridge is a native Expo / React Native app. There is \emph{no} web view and no wrapped
 website. It makes substantive use of native iOS capabilities:
 \begin{itemize}
-  \item Camera with its own permission flow (barcode scanning).
+  \item Camera with its own permission flow (barcode scanning, receipt capture, fridge photos).
   \item Photo library access (receipt and fridge photos, recipe attachments).
   \item On-device speech recognition (Apple's Speech framework, forced on-device --- audio
         never leaves the phone) for voice dictation in chat.
@@ -237,7 +237,7 @@ denied.
 \toprule
 Permission & Requested when & Purpose string shown \\
 \midrule
-Camera & First barcode scan & ``ThatFridge uses the camera to scan grocery barcodes.'' \\
+Camera & First barcode scan, receipt scan, or fridge photo & ``ThatFridge uses the camera to scan barcodes and take photos of receipts and your fridge.'' \\
 Photo Library & Attaching a receipt or fridge photo & ``ThatFridge lets you attach a photo of your fridge or a receipt to a chat.'' \\
 Microphone & First voice dictation in chat & ``ThatFridge uses the microphone so you can talk to the chat instead of typing.'' \\
 Speech Recognition & First voice dictation in chat & ``ThatFridge turns your speech into text for the chat.'' (recognition runs on-device) \\
