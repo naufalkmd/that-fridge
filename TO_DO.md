@@ -33,12 +33,17 @@ Legend: ✅ done · 🟡 partial / drafted, needs action · ⬜ not started
   in ASC only. **Also upload `apps/mobile/app-review.pdf`** at App Review Information →
   Attachment (source: `app-review.tex`, build with `tectonic`) — put the demo password on p.1
   there too.
-- [ ] **Fix the shipped RevenueCat paywall** (dashboard "ThatFridge Paywall", rev 13 — this is
-  what ships, not the code fallback). Inspected 2026-09-06, four gaps: (a) Terms/Privacy point to
-  `thatfridge.app/*` — must be `thatfridge.com/terms/` + `/privacy/`; (b) no free-trial text (CTA
-  "Get Pro access", no "7-day free trial, then $X"); (c) no visible Restore control; (d) no
-  auto-renew disclaimer. Also shows $9.99/$79.99 placeholder prices because RevenueCat has no
-  App Store Connect API key.
+- [ ] **Fix the shipped RevenueCat paywall** (dashboard "ThatFridge Paywall" `pwec1165df9a414243`
+  — this is what ships, `RevenueCatUI.Paywall`, not the code fallback). Edited via the AI paywall
+  editor 2026-09-06 into an **unpublished draft**: (a) Terms → `thatfridge.com/terms/`, Privacy →
+  `thatfridge.com/privacy/` ✅; (b) trial line "7-day free trial, then {price}. Renews
+  automatically until you cancel." added above the CTA ✅; (c) full auto-renew disclosure added
+  below the CTA ✅; (d) Yearly is now the default ✅; (e) **visible Restore Purchases link** — 2nd
+  pass in progress; (f) CTA → "Start 7-Day Free Trial" in the offer state — verifying.
+  **Still to do:** finish (e)/(f), review the draft in the RC builder, then **publish** it.
+  Prices render as $9.99/$79.99 (Test Store placeholders) and the % saved is computed off those —
+  both self-correct once the ASC API key syncs the real $2.99/$19.99 (next item). Verify real
+  prices on a TestFlight build regardless.
 - [ ] **Add the App Store Connect API key to RevenueCat** (Project Settings → Apps → ThatFridge
   (App Store) → App Store Connect API). Without it RevenueCat never imports the real $2.99/$19.99
   price or the 7-day intro offer. The IAP/subscription key is already set; the ASC API key +
