@@ -28,8 +28,8 @@ Korea localization is a post-approval fast-follow.
   - [ ] **Cut `v1.2.2`** — version bumped 2026-09-07 (Google Sign-In now wired into the build:
     native `@react-native-google-signin` URL scheme + client ids). Tag `v1.2.2` to build. This
     is the submission binary — reviewed natively, not just via OTA.
-  - [ ] Verify `GOOGLE_CLIENT_IDS` on the VPS `.env` lists **both** the iOS and Web client ids,
-    then smoke-test "Continue with Google" on the v1.2.2 TestFlight build before submitting.
+  - `GOOGLE_CLIENT_IDS` on the VPS confirmed to list both the iOS and Web client ids
+    (2026-09-07). Still: smoke-test "Continue with Google" on the v1.2.2 TestFlight build.
 - [ ] **Screenshots** — 10-frame marketing set (designed, not plain), plan in
   `apps/mobile/SCREENSHOTS.md`. Friend captures the 9 raw screens from the new build on the demo
   account (`keira@thatfridge.test`, hand over the new password) → send to Claude → Claude
