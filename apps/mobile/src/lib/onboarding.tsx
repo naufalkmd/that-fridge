@@ -36,6 +36,8 @@ interface OnboardingValue {
   /** Ids of checklist steps completed by tapping through (no data signal of their own). */
   checklistVisited: string[];
   markChecklistVisited: (id: string) => Promise<void>;
+  /** Wipe every first-run flag so the carousel, spotlight and checklist all show again. */
+  resetOnboarding: () => Promise<void>;
 }
 
 const OnboardingContext = createContext<OnboardingValue | null>(null);
@@ -104,6 +106,21 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     }
   }, []);
 
+  const resetOnboarding = useCallback(async () => {
+    setSeen(false);
+    setCoachDismissed(false);
+    setChecklistDismissed(false);
+    setChecklistVisited([]);
+    await Promise.all(
+      [
+        SEEN_KEY,
+        COACH_DISMISSED_KEY,
+        CHECKLIST_DISMISSED_KEY,
+        CHECKLIST_VISITED_KEY,
+      ].map((k) => SecureStore.deleteItemAsync(k).catch(() => {})),
+    );
+  }, []);
+
   return (
     <OnboardingContext.Provider
       value={{
@@ -118,6 +135,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         dismissChecklist,
         checklistVisited,
         markChecklistVisited,
+        resetOnboarding,
       }}
     >
       {children}

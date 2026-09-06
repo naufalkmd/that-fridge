@@ -8,6 +8,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { describeError } from "@thatfridge/core";
 import { useAuth } from "@/lib/auth";
 import { useInventory } from "@/lib/inventory";
+import { useOnboarding } from "@/lib/onboarding";
 import { useScope } from "@/lib/scope";
 import { usePro } from "@/lib/pro";
 import { PixelText } from "@/components/brand";
@@ -18,8 +19,26 @@ export default function Profile() {
   const { user, signOut, deleteAccount } = useAuth();
   const { isPro, available, restore, openCustomerCenter } = usePro();
   const { fridges } = useInventory();
+  const { resetOnboarding } = useOnboarding();
   const { scope, setScope } = useScope();
   const [working, setWorking] = useState(false);
+
+  function replayIntro() {
+    Alert.alert(
+      "Replay the intro?",
+      "Shows the welcome slides and the getting-started tips again.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Replay",
+          onPress: async () => {
+            await resetOnboarding();
+            router.replace("/onboarding");
+          },
+        },
+      ],
+    );
+  }
 
   async function doRestore() {
     setWorking(true);
@@ -168,6 +187,11 @@ export default function Profile() {
             onPress={() => router.push("/notification-settings")}
           />
           <LinkRow icon="cart-outline" label="Shopping list" onPress={() => router.push("/shopping")} />
+          <LinkRow
+            icon="refresh-outline"
+            label="Replay intro & tips"
+            onPress={replayIntro}
+          />
           <LinkRow
             icon="information-circle-outline"
             label="About ThatFridge"
