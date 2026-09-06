@@ -73,7 +73,9 @@ export function GettingStarted() {
         hint: "Keep the ones you'll make again",
         route: "/recipes",
         auto: true,
-        done: recipes.length > 0,
+        // Every book ships with the curated starter set, so "has recipes" is always
+        // true — this step only counts a recipe the user added or favorited themselves.
+        done: recipes.some((r) => r.isMine || r.isFavorite),
       },
       {
         id: "shopping",
