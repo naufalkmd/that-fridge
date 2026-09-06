@@ -4,6 +4,7 @@ import type { CurrentUser } from "@thatfridge/core";
 
 import { api, secureTokenStore } from "@/lib/api";
 import { unregisterPush } from "@/lib/push";
+import { resetChatUsed } from "@/lib/chatQuota";
 import { googleSignInIdToken, googleSignOut } from "@/lib/google-auth";
 
 type Status = "loading" | "signedOut" | "signedIn";
@@ -77,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
         dataTransferConsent,
       );
+      await resetChatUsed(); // a brand-new account starts with a full weekly allowance
       setUser(user);
       setStatus("signedIn");
     },
@@ -121,6 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await unregisterPush();
     await googleSignOut();
     await api.logout();
+    await resetChatUsed();
     setUser(null);
     setStatus("signedOut");
   }, []);
@@ -128,6 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const deleteAccount = useCallback(async () => {
     await unregisterPush();
     await api.deleteAccount();
+    await resetChatUsed();
     setUser(null);
     setStatus("signedOut");
   }, []);

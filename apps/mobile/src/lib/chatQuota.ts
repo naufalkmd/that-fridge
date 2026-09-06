@@ -36,3 +36,16 @@ export async function bumpChatUsed(): Promise<void> {
     /* noop */
   }
 }
+
+/**
+ * Wipe the counter. Called on sign-out / account deletion — the key isn't scoped to a
+ * user, so without this a new sign-in on the same device inherits the previous account's
+ * usage for the current week (a fresh signup showing "4 left" instead of 5).
+ */
+export async function resetChatUsed(): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(KEY);
+  } catch {
+    /* noop */
+  }
+}
