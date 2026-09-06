@@ -45,9 +45,12 @@ Korea localization is a post-approval fast-follow.
   - Purchase sheet shows "7 days free, then $X" (fresh sandbox Apple ID, never subscribed)
   - Account deletion from a clean install
   - Local notifications fire and route to the right screen on tap
-- [ ] **App Store availability** — MY + KR (or MY-first, see Korea section); exclude EU/EEA
-  (keeps the DSA "trader" declaration moot — leave the status "non-trader", don't start the
-  flow). Confirm primary category = Food & Drink.
+- [x] **App Store availability** — set 2026-09-06 to worldwide **minus** the EU-27 + Iceland +
+  Norway (avoids the DSA trader declaration; Switzerland + UK kept) and China. Subscriptions
+  (monthly + yearly) set to all storefronts — capped by app availability anyway. Base price
+  USD $2.99 / $19.99, MY + KR set manually, rest auto-converted.
+  - [ ] Still confirm primary category = **Food & Drink** (App Information → Category).
+  - Drop South Korea if the KR privacy policy (`/privacy/ko/`) isn't live at submission.
 - [ ] **TestFlight validated by the team** on real devices — add internal testers + a "What to
   Test" note.
 - [ ] **Submit** — set release to **manual** in ASC, submit the version.
