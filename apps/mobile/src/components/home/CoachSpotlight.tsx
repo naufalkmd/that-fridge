@@ -23,19 +23,29 @@ const RING = 96;
 // account) — the intro can re-run there but the beginner tour shouldn't.
 const ESTABLISHED = 6;
 
-const LOOK_AROUND: { target: Exclude<CoachTarget, "add" | "home">; title: string; body: string }[] = [
+type Ion = keyof typeof Ionicons.glyphMap;
+
+const LOOK_AROUND: {
+  target: Exclude<CoachTarget, "add" | "home">;
+  icon: Ion;
+  title: string;
+  body: string;
+}[] = [
   {
     target: "inventory",
+    icon: "file-tray-stacked",
     title: "Your inventory",
     body: "Everything you add lives here with a freshness bar — green fading to red as it ages.",
   },
   {
     target: "eat",
+    icon: "people",
     title: "Meet the crew",
     body: "Chef, Guardian, Organizer and Shopkeeper — recipes, expiry warnings, storage tips and your shopping list.",
   },
   {
     target: "chat",
+    icon: "chatbubble",
     title: "Ask anything",
     body: "Quick Chat answers questions about your fridge, and turns a recipe link into a card.",
   },
@@ -46,8 +56,9 @@ const LOOK_AROUND: { target: Exclude<CoachTarget, "add" | "home">; title: string
  *
  * Phase A — empty fridge: dims the screen and highlights the "+" so the first action
  * is unmissable. Phase B — once an item exists: a short 3-stop "look around" of the
- * nav (inventory, crew, chat). Either phase ends permanently on Skip / Got it, and
- * the whole thing is suppressed for an already-established fridge.
+ * nav (inventory, crew, chat). Both phases draw the same bright icon chip in the ring
+ * (the "+" or the tab's icon) so they read as one consistent treatment. Either phase
+ * ends permanently on Skip / Got it, and it's suppressed for an established fridge.
  */
 export function CoachSpotlight() {
   const router = useRouter();
@@ -102,12 +113,13 @@ export function CoachSpotlight() {
         insets={insets}
         cx={cx}
         cy={cy}
+        icon="add"
+        big
         title="Add your first item"
         body="Tap + — scan a barcode or just type it in. Your fridge fills in from there."
         primaryLabel="Add an item"
         onPrimary={() => router.push("/add")}
         onSkip={dismissCoach}
-        fab
       />
     );
   }
@@ -124,6 +136,7 @@ export function CoachSpotlight() {
       insets={insets}
       cx={cx}
       cy={cy}
+      icon={stop.icon}
       title={stop.title}
       body={stop.body}
       progress={`${step + 1} / ${LOOK_AROUND.length}`}
@@ -138,25 +151,28 @@ function Overlay({
   insets,
   cx,
   cy,
+  icon,
+  big,
   title,
   body,
   progress,
   primaryLabel,
   onPrimary,
   onSkip,
-  fab,
 }: {
   insets: EdgeInsets;
   cx: number;
   cy: number;
+  icon: Ion;
+  big?: boolean;
   title: string;
   body: string;
   progress?: string;
   primaryLabel: string;
   onPrimary: () => void;
   onSkip?: () => void;
-  fab?: boolean;
 }) {
+  const chip = big ? FAB_SIZE : 46;
   return (
     <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
       <Pressable
@@ -281,27 +297,25 @@ function Overlay({
           }}
         />
 
-        {/* bright copy of the FAB (phase A only), tappable → opens Add */}
-        {fab && (
-          <Pressable
-            onPress={onPrimary}
-            style={{
-              position: "absolute",
-              left: cx - FAB_SIZE / 2,
-              top: cy - FAB_SIZE / 2,
-              width: FAB_SIZE,
-              height: FAB_SIZE,
-              borderRadius: FAB_SIZE / 2,
-              backgroundColor: ACCENT,
-              borderWidth: 4,
-              borderColor: SURFACE,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons name="add" size={26} color={CANVAS} />
-          </Pressable>
-        )}
+        {/* bright chip in the ring — the "+" FAB in phase A, the tab icon in the tour */}
+        <Pressable
+          onPress={onPrimary}
+          style={{
+            position: "absolute",
+            left: cx - chip / 2,
+            top: cy - chip / 2,
+            width: chip,
+            height: chip,
+            borderRadius: big ? chip / 2 : 14,
+            backgroundColor: ACCENT,
+            borderWidth: 4,
+            borderColor: SURFACE,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Ionicons name={icon} size={big ? 26 : 20} color={CANVAS} />
+        </Pressable>
 
         {onSkip && (
           <Pressable
