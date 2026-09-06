@@ -43,12 +43,12 @@ Legend: ✅ done · 🟡 partial / drafted, needs action · ⬜ not started
   (`app_store_connect_api_key_configured: true`). **Product sync still pending** — trigger an
   Import in RC or wait a few hours; check the key role is App Manager+. Not blocking: StoreKit
   gives the SDK the real $2.99/$19.99 price and the trial on-device regardless.
-- [x] ~~Subscriptions + intro offers~~ — both subs "Ready to Submit" and both + the Free/1-week
-  intro offers attached to the version in ASC (2026-09-06). **RevenueCat still hasn't synced the
-  real price/duration/trial** for `thatfridge_pro_monthly` / `_yearly` (catalog shows null) —
-  check the `store_identifier` exactly matches the ASC Product ID, the API-key role is App
-  Manager+, and trigger a manual Import in RC. Cosmetic only if the on-device sandbox paywall
-  already shows the right price + trial (it did), but worth closing so the dashboard is right.
+- [x] ~~Subscriptions + intro offers~~ — both subs priced ($2.99 / $19.99, "1 Year Upfront" for
+  the annual — skipped the optional "Monthly w/ 12-Month Commitment"), availability set,
+  "Ready to Submit", and both + the Free/1-week intro offers attached to the version. RevenueCat
+  links them and shows "Ready to Submit". RC's `indicative_price`/duration fields still read null
+  via API — known ~24h derived-data lag, non-blocking (sandbox paywall already showed real price
+  + trial). Will fill in on its own.
 - [ ] **Full real-device smoke test** against the live API — inventory, chat, notifications,
   social/blocking, icon-gen, expiry-scan, Activate button. Nothing dedicated since the parity
   port; only the paywall/purchase flow has been checked. Include the Add flow: "Scan receipt"
