@@ -32,8 +32,9 @@ type Step = {
 
 /**
  * Self-paced "get started" card on Home — appears once the intro carousel is done and
- * hides itself when every step is complete or the user taps Hide. Opens with one row
- * already ticked (endowed progress) so it never reads as a daunting 0/N.
+ * hides itself when every step is complete or the user taps Hide. Follows the natural
+ * hierarchy (account → fridge → items → the rest) and opens with the account row already
+ * ticked (endowed progress) so it never reads as a daunting 0/N.
  */
 export function GettingStarted() {
   const router = useRouter();
@@ -54,11 +55,19 @@ export function GettingStarted() {
     return [
       {
         id: "welcome",
-        label: "Joined ThatFridge",
+        label: "Created your account",
         hint: "",
         route: null,
         auto: true,
         done: true,
+      },
+      {
+        id: "fridge",
+        label: "Set up your fridge",
+        hint: "Name it — or just add an item and we'll make one",
+        route: "/fridges",
+        auto: true,
+        done: fridges.length > 0,
       },
       {
         id: "item",
