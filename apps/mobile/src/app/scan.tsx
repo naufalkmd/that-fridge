@@ -14,6 +14,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import Animated, { FadeIn } from "react-native-reanimated";
 
 import { ApiError, guessFoodIcon, STORAGE_LOCATIONS } from "@thatfridge/core";
 import { useInventory } from "@/lib/inventory";
@@ -32,28 +33,34 @@ const ACCENT = "#26c6da";
 const INK = "#eaeaec";
 const FAINT = "rgba(234,234,236,0.4)";
 
+type ScanResult =
+  | { kind: "ok"; code: string; name: string }
+  | { kind: "unknown"; code: string }
+  | { kind: "dupe"; code: string }
+  | { kind: "error"; code: string };
+
 export default function Scan() {
   const router = useRouter();
   const { lookupBarcode } = useInventory();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState<ScannedItem[]>([]);
   const [busy, setBusy] = useState(false);
-  const [flash, setFlash] = useState<string | null>(null);
+  const [result, setResult] = useState<ScanResult | null>(null);
   const [editing, setEditing] = useState<number | null>(null);
   const lastRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
-  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
     () => () => {
-      if (flashTimer.current) clearTimeout(flashTimer.current);
+      if (resultTimer.current) clearTimeout(resultTimer.current);
     },
     [],
   );
 
-  const say = useCallback((msg: string) => {
-    setFlash(msg);
-    if (flashTimer.current) clearTimeout(flashTimer.current);
-    flashTimer.current = setTimeout(() => setFlash(null), 1600);
+  const showResult = useCallback((r: ScanResult) => {
+    setResult(r);
+    if (resultTimer.current) clearTimeout(resultTimer.current);
+    resultTimer.current = setTimeout(() => setResult(null), 2600);
   }, []);
 
   const patch = useCallback(
@@ -79,7 +86,8 @@ export default function Scan() {
       lastRef.current = { code: data, at: now };
 
       if (scanned.some((s) => s.barcode === data)) {
-        say("Already in the list");
+        void Haptics.selectionAsync();
+        showResult({ kind: "dupe", code: data });
         return;
       }
 
@@ -99,7 +107,7 @@ export default function Scan() {
             shelfLifeDays: s.default_shelf_life_days ?? null,
           },
         ]);
-        say(`Added ${s.name}`);
+        showResult({ kind: "ok", code: data, name: s.name });
       } catch (err) {
         if (err instanceof ApiError && err.status === 404) {
           void Haptics.notificationAsync(
@@ -117,15 +125,16 @@ export default function Scan() {
               shelfLifeDays: null,
             },
           ]);
-          say("Not in the database — tap it to name it");
+          showResult({ kind: "unknown", code: data });
         } else {
-          say("Lookup failed — try again");
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          showResult({ kind: "error", code: data });
         }
       } finally {
         setBusy(false);
       }
     },
-    [busy, editing, scanned, lookupBarcode, say],
+    [busy, editing, scanned, lookupBarcode, showResult],
   );
 
   function done() {
@@ -198,16 +207,26 @@ export default function Scan() {
         pointerEvents="none"
       >
         <Text className="rounded-lg bg-black/60 px-4 py-2 text-center text-[13px] font-semibold text-white">
-          {flash ??
-            (busy
-              ? "Looking up…"
-              : editing !== null
-                ? "Editing — scanning paused"
-                : scanned.length > 0
-                  ? `${scanned.length} scanned — tap one to edit, or keep going`
-                  : "Point at a barcode")}
+          {busy
+            ? "Looking up…"
+            : editing !== null
+              ? "Editing — scanning paused"
+              : scanned.length > 0
+                ? `${scanned.length} scanned — tap one to edit, or keep going`
+                : "Point at a barcode"}
         </Text>
       </SafeAreaView>
+
+      {/* per-scan result card */}
+      {result && editing === null && (
+        <View
+          className="absolute inset-x-0 items-center"
+          style={{ top: "34%" }}
+          pointerEvents="none"
+        >
+          <ScanResultCard result={result} />
+        </View>
+      )}
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -424,5 +443,114 @@ function EditPanel({
         </Pressable>
       </View>
     </View>
+  );
+}
+
+// A stylised echo of the scanned digits — deterministic bar widths, not a real EAN
+// encoding. Just confirms visually that *this* number went through.
+function BarcodeGlyph({ code }: { code: string }) {
+  const digits = (code.replace(/\D/g, "") || "000000").slice(0, 14);
+  const bars: { w: number; on: boolean }[] = [{ w: 2, on: true }];
+  for (const ch of digits) {
+    const n = ch.charCodeAt(0) - 48;
+    bars.push({ w: 2 + (n % 3), on: true });
+    bars.push({ w: 2 + ((n >> 1) % 2), on: false });
+  }
+  bars.push({ w: 2, on: true });
+  return (
+    <View style={{ flexDirection: "row", height: 40 }}>
+      {bars.map((b, i) => (
+        <View
+          key={i}
+          style={{
+            width: b.w,
+            backgroundColor: b.on ? "#0a0a0c" : "transparent",
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+function ScanResultCard({ result }: { result: ScanResult }) {
+  const tint =
+    result.kind === "ok"
+      ? "#1f9d55"
+      : result.kind === "unknown"
+        ? "#c77700"
+        : result.kind === "error"
+          ? "#c0392b"
+          : "#666";
+  const label =
+    result.kind === "ok"
+      ? result.name || "Added"
+      : result.kind === "unknown"
+        ? "Not recognised"
+        : result.kind === "error"
+          ? "Lookup failed"
+          : "Already scanned";
+  const icon =
+    result.kind === "ok"
+      ? "check-circle"
+      : result.kind === "unknown"
+        ? "help-circle"
+        : result.kind === "error"
+          ? "alert-circle"
+          : "information";
+
+  return (
+    <Animated.View
+      entering={FadeIn.duration(140)}
+      style={{
+        backgroundColor: "#fff",
+        borderRadius: 14,
+        paddingTop: 12,
+        paddingBottom: 12,
+        paddingHorizontal: 18,
+        alignItems: "center",
+        gap: 5,
+        minWidth: 210,
+        shadowColor: "#000",
+        shadowOpacity: 0.35,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 6 },
+        elevation: 8,
+      }}
+    >
+      {result.kind !== "error" && <BarcodeGlyph code={result.code} />}
+      {result.kind !== "error" && (
+        <Text
+          style={{
+            fontSize: 10.5,
+            letterSpacing: 2,
+            color: "#777",
+            fontVariant: ["tabular-nums"],
+          }}
+        >
+          {result.code}
+        </Text>
+      )}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+          marginTop: 3,
+        }}
+      >
+        <MaterialCommunityIcons name={icon} size={16} color={tint} />
+        <Text
+          style={{ fontSize: 14, fontWeight: "800", color: "#0a0a0c" }}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+      </View>
+      {result.kind === "unknown" && (
+        <Text style={{ fontSize: 11, color: "#888" }}>
+          Tap the chip below to name it
+        </Text>
+      )}
+    </Animated.View>
   );
 }
