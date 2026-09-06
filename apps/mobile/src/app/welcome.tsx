@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as AppleAuthentication from "expo-apple-authentication";
@@ -55,6 +55,10 @@ type Cadence = "evening" | "twice_weekly";
 
 export default function Welcome() {
   const router = useRouter();
+  const { preview: previewParam } = useLocalSearchParams<{ preview?: string }>();
+  // Preview mode (Profile → "Preview welcome flow"): walk the screens without writing the
+  // draft, marking the intro seen, or touching auth. Every hand-off just closes the flow.
+  const preview = previewParam === "1";
   const { markSeen } = useOnboarding();
   const { signInWithApple, signInWithGoogle } = useAuth();
 
@@ -75,6 +79,7 @@ export default function Welcome() {
   // Persist the anonymous choices + mark the intro seen (so the post-sign-in /onboarding
   // route doesn't replay the carousel). Called before every hand-off to auth.
   const commitDraft = useCallback(async () => {
+    if (preview) return;
     try {
       await patchOnboardingDraft({
         ...(goal ? { goal } : {}),
@@ -88,19 +93,27 @@ export default function Welcome() {
     } catch {
       /* best effort — a lost draft just means a plainer first session */
     }
-  }, [goal, waste, household, fridgeName, reminder, markSeen]);
+  }, [preview, goal, waste, household, fridgeName, reminder, markSeen]);
+
+  // In preview, all exits just close back to Profile.
+  const closePreview = useCallback(() => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/profile");
+  }, [router]);
 
   const toSignIn = useCallback(
     async (mode: "login" | "signup") => {
+      if (preview) return closePreview();
       track("welcome_to_signin", { mode, has_goal: !!goal, has_fridge: !!fridgeName });
       await commitDraft();
       router.replace(`/sign-in?mode=${mode}`);
     },
-    [commitDraft, goal, fridgeName, router],
+    [preview, closePreview, commitDraft, goal, fridgeName, router],
   );
 
   const social = useCallback(
     async (provider: "apple" | "google") => {
+      if (preview) return closePreview();
       track("welcome_social_auth", { provider });
       await commitDraft();
       try {
@@ -113,14 +126,44 @@ export default function Welcome() {
         router.replace("/sign-in?mode=signup");
       }
     },
-    [commitDraft, signInWithApple, signInWithGoogle, router],
+    [preview, closePreview, commitDraft, signInWithApple, signInWithGoogle, router],
   );
 
   const haveAccount = () => toSignIn("login");
 
-  if (step === "carousel") {
-    return (
-      <IntroCarousel
+  const stepView = renderStep();
+  return (
+    <View style={{ flex: 1 }}>
+      {stepView}
+      {preview && (
+        <Pressable
+          onPress={closePreview}
+          style={{
+            position: "absolute",
+            top: 6,
+            alignSelf: "center",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            backgroundColor: "rgba(38,198,218,0.16)",
+            borderRadius: 999,
+            paddingVertical: 4,
+            paddingHorizontal: 12,
+          }}
+        >
+          <Ionicons name="eye-outline" size={12} color={ACCENT} />
+          <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.4, color: ACCENT }}>
+            PREVIEW — tap to exit
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
+
+  function renderStep() {
+    if (step === "carousel") {
+      return (
+        <IntroCarousel
         finishLabel="Continue"
         onFinish={() => setStep("questions")}
         onSkip={() => toSignIn("signup")}
@@ -207,17 +250,18 @@ export default function Welcome() {
     );
   }
 
-  return (
-    <WallStep
-      goal={goal}
-      fridgeName={fridgeName}
-      reminder={reminder}
-      onEmail={() => toSignIn("signup")}
-      onHaveAccount={haveAccount}
-      onApple={() => social("apple")}
-      onGoogle={() => social("google")}
-    />
-  );
+    return (
+      <WallStep
+        goal={goal}
+        fridgeName={fridgeName}
+        reminder={reminder}
+        onEmail={() => toSignIn("signup")}
+        onHaveAccount={haveAccount}
+        onApple={() => social("apple")}
+        onGoogle={() => social("google")}
+      />
+    );
+  }
 }
 
 // ---- shared bits --------------------------------------------------------

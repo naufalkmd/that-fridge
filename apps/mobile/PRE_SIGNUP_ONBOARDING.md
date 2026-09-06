@@ -276,6 +276,9 @@ flow now matches §3 end-to-end:
   both. Editable in **Notification settings → Fridge check-in**.
 - Events: `welcome_questions_answered`, `welcome_reminder_set`, `welcome_social_auth`, plus
   the Phase 3 set.
+- **Preview:** Profile → "Preview welcome flow" opens `/welcome?preview=1` — walk every
+  screen without writing the draft, marking the intro seen, or touching auth; a "PREVIEW —
+  tap to exit" pill and every hand-off just close back. Not dev-gated (harmless).
 - **Data-driven cuts still apply** — if the funnel shows a step bleeding users, remove it;
   the state machine makes any step easy to skip.
 - **No mobile test runner** — `tsc` clean; needs the device pass on the next build.

@@ -193,6 +193,11 @@ export default function Profile() {
             onPress={replayIntro}
           />
           <LinkRow
+            icon="eye-outline"
+            label="Preview welcome flow"
+            onPress={() => router.push("/welcome?preview=1")}
+          />
+          <LinkRow
             icon="information-circle-outline"
             label="About ThatFridge"
             onPress={() => router.push("/about")}
