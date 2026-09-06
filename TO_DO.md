@@ -31,9 +31,8 @@ Legend: ✅ done · 🟡 partial / drafted, needs action · ⬜ not started
     cleared once fields were retyped through a plain-text editor).
   - [x] Store listing copy (name/subtitle/description/keywords/promo), verified char counts.
   - [x] Age rating questionnaire — walked through live, result **9+** (see `STORE_LISTING.md` §4).
-  - [ ] App Privacy form (`STORE_LISTING.md` §1).
-  - [ ] App Review notes + demo account (`STORE_LISTING.md` §5) — fill the demo password in ASC only.
-  - [ ] Upload `apps/mobile/app-review.pdf` at App Review Information → Attachment.
+  - [x] App Privacy form (`STORE_LISTING.md` §1).
+  - [x] App Review notes + demo account + `app-review.pdf` attachment (2026-09-06).
   - [ ] Localized `ko` (and `ms`) metadata — at minimum Korean.
 - [x] ~~RevenueCat paywall~~ — "ThatFridge Paywall" `pwec1165df9a414243` **published rev 17**
   (2026-09-06). Trial line + full auto-renew disclosure + `thatfridge.com` Terms/Privacy +
