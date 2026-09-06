@@ -1,9 +1,30 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import { describeError, type Recipe, type RecipeInput } from "@thatfridge/core";
+import {
+  describeError,
+  type Recipe,
+  type RecipeInput,
+  type RecipeSuggestionBlock,
+} from "@thatfridge/core";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+
+// Hand-off buffer for "Edit first" on a Chef chat suggestion: the card stashes the
+// suggested recipe here, then /recipe-form?from=suggestion picks it up and opens
+// pre-filled as a new (unsaved) recipe. Module-level + one-shot, same pattern as the
+// barcode-scan draft hand-off in components/draft-item.tsx.
+let suggestionDraft: RecipeSuggestionBlock | null = null;
+
+export function stashRecipeSuggestion(block: RecipeSuggestionBlock): void {
+  suggestionDraft = block;
+}
+
+export function takeRecipeSuggestion(): RecipeSuggestionBlock | null {
+  const out = suggestionDraft;
+  suggestionDraft = null;
+  return out;
+}
 
 interface RecipesContextValue {
   recipes: Recipe[];

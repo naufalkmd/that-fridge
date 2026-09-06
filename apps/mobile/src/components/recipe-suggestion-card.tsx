@@ -44,12 +44,14 @@ export function RecipeSuggestionCard({
   added,
   adding,
   onAdd,
+  onEdit,
   onDismiss,
 }: {
   suggestion: RecipeSuggestionBlock;
   added: boolean;
   adding: boolean;
   onAdd: () => void;
+  onEdit: () => void;
   onDismiss: () => void;
 }) {
   const [dismissed, setDismissed] = useState(false);
@@ -320,11 +322,10 @@ export function RecipeSuggestionCard({
           </Text>
         </View>
       ) : (
-        <View style={{ flexDirection: "row", gap: 8, width: CARD_W }}>
+        <View style={{ width: CARD_W, gap: 8 }}>
           <Pressable
             onPress={adding ? undefined : onAdd}
             style={{
-              flex: 1,
               alignItems: "center",
               paddingVertical: 10,
               borderRadius: 6,
@@ -343,27 +344,52 @@ export function RecipeSuggestionCard({
               {adding ? "Adding…" : "Add to recipe book"}
             </Text>
           </Pressable>
-          <Pressable
-            onPress={() => {
-              setDismissed(true);
-              onDismiss();
-            }}
-            style={{
-              alignItems: "center",
-              paddingVertical: 10,
-              paddingHorizontal: 14,
-              borderRadius: 6,
-              borderWidth: 1,
-              borderColor: STRONG_BORDER,
-            }}
-          >
-            <Text
-              numberOfLines={1}
-              style={{ fontSize: 12, fontWeight: "700", color: INK }}
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable
+              onPress={adding ? undefined : onEdit}
+              style={{
+                flex: 1,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+                paddingVertical: 10,
+                borderRadius: 6,
+                borderWidth: 1,
+                borderColor: STRONG_BORDER,
+                opacity: adding ? 0.5 : 1,
+              }}
             >
-              No thanks
-            </Text>
-          </Pressable>
+              <MaterialCommunityIcons name="pencil" size={12} color={INK} />
+              <Text
+                numberOfLines={1}
+                style={{ fontSize: 12, fontWeight: "700", color: INK }}
+              >
+                Edit first
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setDismissed(true);
+                onDismiss();
+              }}
+              style={{
+                flex: 1,
+                alignItems: "center",
+                paddingVertical: 10,
+                borderRadius: 6,
+                borderWidth: 1,
+                borderColor: STRONG_BORDER,
+              }}
+            >
+              <Text
+                numberOfLines={1}
+                style={{ fontSize: 12, fontWeight: "700", color: INK }}
+              >
+                No thanks
+              </Text>
+            </Pressable>
+          </View>
         </View>
       )}
     </View>

@@ -17,7 +17,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { describeError, type RecipeAttachment, type RecipeCategory } from "@thatfridge/core";
 import { api } from "@/lib/api";
-import { useRecipes } from "@/lib/recipes";
+import { takeRecipeSuggestion, useRecipes } from "@/lib/recipes";
 import { SheetHeader } from "@/components/sheet";
 
 const AMBER = "#26c6da";
@@ -32,17 +32,30 @@ const CATEGORIES: RecipeCategory[] = ["breakfast", "lunch", "dinner", "dessert",
 
 export default function RecipeForm() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, from } = useLocalSearchParams<{ id?: string; from?: string }>();
   const { byId, create, update } = useRecipes();
   const existing = id ? byId(id) : undefined;
 
-  const [name, setName] = useState(existing?.name ?? "");
-  const [minutes, setMinutes] = useState(String(existing?.minutes ?? 20));
-  const [category, setCategory] = useState<RecipeCategory | null>(existing?.category ?? null);
-  const [ingredients, setIngredients] = useState<string[]>(
-    existing?.ingredients.map((i) => i.name) ?? [""],
+  // One-shot: a Chef chat suggestion the user chose to tweak before saving. Read once
+  // on mount so a re-render doesn't clear the buffer out from under a still-open form.
+  const [seed] = useState(() =>
+    from === "suggestion" ? takeRecipeSuggestion() : null,
   );
-  const [steps, setSteps] = useState<string[]>(existing?.steps ?? [""]);
+
+  const [name, setName] = useState(existing?.name ?? seed?.name ?? "");
+  const [minutes, setMinutes] = useState(
+    String(existing?.minutes ?? seed?.minutes ?? 20),
+  );
+  const [category, setCategory] = useState<RecipeCategory | null>(
+    existing?.category ?? seed?.category ?? null,
+  );
+  const [ingredients, setIngredients] = useState<string[]>(
+    existing?.ingredients.map((i) => i.name) ??
+      seed?.ingredients.map((i) => i.name) ?? [""],
+  );
+  const [steps, setSteps] = useState<string[]>(
+    existing?.steps ?? seed?.steps ?? [""],
+  );
   const [attachments, setAttachments] = useState<RecipeAttachment[]>(existing?.attachments ?? []);
   const [link, setLink] = useState("");
   const [importing, setImporting] = useState(false);
@@ -130,12 +143,14 @@ export default function RecipeForm() {
       className="flex-1 bg-canvas"
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <SheetHeader title={existing ? "Edit recipe" : "New recipe"} />
+      <SheetHeader
+        title={existing ? "Edit recipe" : seed ? "Tweak recipe" : "New recipe"}
+      />
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 4, paddingBottom: 40, gap: 16 }}
         keyboardShouldPersistTaps="handled"
       >
-        {!existing && (
+        {!existing && !seed && (
           <View style={{ flexDirection: "row", gap: 8 }}>
             <TextInput
               value={link}

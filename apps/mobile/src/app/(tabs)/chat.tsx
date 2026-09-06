@@ -34,7 +34,7 @@ import {
   bumpChatUsed,
   getChatUsed,
 } from "@/lib/chatQuota";
-import { useRecipes } from "@/lib/recipes";
+import { stashRecipeSuggestion, useRecipes } from "@/lib/recipes";
 import { useVoiceDictation } from "@/lib/voice";
 import { MarkdownText } from "@/components/markdown-text";
 import { RecipeSuggestionCard } from "@/components/recipe-suggestion-card";
@@ -536,6 +536,7 @@ function TypingDots() {
 }
 
 function Bubble({ msg }: { msg: Msg }) {
+  const router = useRouter();
   const isUser = msg.role === "user";
   const { recipes, create } = useRecipes();
   const [added, setAdded] = useState(false);
@@ -639,6 +640,10 @@ function Bubble({ msg }: { msg: Msg }) {
           added={added || alreadyInBook}
           adding={adding}
           onAdd={addToBook}
+          onEdit={() => {
+            stashRecipeSuggestion(msg.recipe!);
+            router.push("/recipe-form?from=suggestion");
+          }}
           onDismiss={() => setDismissed(true)}
         />
       )}
