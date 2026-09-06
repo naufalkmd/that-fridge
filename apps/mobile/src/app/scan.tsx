@@ -88,9 +88,12 @@ export default function Scan() {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         codesRef.current.add(data);
         drafts.append(
+          // Match one of our pixel food icons from the product name; if nothing fits,
+          // "generic" lets FoodIcon fall back to the name's initials. We never use the
+          // barcode/OFF product photo as the item image.
           blankDraft({
             name: s.name,
-            icon: s.icon || guessFoodIcon(s.name) || "generic",
+            icon: guessFoodIcon(s.name) ?? "generic",
             location: s.location ?? "fridge",
             expiryDate: s.default_shelf_life_days
               ? isoInDays(s.default_shelf_life_days)
