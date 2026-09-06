@@ -206,12 +206,15 @@ export function FridgeStep({
   onBack,
   onSubmit,
   onSkip,
+  onHaveAccount,
   ctaLabel = "Create fridge",
   busy = false,
 }: {
   onBack: () => void;
   onSubmit: (name: string) => void;
   onSkip: () => void;
+  /** Pre-sign-in only: shows a "Log in" link in the header. */
+  onHaveAccount?: () => void;
   ctaLabel?: string;
   /** Show a spinner on the CTA (post-sign-in flow makes a network call). */
   busy?: boolean;
@@ -230,9 +233,16 @@ export function FridgeStep({
         <Pressable onPress={onBack} hitSlop={12} disabled={busy}>
           <Ionicons name="arrow-back" size={20} color={MUTED} />
         </Pressable>
-        <Pressable onPress={onSkip} hitSlop={12} disabled={busy}>
-          <Text style={{ fontSize: 13, fontWeight: "700", color: MUTED }}>Skip</Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: 16 }}>
+          {onHaveAccount && (
+            <Pressable onPress={onHaveAccount} hitSlop={12} disabled={busy}>
+              <Text style={{ fontSize: 12.5, fontWeight: "700", color: MUTED }}>Log in</Text>
+            </Pressable>
+          )}
+          <Pressable onPress={onSkip} hitSlop={12} disabled={busy}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: MUTED }}>Skip</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 28, gap: 14 }}>

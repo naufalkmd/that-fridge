@@ -225,6 +225,7 @@ export default function Welcome() {
       <FridgeStep
         ctaLabel="Continue"
         onBack={() => setStep("demo")}
+        onHaveAccount={haveAccount}
         onSubmit={(name) => {
           setFridgeName(name);
           track("welcome_fridge_named");
@@ -749,7 +750,7 @@ function WallStep({
             letterSpacing: -0.3,
           }}
         >
-          Save your setup
+          Save your fridge &amp; crew
         </Text>
         <Text style={{ fontSize: 14, lineHeight: 20, color: MUTED, textAlign: "center" }}>
           Create an account so your fridge, your crew and your progress are there next time.
