@@ -118,7 +118,8 @@ Password & As entered in the \emph{App Review Information} $\rightarrow$ \emph{S
   \item \textbf{Add (centre ``+'' button).} Four ways to add stock: \emph{Scan barcode}
         (free), \emph{Add manually} (free), \emph{Scan receipt} (Pro), \emph{Photo of
         fridge} (Pro). Barcode and manual entry work on the demo account without a
-        subscription.
+        subscription. The three camera methods open the camera directly, with an
+        ``upload from library'' option for testing without a physical receipt or fridge.
   \item \textbf{Chat tab.} Ask the crew in plain language, e.g.\ ``what can I cook
         tonight?''. The free tier allows 5 messages per week shared across the crew.
         Responses are produced server-side (see \S\ref{sec:third-party}).
@@ -131,8 +132,10 @@ Password & As entered in the \emph{App Review Information} $\rightarrow$ \emph{S
   \item \textbf{Sharing} (Profile $\rightarrow$ Fridges, or the ``+'' on the Home fridge
         carousel). Create or rename fridges, invite another user by exact username, and
         approve join requests. Content in a fridge is visible only to approved members.
-  \item \textbf{Profile tab.} Subscription status, the upgrade entry point, notification
-        settings, ``AI Data \& Memory'' controls, Sign out, and \textbf{Delete account}.
+  \item \textbf{Profile tab.} Subscription status, a \textbf{Go Pro} button (and a
+        \emph{Restore purchases} link), \textbf{Manage subscription} once subscribed (opens
+        the RevenueCat Customer Center), notification settings, ``AI Data \& Memory''
+        controls, Sign out, and \textbf{Delete account}.
 \end{enumerate}
 
 \section{Reviewing the subscription (Guideline 3.1)}
@@ -143,19 +146,22 @@ Password & As entered in the \emph{App Review Information} $\rightarrow$ \emph{S
         auto-renewable and both include a 7-day free trial.
   \item \textbf{Purchase path.} StoreKit only, via RevenueCat. There is no external or
         alternative purchase mechanism anywhere in the app.
-  \item \textbf{Opening the paywall.} Profile tab $\rightarrow$ \textbf{Upgrade to Pro}, or
-        attempt a Pro-only action such as \emph{Scan receipt}.
+  \item \textbf{Opening the paywall.} Profile tab $\rightarrow$ \textbf{Go Pro}, or attempt
+        a Pro-only action such as \emph{Scan receipt}.
   \item \textbf{The paywall shows} each plan's price and billing period, the 7-day
-        free-trial terms, a \textbf{Restore Purchases} control, and links to the
+        free-trial terms and the price after it, a \textbf{Restore Purchases} control, the
+        standard auto-renew disclosure, and links to the
         \href{https://thatfridge.com/terms/}{Terms of Use} and
-        \href{https://thatfridge.com/privacy/}{Privacy Policy}. Auto-renewal and
-        cancellation terms are stated on screen and repeated in the App Store description.
+        \href{https://thatfridge.com/privacy/}{Privacy Policy}.
   \item \textbf{Sandbox.} Starting the free trial in the review environment grants all Pro
         entitlements immediately; no promo code is required. \textbf{Restore Purchases}
         re-syncs entitlements for the signed-in Apple ID.
-  \item \textbf{Cancellation.} Deleting the ThatFridge account does \emph{not} cancel the
-        Apple subscription --- that is managed by the user in iOS Settings, per Apple's
-        requirements. The app states this at the point of deletion.
+  \item \textbf{Cancelling.} Cancelling the trial or subscription (Manage subscription, or
+        iOS Settings) does not remove Pro immediately --- access continues until the end of
+        the current period, per Apple's model, then the app returns to the free tier on the
+        next launch or foreground. Deleting the ThatFridge account likewise does \emph{not}
+        cancel the Apple subscription; that is managed by the user in iOS Settings, and the
+        app says so at the point of deletion.
 \end{itemize}
 
 \section{Answers to likely review questions}

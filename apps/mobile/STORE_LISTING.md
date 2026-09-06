@@ -282,7 +282,7 @@ WHAT TO TEST
 PRO FEATURES AND THE FREE TRIAL
 Pro unlocks unlimited AI chat, receipt scanning, fridge-photo scanning, and multiple/shared
 fridges. The app offers a 7-day free trial with no promo code needed - start it from
-Profile tab -> Upgrade. In the App Store sandbox environment this grants all Pro features
+Profile tab -> Go Pro. In the App Store sandbox environment this grants all Pro features
 immediately. (Receipt and fridge-photo scanning are Pro-only and will show an upgrade prompt
 on the free tier; barcode scanning and manual add are always free; expiry-date photo scan and
 AI icon generation are limited on the free tier and unlimited on Pro.)
