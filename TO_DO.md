@@ -23,13 +23,9 @@ Legend: ✅ done · 🟡 partial / drafted, needs action · ⬜ not started
 ## What's left to do
 
 ### Blocking App Store submission
-- [ ] **Rotate the demo account password.** `password123` was committed (public). It's now an
-  env var (`DEMO_USER_PASSWORD`): set it in the prod `.env`, save to the password manager, run
-  `php artisan config:clear && php artisan db:seed --force`. Full steps in `STORE_LISTING.md` §5.
-- [ ] **Capture iPhone screenshots** — 1320×2868px, **6.9" size only** (this alone satisfies
-  every smaller size via Apple's auto-scaling — verified against Apple's current spec
-  2026-09-05). No device frame, no alpha channel. 1-10 images; suggest paywall + Home + Chat +
-  Inventory.
+- [ ] **Capture iPhone screenshots** — full plan in `apps/mobile/SCREENSHOTS.md` (10-frame set,
+  1320×2868px 6.9"-only, frame design + capture/assembly/localization steps). Blocked on: new
+  demo password (done — hand it over) + a Release build against prod API.
 - [ ] **Paste drafted content into App Store Connect** — all fully written in
   `apps/mobile/STORE_LISTING.md`: store listing copy (§2), App Privacy form (§1), age rating
   reasoning (§4, expected 4+), App Review notes + demo account instructions (§5). Review before
