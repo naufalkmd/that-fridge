@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -17,6 +19,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import Animated, { FadeIn } from "react-native-reanimated";
 
+import { api } from "@/lib/api";
+import { useInventory } from "@/lib/inventory";
 import { useOnboarding } from "@/lib/onboarding";
 import { PixelText } from "@/components/brand";
 
@@ -70,9 +74,11 @@ const SLIDES: Slide[] = [
 export default function Onboarding() {
   const router = useRouter();
   const { markSeen } = useOnboarding();
+  const { fridges, refresh } = useInventory();
   const { width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
+  const [phase, setPhase] = useState<"slides" | "fridge">("slides");
 
   const last = index === SLIDES.length - 1;
 
@@ -88,13 +94,33 @@ export default function Onboarding() {
 
   const next = useCallback(() => {
     if (last) {
-      void finish({ thenAdd: true });
+      // Already have a fridge (a returning user re-seeing the intro) → skip naming.
+      if (fridges.length > 0) void finish({ thenAdd: true });
+      else setPhase("fridge");
       return;
     }
     Haptics.selectionAsync().catch(() => {});
     scrollRef.current?.scrollTo({ x: (index + 1) * width, animated: true });
     setIndex((i) => Math.min(i + 1, SLIDES.length - 1));
-  }, [last, finish, index, width]);
+  }, [last, finish, index, width, fridges.length]);
+
+  if (phase === "fridge") {
+    return (
+      <FridgeStep
+        onBack={() => setPhase("slides")}
+        onCreate={async (name) => {
+          try {
+            await api.createFridge(name);
+            await refresh();
+          } catch {
+            /* the add-item flow will create "My Fridge" if this didn't land */
+          }
+          void finish({ thenAdd: true });
+        }}
+        onSkip={() => finish({ thenAdd: true })}
+      />
+    );
+  }
 
   const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const i = Math.round(e.nativeEvent.contentOffset.x / Math.max(width, 1));
@@ -201,9 +227,9 @@ export default function Onboarding() {
               color: CANVAS,
             }}
           >
-            {last ? "Add my first item" : "Next"}
+            {last ? "Get started" : "Next"}
           </Text>
-          <Ionicons name={last ? "add" : "arrow-forward"} size={17} color={CANVAS} />
+          <Ionicons name="arrow-forward" size={17} color={CANVAS} />
         </Pressable>
 
         {last ? (
@@ -219,6 +245,150 @@ export default function Onboarding() {
         ) : (
           <View style={{ height: 25 }} />
         )}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ---- fridge naming step (after the slides, before Home) ------------------
+
+function FridgeStep({
+  onBack,
+  onCreate,
+  onSkip,
+}: {
+  onBack: () => void;
+  onCreate: (name: string) => Promise<void>;
+  onSkip: () => void;
+}) {
+  const [name, setName] = useState("My Fridge");
+  const [busy, setBusy] = useState(false);
+
+  const create = () => {
+    if (busy) return;
+    setBusy(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    void onCreate(name.trim() || "My Fridge");
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: CANVAS }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 24,
+          paddingTop: 8,
+          paddingBottom: 4,
+        }}
+      >
+        <Pressable onPress={onBack} hitSlop={12} disabled={busy}>
+          <Ionicons name="arrow-back" size={20} color={MUTED} />
+        </Pressable>
+        <Pressable onPress={onSkip} hitSlop={12} disabled={busy}>
+          <Text style={{ fontSize: 13, fontWeight: "700", color: MUTED }}>Skip</Text>
+        </Pressable>
+      </View>
+
+      <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 28, gap: 14 }}>
+        <View style={{ alignItems: "center", marginBottom: 6 }}>
+          <Glow />
+          <View
+            style={{
+              width: 68,
+              height: 68,
+              borderRadius: 18,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: SURFACE,
+              borderWidth: 1,
+              borderColor: HAIRLINE,
+            }}
+          >
+            <MaterialCommunityIcons name="fridge-outline" size={34} color={ACCENT} />
+          </View>
+        </View>
+
+        <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT, textAlign: "center" }}>
+          YOUR FIRST FRIDGE
+        </PixelText>
+        <Text
+          style={{
+            fontSize: 27,
+            lineHeight: 33,
+            fontWeight: "800",
+            color: INK,
+            textAlign: "center",
+            letterSpacing: -0.3,
+          }}
+        >
+          Name your fridge
+        </Text>
+        <Text style={{ fontSize: 14, lineHeight: 20, color: MUTED, textAlign: "center" }}>
+          It&apos;s where everything you track lives. Add more later — one for home, one
+          shared with housemates.
+        </Text>
+
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          placeholder="My Fridge"
+          placeholderTextColor={FAINT}
+          autoCapitalize="words"
+          returnKeyType="done"
+          onSubmitEditing={create}
+          editable={!busy}
+          style={{
+            marginTop: 6,
+            backgroundColor: SURFACE,
+            borderWidth: 1,
+            borderColor: HAIRLINE,
+            borderRadius: 12,
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            fontSize: 15,
+            fontWeight: "600",
+            color: INK,
+            textAlign: "center",
+          }}
+        />
+      </View>
+
+      <View style={{ paddingHorizontal: 28, paddingTop: 10, paddingBottom: 20, gap: 12 }}>
+        <Pressable
+          onPress={create}
+          disabled={busy}
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            backgroundColor: ACCENT,
+            borderRadius: 12,
+            paddingVertical: 16,
+            opacity: busy || pressed ? 0.85 : 1,
+          })}
+        >
+          {busy ? (
+            <ActivityIndicator color={CANVAS} />
+          ) : (
+            <>
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: "800",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  color: CANVAS,
+                }}
+              >
+                Create fridge
+              </Text>
+              <Ionicons name="arrow-forward" size={17} color={CANVAS} />
+            </>
+          )}
+        </Pressable>
       </View>
     </SafeAreaView>
   );

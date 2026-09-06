@@ -60,8 +60,17 @@ Full-screen, dark canvas, `#26c6da` accent, swipe or "Next", page dots, "Skip" t
 | 2 | An item card sliding from green → amber → red | **Know before it goes bad** | Track what you have and get a nudge a few days out — not a bad smell a week later. |
 | 3 | Chat bubble: "What can I cook tonight?" → a recipe | **Cook what you already have** | Ask the crew anything about your fridge in plain language. Less guessing, less waste. |
 
-Slide 3 primary button: **"Add my first item"** → completes onboarding, routes to `/add`.
-Secondary on every slide: **"Skip"** → completes onboarding, routes to `/home`.
+Slide 3 primary button: **"Get started"** → the fridge-naming step (§2a-2). Secondary on
+every slide: **"Skip"** → completes onboarding, routes to `/home`.
+
+### 2a-2. Name your fridge (BUILT 2026-09-06)
+
+After the slides, before Home: a single-field step (`FridgeStep` in `onboarding.tsx`) —
+"Name your fridge", prefilled `My Fridge`. **Create fridge** → `api.createFridge(name)` +
+`refresh()` → finish → Home → `/add`. **Skip** → finish (the add-item flow auto-creates
+"My Fridge"). Skipped entirely for a returning user who already has a fridge. This is the
+account → fridge → items hierarchy made a real step rather than a spotlight on a button
+that doesn't exist on Home.
 
 ### 2b. One personalization question — *optional, cut if it adds friction*
 
