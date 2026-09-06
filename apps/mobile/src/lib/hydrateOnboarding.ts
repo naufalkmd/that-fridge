@@ -2,6 +2,8 @@ import type { Fridge, OnboardingPrefs } from "@thatfridge/core";
 
 import { api } from "@/lib/api";
 import { track } from "@/lib/analytics";
+import { setFridgeReminder } from "@/lib/fridgeReminder";
+import { ensureNotificationPermission } from "@/lib/localNotifications";
 import { clearOnboardingDraft, getOnboardingDraft } from "@/lib/onboardingDraft";
 
 // Replays the pre-sign-in onboarding draft to the server after the first successful auth.
@@ -52,12 +54,24 @@ export async function hydrateOnboarding(): Promise<void> {
   // 2. First fridge (server-checked, so it can't collide with ensureFridgeId).
   if (!(await ensureOnboardingFridge())) failures.push("fridge");
 
-  // 3. Reminder — the draft records the intent; scheduling + the permission prompt land
-  //    in Phase 4 (they need the notification-scheduling helper and careful timing).
+  // 3. "Check your fridge" reminder — ask for notification permission in context, then
+  //    schedule the chosen cadence. A skip (`reminder` null/absent) does nothing.
+  if (draft.reminder?.cadence) {
+    try {
+      if (await ensureNotificationPermission()) {
+        await setFridgeReminder(draft.reminder.cadence);
+      } else {
+        failures.push("reminder_permission");
+      }
+    } catch {
+      failures.push("reminder");
+    }
+  }
 
   track("onboarding_hydrated", {
     named_fridge: !!draft.fridgeName,
     goal: draft.goal ?? null,
+    reminder: draft.reminder?.cadence ?? null,
     failures: failures.length ? failures : null,
   });
 }

@@ -257,16 +257,34 @@ funnel = flying blind), Phase 2 is the first user-visible cut, Phases 3–5 are 
 - **No mobile test runner** — verified by `tsc` + a manual device pass on the next build.
 - **Next:** collect 2–3 weeks of funnel data (`app:onboarding-funnel`) before Phase 4.
 
-### Phase 4 — Expand from data  ·  ~2–3 days  ·  data-driven
+### Phase 4 — the full flow  ·  DONE 2026-09-07  ·  built ahead of the data
 
-Add back the pieces that earn their place; cut anything Phase 3 data shows bleeding users.
+Built directly rather than waiting for Phase 3 funnel data (product call). The `welcome`
+flow now matches §3 end-to-end:
 
-- Add the **Guardian + Organizer question rows** (one screen, §3 step 2) if the single
-  question didn't hurt drop-off.
-- Add **Meet your crew** (§3 step 3) and the **reminder cadence** step (§3 step 6).
-- Re-check per-step drop-off after each addition; a step that costs >X% conversion comes back
-  out.
-- **Exit:** the flow matches §3 (or a justified subset), each step's drop-off is known.
+- **`questions` step** — one screen, all three crew-framed questions (Shopkeeper "what brings
+  you here", Guardian "how often thrown out", Organizer "who's it for"). Chips, nothing
+  required, `welcome_questions_answered` beacons the answered count.
+- **`crew` step** — 4 tap-to-expand cards with a one-liner each.
+- **`reminder` step** — "want a nudge to check in?" → evening / 2×week / off. Stored in the
+  draft; `hydrateOnboarding` asks notification permission then `setFridgeReminder()`.
+- **`wall` step** — now has inline **Apple / Google / email** buttons (commit the draft, then
+  auth, then `/home`); "I already have an account" still hands to `/sign-in`.
+- **`lib/fridgeReminder.ts`** — the recurring "check your fridge" notification, tagged
+  `data.kind: "checkin"`. `localNotifications.ts` refactored to cancel by `kind` (with a
+  legacy-untagged sweep) so expiry + check-in reminders coexist; `ExpiryReminderSync` rebuilds
+  both. Editable in **Notification settings → Fridge check-in**.
+- Events: `welcome_questions_answered`, `welcome_reminder_set`, `welcome_social_auth`, plus
+  the Phase 3 set.
+- **Data-driven cuts still apply** — if the funnel shows a step bleeding users, remove it;
+  the state machine makes any step easy to skip.
+- **No mobile test runner** — `tsc` clean; needs the device pass on the next build.
+
+### Phase 4 (original plan) — Expand from data  ·  superseded
+
+Was: add the extra questions / crew / reminder back *only* if Phase 3 data showed the lean
+flow held. Shipped the full flow instead; the drop-off analysis now happens in reverse
+(remove what's bleeding) via `app:onboarding-funnel`.
 
 ### Phase 5 — Payoff & polish  ·  ~2 days  ·  closes the loop
 

@@ -104,8 +104,13 @@ Korea localization is a post-approval fast-follow.
     onboarding components extracted; `onboarding.tsx` now the post-auth fallback. Race-safe
     fridge creation via `ensureOnboardingFridge`. `welcome_*` events. 2026-09-07.
     **Needs a real-device pass on the next build** (no mobile test runner).
-  - [ ] Phases 4–5 — expand questions / meet-the-crew / reminder from funnel data, then
-    payoff (personalized copy, peak-end beat). Wait for ~2–3 weeks of Phase 3 data first.
+  - [x] Phase 4 — full `/welcome` flow: 3 crew-framed questions on one screen, meet-the-crew
+    step, "check-in reminder" step (→ `lib/fridgeReminder.ts` recurring local notification,
+    editable in Notification settings), and inline Apple/Google/email on the soft wall.
+    2026-09-07. **Needs a device pass on the v1.2.2 build.** Prune bleeding steps from
+    `app:onboarding-funnel` data.
+  - [ ] Phase 5 — payoff: personalized copy from the stored preference tags, peak-end
+    "you're all set" beat. Wait for funnel data.
 - [ ] Pro AI spend ceiling — meter real OpenRouter token cost per Pro user per billing cycle
   and cap it at ~$1.00–1.50 of model spend (well under the ~$2.09 net on a $2.99 plan). Debit
   the actual `usage` from each response into a per-user counter; at the ceiling, disable only

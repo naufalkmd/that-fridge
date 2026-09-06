@@ -3,12 +3,15 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
+import * as AppleAuthentication from "expo-apple-authentication";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import type { OnboardingGoal } from "@thatfridge/core";
+import type { OnboardingDraft } from "@/lib/onboardingDraft";
 
 import { track } from "@/lib/analytics";
+import { useAuth } from "@/lib/auth";
+import { googleAuthAvailable } from "@/lib/google-auth";
 import { useOnboarding } from "@/lib/onboarding";
 import { patchOnboardingDraft } from "@/lib/onboardingDraft";
 import { PixelText } from "@/components/brand";
@@ -32,18 +35,35 @@ import {
   topBar,
 } from "@/components/onboarding/shared";
 
-// Pre-sign-in onboarding (PRE_SIGNUP_ONBOARDING.md Phase 3). Deliver the "aha" and collect
-// a couple of choices while anonymous; the soft wall hands off to /sign-in, and
+// Pre-sign-in onboarding (PRE_SIGNUP_ONBOARDING.md Phase 3 + 4). Deliver the "aha" and
+// collect a few choices while anonymous; the soft wall does the auth, and
 // hydrateFromOnboarding() (fired from lib/auth after the first auth) replays the draft.
 
-type Step = "carousel" | "goal" | "demo" | "fridge" | "wall";
+type Step =
+  | "carousel"
+  | "questions"
+  | "crew"
+  | "demo"
+  | "fridge"
+  | "reminder"
+  | "wall";
+
+type Goal = NonNullable<OnboardingDraft["goal"]>;
+type Waste = NonNullable<OnboardingDraft["wasteFrequency"]>;
+type Household = NonNullable<OnboardingDraft["household"]>;
+type Cadence = "evening" | "twice_weekly";
 
 export default function Welcome() {
   const router = useRouter();
   const { markSeen } = useOnboarding();
+  const { signInWithApple, signInWithGoogle } = useAuth();
+
   const [step, setStep] = useState<Step>("carousel");
-  const [goal, setGoal] = useState<OnboardingGoal | null>(null);
+  const [goal, setGoal] = useState<Goal | null>(null);
+  const [waste, setWaste] = useState<Waste | null>(null);
+  const [household, setHousehold] = useState<Household | null>(null);
   const [fridgeName, setFridgeName] = useState<string | null>(null);
+  const [reminder, setReminder] = useState<Cadence | null>(null);
 
   useEffect(() => {
     track("welcome_started");
@@ -52,24 +72,48 @@ export default function Welcome() {
     track("welcome_step_viewed", { step });
   }, [step]);
 
-  // Persist the anonymous choices + mark the intro seen so the post-sign-in /onboarding
-  // route doesn't replay the carousel. Then hand off to the auth screen.
+  // Persist the anonymous choices + mark the intro seen (so the post-sign-in /onboarding
+  // route doesn't replay the carousel). Called before every hand-off to auth.
+  const commitDraft = useCallback(async () => {
+    try {
+      await patchOnboardingDraft({
+        ...(goal ? { goal } : {}),
+        ...(waste ? { wasteFrequency: waste } : {}),
+        ...(household ? { household } : {}),
+        ...(fridgeName ? { fridgeName } : {}),
+        reminder: reminder ? { cadence: reminder } : null,
+        completedAt: new Date().toISOString(),
+      });
+      await markSeen();
+    } catch {
+      /* best effort — a lost draft just means a plainer first session */
+    }
+  }, [goal, waste, household, fridgeName, reminder, markSeen]);
+
   const toSignIn = useCallback(
     async (mode: "login" | "signup") => {
       track("welcome_to_signin", { mode, has_goal: !!goal, has_fridge: !!fridgeName });
-      try {
-        await patchOnboardingDraft({
-          ...(goal ? { goal } : {}),
-          ...(fridgeName ? { fridgeName } : {}),
-          completedAt: new Date().toISOString(),
-        });
-        await markSeen();
-      } catch {
-        /* best effort — a lost draft just means a plainer first session */
-      }
+      await commitDraft();
       router.replace(`/sign-in?mode=${mode}`);
     },
-    [goal, fridgeName, markSeen, router],
+    [commitDraft, goal, fridgeName, router],
+  );
+
+  const social = useCallback(
+    async (provider: "apple" | "google") => {
+      track("welcome_social_auth", { provider });
+      await commitDraft();
+      try {
+        await (provider === "apple" ? signInWithApple() : signInWithGoogle());
+        router.replace("/home");
+      } catch (err) {
+        const e = err as { code?: string };
+        if (e?.code === "ERR_REQUEST_CANCELED" || e?.code === "SIGN_IN_CANCELLED") return;
+        // fall back to the full sign-in screen on a real failure
+        router.replace("/sign-in?mode=signup");
+      }
+    },
+    [commitDraft, signInWithApple, signInWithGoogle, router],
   );
 
   const haveAccount = () => toSignIn("login");
@@ -78,7 +122,7 @@ export default function Welcome() {
     return (
       <IntroCarousel
         finishLabel="Continue"
-        onFinish={() => setStep("goal")}
+        onFinish={() => setStep("questions")}
         onSkip={() => toSignIn("signup")}
         onSlideView={(index) => track("welcome_slide_viewed", { index })}
         footerExtra={<HaveAccountLink onPress={haveAccount} />}
@@ -86,15 +130,34 @@ export default function Welcome() {
     );
   }
 
-  if (step === "goal") {
+  if (step === "questions") {
     return (
-      <GoalStep
-        value={goal}
-        onChange={(g) => {
-          setGoal(g);
-          track("welcome_goal_picked", { goal: g });
-        }}
+      <QuestionsStep
+        goal={goal}
+        waste={waste}
+        household={household}
+        onGoal={setGoal}
+        onWaste={setWaste}
+        onHousehold={setHousehold}
         onBack={() => setStep("carousel")}
+        onContinue={() => {
+          track("welcome_questions_answered", {
+            goal,
+            waste,
+            household,
+            answered: [goal, waste, household].filter(Boolean).length,
+          });
+          setStep("crew");
+        }}
+        onHaveAccount={haveAccount}
+      />
+    );
+  }
+
+  if (step === "crew") {
+    return (
+      <CrewStep
+        onBack={() => setStep("questions")}
         onContinue={() => setStep("demo")}
         onHaveAccount={haveAccount}
       />
@@ -104,7 +167,7 @@ export default function Welcome() {
   if (step === "demo") {
     return (
       <DemoStep
-        onBack={() => setStep("goal")}
+        onBack={() => setStep("crew")}
         onContinue={() => {
           track("welcome_demo_win_tapped");
           setStep("fridge");
@@ -122,9 +185,24 @@ export default function Welcome() {
         onSubmit={(name) => {
           setFridgeName(name);
           track("welcome_fridge_named");
+          setStep("reminder");
+        }}
+        onSkip={() => setStep("reminder")}
+      />
+    );
+  }
+
+  if (step === "reminder") {
+    return (
+      <ReminderStep
+        value={reminder}
+        onChange={setReminder}
+        onBack={() => setStep("fridge")}
+        onContinue={() => {
+          track("welcome_reminder_set", { cadence: reminder });
           setStep("wall");
         }}
-        onSkip={() => setStep("wall")}
+        onHaveAccount={haveAccount}
       />
     );
   }
@@ -133,13 +211,16 @@ export default function Welcome() {
     <WallStep
       goal={goal}
       fridgeName={fridgeName}
-      onCreate={() => toSignIn("signup")}
+      reminder={reminder}
+      onEmail={() => toSignIn("signup")}
       onHaveAccount={haveAccount}
+      onApple={() => social("apple")}
+      onGoogle={() => social("google")}
     />
   );
 }
 
-// ---- "I already have an account" -----------------------------------------
+// ---- shared bits --------------------------------------------------------
 
 function HaveAccountLink({ onPress }: { onPress: () => void }) {
   return (
@@ -164,29 +245,91 @@ function BackBar({ onBack, onHaveAccount }: { onBack: () => void; onHaveAccount:
   );
 }
 
-// ---- step: "what brings you here?" ---------------------------------------
-
-const GOALS: {
-  key: OnboardingGoal;
+function Chip({
+  label,
+  active,
+  onPress,
+}: {
   label: string;
-  sub: string;
-  icon: keyof typeof MaterialCommunityIcons.glyphMap;
-}[] = [
-  { key: "waste_less", label: "Stop wasting food", sub: "Fewer things forgotten at the back", icon: "leaf" },
-  { key: "cook_smarter", label: "Cook what I already have", sub: "Ideas from your actual fridge", icon: "silverware-fork-knife" },
-  { key: "organize", label: "Keep the kitchen organized", sub: "Know what's where, and what's low", icon: "sync" },
-  { key: "save_money", label: "Save money on groceries", sub: "Buy less, throw out less", icon: "cash" },
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: active ? ACCENT : HAIRLINE,
+        backgroundColor: active ? "rgba(38,198,218,0.12)" : SURFACE,
+        paddingVertical: 9,
+        paddingHorizontal: 14,
+      }}
+    >
+      <Text style={{ fontSize: 13, fontWeight: "700", color: active ? ACCENT : INK }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function QuestionBlock({
+  crew,
+  question,
+  children,
+}: {
+  crew: string;
+  question: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={{ gap: 9 }}>
+      <Text style={{ fontSize: 10.5, fontWeight: "800", letterSpacing: 0.4, color: ACCENT }}>
+        {crew.toUpperCase()}
+      </Text>
+      <Text style={{ fontSize: 15.5, fontWeight: "700", color: INK }}>{question}</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{children}</View>
+    </View>
+  );
+}
+
+// ---- step: the 3 questions ---------------------------------------------
+
+const GOALS: { key: Goal; label: string }[] = [
+  { key: "waste_less", label: "Stop wasting food" },
+  { key: "cook_smarter", label: "Cook what I have" },
+  { key: "organize", label: "Stay organized" },
+  { key: "save_money", label: "Save money" },
+];
+const WASTE: { key: Waste; label: string }[] = [
+  { key: "weekly", label: "Every week" },
+  { key: "monthly", label: "A few times a month" },
+  { key: "rarely", label: "Rarely" },
+];
+const HOUSEHOLD: { key: Household; label: string }[] = [
+  { key: "solo", label: "Just me" },
+  { key: "partner", label: "Me + partner" },
+  { key: "household", label: "Whole household" },
+  { key: "roommates", label: "Roommates" },
 ];
 
-function GoalStep({
-  value,
-  onChange,
+function QuestionsStep({
+  goal,
+  waste,
+  household,
+  onGoal,
+  onWaste,
+  onHousehold,
   onBack,
   onContinue,
   onHaveAccount,
 }: {
-  value: OnboardingGoal | null;
-  onChange: (g: OnboardingGoal) => void;
+  goal: Goal | null;
+  waste: Waste | null;
+  household: Household | null;
+  onGoal: (g: Goal) => void;
+  onWaste: (w: Waste) => void;
+  onHousehold: (h: Household) => void;
   onBack: () => void;
   onContinue: () => void;
   onHaveAccount: () => void;
@@ -195,70 +338,127 @@ function GoalStep({
     <SafeAreaView style={{ flex: 1, backgroundColor: CANVAS }}>
       <BackBar onBack={onBack} onHaveAccount={onHaveAccount} />
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 28, paddingTop: 12, paddingBottom: 20, gap: 12 }}
+        contentContainerStyle={{ paddingHorizontal: 26, paddingTop: 10, paddingBottom: 20, gap: 20 }}
       >
-        <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT }}>
-          ONE QUICK THING
-        </PixelText>
-        <Text
-          style={{
-            fontSize: 27,
-            lineHeight: 33,
-            fontWeight: "800",
-            color: INK,
-            letterSpacing: -0.3,
-          }}
-        >
-          What brings you here?
-        </Text>
-        <Text style={{ fontSize: 13.5, lineHeight: 19, color: MUTED, marginBottom: 6 }}>
-          The crew leans into this. Pick one — you can change it later.
-        </Text>
+        <View style={{ gap: 6 }}>
+          <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT }}>
+            A FEW QUICK THINGS
+          </PixelText>
+          <Text
+            style={{ fontSize: 25, lineHeight: 31, fontWeight: "800", color: INK, letterSpacing: -0.3 }}
+          >
+            Help the crew help you
+          </Text>
+          <Text style={{ fontSize: 13, color: FAINT }}>Tap what fits. Nothing&apos;s required.</Text>
+        </View>
 
-        {GOALS.map((g) => {
-          const active = value === g.key;
+        <QuestionBlock crew="Shopkeeper" question="What brings you here?">
+          {GOALS.map((g) => (
+            <Chip key={g.key} label={g.label} active={goal === g.key} onPress={() => onGoal(g.key)} />
+          ))}
+        </QuestionBlock>
+
+        <QuestionBlock crew="Guardian" question="How often does food get thrown out?">
+          {WASTE.map((w) => (
+            <Chip key={w.key} label={w.label} active={waste === w.key} onPress={() => onWaste(w.key)} />
+          ))}
+        </QuestionBlock>
+
+        <QuestionBlock crew="Organizer" question="Who's this fridge for?">
+          {HOUSEHOLD.map((h) => (
+            <Chip
+              key={h.key}
+              label={h.label}
+              active={household === h.key}
+              onPress={() => onHousehold(h.key)}
+            />
+          ))}
+        </QuestionBlock>
+      </ScrollView>
+
+      <View style={{ paddingHorizontal: 26, paddingTop: 8, paddingBottom: 20 }}>
+        <PrimaryButton label="Continue" onPress={onContinue} />
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ---- step: meet the crew ---------------------------------------------
+
+const CREW_LINES = [
+  "I turn what's about to go off into tonight's dinner.",
+  "I flag food before it spoils — and what's risky to keep.",
+  "I say what belongs in the fridge, freezer or pantry.",
+  "I keep a running list of what you're running low on.",
+];
+
+function CrewStep({
+  onBack,
+  onContinue,
+  onHaveAccount,
+}: {
+  onBack: () => void;
+  onContinue: () => void;
+  onHaveAccount: () => void;
+}) {
+  const [open, setOpen] = useState<number | null>(0);
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: CANVAS }}>
+      <BackBar onBack={onBack} onHaveAccount={onHaveAccount} />
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 26, paddingTop: 10, paddingBottom: 20, gap: 12 }}
+      >
+        <View style={{ gap: 6 }}>
+          <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT }}>MEET THE CREW</PixelText>
+          <Text
+            style={{ fontSize: 25, lineHeight: 31, fontWeight: "800", color: INK, letterSpacing: -0.3 }}
+          >
+            Four of them, one job each
+          </Text>
+          <Text style={{ fontSize: 13, color: FAINT }}>Tap a card to hear what they do.</Text>
+        </View>
+
+        {CREW.map((c, i) => {
+          const isOpen = open === i;
           return (
             <Pressable
-              key={g.key}
-              onPress={() => onChange(g.key)}
+              key={c.name}
+              onPress={() => setOpen(isOpen ? null : i)}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 13,
                 borderRadius: 14,
                 borderWidth: 1,
-                borderColor: active ? ACCENT : HAIRLINE,
-                backgroundColor: active ? "rgba(38,198,218,0.10)" : SURFACE,
-                paddingVertical: 14,
-                paddingHorizontal: 16,
+                borderColor: isOpen ? ACCENT : HAIRLINE,
+                backgroundColor: isOpen ? "rgba(38,198,218,0.08)" : SURFACE,
+                padding: 13,
               }}
             >
-              <MaterialCommunityIcons
-                name={g.icon}
-                size={20}
-                color={active ? ACCENT : MUTED}
-              />
+              <Image source={c.gif} style={{ width: 42, height: 42 }} contentFit="contain" />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14.5, fontWeight: "700", color: INK }}>{g.label}</Text>
-                <Text style={{ fontSize: 12, color: FAINT, marginTop: 1 }}>{g.sub}</Text>
+                <Text style={{ fontSize: 14.5, fontWeight: "800", color: INK }}>{c.name}</Text>
+                <Text
+                  style={{ fontSize: 12.5, lineHeight: 17, color: isOpen ? MUTED : FAINT, marginTop: 2 }}
+                  numberOfLines={isOpen ? undefined : 1}
+                >
+                  {CREW_LINES[i]}
+                </Text>
               </View>
-              {active && <Ionicons name="checkmark-circle" size={18} color={ACCENT} />}
             </Pressable>
           );
         })}
       </ScrollView>
 
-      <View style={{ paddingHorizontal: 28, paddingTop: 8, paddingBottom: 20, gap: 10 }}>
+      <View style={{ paddingHorizontal: 26, paddingTop: 8, paddingBottom: 20 }}>
         <PrimaryButton label="Continue" onPress={onContinue} />
-        <Pressable onPress={onContinue} hitSlop={8} style={{ alignItems: "center", paddingVertical: 2 }}>
-          <Text style={{ fontSize: 12.5, fontWeight: "600", color: FAINT }}>Skip</Text>
-        </Pressable>
       </View>
     </SafeAreaView>
   );
 }
 
-// ---- step: the first-win demo (mock fridge → Chef → Guardian) -----------
+// ---- step: the first-win demo --------------------------------------
 
 const DEMO_ITEMS = [
   { name: "Eggs", where: "Door shelf", color: GOOD, days: "5 days" },
@@ -281,16 +481,13 @@ function DemoStep({
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 10, paddingBottom: 20, gap: 14 }}
       >
-        <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT }}>
-          HERE&apos;S THE IDEA
-        </PixelText>
+        <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT }}>HERE&apos;S THE IDEA</PixelText>
         <Text
           style={{ fontSize: 25, lineHeight: 31, fontWeight: "800", color: INK, letterSpacing: -0.3 }}
         >
           Say this is your fridge
         </Text>
 
-        {/* mock fridge */}
         <View
           style={{
             borderRadius: 16,
@@ -323,13 +520,11 @@ function DemoStep({
           ))}
         </View>
 
-        {/* Chef */}
         <DemoBubble
           gif={CREW[0].gif}
           name="Chef"
           text="A 15-minute frittata clears the eggs and spinach, and the Greek yogurt makes a quick herb sauce on the side."
         />
-        {/* Guardian */}
         <DemoBubble
           gif={CREW[1].gif}
           name="Guardian"
@@ -369,28 +564,119 @@ function DemoBubble({ gif, name, text }: { gif: number; name: string; text: stri
   );
 }
 
-// ---- step: the soft wall -------------------------------------------------
+// ---- step: set your intention (reminder) ---------------------------
+
+const CADENCES: { key: Cadence | "off"; label: string; sub: string }[] = [
+  { key: "evening", label: "Every evening", sub: "A quick glance before dinner" },
+  { key: "twice_weekly", label: "A couple of times a week", sub: "Wednesday and Sunday" },
+  { key: "off", label: "No reminders", sub: "I'll check on my own" },
+];
+
+function ReminderStep({
+  value,
+  onChange,
+  onBack,
+  onContinue,
+  onHaveAccount,
+}: {
+  value: Cadence | null;
+  onChange: (c: Cadence | null) => void;
+  onBack: () => void;
+  onContinue: () => void;
+  onHaveAccount: () => void;
+}) {
+  const current = value ?? "off";
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: CANVAS }}>
+      <BackBar onBack={onBack} onHaveAccount={onHaveAccount} />
+      <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 26, gap: 12 }}>
+        <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT }}>ONE LAST THING</PixelText>
+        <Text
+          style={{ fontSize: 25, lineHeight: 31, fontWeight: "800", color: INK, letterSpacing: -0.3 }}
+        >
+          Want a nudge to check in?
+        </Text>
+        <Text style={{ fontSize: 13.5, lineHeight: 19, color: MUTED, marginBottom: 6 }}>
+          A gentle reminder to look before things go bad. Change it any time in settings.
+        </Text>
+
+        {CADENCES.map((c) => {
+          const active = current === c.key;
+          return (
+            <Pressable
+              key={c.key}
+              onPress={() => onChange(c.key === "off" ? null : c.key)}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 12,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: active ? ACCENT : HAIRLINE,
+                backgroundColor: active ? "rgba(38,198,218,0.10)" : SURFACE,
+                paddingVertical: 14,
+                paddingHorizontal: 16,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14.5, fontWeight: "700", color: INK }}>{c.label}</Text>
+                <Text style={{ fontSize: 12, color: FAINT, marginTop: 1 }}>{c.sub}</Text>
+              </View>
+              {active && <Ionicons name="checkmark-circle" size={18} color={ACCENT} />}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={{ paddingHorizontal: 26, paddingTop: 8, paddingBottom: 20 }}>
+        <PrimaryButton label="Continue" onPress={onContinue} />
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ---- step: the soft wall (with inline auth) -----------------------
 
 function WallStep({
   goal,
   fridgeName,
-  onCreate,
+  reminder,
+  onEmail,
   onHaveAccount,
+  onApple,
+  onGoogle,
 }: {
-  goal: OnboardingGoal | null;
+  goal: Goal | null;
   fridgeName: string | null;
-  onCreate: () => void;
+  reminder: Cadence | null;
+  onEmail: () => void;
   onHaveAccount: () => void;
+  onApple: () => void;
+  onGoogle: () => void;
 }) {
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    AppleAuthentication.isAvailableAsync()
+      .then(setAppleAvailable)
+      .catch(() => setAppleAvailable(false));
+  }, []);
+
+  const run = (fn: () => void) => {
+    if (busy) return;
+    setBusy(true);
+    fn();
+  };
+
   const done = [
-    { label: goal ? "Goal set" : "Crew ready", ok: true },
-    { label: fridgeName ? `Fridge "${fridgeName}" ready` : "Fridge ready", ok: true },
-    { label: "Your crew is on standby", ok: true },
+    goal ? "Goal set" : "Your crew is ready",
+    fridgeName ? `Fridge "${fridgeName}" ready` : "Fridge ready",
+    reminder ? "Check-in reminder on" : "Everything's set up",
   ];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CANVAS }}>
-      <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 28, gap: 16 }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 28, paddingVertical: 20, gap: 16 }}>
         <View style={{ alignItems: "center" }}>
           <Glow />
           <View
@@ -436,22 +722,67 @@ function WallStep({
           }}
         >
           {done.map((d) => (
-            <View key={d.label} style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+            <View key={d} style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
               <Ionicons name="checkmark-circle" size={16} color={GOOD} />
-              <Text style={{ fontSize: 13, color: INK }}>{d.label}</Text>
+              <Text style={{ fontSize: 13, color: INK }}>{d}</Text>
             </View>
           ))}
         </View>
-      </View>
 
-      <View style={{ paddingHorizontal: 28, paddingTop: 10, paddingBottom: 22, gap: 12 }}>
-        <PrimaryButton label="Create account" onPress={onCreate} />
+        <View style={{ gap: 10 }}>
+          {appleAvailable && (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+              cornerRadius={12}
+              style={{ height: 50, width: "100%" }}
+              onPress={() => run(onApple)}
+            />
+          )}
+          {!!googleAuthAvailable && (
+            <Pressable
+              onPress={() => run(onGoogle)}
+              disabled={busy}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                borderRadius: 12,
+                backgroundColor: "#fff",
+                height: 50,
+                opacity: busy ? 0.7 : 1,
+              }}
+            >
+              <Ionicons name="logo-google" size={18} color="#0a0a0c" />
+              <Text style={{ fontSize: 16, fontWeight: "600", color: "#0a0a0c" }}>
+                Continue with Google
+              </Text>
+            </Pressable>
+          )}
+          <Pressable
+            onPress={() => run(onEmail)}
+            disabled={busy}
+            style={{
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: HAIRLINE,
+              height: 50,
+              opacity: busy ? 0.7 : 1,
+            }}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "700", color: INK }}>Sign up with email</Text>
+          </Pressable>
+        </View>
+
         <Pressable onPress={onHaveAccount} hitSlop={8} style={{ alignItems: "center", paddingVertical: 4 }}>
           <Text style={{ fontSize: 13, fontWeight: "600", color: FAINT }}>
             I already have an account
           </Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
