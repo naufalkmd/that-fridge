@@ -4,6 +4,9 @@ A short, skippable intro shown once after a user first signs in, plus a first-ru
 Home. Goal: get a brand-new user to their first "aha" (one item tracked, one crew answer) before
 they bounce on empty states.
 
+> Moving the intro **before** the auth wall (Duolingo-style) is drafted separately in
+> `PRE_SIGNUP_ONBOARDING.md` — a post-launch project. This doc is the shipped post-sign-in flow.
+
 ## Scope decision
 
 **Post-launch OTA fast-follow, not a submission blocker.** It's pure JS/UI — ships as an EAS
