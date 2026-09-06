@@ -15,13 +15,7 @@ import * as Haptics from "expo-haptics";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
-import Animated, {
-  Easing,
-  FadeIn,
-  FadeInDown,
-  useAnimatedStyle,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 
 import { useOnboarding } from "@/lib/onboarding";
 import { PixelText } from "@/components/brand";
@@ -84,7 +78,7 @@ export default function Onboarding() {
 
   const finish = useCallback(
     async (opts?: { thenAdd?: boolean }) => {
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       await markSeen();
       router.replace("/home");
       if (opts?.thenAdd) setTimeout(() => router.push("/add"), 250);
@@ -97,13 +91,13 @@ export default function Onboarding() {
       void finish({ thenAdd: true });
       return;
     }
-    void Haptics.selectionAsync();
+    Haptics.selectionAsync().catch(() => {});
     scrollRef.current?.scrollTo({ x: (index + 1) * width, animated: true });
     setIndex((i) => Math.min(i + 1, SLIDES.length - 1));
   }, [last, finish, index, width]);
 
   const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const i = Math.round(e.nativeEvent.contentOffset.x / width);
+    const i = Math.round(e.nativeEvent.contentOffset.x / Math.max(width, 1));
     if (i !== index) setIndex(i);
   };
 
@@ -122,7 +116,15 @@ export default function Onboarding() {
       >
         <View style={{ flexDirection: "row", gap: 6 }}>
           {SLIDES.map((_, i) => (
-            <Dot key={i} active={i === index} />
+            <View
+              key={i}
+              style={{
+                height: 7,
+                width: i === index ? 22 : 7,
+                borderRadius: 4,
+                backgroundColor: i === index ? ACCENT : "rgba(255,255,255,0.18)",
+              }}
+            />
           ))}
         </View>
         <Pressable onPress={() => finish()} hitSlop={12}>
@@ -140,7 +142,6 @@ export default function Onboarding() {
       >
         {SLIDES.map((s, i) => (
           <View key={i} style={{ width, flex: 1, paddingHorizontal: 28 }}>
-            {/* art */}
             <View
               style={{
                 flex: 1,
@@ -150,10 +151,9 @@ export default function Onboarding() {
               }}
             >
               <Glow />
-              {i === index && s.art()}
+              {i === index ? s.art() : null}
             </View>
 
-            {/* copy */}
             <View style={{ paddingBottom: 8, gap: 10 }}>
               <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT }}>
                 {s.eyebrow}
@@ -177,7 +177,7 @@ export default function Onboarding() {
         ))}
       </ScrollView>
 
-      {/* footer button */}
+      {/* footer */}
       <View style={{ paddingHorizontal: 28, paddingTop: 10, paddingBottom: 8, gap: 12 }}>
         <Pressable
           onPress={next}
@@ -203,61 +203,54 @@ export default function Onboarding() {
           >
             {last ? "Add my first item" : "Next"}
           </Text>
-          <Ionicons
-            name={last ? "add" : "arrow-forward"}
-            size={17}
-            color={CANVAS}
-          />
+          <Ionicons name={last ? "add" : "arrow-forward"} size={17} color={CANVAS} />
         </Pressable>
 
-        <Pressable
-          onPress={() => finish()}
-          hitSlop={8}
-          style={{ alignItems: "center", paddingVertical: 4, opacity: last ? 1 : 0 }}
-          disabled={!last}
-        >
-          <Text style={{ fontSize: 13, fontWeight: "600", color: FAINT }}>
-            I&apos;ll explore on my own
-          </Text>
-        </Pressable>
+        {last ? (
+          <Pressable
+            onPress={() => finish()}
+            hitSlop={8}
+            style={{ alignItems: "center", paddingVertical: 4 }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "600", color: FAINT }}>
+              I&apos;ll explore on my own
+            </Text>
+          </Pressable>
+        ) : (
+          <View style={{ height: 25 }} />
+        )}
       </View>
     </SafeAreaView>
   );
 }
 
-function Dot({ active }: { active: boolean }) {
-  const style = useAnimatedStyle(() => ({
-    width: withTiming(active ? 22 : 7, { duration: 220 }),
-    backgroundColor: withTiming(active ? ACCENT : "rgba(255,255,255,0.18)", {
-      duration: 220,
-    }),
-  }));
-  return <Animated.View style={[{ height: 7, borderRadius: 4 }, style]} />;
-}
-
 /** Soft turquoise radial glow behind the art. */
 function Glow() {
   return (
-    <View style={{ position: "absolute", width: 320, height: 320 }} pointerEvents="none">
+    <View
+      style={{ position: "absolute", width: 300, height: 300 }}
+      pointerEvents="none"
+    >
       <Svg width="100%" height="100%">
         <Defs>
-          <RadialGradient id="g" cx="50%" cy="50%" r="50%">
+          <RadialGradient id="obGlow" cx="50%" cy="50%" r="50%">
             <Stop offset="0%" stopColor={ACCENT} stopOpacity={0.16} />
             <Stop offset="55%" stopColor={ACCENT} stopOpacity={0.05} />
             <Stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
           </RadialGradient>
         </Defs>
-        <Rect width="100%" height="100%" fill="url(#g)" />
+        <Rect width="100%" height="100%" fill="url(#obGlow)" />
       </Svg>
     </View>
   );
 }
 
-// ---- slide 1: the crew ---------------------------------------------------
+// ---- slide 1: the crew -----------------------------------------------------
 
 function CrewArt() {
   return (
-    <View
+    <Animated.View
+      entering={FadeIn.duration(250)}
       style={{
         flexDirection: "row",
         flexWrap: "wrap",
@@ -266,10 +259,9 @@ function CrewArt() {
         gap: 14,
       }}
     >
-      {CREW.map((c, i) => (
-        <Animated.View
+      {CREW.map((c) => (
+        <View
           key={c.name}
-          entering={FadeInDown.delay(120 + i * 90).springify().damping(14)}
           style={{
             width: 100,
             alignItems: "center",
@@ -281,41 +273,54 @@ function CrewArt() {
             paddingVertical: 12,
           }}
         >
-          <Image source={c.gif} style={{ width: 52, height: 52 }} contentFit="contain" />
+          <Image
+            source={c.gif}
+            style={{ width: 52, height: 52 }}
+            contentFit="contain"
+          />
           <Text style={{ fontSize: 11.5, fontWeight: "700", color: INK }}>{c.name}</Text>
-        </Animated.View>
+        </View>
       ))}
-    </View>
+    </Animated.View>
   );
 }
 
-// ---- slide 2: freshness pill cycling through states ---------------------
+// ---- slide 2: freshness card cycling through states -----------------------
 
 const FRESH_STATES = [
-  { label: "Fresh", detail: "6 days left", color: GOOD, icon: "leaf" },
-  { label: "Use soon", detail: "2 days left", color: WARN, icon: "clock-alert-outline" },
-  { label: "Overdue", detail: "expired today", color: BAD, icon: "alert-circle-outline" },
+  { label: "Fresh", detail: "6 days left", color: GOOD, icon: "leaf", fill: 1 },
+  {
+    label: "Use soon",
+    detail: "2 days left",
+    color: WARN,
+    icon: "clock-alert-outline",
+    fill: 0.55,
+  },
+  {
+    label: "Overdue",
+    detail: "expired today",
+    color: BAD,
+    icon: "alert-circle-outline",
+    fill: 0.16,
+  },
 ] as const;
 
 function FreshnessArt() {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => setStep((s) => (s + 1) % FRESH_STATES.length), 1900);
+    const id = setInterval(
+      () => setStep((s) => (s + 1) % FRESH_STATES.length),
+      1900,
+    );
     return () => clearInterval(id);
   }, []);
 
   const state = FRESH_STATES[step];
-  const barStyle = useAnimatedStyle(() => ({
-    width: withTiming(`${100 - step * 42}%`, {
-      duration: 550,
-      easing: Easing.out(Easing.quad),
-    }),
-  }));
 
   return (
     <Animated.View
-      entering={FadeIn.duration(300)}
+      entering={FadeIn.duration(250)}
       style={{
         width: 260,
         backgroundColor: SURFACE,
@@ -365,8 +370,13 @@ function FreshnessArt() {
           overflow: "hidden",
         }}
       >
-        <Animated.View
-          style={[{ height: 6, borderRadius: 3, backgroundColor: state.color }, barStyle]}
+        <View
+          style={{
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: state.color,
+            width: `${Math.round(state.fill * 100)}%`,
+          }}
         />
       </View>
       <Text style={{ fontSize: 11.5, color: FAINT }}>{state.detail}</Text>
@@ -374,15 +384,12 @@ function FreshnessArt() {
   );
 }
 
-// ---- slide 3: mock chat -----------------------------------------------
+// ---- slide 3: mock chat --------------------------------------------------
 
 function ChatArt() {
   return (
-    <View style={{ width: 264, gap: 12 }}>
-      <Animated.View
-        entering={FadeInDown.delay(120).springify().damping(15)}
-        style={{ alignSelf: "flex-end", maxWidth: "88%" }}
-      >
+    <Animated.View entering={FadeIn.duration(250)} style={{ width: 264, gap: 12 }}>
+      <View style={{ alignSelf: "flex-end", maxWidth: "88%" }}>
         <View
           style={{
             backgroundColor: ACCENT,
@@ -396,12 +403,9 @@ function ChatArt() {
             What can I cook tonight?
           </Text>
         </View>
-      </Animated.View>
+      </View>
 
-      <Animated.View
-        entering={FadeInDown.delay(360).springify().damping(15)}
-        style={{ alignSelf: "flex-start", maxWidth: "92%" }}
-      >
+      <View style={{ alignSelf: "flex-start", maxWidth: "92%" }}>
         <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
           <Image
             source={CREW[0].gif}
@@ -425,7 +429,7 @@ function ChatArt() {
             </Text>
           </View>
         </View>
-      </Animated.View>
-    </View>
+      </View>
+    </Animated.View>
   );
 }
