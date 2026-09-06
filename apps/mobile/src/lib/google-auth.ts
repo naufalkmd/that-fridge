@@ -10,12 +10,17 @@ try {
   g = null;
 }
 
-// The Web OAuth client id — see apps/mobile/RELEASE.md. Both the native module and the
-// backend verify against it.
+// OAuth client ids — see apps/mobile/RELEASE.md. The web id is what the ID token's `aud`
+// carries (backend verifies against it); the iOS id is what the native SDK needs to resolve
+// its own client at configure() time (without it, iOS throws "iosClientId was not provided").
 const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+const IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 
 if (g && WEB_CLIENT_ID) {
-  g.GoogleSignin.configure({ webClientId: WEB_CLIENT_ID });
+  g.GoogleSignin.configure({
+    webClientId: WEB_CLIENT_ID,
+    ...(IOS_CLIENT_ID ? { iosClientId: IOS_CLIENT_ID } : {}),
+  });
 }
 
 export const googleAuthAvailable = !!g && !!WEB_CLIENT_ID;

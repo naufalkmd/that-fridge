@@ -2,7 +2,7 @@
 
 Get ThatFridge running locally, plus every wall we've actually hit and the fix that worked.
 
-_Last updated: 2026-09-06._
+_Last updated: 2026-09-07._
 
 ## Where the other docs live
 
@@ -399,6 +399,22 @@ in `AgentService` if it needs tightening further.
 Expected. Those sites serve a bot wall with no recipe text; `WebContentService` best-effort
 scrapes the caption JSON but usually gets nothing. YouTube works when the recipe is in the
 video description. Recipe blogs/sites work well. The chat tells the user to paste the text.
+
+---
+
+## Auth
+
+### "Continue with Google" button missing, or errors on tap
+
+The button shows only when the native `@react-native-google-signin` module is compiled in
+**and** `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` is in the JS bundle. v1.2.1 had neither wired
+into the build. Fixed 2026-09-07 by inlining the three Google vars
+(`GOOGLE_IOS_URL_SCHEME`, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`)
+into `eas.json`'s `production` / `development-prod` profiles + the two `EXPO_PUBLIC_*` ones
+into `.github/workflows/eas-update.yml`, and passing `iosClientId` in
+`src/lib/google-auth.ts` (`configure()` threw "iosClientId was not provided" without it).
+`GOOGLE_IOS_URL_SCHEME` is native (Info.plist) — needs a tagged build, not an OTA.
+Server side: `GOOGLE_CLIENT_IDS` in the VPS `.env` must list both the iOS and Web client ids.
 
 ---
 

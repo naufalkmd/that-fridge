@@ -13,7 +13,12 @@
     },
     "development-prod": {
       "extends": "development",
-      "env": { "EXPO_PUBLIC_API_URL": "https://api.thatfridge.com/api" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.thatfridge.com/api",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "354217060730-di8hektfrbt9imlcpqp78r63o12ao8gm.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "354217060730-3jpu7mbm22mknqvs55523gikkmg7nru8.apps.googleusercontent.com",
+        "GOOGLE_IOS_URL_SCHEME": "com.googleusercontent.apps.354217060730-3jpu7mbm22mknqvs55523gikkmg7nru8"
+      }
     },
     "preview": {
       "distribution": "internal",
@@ -24,7 +29,12 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
-      "env": { "EXPO_PUBLIC_API_URL": "https://api.thatfridge.com/api" }
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.thatfridge.com/api",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "354217060730-di8hektfrbt9imlcpqp78r63o12ao8gm.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "354217060730-3jpu7mbm22mknqvs55523gikkmg7nru8.apps.googleusercontent.com",
+        "GOOGLE_IOS_URL_SCHEME": "com.googleusercontent.apps.354217060730-3jpu7mbm22mknqvs55523gikkmg7nru8"
+      }
     }
   },
   "submit": {

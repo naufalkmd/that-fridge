@@ -61,7 +61,10 @@ jobs:
           RAW_MSG: ${{ github.event.inputs.message || github.event.head_commit.message }}
           # `eas update` doesn't read eas.json build-profile env, so EXPO_PUBLIC_* must be set
           # here or the bundle ships with it undefined (→ app falls back, breaks every request).
+          # Keep these in sync with eas.json's production profile.
           EXPO_PUBLIC_API_URL: https://api.thatfridge.com/api
+          EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 354217060730-di8hektfrbt9imlcpqp78r63o12ao8gm.apps.googleusercontent.com
+          EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: 354217060730-3jpu7mbm22mknqvs55523gikkmg7nru8.apps.googleusercontent.com
         run: |
           MSG="$(printf '%s' "$RAW_MSG" | head -1)"
           eas update --branch production --non-interactive --message "$MSG"

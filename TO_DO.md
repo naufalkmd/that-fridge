@@ -25,8 +25,11 @@ Korea localization is a post-approval fast-follow.
 - [x] **New native build** — `v1.2.1` (commit `7a1db9a`, the camera-string bump) built on EAS
   `production` profile (prod `EXPO_PUBLIC_API_URL`, `production` OTA channel) and auto-submitted;
   confirmed listed + processed in TestFlight 2026-09-06. All JS since is OTA on the same runtime.
-  - Before the final App Store submit, cut one more build (bump to `1.2.2`, tag) so the reviewed
-    binary natively matches the current JS rather than only via OTA.
+  - [ ] **Cut `v1.2.2`** — version bumped 2026-09-07 (Google Sign-In now wired into the build:
+    native `@react-native-google-signin` URL scheme + client ids). Tag `v1.2.2` to build. This
+    is the submission binary — reviewed natively, not just via OTA.
+  - [ ] Verify `GOOGLE_CLIENT_IDS` on the VPS `.env` lists **both** the iOS and Web client ids,
+    then smoke-test "Continue with Google" on the v1.2.2 TestFlight build before submitting.
 - [ ] **Screenshots** — 10-frame marketing set (designed, not plain), plan in
   `apps/mobile/SCREENSHOTS.md`. Friend captures the 9 raw screens from the new build on the demo
   account (`keira@thatfridge.test`, hand over the new password) → send to Claude → Claude

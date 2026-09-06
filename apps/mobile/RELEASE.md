@@ -112,14 +112,20 @@ they need a native rebuild because they add native modules.
    **iOS client ID** and its **reversed** form (`com.googleusercontent.apps.…`).
 3. **Create credentials → OAuth client ID → Web application** — note the **Web client ID**.
    This is what `@react-native-google-signin` and the backend both verify against.
-4. Set these:
-   | value | where |
+4. Client-side values (done 2026-09-07 — committed in `eas.json`'s `production` /
+   `development-prod` profiles + `.github/workflows/eas-update.yml`; `.env` for local dev):
+   | value | var |
    |---|---|
-   | reversed iOS client ID | `GOOGLE_IOS_URL_SCHEME` — `apps/mobile/.env` for dev, EAS build env var for CI (`eas env:create`) |
-   | Web client ID | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` — same two places |
-   | `<iOS client ID>,<Web client ID>` | backend `GOOGLE_CLIENT_IDS` (server `.env`) |
+   | reversed iOS client ID (`com.googleusercontent.apps.…`) | `GOOGLE_IOS_URL_SCHEME` (native — `app.config.ts` plugin, rebuild only) |
+   | un-reversed iOS client ID (`….apps.googleusercontent.com`) | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` (JS — `google-auth.ts` `configure()`) |
+   | Web client ID | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (JS — token `aud`) |
+5. Backend: `GOOGLE_CLIENT_IDS` (server `.env`) must contain **both** `<iOS client ID>` and
+   `<Web client ID>`, comma-separated. **Verify on the VPS before submitting.**
 
-Then bump `version`, cut a new build, and test both buttons on a device.
+The button appears only on a build whose native module is compiled (needs
+`GOOGLE_IOS_URL_SCHEME` at build time → next `v*` tag) **and** with
+`EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in the bundle. Test on the TestFlight build, not an OTA
+to an older one.
 
 ## Voice dictation (Quick Chat)
 
