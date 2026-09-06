@@ -26,11 +26,16 @@ Legend: ✅ done · 🟡 partial / drafted, needs action · ⬜ not started
 - [ ] **Capture iPhone screenshots** — full plan in `apps/mobile/SCREENSHOTS.md` (10-frame set,
   1320×2868px 6.9"-only, frame design + capture/assembly/localization steps). Blocked on: new
   demo password (done — hand it over) + a Release build against prod API.
-- [ ] **Paste drafted content into App Store Connect** — all fully written in
-  `apps/mobile/STORE_LISTING.md`: store listing copy (§2), App Privacy form (§1), age rating
-  reasoning (§4, expected 4+), App Review notes + demo account instructions (§5). Review before
-  pasting, verify age-rating answers against ASC's actual live questionnaire (category
-  structure changed recently, can't confirm the exact current wording).
+- [ ] **Paste drafted content into App Store Connect** — all in `apps/mobile/STORE_LISTING.md`:
+  store listing copy (§2, ASCII-safe), App Privacy form (§1), age rating (§4 — walked through
+  live, result **9+**), App Review notes + demo instructions (§5). Paste copy through a
+  plain-text editor (an invisible U+200B kept failing the validators). Fill the demo password
+  in ASC only. **Also upload `apps/mobile/app-review.pdf`** at App Review Information →
+  Attachment (source: `app-review.tex`, build with `tectonic`) — put the demo password on p.1
+  there too.
+- [ ] Verify the **shipped RevenueCat paywall** (dashboard config, not the custom fallback)
+  shows price + billing period + trial terms + Restore + Terms/Privacy links — the App Review
+  guide tells the reviewer it does.
 - [ ] **Full real-device/simulator smoke test** against the live API — inventory, chat,
   notifications, social/blocking, icon-gen, expiry-scan, Activate button. Nothing dedicated
   since the parity port; only the paywall/purchase flow has been verified so far.
