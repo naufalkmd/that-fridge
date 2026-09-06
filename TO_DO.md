@@ -67,6 +67,10 @@ Korea localization is a post-approval fast-follow.
   the store listing is live — risks Shipaton's "brand-new app" disqualification.
 
 ### Deferred to post-launch (don't work on these before Sep 30)
+- [ ] First-run onboarding — 3-slide value carousel + Home first-run checklist, skippable. Full
+  plan in `apps/mobile/ONBOARDING_PLAN.md`. Pure JS → ships as an OTA, no re-review. The
+  carousel alone could go in the submission build if the smoke test lands with buffer; the
+  checklist is post-launch regardless.
 - [ ] Copy backups off the VPS (weekly droplet snapshot is on; add pg_dump → object storage).
 - [ ] Sentry DSN (crash monitoring is scaffolded, currently a no-op).
 - [ ] `apps/web/lib/thatfridge` → `packages/core` extraction (most already moved).
