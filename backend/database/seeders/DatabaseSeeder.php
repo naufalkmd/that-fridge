@@ -28,7 +28,7 @@ class DatabaseSeeder extends Seeder
         if (app()->environment('production') && empty(env('DEMO_USER_PASSWORD'))) {
             throw new \RuntimeException(
                 'Set DEMO_USER_PASSWORD in .env before seeding in production '
-                . '(then: php artisan config:clear && php artisan db:seed --force).'
+                .'(then: php artisan config:clear && php artisan db:seed --force).'
             );
         }
         $demoPassword = env('DEMO_USER_PASSWORD', 'password123');
@@ -73,23 +73,6 @@ class DatabaseSeeder extends Seeder
                 ],
             ],
             [
-                'name' => 'Creamy Veggie Soup',
-                'minutes' => 30,
-                'category' => 'dinner',
-                'ingredients' => [
-                    ['icon' => 'spinach', 'name' => 'Spinach'],
-                    ['icon' => 'carrot', 'name' => 'Carrots'],
-                    ['icon' => 'cheese', 'name' => 'Cheese'],
-                    ['icon' => 'milk', 'name' => 'Milk'],
-                ],
-                'steps' => [
-                    'Sauté carrots until soft.',
-                    'Add spinach and cook until wilted.',
-                    'Pour in milk and simmer.',
-                    'Stir in cheese until melted and creamy.',
-                ],
-            ],
-            [
                 'name' => 'Veggie Omelet',
                 'minutes' => 12,
                 'category' => 'breakfast',
@@ -106,21 +89,6 @@ class DatabaseSeeder extends Seeder
                 ],
             ],
             [
-                'name' => 'Berry Oat Bowl',
-                'minutes' => 8,
-                'category' => 'breakfast',
-                'ingredients' => [
-                    ['icon' => 'berries', 'name' => 'Berries'],
-                    ['icon' => 'yogurt', 'name' => 'Yogurt'],
-                    ['icon' => 'milk', 'name' => 'Milk'],
-                ],
-                'steps' => [
-                    'Combine oats and milk, let sit 5 minutes.',
-                    'Top with yogurt.',
-                    'Finish with fresh berries.',
-                ],
-            ],
-            [
                 'name' => 'Leftover Fried Rice',
                 'minutes' => 15,
                 'category' => 'quick',
@@ -134,42 +102,6 @@ class DatabaseSeeder extends Seeder
                     'Stir-fry carrots for 2 minutes.',
                     'Add chopped leftovers and rice, toss well.',
                     'Fold in eggs and season to taste.',
-                ],
-            ],
-            [
-                'name' => 'Bean & Veggie Bowl',
-                'minutes' => 25,
-                'category' => 'dinner',
-                // 'icon126' is the food-icons manifest entry that the frontend's guessIcon()
-                // already resolves any "beans" item name to (see frontend/lib/thatfridge/data.ts)
-                // - reusing it here is what lets this recipe recognize beans a user actually owns.
-                'ingredients' => [
-                    ['icon' => 'icon126', 'name' => 'Beans'],
-                    ['icon' => 'carrot', 'name' => 'Carrots'],
-                    ['icon' => 'spinach', 'name' => 'Spinach'],
-                    ['icon' => 'cheese', 'name' => 'Cheese'],
-                ],
-                'steps' => [
-                    'Rinse and drain the beans.',
-                    'Sauté carrots until just tender.',
-                    'Stir in spinach and beans, warm through.',
-                    'Top with cheese and serve.',
-                ],
-            ],
-            [
-                'name' => 'Apple Crumble',
-                'minutes' => 35,
-                'category' => 'dessert',
-                'ingredients' => [
-                    ['icon' => 'apple', 'name' => 'Apples'],
-                    ['icon' => 'cheese', 'name' => 'Butter'],
-                    ['icon' => 'milk', 'name' => 'Milk'],
-                ],
-                'steps' => [
-                    'Slice apples into a baking dish.',
-                    'Rub butter into a crumble topping.',
-                    'Scatter topping over apples.',
-                    'Bake until golden, serve with milk.',
                 ],
             ],
         ] as $recipe) {
