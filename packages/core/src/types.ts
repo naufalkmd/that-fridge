@@ -30,6 +30,8 @@ export interface Item {
   categoryId?: string | null;
   freshness: number;
   days: number;
+  /** ISO timestamp of when the item was added to the fridge. */
+  added?: string | null;
   note: string;
   qty: number;
   opened?: boolean;

@@ -29,8 +29,10 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import {
+  addedAgoLabel,
   daysLabel,
   freshColor,
+  normalizeItemName,
   type Category,
   type FlatItem,
 } from "@thatfridge/core";
@@ -157,6 +159,32 @@ export default function Inventory() {
     () => allItems.some((i) => !i.categoryId),
     [allItems],
   );
+
+  // Same-name items the user can't tell apart ("which banana is the new one?").
+  // Flag every row in a duplicate group, and mark the one to use first — soonest
+  // to expire, ties broken by whichever was added earliest.
+  const { dupKeys, useFirstIds } = useMemo(() => {
+    const groups = new Map<string, FlatItem[]>();
+    for (const it of allItems) {
+      const k = normalizeItemName(it.name);
+      const g = groups.get(k);
+      if (g) g.push(it);
+      else groups.set(k, [it]);
+    }
+    const keys = new Set<string>();
+    const first = new Set<string>();
+    for (const [k, g] of groups) {
+      if (g.length < 2) continue;
+      keys.add(k);
+      const oldest = [...g].sort(
+        (a, b) =>
+          a.freshness - b.freshness ||
+          (a.added ?? "").localeCompare(b.added ?? ""),
+      )[0];
+      if (oldest) first.add(oldest.id);
+    }
+    return { dupKeys: keys, useFirstIds: first };
+  }, [allItems]);
   const chips = useMemo(
     () => [
       { id: "all", name: "All" },
@@ -223,6 +251,8 @@ export default function Inventory() {
       item={item}
       last={last}
       showFridge={showFridgeTags}
+      duplicate={dupKeys.has(normalizeItemName(item.name))}
+      useFirst={useFirstIds.has(item.id)}
       selecting={selecting}
       selected={selected.has(item.id)}
       dragging={dragId === item.id}
@@ -971,6 +1001,8 @@ function ItemRow({
   item,
   last,
   showFridge,
+  duplicate,
+  useFirst,
   selecting,
   selected,
   dragging,
@@ -985,6 +1017,8 @@ function ItemRow({
   item: FlatItem;
   last: boolean;
   showFridge: boolean;
+  duplicate: boolean;
+  useFirst: boolean;
   selecting: boolean;
   selected: boolean;
   dragging: boolean;
@@ -1104,17 +1138,46 @@ function ItemRow({
                 color={BLUE}
               />
             )}
+            {useFirst && (
+              <View
+                style={{
+                  backgroundColor: "rgba(245,166,35,0.16)",
+                  paddingHorizontal: 5,
+                  paddingVertical: 1,
+                  borderRadius: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 8.5,
+                    fontWeight: "800",
+                    letterSpacing: 0.4,
+                    color: "#f5a623",
+                  }}
+                >
+                  USE FIRST
+                </Text>
+              </View>
+            )}
             <LocationTag location={item.location} />
             <CategoryTag category={item.nutritionCategory} />
           </View>
-          {showFridge && (
-            <Text
-              style={{ fontSize: 10.5, color: FAINT, marginBottom: 5 }}
-              numberOfLines={1}
-            >
-              {item.fridgeName}
-            </Text>
-          )}
+          {(() => {
+            const sub = [
+              showFridge ? item.fridgeName : null,
+              duplicate ? addedAgoLabel(item.added) : null,
+            ]
+              .filter(Boolean)
+              .join("  ·  ");
+            return sub ? (
+              <Text
+                style={{ fontSize: 10.5, color: FAINT, marginBottom: 5 }}
+                numberOfLines={1}
+              >
+                {sub}
+              </Text>
+            ) : null;
+          })()}
           <View
             style={{
               height: 4,

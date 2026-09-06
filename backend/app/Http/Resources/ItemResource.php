@@ -39,6 +39,7 @@ class ItemResource extends JsonResource
             'category_id' => $this->category_id ? (string) $this->category_id : null,
             'freshness' => $freshness,
             'days' => $days,
+            'added' => $this->created_at?->toISOString(),
             'opened' => (bool) $this->opened,
             'note' => $this->note,
             'location' => $this->location,

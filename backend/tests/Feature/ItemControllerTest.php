@@ -36,6 +36,20 @@ class ItemControllerTest extends TestCase
         $this->assertDatabaseHas('items', ['name' => 'Milk', 'nutrition_category' => 'dairy']);
     }
 
+    public function test_store_returns_the_added_timestamp(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+
+        $response = $this->actingAs($user)->postJson("/api/sections/{$section->id}/items", [
+            'name' => 'Milk',
+            'icon' => 'milk',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertNotNull($response->json('data.added'));
+    }
+
     public function test_store_rejects_an_invalid_nutrition_category(): void
     {
         $user = User::factory()->create();

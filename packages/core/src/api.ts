@@ -55,6 +55,7 @@ interface RawItem {
   category_id: string | null;
   freshness: number | null;
   days: number | null;
+  added?: string | null;
   opened?: boolean;
   note: string | null;
   location: StorageLocation | null;
@@ -88,6 +89,7 @@ function toItem(raw: RawItem): Item {
     categoryId: raw.category_id ?? null,
     freshness: raw.freshness ?? 0,
     days: raw.days ?? 0,
+    added: raw.added ?? null,
     note: raw.note ?? "",
     qty: raw.quantity ?? 1,
     opened: raw.opened ?? false,

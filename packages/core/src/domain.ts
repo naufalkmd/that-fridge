@@ -58,6 +58,32 @@ export function normalizeShopUrl(value: string): string | null {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
+/**
+ * Normalises an item name for "do I already have one of these?" matching:
+ * lower-cased, trimmed, inner whitespace collapsed, a trailing plural dropped.
+ * "Bananas", " banana ", and "BANANA" all collapse to "banana".
+ */
+export function normalizeItemName(name: string): string {
+  let s = name.trim().toLowerCase().replace(/\s+/g, " ");
+  if (s.endsWith("ies") && s.length > 4) s = `${s.slice(0, -3)}y`;
+  else if (s.endsWith("es") && s.length > 4) s = s.slice(0, -2);
+  else if (s.endsWith("s") && !s.endsWith("ss") && s.length > 3) s = s.slice(0, -1);
+  return s;
+}
+
+/** "Added today" / "Added 3d ago" / "Added 2w ago" from an ISO timestamp. */
+export function addedAgoLabel(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return null;
+  const days = Math.floor((Date.now() - then) / 86_400_000);
+  if (days <= 0) return "Added today";
+  if (days === 1) return "Added yesterday";
+  if (days < 7) return `Added ${days}d ago`;
+  if (days < 30) return `Added ${Math.floor(days / 7)}w ago`;
+  return `Added ${Math.floor(days / 30)}mo ago`;
+}
+
 export function timeAgo(ms: number): string {
   const mins = Math.max(0, Math.round((Date.now() - ms) / 60000));
   if (mins < 1) return "Just now";

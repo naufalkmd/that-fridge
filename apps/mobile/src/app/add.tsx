@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +20,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   describeError,
   guessFoodIcon,
+  normalizeItemName,
   type NutritionCategory,
   type StorageLocation,
 } from "@thatfridge/core";
@@ -90,7 +91,7 @@ const METHODS: {
 
 export default function Add() {
   const router = useRouter();
-  const { addItem, addManyItems } = useInventory();
+  const { addItem, addManyItems, items } = useInventory();
   const { isPro } = usePro();
   const params = useLocalSearchParams<{
     name?: string;
@@ -130,6 +131,27 @@ export default function Add() {
         ],
   );
   const [saving, setSaving] = useState(false);
+
+  // Names in this draft that already sit in the fridge — so the user knows a new
+  // row is a separate batch, not an edit to the one they have.
+  const existingKeys = useMemo(
+    () => new Set(items.map((i) => normalizeItemName(i.name))),
+    [items],
+  );
+  const dupNames = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const d of drafts.items) {
+      const n = d.name.trim();
+      if (!n) continue;
+      const k = normalizeItemName(n);
+      if (existingKeys.has(k) && !seen.has(k)) {
+        seen.add(k);
+        out.push(n);
+      }
+    }
+    return out;
+  }, [drafts.items, existingKeys]);
 
   async function submitManual() {
     const toAdd = drafts.items.filter((d) => d.name.trim());
@@ -273,6 +295,7 @@ export default function Add() {
         <DraftList
           drafts={drafts}
           scanMode={false}
+          notice={dupNames.length ? <DuplicateNotice names={dupNames} /> : null}
           intro={
             <Text style={{ fontSize: 13, color: MUTED }}>
               Fill in what you can — the crew can guess the rest. Add as many
@@ -495,6 +518,7 @@ function ScanFlow({
 function DraftList({
   drafts,
   scanMode,
+  notice,
   intro,
   emptyText,
   addLabel,
@@ -504,6 +528,7 @@ function DraftList({
 }: {
   drafts: DraftStore;
   scanMode: boolean;
+  notice?: React.ReactNode;
   intro: React.ReactNode;
   emptyText?: string;
   addLabel: string;
@@ -525,6 +550,7 @@ function DraftList({
         }}
         keyboardShouldPersistTaps="handled"
       >
+        {notice}
         <View
           style={{
             flexDirection: "row",
@@ -643,6 +669,44 @@ function DraftList({
           )}
         </Pressable>
       </View>
+    </View>
+  );
+}
+
+// Shown when a draft's name is already in the fridge: adding makes a separate
+// batch, and Inventory will label the older one so it gets used first.
+function DuplicateNotice({ names }: { names: string[] }) {
+  const list =
+    names.length === 1
+      ? names[0]
+      : names.length === 2
+        ? `${names[0]} and ${names[1]}`
+        : `${names.slice(0, 2).join(", ")} +${names.length - 2} more`;
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        gap: 8,
+        alignItems: "flex-start",
+        backgroundColor: SURFACE2,
+        borderWidth: 1,
+        borderColor: HAIRLINE,
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 14,
+      }}
+    >
+      <MaterialCommunityIcons
+        name="information-outline"
+        size={15}
+        color={AMBER}
+        style={{ marginTop: 1 }}
+      />
+      <Text style={{ flex: 1, fontSize: 12, color: MUTED, lineHeight: 17 }}>
+        <Text style={{ color: INK, fontWeight: "700" }}>{list}</Text> already in
+        your fridge. This adds a separate batch — Inventory tags the older one{" "}
+        <Text style={{ color: "#f5a623", fontWeight: "700" }}>Use first</Text>.
+      </Text>
     </View>
   );
 }
