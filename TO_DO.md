@@ -49,9 +49,11 @@ Legend: ✅ done · 🟡 partial / drafted, needs action · ⬜ not started
   gives the SDK the real $2.99/$19.99 price and the trial on-device regardless.
 - [x] ~~Intro offers~~ — Free / 1 week created in ASC for both products (2026-09-06). Still must
   be included in the version submission, and verified on-device (below).
-- [ ] **Full real-device/simulator smoke test** against the live API — inventory, chat,
-  notifications, social/blocking, icon-gen, expiry-scan, Activate button. Nothing dedicated
-  since the parity port; only the paywall/purchase flow has been verified so far.
+- [ ] **Full real-device smoke test** against the live API — inventory, chat, notifications,
+  social/blocking, icon-gen, expiry-scan, Activate button. Nothing dedicated since the parity
+  port; only the paywall/purchase flow has been checked. Include the Add flow: "Scan receipt"
+  and "Photo of fridge" now open the camera on entry (needs a **native rebuild**, not OTA —
+  camera purpose string changed; test on a real device, the simulator has no camera).
 - [ ] Verify the 7-day trial **on device**: fresh sandbox Apple ID that has never subscribed →
   open paywall → the iOS purchase sheet must read "7 days free, then $X". If not, the intro
   offer isn't attached to the version / approved. Doubles as judge/reviewer access.
