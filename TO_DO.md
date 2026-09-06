@@ -67,12 +67,12 @@ Korea localization is a post-approval fast-follow.
   the store listing is live — risks Shipaton's "brand-new app" disqualification.
 
 ### Deferred to post-launch (don't work on these before Sep 30)
-- [x] ~~First-run onboarding~~ — built 2026-09-06: skippable 3-slide carousel (`onboarding.tsx`)
-  + additive Home first-run checklist (`FirstRunChecklist.tsx`), gated via `useOnboarding()` +
-  `index.tsx` / `(tabs)/_layout.tsx`. Plan: `ONBOARDING_PLAN.md`. Pure JS. **Not visually
-  verified on device yet** — include in the smoke test (carousel renders + skips, checklist
-  ticks as you add an item / hides when done). Reviewer notes updated to mention the skippable
-  carousel.
+- [x] ~~First-run onboarding~~ — built + simulator-verified 2026-09-06: skippable 3-slide
+  carousel (`onboarding.tsx`) then, for an empty fridge, a spotlight coach-mark on the "+"
+  button (`CoachSpotlight.tsx`) — screen dims, button highlighted, tooltip. Gated via
+  `useOnboarding()` + `index.tsx` / `(tabs)/_layout.tsx`. Plan: `ONBOARDING_PLAN.md`. Pure JS,
+  already OTA'd. Smoke-test with a **fresh no-items account** (the spotlight only shows when the
+  fridge is empty). Reviewer notes mention the skippable carousel.
 - [ ] Copy backups off the VPS (weekly droplet snapshot is on; add pg_dump → object storage).
 - [ ] Sentry DSN (crash monitoring is scaffolded, currently a no-op).
 - [ ] `apps/web/lib/thatfridge` → `packages/core` extraction (most already moved).

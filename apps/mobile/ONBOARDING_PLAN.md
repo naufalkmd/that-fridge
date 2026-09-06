@@ -74,7 +74,17 @@ Store the answer on the user (`data.onboarding_goal`) for later use (e.g. which 
 lead with, or a tailored empty-state line). **v1: only build this if it's genuinely one extra
 screen.** Skip entirely if it risks the deadline — it's the least important piece.
 
-### 2c. Home first-run checklist (post-launch)
+### 2c. Post-carousel spotlight (BUILT 2026-09-06)
+
+The checklist card below was tried first and felt too easy to miss. Replaced with a
+**single spotlight coach-mark**: for a signed-in user with an empty fridge who has seen the
+carousel, the whole screen dims and the "+" button is highlighted with a ring + a tooltip
+("Add your first item"). Tap the button/tooltip → Add; tap anywhere else or Skip → dismiss.
+Never returns once an item exists. Lives in `components/home/CoachSpotlight.tsx`, rendered
+from `(tabs)/_layout` above the tab bar; the tab bar publishes its "+" rect via
+`useOnboarding()`.
+
+### 2c-alt. Home first-run checklist (NOT shipped — superseded by 2c)
 
 A dismissible card at the top of Home, above Overview, shown while any task is incomplete.
 
