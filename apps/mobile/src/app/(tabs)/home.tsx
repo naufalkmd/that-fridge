@@ -42,6 +42,7 @@ import { MarkdownText } from "@/components/markdown-text";
 import { SectionHeader } from "@/components/ui";
 import { FridgeScopePicker } from "@/components/fridge-scope";
 import { KitchenScore } from "@/components/home/KitchenScore";
+import { GettingStarted } from "@/components/home/GettingStarted";
 import { CrewScene } from "@/components/home/CrewScene";
 import { FridgeNotes } from "@/components/home/FridgeNotes";
 
@@ -242,6 +243,9 @@ export default function Home() {
 
         {/* fridge scope picker */}
         <FridgeScopePicker />
+
+        {/* first-run checklist — hides itself once complete or dismissed */}
+        <GettingStarted />
 
         {/* overview */}
         <View>

@@ -84,26 +84,31 @@ Never returns once an item exists. Lives in `components/home/CoachSpotlight.tsx`
 from `(tabs)/_layout` above the tab bar; the tab bar publishes its "+" rect via
 `useOnboarding()`.
 
-### 2c-alt. Home first-run checklist (NOT shipped — superseded by 2c)
+### 2c-alt. Home "Getting started" checklist (BUILT 2026-09-06)
 
-A dismissible card at the top of Home, above Overview, shown while any task is incomplete.
+Ships **alongside** the spotlight, not instead of it: the spotlight gets the very first item
+added; this card then guides the next few features at the user's own pace.
 
-- [x] Create your account
-- [ ] **Add your first item** → opens `/add`
-- [ ] **Ask the crew a question** → opens `/chat`
-- [ ] **Name your fridge** (only if a fridge exists and is still "My Fridge") → `/fridges`
+`components/home/GettingStarted.tsx` — a dismissible card above Overview on Home, with a
+progress bar and 5 steps. Renders only when the carousel is `seen`, not dismissed, not all
+5 done, **and `items.length < 5`** (so a reinstall / the demo account doesn't get a beginner
+checklist). Each row deep-links; completion is derived from real state where possible:
 
-Each row: icon, label, one-line hint, chevron. Tapping routes to the action. Completion is
-**derived from real state**, not a stored flag:
+| Step | Route | Done when |
+| --- | --- | --- |
+| Add your first item | `/add` | `items.length > 0` |
+| Ask the crew what to cook | `/chat` | tapped through (`checklistVisited` has `crew`) |
+| Save a recipe to your book | `/recipes` | `recipes.length > 0` |
+| Start a shopping list | `/shopping` | `shopping.length > 0` |
+| Add your household | `/fridges` | a fridge has `memberCount > 1`, or tapped through |
 
-| Task | Done when |
-| --- | --- |
-| Add first item | `items.length > 0` |
-| Ask the crew | a stored `onboarding_asked_crew` flag set on first successful `/chat` send |
-| Name your fridge | a fridge exists and its name ≠ "My Fridge" / "" |
+State in `lib/onboarding.tsx`: `checklistDismissed` + `dismissChecklist()`,
+`checklistVisited[]` + `markChecklistVisited(id)` (SecureStore keys
+`..._checklist_dismissed_v1` / `..._checklist_visited_v1`). "Hide" dismisses permanently;
+the card also self-hides once all 5 are done.
 
-Card auto-hides when all tasks are done, or on an explicit "Dismiss". A tiny "X" dismisses;
-store `onboarding_checklist_dismissed`.
+Deferred (post-launch, see TO_DO): contextual one-shot coach-marks for the non-obvious bits
+(crew tabs, drag-to-reorder in Inventory, the Kitchen Score), and any analytics on completion.
 
 ---
 

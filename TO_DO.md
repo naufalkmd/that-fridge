@@ -77,11 +77,17 @@ Korea localization is a post-approval fast-follow.
 
 ### Deferred to post-launch (don't work on these before Sep 30)
 - [x] ~~First-run onboarding~~ — built + simulator-verified 2026-09-06: skippable 3-slide
-  carousel (`onboarding.tsx`) then, for an empty fridge, a spotlight coach-mark on the "+"
-  button (`CoachSpotlight.tsx`) — screen dims, button highlighted, tooltip. Gated via
+  carousel (`onboarding.tsx`), then for an empty fridge a spotlight coach-mark on the "+"
+  button (`CoachSpotlight.tsx`), then a self-paced 5-step **"Getting started" checklist** on
+  Home (`GettingStarted.tsx`, hidden once done/dismissed or `items >= 5`). Gated via
   `useOnboarding()` + `index.tsx` / `(tabs)/_layout.tsx`. Plan: `ONBOARDING_PLAN.md`. Pure JS,
-  already OTA'd. Smoke-test with a **fresh no-items account** (the spotlight only shows when the
-  fridge is empty). Reviewer notes mention the skippable carousel.
+  already OTA'd. Smoke-test with a **fresh no-items account** (spotlight + checklist only show
+  on a near-empty fridge). Reviewer notes mention the skippable carousel.
+- [ ] Contextual onboarding coach-marks — one-shot tips fired at the right trigger for the
+  non-obvious bits: the crew tabs inside `/eat`, drag-to-reorder in Inventory, what the Kitchen
+  Score means. Plus lightweight analytics on carousel skip-rate + checklist completion to see
+  if any of it earns its keep. (The 14-step forced tour idea is deliberately not this — see
+  ONBOARDING_PLAN.md §4.)
 - [ ] Pro AI spend ceiling — meter real OpenRouter token cost per Pro user per billing cycle
   and cap it at ~$1.00–1.50 of model spend (well under the ~$2.09 net on a $2.99 plan). Debit
   the actual `usage` from each response into a per-user counter; at the ceiling, disable only
