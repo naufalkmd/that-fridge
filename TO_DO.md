@@ -77,7 +77,13 @@ Korea localization is a post-approval fast-follow.
   `useOnboarding()` + `index.tsx` / `(tabs)/_layout.tsx`. Plan: `ONBOARDING_PLAN.md`. Pure JS,
   already OTA'd. Smoke-test with a **fresh no-items account** (the spotlight only shows when the
   fridge is empty). Reviewer notes mention the skippable carousel.
-- [ ] Copy backups off the VPS (weekly droplet snapshot is on; add pg_dump → object storage).
+- [ ] Pro AI spend ceiling — meter real OpenRouter token cost per Pro user per billing cycle
+  and cap it at ~$1.00–1.50 of model spend (well under the ~$2.09 net on a $2.99 plan). Debit
+  the actual `usage` from each response into a per-user counter; at the ceiling, disable only
+  the expensive paths (browsing, receipt/fridge-photo scan, vision) and keep basic text chat.
+  Reset on the RevenueCat renewal date (or ISO-month). Update paywall + App Store copy: drop
+  the literal "unlimited", use fair-use wording or an allowance. Floor `throttle:15,1` already
+  covers hammering; this is margin protection against the heavy-browsing tail.
 - [ ] Sentry DSN (crash monitoring is scaffolded, currently a no-op).
 - [ ] `apps/web/lib/thatfridge` → `packages/core` extraction (most already moved).
 - [ ] `react-i18next` + `expo-localization` — ship Korean (and optionally Malay) UI as an OTA,
