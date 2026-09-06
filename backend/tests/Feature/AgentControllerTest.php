@@ -357,4 +357,42 @@ class AgentControllerTest extends TestCase
         $response->assertJson(['location' => 'freezer', 'nutrition_category' => 'vegetables']);
         $response->assertJsonStructure(['shelf_life_days', 'location', 'nutrition_category']);
     }
+
+    public function test_delete_session_removes_only_that_session(): void
+    {
+        $user = User::factory()->create();
+        $keep = (string) Str::uuid();
+        $drop = (string) Str::uuid();
+        foreach ([$keep, $drop] as $sid) {
+            ChatHistory::create([
+                'user_id' => $user->id, 'session_id' => $sid,
+                'agent' => 'Chef', 'user_message' => 'hi', 'agent_response' => 'yo',
+            ]);
+        }
+
+        $this->actingAs($user)->deleteJson("/api/chat/sessions/{$drop}")->assertOk();
+
+        $this->assertDatabaseHas('chat_history', ['session_id' => $keep]);
+        $this->assertDatabaseMissing('chat_history', ['session_id' => $drop]);
+    }
+
+    public function test_delete_all_sessions_wipes_only_the_current_users_history(): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        ChatHistory::create([
+            'user_id' => $user->id, 'session_id' => (string) Str::uuid(),
+            'agent' => 'Chef', 'user_message' => 'mine', 'agent_response' => 'x',
+        ]);
+        ChatHistory::create([
+            'user_id' => $other->id, 'session_id' => (string) Str::uuid(),
+            'agent' => 'Chef', 'user_message' => 'theirs', 'agent_response' => 'x',
+        ]);
+
+        $this->actingAs($user)->deleteJson('/api/chat/sessions')
+            ->assertOk()->assertJson(['deleted' => 1]);
+
+        $this->assertDatabaseMissing('chat_history', ['user_message' => 'mine']);
+        $this->assertDatabaseHas('chat_history', ['user_message' => 'theirs']);
+    }
 }

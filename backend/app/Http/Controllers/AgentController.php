@@ -113,6 +113,17 @@ class AgentController extends Controller
     }
 
     /**
+     * Wipe every past chat session for the authenticated user (the "Clear all" button
+     * in Chat History). Also clears the "latest session" that history() would restore.
+     */
+    public function deleteAllSessions(Request $request)
+    {
+        $deleted = $request->user()->chatHistory()->delete();
+
+        return response()->json(['deleted' => $deleted], 200);
+    }
+
+    /**
      * The prior turns of the session this message belongs to, oldest first, as alternating
      * user/assistant messages ready to hand to the model - without this, AgentService::chat
      * only ever sees the single latest message, so every follow-up ("show me the recipe",

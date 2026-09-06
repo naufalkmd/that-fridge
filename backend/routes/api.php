@@ -78,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('throttle:15,1')->post('/', [AgentController::class, 'send']);
         Route::get('/sessions', [AgentController::class, 'sessions']);
         Route::get('/sessions/{sessionId}', [AgentController::class, 'sessionMessages']);
+        Route::delete('/sessions', [AgentController::class, 'deleteAllSessions']);
         Route::delete('/sessions/{sessionId}', [AgentController::class, 'deleteSession']);
     });
 
@@ -162,6 +163,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/notification-events', [NotificationEventController::class, 'index']);
     Route::patch('/notification-events/{notificationEvent}', [NotificationEventController::class, 'update']);
+    Route::delete('/notification-events', [NotificationEventController::class, 'destroyAll']);
+    Route::delete('/notification-events/{notificationEvent}', [NotificationEventController::class, 'destroy']);
 
     Route::get('/usage-history', [UsageHistoryController::class, 'index']);
     Route::post('/usage-history', [UsageHistoryController::class, 'store']);

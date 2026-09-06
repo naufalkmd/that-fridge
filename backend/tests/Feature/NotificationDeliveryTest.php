@@ -243,4 +243,31 @@ class NotificationDeliveryTest extends TestCase
         $this->assertDatabaseMissing('push_tokens', ['token' => 'ExponentPushToken[dead]']);
         $this->assertDatabaseHas('push_tokens', ['token' => 'ExponentPushToken[live]']);
     }
+
+    public function test_clearing_a_notification_deletes_it_from_the_feed(): void
+    {
+        $owner = User::factory()->create(['username' => 'jo']);
+        $target = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Loft']);
+        $this->actingAs($owner)->postJson("/api/fridges/{$fridge->id}/invites", ['userId' => $target->id]);
+
+        $id = $this->actingAs($target)->getJson('/api/notification-events')->json('data.0.id');
+
+        $this->actingAs($target)->deleteJson("/api/notification-events/{$id}")->assertNoContent();
+
+        $this->assertCount(0, $this->actingAs($target)->getJson('/api/notification-events')->json('data'));
+    }
+
+    public function test_clear_all_wipes_the_users_whole_feed(): void
+    {
+        $owner = User::factory()->create();
+        $target = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Loft']);
+        $this->actingAs($owner)->postJson("/api/fridges/{$fridge->id}/invites", ['userId' => $target->id]);
+
+        $this->actingAs($target)->deleteJson('/api/notification-events')
+            ->assertOk()->assertJson(['deleted' => 1]);
+
+        $this->assertCount(0, $this->actingAs($target)->getJson('/api/notification-events')->json('data'));
+    }
 }

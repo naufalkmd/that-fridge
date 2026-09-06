@@ -38,4 +38,32 @@ class NotificationEventController extends Controller
 
         return new NotificationEventResource($notificationEvent->load('fridge'));
     }
+
+    public function destroy(Request $request, NotificationEvent $notificationEvent)
+    {
+        $this->authorize('delete', $notificationEvent);
+
+        $notificationEvent->delete();
+
+        return response()->noContent();
+    }
+
+    /**
+     * Clear the inbox: delete every event this user can see (their personally-addressed
+     * ones plus the fridge-wide ones for fridges they belong to). Mirrors index()'s scope.
+     */
+    public function destroyAll(Request $request)
+    {
+        $userId = $request->user()->id;
+        $fridgeIds = $request->user()->memberFridges()->pluck('fridges.id');
+
+        $deleted = NotificationEvent::query()
+            ->where(function ($query) use ($userId, $fridgeIds) {
+                $query->where('user_id', $userId)
+                    ->orWhere(fn ($q) => $q->whereNull('user_id')->whereIn('fridge_id', $fridgeIds));
+            })
+            ->delete();
+
+        return response()->json(['deleted' => $deleted], 200);
+    }
 }
