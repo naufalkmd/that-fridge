@@ -25,8 +25,11 @@ Korea localization is a post-approval fast-follow.
 - [ ] **New native build** — `apps/mobile` against prod `EXPO_PUBLIC_API_URL`, includes the
   camera-first Add fix (needs a rebuild, not an OTA — Info.plist camera string changed). Push to
   TestFlight.
-- [ ] **Screenshots** — 10-frame set per `apps/mobile/SCREENSHOTS.md`, captured from that build
-  on the demo account (`keira@thatfridge.test`, hand over the new password).
+- [ ] **Screenshots** — 10-frame marketing set (designed, not plain), plan in
+  `apps/mobile/SCREENSHOTS.md`. Friend captures the 9 raw screens from the new build on the demo
+  account (`keira@thatfridge.test`, hand over the new password) → send to Claude → Claude
+  composites the frames via the `design` skill canvas or an HTML+headless-Chrome template (§5)
+  and returns export-ready 1320×2868 PNGs. English set now; `ko` re-render post-approval.
 - [ ] **Full real-device smoke test** on that build against the live API — run the QA matrix
   (Reference). Nothing dedicated since the parity port. Must pass:
   - Core loop: add item, barcode scan, inventory edit, mark-made decrements stock

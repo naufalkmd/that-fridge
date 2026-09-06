@@ -192,16 +192,29 @@ This is the full 10-slot set — no room left for the optional frames without a 
 
 ## 5. Assembly
 
-Two ways to composite the caption band onto the raw screen PNGs:
+**Input needed first:** the 9 raw app-screen PNGs (1320×2868) — Claude can't capture these;
+they come from a real-device / simulator run on the demo account, states per §3–§4.
 
-- **Recommended — an HTML template** (one file, 10 artboards at 1320×2868, screens dropped in as
-  `<img>`, captions as real text, exported with a headless screenshot). Frame 1 (Intro) is the
-  same template with the screen slot swapped for the brand lockup. Fast to re-run for `ko`/`ms`
-  — just swap the caption strings. Lives in `scripts/` or the scratchpad, not shipped.
-- **Figma** — one frame component, 10 instances, a text-variable per caption. Better if someone
-  wants to hand-tune shadows/spacing. Export at 1x (frames are already 1320×2868).
+Two ways to composite the caption band onto them, both driven by Claude:
 
-Either way the raw screen PNGs are the input; the template never touches the app.
+- **Option A — `design` skill canvas.** Claude drafts the 10 frames as artboards on one
+  pan/zoom canvas, published as an Artifact with a visual editor (click-to-select, inline text,
+  PNG/PDF export). Best when you want to hand-tune spacing/shadows before export. Claude loads
+  `artifact-design` first for the visual system, optionally `refero` for reference from
+  comparable Food & Drink apps.
+- **Option B — HTML template + headless render.** One HTML file, 10 sections at exactly
+  1320×2868, dark theme + captions baked in, screens as `<img>`. Claude renders each to a
+  pixel-exact PNG with local headless Chrome + ImageMagick. Best when you just want the files,
+  and fastest to re-run for `ko`/`ms` (swap the caption strings, re-render). Lives in
+  `scripts/` or the scratchpad, not shipped.
+
+Frame 1 (Intro) uses the same layout with the screen slot swapped for the brand lockup.
+Either way the raw PNGs are the input; nothing here touches the app.
+
+### Run order
+1. Friend captures the 9 raw screens from the new native build (§4 prep).
+2. Send them to Claude → Claude builds Option A or B and returns export-ready 1320×2868 PNGs.
+3. Upload the English set to App Store Connect; re-render for `ko` post-approval (§6).
 
 ## 6. Localization workflow
 
