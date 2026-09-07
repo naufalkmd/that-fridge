@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { LayoutAnimation, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as AppleAuthentication from "expo-apple-authentication";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import Svg, { Path, Rect } from "react-native-svg";
 
 import type { OnboardingDraft } from "@/lib/onboardingDraft";
 
@@ -460,98 +461,56 @@ const CREW_INFO: { color: string; role: string; does: string; example: string }[
   },
 ];
 
-function CrewCard({
-  name,
-  gif,
-  info,
-  open,
-  onToggle,
-}: {
-  name: string;
-  gif: number;
-  info: (typeof CREW_INFO)[number];
-  open: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onToggle}
-      style={{
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: open ? `${info.color}66` : HAIRLINE,
-        backgroundColor: open ? `${info.color}12` : SURFACE,
-        padding: 14,
-        gap: open ? 12 : 0,
-      }}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 13 }}>
-        <View
-          style={{
-            width: 50,
-            height: 50,
-            borderRadius: 13,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: `${info.color}1f`,
-            borderWidth: 1,
-            borderColor: `${info.color}33`,
-          }}
-        >
-          <Image source={gif} style={{ width: 34, height: 34 }} contentFit="contain" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, fontWeight: "800", color: INK }}>{name}</Text>
-          <Text
-            style={{ fontSize: 12.5, fontWeight: "600", color: info.color, marginTop: 1 }}
-          >
-            {info.role}
-          </Text>
-        </View>
-        <Ionicons
-          name="chevron-down"
-          size={17}
-          color={open ? info.color : FAINT}
-          style={{ transform: [{ rotate: open ? "180deg" : "0deg" }] }}
-        />
-      </View>
+const GLYPHS = ["chef", "guardian", "organizer", "shopkeeper"] as const;
 
-      {open && (
-        <View style={{ gap: 10 }}>
-          <Text style={{ fontSize: 13.5, lineHeight: 19, color: MUTED }}>{info.does}</Text>
-          <View
-            style={{
-              flexDirection: "row",
-              gap: 9,
-              backgroundColor: CANVAS,
-              borderRadius: 11,
-              borderLeftWidth: 2.5,
-              borderLeftColor: info.color,
-              paddingVertical: 9,
-              paddingHorizontal: 11,
-            }}
-          >
-            <Ionicons
-              name="chatbubble-ellipses"
-              size={13}
-              color={info.color}
-              style={{ marginTop: 2 }}
-            />
-            <Text
-              style={{
-                flex: 1,
-                fontSize: 12.5,
-                lineHeight: 17,
-                fontStyle: "italic",
-                color: INK,
-              }}
-            >
-              &ldquo;{info.example}&rdquo;
-            </Text>
-          </View>
-        </View>
+/** Simple line-icon per crew member — used at small size in the switcher, where the
+ *  pixel sprite is too fiddly to read. The sprite itself carries the big view. */
+function CrewGlyph({
+  id,
+  size,
+  color,
+}: {
+  id: (typeof GLYPHS)[number];
+  size: number;
+  color: string;
+}) {
+  const p = {
+    fill: "none",
+    stroke: color,
+    strokeWidth: 1.7,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      {id === "chef" && (
+        <>
+          <Path {...p} d="M6 14h12v5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z" />
+          <Path {...p} d="M6 14a4 4 0 0 1-1-7.8A4 4 0 0 1 12 4a4 4 0 0 1 7 2.2A4 4 0 0 1 18 14" />
+          <Path {...p} d="M9 17h.01M12 17h.01M15 17h.01" />
+        </>
       )}
-    </Pressable>
+      {id === "guardian" && (
+        <>
+          <Path {...p} d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z" />
+          <Path {...p} d="m9 12 2 2 4-4" />
+        </>
+      )}
+      {id === "organizer" && (
+        <>
+          <Rect {...p} x={3} y={4} width={8} height={7} rx={1} />
+          <Rect {...p} x={13} y={4} width={8} height={7} rx={1} />
+          <Rect {...p} x={3} y={13} width={8} height={7} rx={1} />
+          <Rect {...p} x={13} y={13} width={8} height={7} rx={1} />
+        </>
+      )}
+      {id === "shopkeeper" && (
+        <>
+          <Path {...p} d="M4 8h16l-1.5 11a1 1 0 0 1-1 1H6.5a1 1 0 0 1-1-1z" />
+          <Path {...p} d="M9 8V6a3 3 0 0 1 6 0v2" />
+        </>
+      )}
+    </Svg>
   );
 }
 
@@ -564,54 +523,131 @@ function CrewStep({
   onContinue: () => void;
   onHaveAccount: () => void;
 }) {
-  const [open, setOpen] = useState<number | null>(0);
-
-  const toggle = (i: number) => {
-    LayoutAnimation.configureNext(
-      LayoutAnimation.create(170, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity),
-    );
-    setOpen((cur) => (cur === i ? null : i));
-  };
+  const [active, setActive] = useState(0);
+  const member = CREW[active];
+  const info = CREW_INFO[active];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CANVAS }}>
       <BackBar onBack={onBack} onHaveAccount={onHaveAccount} />
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 26, paddingTop: 10, paddingBottom: 24, gap: 11 }}
+        contentContainerStyle={{ paddingHorizontal: 26, paddingTop: 10, paddingBottom: 24 }}
       >
-        <View style={{ gap: 6, marginBottom: 2 }}>
+        <View style={{ gap: 6, marginBottom: 18 }}>
           <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT }}>MEET THE CREW</PixelText>
           <Text
             style={{ fontSize: 25, lineHeight: 31, fontWeight: "800", color: INK, letterSpacing: -0.3 }}
           >
             Four of them, one job each
           </Text>
-          <Text style={{ fontSize: 13, color: FAINT }}>Tap a card to see how they help.</Text>
+          <Text style={{ fontSize: 13, color: FAINT }}>Tap to meet each one.</Text>
         </View>
 
-        {CREW.map((c, i) => (
-          <CrewCard
-            key={c.name}
-            name={c.name}
-            gif={c.gif}
-            info={CREW_INFO[i]}
-            open={open === i}
-            onToggle={() => toggle(i)}
-          />
-        ))}
+        {/* switcher */}
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
+          {CREW.map((c, i) => {
+            const on = i === active;
+            const col = CREW_INFO[i].color;
+            return (
+              <Pressable key={c.name} onPress={() => setActive(i)} style={{ flex: 1 }}>
+                <View
+                  style={{
+                    height: 48,
+                    borderRadius: 13,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: on ? col : `${col}1f`,
+                    borderWidth: 1,
+                    borderColor: on ? col : `${col}3d`,
+                  }}
+                >
+                  <CrewGlyph id={GLYPHS[i]} size={21} color={on ? "#0a0a0c" : col} />
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
 
-        <Text
+        {/* the agent, no background */}
+        <View style={{ flexDirection: "row", gap: 16, alignItems: "center", minHeight: 132 }}>
+          <View
+            style={{
+              width: 116,
+              height: 124,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Glow />
+            <Image
+              source={member.gif}
+              style={{ width: 106, height: 118 }}
+              contentFit="contain"
+            />
+          </View>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text
+              style={{ fontSize: 21, fontWeight: "800", color: INK, letterSpacing: -0.2 }}
+            >
+              {member.name}
+            </Text>
+            <Text style={{ fontSize: 12.5, fontWeight: "700", color: info.color }}>
+              {info.role}
+            </Text>
+            <Text style={{ fontSize: 12.5, lineHeight: 17, color: MUTED, marginTop: 6 }}>
+              {info.does}
+            </Text>
+          </View>
+        </View>
+
+        {/* what they'd actually say */}
+        <View
           style={{
-            fontSize: 12.5,
-            lineHeight: 18,
-            color: FAINT,
-            textAlign: "center",
-            marginTop: 10,
+            flexDirection: "row",
+            gap: 9,
+            marginTop: 16,
+            backgroundColor: SURFACE,
+            borderRadius: 12,
+            borderLeftWidth: 2.5,
+            borderLeftColor: info.color,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
           }}
         >
-          Always on, never nagging. You&apos;ll meet them properly once your fridge has a few
-          things in it.
-        </Text>
+          <Ionicons
+            name="chatbubble-ellipses"
+            size={13}
+            color={info.color}
+            style={{ marginTop: 2 }}
+          />
+          <Text
+            style={{
+              flex: 1,
+              fontSize: 12.5,
+              lineHeight: 17,
+              fontStyle: "italic",
+              color: INK,
+            }}
+          >
+            &ldquo;{info.example}&rdquo;
+          </Text>
+        </View>
+
+        <View
+          style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 20 }}
+        >
+          {CREW.map((c, i) => (
+            <View
+              key={c.name}
+              style={{
+                height: 6,
+                width: i === active ? 18 : 6,
+                borderRadius: 3,
+                backgroundColor: i === active ? CREW_INFO[i].color : "rgba(255,255,255,0.16)",
+              }}
+            />
+          ))}
+        </View>
       </ScrollView>
 
       <View style={{ paddingHorizontal: 26, paddingTop: 8, paddingBottom: 20 }}>
