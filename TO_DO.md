@@ -15,15 +15,17 @@ and live. The full pre-sign-in onboarding flow is built and OTA'd (see
 `apps/mobile/ONBOARDING.md`); Google Sign-In is wired into the native build. App Store Connect
 is largely set up — listing copy, age rating (9+), App Privacy, App Review notes +
 `app-review.pdf` attachment, subscriptions priced and "Ready to Submit", intro offers attached,
-paywall published (RC rev 17). What's left is the `v1.2.2` binary, a real-device smoke test,
-screenshots, and the submission. **v1 ships an English-only listing;** Korea localization is a
-post-approval fast-follow.
+paywall published (RC rev 17). The full smoke test passed on a dev build 2026-09-07. What's
+left is the `v1.2.2` binary (+ a quick re-run of the key paths on it), screenshots, and the
+submission. **v1 ships an English-only listing;** Korea localization is a post-approval
+fast-follow.
 
 ---
 
 ## What's left to do
 
 ### Blocking submission
+
 - [ ] **Cut the `v1.2.2` submission binary** — `app.config.ts` version already bumped to 1.2.2
   (2026-09-07) with Google Sign-In wired into the native build (`@react-native-google-signin`
   URL scheme + client ids; `GOOGLE_CLIENT_IDS` on the VPS lists both the iOS and Web ids). Tag
@@ -35,26 +37,14 @@ post-approval fast-follow.
   account (`keira@thatfridge.test`, hand over the new password) → send to Claude → Claude
   composites the frames via the `design` skill canvas or an HTML+headless-Chrome template (§5)
   and returns export-ready 1320×2868 PNGs. English set now; `ko` re-render post-approval.
-- [ ] **Full real-device smoke test** on that build against the live API — run the QA matrix
-  (Reference). Nothing dedicated since the parity port. Must pass:
-  - Core loop: add item, barcode scan, inventory edit, mark-made decrements stock
-  - Add flow: "Scan receipt" / "Photo of fridge" open the camera directly
-  - New deletion flows (2026-09-06): inventory bulk-delete in select mode; chat-history
-    delete + "Clear all" actually stick after a refresh; notification "Clear" / "Clear all"
-    removes rows (not grey-out); long-press a generated icon in the Add picker to delete it
-  - First-run (fresh install, no account): `/welcome` → 3-slide carousel (slide 1 = the walking
-    crew scene) → 3 chip questions → character-select "meet the crew" → first-win demo → name
-    fridge → check-in reminder → soft wall (Apple / Google / email). After auth: the 4-stop
-    Home spotlight tour, then the "Getting started" progress-path card (opens at account ✓).
-    Then Profile → "Replay intro & tips" → `/welcome?preview=1` walks every screen non-destructively.
-  - Sign-in: "Continue with Apple" **and** "Continue with Google" both complete on the 1.2.2
-    build (Google was never in a shipped binary before) and land a real session
-  - Paywall on device: "Start 7-Day Free Trial" CTA, real $2.99 / $19.99 prices, Restore works,
-    Terms/Privacy open `thatfridge.com`
-  - Purchase sheet shows "7 days free, then $X" (fresh sandbox Apple ID, never subscribed)
-  - Account deletion from a clean install
-  - Local notifications fire and route to the right screen on tap
-- [x] **App Store availability** — set 2026-09-06 to worldwide **minus** the EU-27 + Iceland +
+- [x] **Full real-device smoke test** — passed 2026-09-07 against the live API. Covered: core
+  loop (add / barcode / edit / mark-made decrements), receipt + fridge-photo camera, the
+  2026-09-06 deletion flows, the full first-run `/welcome` flow + Home spotlight + progress-path
+  checklist + `preview=1` replay, Apple **and** Google sign-in, paywall (trial CTA, real
+  $2.99/$19.99, Restore, Terms/Privacy links), purchase sheet "7 days free then $X" on a fresh
+  sandbox ID, account deletion from a clean install, local notifications firing + routing on tap.
+  Re-run the key paths once on the actual `v1.2.2` TestFlight binary.
+- [X] **App Store availability** — set 2026-09-06 to worldwide **minus** the EU-27 + Iceland +
   Norway (avoids the DSA trader declaration; Switzerland + UK kept) and China. Subscriptions
   (monthly + yearly) set to all storefronts — capped by app availability anyway. Base price
   USD $2.99 / $19.99, MY + KR set manually, rest auto-converted.
@@ -65,6 +55,7 @@ post-approval fast-follow.
 - [ ] **Submit** — set release to **manual** in ASC, submit the version.
 
 ### Korea rollout (whenever the KR storefront ships — can trail the English launch)
+
 - [ ] Per-storefront subscription prices: Malaysia `RM12.90` / `RM89`, Korea `₩3,900` / `₩25,000`.
 - [ ] Korean listing metadata (subtitle, description, keywords, screenshots) — metadata-only,
   lands after English approval with no binary re-review. Draft screenshot captions in
@@ -75,16 +66,19 @@ post-approval fast-follow.
   sign-up — Apple/Google social sign-in skips it. Needs a pre-OAuth consent interstitial.
 
 ### Shipaton / Devpost (deadline: same Sep 30, 11:45pm PDT)
+
 - [ ] Devpost project page + feature description.
 - [ ] Demo video ≤2:00, public on YouTube/Vimeo, no copyrighted music/footage.
 - [ ] #BuildInPublic thread/dev log, updated 2-3×/week.
 - [ ] Peace Prize impact statement (household food-waste → savings + environmental).
 - [ ] App Store URL on the submission.
 - [ ] **Submit on Devpost before the deadline.**
+
 - **Don't** market as "launched" anywhere public (TestFlight link, ProductHunt, press) before
   the store listing is live — risks Shipaton's "brand-new app" disqualification.
 
 ### Deferred to post-launch (don't work on these before Sep 30)
+
 - [ ] Onboarding polish — personalized payoff copy from the stored `preferences` tags + a
   peak-end "you're all set" beat, and contextual one-shot coach-marks (crew tabs in `/eat`,
   drag-to-reorder in Inventory, the Kitchen Score). Both wait on `app:onboarding-funnel` data.
@@ -105,12 +99,12 @@ post-approval fast-follow.
 - [ ] AI recipe images + one shared image budget. Give recipes an AI-generated hero image
   (`image_url` on `recipes`, migration, regenerate button in `recipe-form`, render on the card
   + detail). Generate with `fal-ai/flux/schnell` (same model as icons, no rembg pass → ~$0.003).
-  **All AI image generation shares one weekly free budget**, not a per-feature limit: rename the
-  `generated_icons` concept to a shared `generated_images` table with a `kind` (`icon`/`recipe`)
-  and a `credits` int; the free-tier check becomes `SUM(credits) since weekStart <= 5` instead
-  of `COUNT(*)`. Icon = 1 credit, recipe image (schnell) = 1 credit. Only bump the recipe image
-  to 2 credits if it's ever moved to `flux/dev`/pro (~5-8× the cost). Pro folds under the spend
-  ceiling above.
+    **All AI image generation shares one weekly free budget**, not a per-feature limit: rename the
+    `generated_icons` concept to a shared `generated_images` table with a `kind` (`icon`/`recipe`)
+    and a `credits` int; the free-tier check becomes `SUM(credits) since weekStart <= 5` instead
+    of `COUNT(*)`. Icon = 1 credit, recipe image (schnell) = 1 credit. Only bump the recipe image
+    to 2 credits if it's ever moved to `flux/dev`/pro (~5-8× the cost). Pro folds under the spend
+    ceiling above.
 - [ ] Sentry DSN (crash monitoring is scaffolded, currently a no-op).
 - [ ] `apps/web/lib/thatfridge` → `packages/core` extraction (most already moved).
 - [ ] `react-i18next` + `expo-localization` — ship Korean (and optionally Malay) UI as an OTA,
@@ -130,15 +124,15 @@ post-approval fast-follow.
 
 ### Cost tracker (all USD, approximate)
 
-| Item | Cost | Status |
-| --- | --- | --- |
-| Apple Developer Program | $99/yr | Paid |
-| Domain — `thatfridge.com` | ~$10.46/yr | Paid |
-| PixelMix commercial font licence | $25 one-time | Paid (embedding confirmation pending, see above) |
-| VPS — DigitalOcean SGP1, 2 vCPU/2GB + backups | $21.60/mo | Live |
-| Legal site hosting (Cloudflare Workers), email routing | $0 | Live |
-| Sentry, RevenueCat, Expo EAS, Devpost | $0 | Free tiers |
-| Google Play Console | $25 one-time | Deferred (post-launch) |
+| Item                                                   | Cost         | Status                                           |
+| ------------------------------------------------------ | ------------ | ------------------------------------------------ |
+| Apple Developer Program                                | $99/yr       | Paid                                             |
+| Domain —`thatfridge.com`                            | ~$10.46/yr   | Paid                                             |
+| PixelMix commercial font licence                       | $25 one-time | Paid (embedding confirmation pending, see above) |
+| VPS — DigitalOcean SGP1, 2 vCPU/2GB + backups         | $21.60/mo    | Live                                             |
+| Legal site hosting (Cloudflare Workers), email routing | $0           | Live                                             |
+| Sentry, RevenueCat, Expo EAS, Devpost                  | $0           | Free tiers                                       |
+| Google Play Console                                    | $25 one-time | Deferred (post-launch)                           |
 
 **Fixed recurring cost: ≈$30.72/mo ($368.66/yr)**, regardless of user count. Apple's commission
 is 15% once the Small Business Program application (submitted 2026-09-05) is approved, 30%
@@ -171,13 +165,13 @@ verified 2026-09-06. ASC API key + vendor number `94767188` set in RevenueCat.
 
 ### Free-tier limits (all enforced server-side, not just client-side)
 
-| Feature | Free tier | Pro |
-| --- | --- | --- |
-| AI chat (Quick Chat + "Activate {agent}", shared budget) | 5/week | Unlimited |
-| Icon generation | 5/week | Unlimited |
-| Expiry-date photo scan | 10/week | Unlimited |
-| Receipt / fridge-photo scan | Not available | Unlimited |
-| Fridges (owned or joined, total) | 1 | Unlimited |
+| Feature                                                  | Free tier     | Pro       |
+| -------------------------------------------------------- | ------------- | --------- |
+| AI chat (Quick Chat + "Activate {agent}", shared budget) | 5/week        | Unlimited |
+| Icon generation                                          | 5/week        | Unlimited |
+| Expiry-date photo scan                                   | 10/week       | Unlimited |
+| Receipt / fridge-photo scan                              | Not available | Unlimited |
+| Fridges (owned or joined, total)                         | 1             | Unlimited |
 
 Every AI-calling route also has a floor-level `throttle` regardless of Pro status, as abuse
 protection against direct API hammering.
@@ -235,14 +229,14 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
 
 ### QA matrix
 
-| Area | Checks |
-| --- | --- |
-| Devices | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device |
-| Auth | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session |
-| Core loop | add item, barcode scan (camera allow/deny/deny-then-enable), inventory edit/delete, mark recipe made decrements stock |
-| Notifications | local alert fires at the right time, taps route to the item, permission denied handled |
-| Paywall | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow |
-| Native chrome | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe |
-| Network | airplane mode on every screen, slow 3G, API 500s, retry paths |
-| Lifecycle | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly |
-| Compliance | account deletion from a clean install, privacy-policy link opens, demo account works fresh |
+| Area          | Checks                                                                                                                |
+| ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Devices       | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device                                                            |
+| Auth          | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session                     |
+| Core loop     | add item, barcode scan (camera allow/deny/deny-then-enable), inventory edit/delete, mark recipe made decrements stock |
+| Notifications | local alert fires at the right time, taps route to the item, permission denied handled                                |
+| Paywall       | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow                                        |
+| Native chrome | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe                                 |
+| Network       | airplane mode on every screen, slow 3G, API 500s, retry paths                                                         |
+| Lifecycle     | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly                               |
+| Compliance    | account deletion from a clean install, privacy-policy link opens, demo account works fresh                            |
