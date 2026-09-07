@@ -228,7 +228,9 @@ function CrewCharacter({
         style={{
           position: "absolute",
           bottom: "100%",
-          marginBottom: 34,
+          // Home stacks the score meter between bubble and sprite; the onboarding
+          // preview has nothing there, so sit the bubble right on the character's head.
+          marginBottom: showcase ? 2 : 34,
           alignSelf: "center",
           maxWidth: 108,
           minWidth: 84,
