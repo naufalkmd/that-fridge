@@ -164,14 +164,14 @@ export default function Welcome() {
     if (step === "carousel") {
       return (
         <IntroCarousel
-        finishLabel="Continue"
-        onFinish={() => setStep("questions")}
-        onSkip={() => toSignIn("signup")}
-        onSlideView={(index) => track("welcome_slide_viewed", { index })}
-        footerExtra={<HaveAccountLink onPress={haveAccount} />}
-      />
-    );
-  }
+          finishLabel="Get started"
+          onFinish={() => setStep("questions")}
+          onSkip={() => toSignIn("signup")}
+          onSlideView={(index) => track("welcome_slide_viewed", { index })}
+          footerExtra={<HaveAccountLink onPress={haveAccount} />}
+        />
+      );
+    }
 
   if (step === "questions") {
     return (

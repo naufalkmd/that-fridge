@@ -188,13 +188,18 @@ export function IntroCarousel({
         ))}
       </ScrollView>
 
-      <View style={{ paddingHorizontal: 28, paddingTop: 10, paddingBottom: 8, gap: 12 }}>
+      <View
+        style={{
+          paddingHorizontal: 28,
+          paddingTop: 12,
+          paddingBottom: 10,
+          gap: 12,
+          backgroundColor: CANVAS,
+          zIndex: 2,
+        }}
+      >
         <PrimaryButton label={last ? finishLabel : "Next"} onPress={next} />
-        {last && footerExtra ? (
-          footerExtra
-        ) : (
-          <View style={{ height: 25 }} />
-        )}
+        {last && footerExtra ? footerExtra : <View style={{ height: 22 }} />}
       </View>
     </SafeAreaView>
   );
