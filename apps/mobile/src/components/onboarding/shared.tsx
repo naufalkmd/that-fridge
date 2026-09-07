@@ -10,7 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -90,6 +90,7 @@ export function IntroCarousel({
   footerExtra?: React.ReactNode;
 }) {
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
   const last = index === SLIDES.length - 1;
@@ -115,7 +116,7 @@ export function IntroCarousel({
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: CANVAS }}>
+    <View style={{ flex: 1, backgroundColor: CANVAS, paddingTop: insets.top }}>
       <View
         style={{
           flexDirection: "row",
@@ -144,64 +145,68 @@ export function IntroCarousel({
         </Pressable>
       </View>
 
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={onScrollEnd}
-        style={{ flex: 1 }}
-      >
-        {SLIDES.map((s, i) => (
-          <View key={i} style={{ width, flex: 1, paddingHorizontal: 28 }}>
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={onScrollEnd}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ alignItems: "center" }}
+        >
+          {SLIDES.map((s, i) => (
             <View
+              key={i}
               style={{
-                flex: 1,
-                alignItems: "center",
+                width,
+                height: "100%",
+                paddingHorizontal: 28,
                 justifyContent: "center",
-                minHeight: 220,
+                gap: 24,
               }}
             >
-              <Glow />
-              {i === index ? s.art() : null}
+              <View style={{ alignItems: "center", height: 200, justifyContent: "center" }}>
+                <Glow />
+                {i === index ? s.art() : null}
+              </View>
+              <View style={{ gap: 10 }}>
+                <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT }}>
+                  {s.eyebrow}
+                </PixelText>
+                <Text
+                  style={{
+                    fontSize: 30,
+                    lineHeight: 36,
+                    fontWeight: "800",
+                    color: INK,
+                    letterSpacing: -0.3,
+                  }}
+                >
+                  {s.title}
+                </Text>
+                <Text style={{ fontSize: 14.5, lineHeight: 21, color: MUTED }}>
+                  {s.body}
+                </Text>
+              </View>
             </View>
-            <View style={{ paddingBottom: 8, gap: 10 }}>
-              <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT }}>
-                {s.eyebrow}
-              </PixelText>
-              <Text
-                style={{
-                  fontSize: 30,
-                  lineHeight: 36,
-                  fontWeight: "800",
-                  color: INK,
-                  letterSpacing: -0.3,
-                }}
-              >
-                {s.title}
-              </Text>
-              <Text style={{ fontSize: 14.5, lineHeight: 21, color: MUTED }}>
-                {s.body}
-              </Text>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+          ))}
+        </ScrollView>
+      </View>
 
       <View
         style={{
           paddingHorizontal: 28,
           paddingTop: 12,
-          paddingBottom: 10,
+          paddingBottom: Math.max(insets.bottom, 12) + 10,
           gap: 12,
           backgroundColor: CANVAS,
-          zIndex: 2,
         }}
       >
         <PrimaryButton label={last ? finishLabel : "Next"} onPress={next} />
         {last && footerExtra ? footerExtra : <View style={{ height: 22 }} />}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -347,16 +352,17 @@ export function PrimaryButton({
     <Pressable
       onPress={onPress}
       disabled={busy}
-      style={({ pressed }) => ({
+      style={{
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
         gap: 8,
         backgroundColor: ACCENT,
         borderRadius: 12,
-        paddingVertical: 16,
-        opacity: busy || pressed ? 0.85 : 1,
-      })}
+        minHeight: 54,
+        paddingHorizontal: 20,
+        opacity: busy ? 0.7 : 1,
+      }}
     >
       {busy ? (
         <ActivityIndicator color={CANVAS} />
