@@ -1,6 +1,6 @@
 import "../global.css";
 
-import { useEffect } from "react";
+import { Fragment, useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
@@ -8,7 +8,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-import { AuthProvider } from "@/lib/auth";
+import { AuthProvider, useAuth } from "@/lib/auth";
 import { OnboardingProvider } from "@/lib/onboarding";
 import { ProProvider } from "@/lib/pro";
 import { InventoryProvider } from "@/lib/inventory";
@@ -51,7 +51,11 @@ export default function RootLayout() {
           <AuthProvider>
             <OnboardingProvider>
               <ProProvider>
-                <InventoryProvider>
+                {/* Remount every data provider (and the screens) when the account
+                    changes, so a new sign-in can't inherit the previous user's
+                    fridge / notes / recipes if a stale session lingered. */}
+                <AccountBoundary>
+                  <InventoryProvider>
                   <ScopeProvider>
                     <SocialProvider>
                       <NotificationsProvider>
@@ -261,6 +265,7 @@ export default function RootLayout() {
                     </SocialProvider>
                   </ScopeProvider>
                 </InventoryProvider>
+                </AccountBoundary>
               </ProProvider>
             </OnboardingProvider>
           </AuthProvider>
@@ -268,4 +273,14 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+/**
+ * Keys the data-provider subtree (and the screens) on the current account id, so a
+ * sign-in as a different user tears down every provider and rebuilds it from scratch —
+ * even if the previous session never cleanly transitioned through "signedOut".
+ */
+function AccountBoundary({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  return <Fragment key={user?.id ?? "signed-out"}>{children}</Fragment>;
 }

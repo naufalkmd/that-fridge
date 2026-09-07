@@ -134,18 +134,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await unregisterPush();
-    await googleSignOut();
-    await api.logout();
-    await resetChatUsed();
+    // Every cleanup step is best-effort — a failing one (offline, no push module) must
+    // never strand the session as "signedIn", or the next account's providers won't
+    // reload and it inherits the previous user's fridge/notes/recipes.
+    await unregisterPush().catch(() => {});
+    await googleSignOut().catch(() => {});
+    await api.logout().catch(() => {});
+    await resetChatUsed().catch(() => {});
     setUser(null);
     setStatus("signedOut");
   }, []);
 
   const deleteAccount = useCallback(async () => {
-    await unregisterPush();
-    await api.deleteAccount();
-    await resetChatUsed();
+    await unregisterPush().catch(() => {});
+    await api.deleteAccount(); // must succeed — the account is really being deleted
+    await resetChatUsed().catch(() => {});
     setUser(null);
     setStatus("signedOut");
   }, []);
