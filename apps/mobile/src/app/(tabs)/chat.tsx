@@ -28,6 +28,7 @@ import {
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
+import { useOnboarding } from "@/lib/onboarding";
 import { usePro } from "@/lib/pro";
 import {
   FREE_CHATS_PER_WEEK,
@@ -67,6 +68,7 @@ export default function Chat() {
   const insets = useSafeAreaInsets();
   const { session } = useLocalSearchParams<{ session?: string }>();
   const { items } = useInventory();
+  const { markChecklistVisited } = useOnboarding();
   const { isPro, presentPaywallIfNeeded } = usePro();
   const [messages, setMessages] = useState<Msg[]>([GREETING]);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -186,6 +188,9 @@ export default function Chat() {
       ]);
       // Fire-and-forget: let the crew update what it remembers from this exchange.
       api.extractMemory(messageForApi, res.agent_response).catch(() => {});
+      // Completes the "Ask the crew" step on the Home checklist — a sent message, not
+      // just opening this screen.
+      void markChecklistVisited("crew");
       if (!isPro) {
         await bumpChatUsed();
         setUsed((u) => u + 1);
