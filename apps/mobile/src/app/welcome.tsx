@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -855,16 +855,23 @@ function WallStep({
 }) {
   const [appleAvailable, setAppleAvailable] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [consent, setConsent] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
   useEffect(() => {
     AppleAuthentication.isAvailableAsync()
       .then(setAppleAvailable)
       .catch(() => setAppleAvailable(false));
   }, []);
 
-  const run = (fn: () => void) => {
+  const run = (fn: () => void | Promise<void>) => {
     if (busy) return;
+    if (!consent) {
+      setHint("Please tick the box above to continue.");
+      return;
+    }
     setBusy(true);
-    fn();
+    // Reset if the provider sheet is cancelled; on success the screen has already navigated away.
+    Promise.resolve(fn()).finally(() => setBusy(false));
   };
 
   const done = [
@@ -928,6 +935,44 @@ function WallStep({
           ))}
         </View>
 
+        <Pressable
+          onPress={() => {
+            setConsent((v) => !v);
+            setHint(null);
+          }}
+          style={{ flexDirection: "row", alignItems: "flex-start", gap: 9, paddingHorizontal: 2 }}
+        >
+          <Ionicons
+            name={consent ? "checkbox" : "square-outline"}
+            size={18}
+            color={consent ? ACCENT : MUTED}
+            style={{ marginTop: 1 }}
+          />
+          <Text style={{ flex: 1, fontSize: 11, lineHeight: 15, color: FAINT }}>
+            I agree to the{" "}
+            <Text
+              style={{ fontWeight: "700", color: MUTED }}
+              onPress={() => Linking.openURL("https://thatfridge.com/terms")}
+            >
+              Terms
+            </Text>{" "}
+            &amp;{" "}
+            <Text
+              style={{ fontWeight: "700", color: MUTED }}
+              onPress={() => Linking.openURL("https://thatfridge.com/privacy")}
+            >
+              Privacy Policy
+            </Text>
+            , and consent to my data (including chat and photos) being processed outside my
+            country — on servers in Singapore and the United States — for AI features.
+          </Text>
+        </Pressable>
+        {hint && (
+          <Text style={{ fontSize: 11.5, fontWeight: "600", color: BAD, paddingHorizontal: 2 }}>
+            {hint}
+          </Text>
+        )}
+
         <View style={{ gap: 10 }}>
           {appleAvailable && (
             <AppleAuthentication.AppleAuthenticationButton
@@ -960,7 +1005,12 @@ function WallStep({
             </Pressable>
           )}
           <Pressable
-            onPress={() => run(onEmail)}
+            onPress={() => {
+              // The email sign-up screen has its own consent checkbox — don't make them tick twice.
+              if (busy) return;
+              setBusy(true);
+              onEmail();
+            }}
             disabled={busy}
             style={{
               alignItems: "center",

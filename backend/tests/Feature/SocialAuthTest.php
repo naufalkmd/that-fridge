@@ -97,6 +97,45 @@ class SocialAuthTest extends TestCase
         $this->assertNull($user->email_verified_at);
     }
 
+    public function test_a_new_social_account_records_cross_border_transfer_consent(): void
+    {
+        $this->fakeVerifier('apple', new OAuthIdentity('apple', 'apple-sub-1', 'ada@example.com', true));
+
+        $this->postJson('/api/auth/apple', ['identityToken' => 'tok', 'dataTransferConsent' => true])
+            ->assertStatus(201);
+
+        $user = User::where('email', 'ada@example.com')->firstOrFail();
+        $this->assertNotNull($user->data_transfer_consented_at);
+    }
+
+    public function test_explicitly_declining_transfer_consent_is_rejected(): void
+    {
+        $this->fakeVerifier('google', new OAuthIdentity('google', 'g-sub-1', 'g@example.com', true));
+
+        $this->postJson('/api/auth/google', ['idToken' => 'tok', 'dataTransferConsent' => false])
+            ->assertStatus(422);
+
+        $this->assertSame(0, User::count());
+    }
+
+    public function test_consent_is_backfilled_for_a_pre_existing_social_account(): void
+    {
+        $existing = User::factory()->create([
+            'email' => 'old@example.com',
+            'password' => null,
+            'oauth_provider' => 'google',
+            'oauth_sub' => 'g-sub-old',
+            'data_transfer_consented_at' => null,
+        ]);
+
+        $this->fakeVerifier('google', new OAuthIdentity('google', 'g-sub-old', 'old@example.com', true));
+
+        $this->postJson('/api/auth/google', ['idToken' => 'tok', 'dataTransferConsent' => true])
+            ->assertStatus(200);
+
+        $this->assertNotNull($existing->refresh()->data_transfer_consented_at);
+    }
+
     public function test_an_invalid_token_is_a_validation_error(): void
     {
         $this->mock(OAuthVerifier::class, fn ($m) => $m->shouldReceive('apple')

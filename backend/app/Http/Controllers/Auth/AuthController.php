@@ -82,9 +82,17 @@ class AuthController extends Controller
         $data = $request->validate([
             'identityToken' => ['required', 'string'],
             'name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            // Cross-border transfer consent (PIPA / PDPA / UK-Swiss). 'sometimes|accepted':
+            // a new client always sends it true; an old client (pre-1.2.2) omits it and the
+            // completed OAuth handshake past the on-screen notice stands as the affirmative act.
+            'dataTransferConsent' => ['sometimes', 'accepted'],
         ]);
 
-        return $this->socialSignIn($verifier->apple($data['identityToken']), $data['name'] ?? null);
+        return $this->socialSignIn(
+            $verifier->apple($data['identityToken']),
+            $data['name'] ?? null,
+            $request->boolean('dataTransferConsent'),
+        );
     }
 
     /**
@@ -94,9 +102,14 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'idToken' => ['required', 'string'],
+            'dataTransferConsent' => ['sometimes', 'accepted'],
         ]);
 
-        return $this->socialSignIn($verifier->google($data['idToken']), null);
+        return $this->socialSignIn(
+            $verifier->google($data['idToken']),
+            null,
+            $request->boolean('dataTransferConsent'),
+        );
     }
 
     public function logout(Request $request)
@@ -157,7 +170,7 @@ class AuthController extends Controller
      * this provider id, else link one that shares the verified email, else create a fresh
      * passwordless account.
      */
-    private function socialSignIn(OAuthIdentity $identity, ?string $fallbackName): JsonResponse
+    private function socialSignIn(OAuthIdentity $identity, ?string $fallbackName, bool $consent = false): JsonResponse
     {
         $user = User::where('oauth_provider', $identity->provider)
             ->where('oauth_sub', $identity->sub)
@@ -175,6 +188,9 @@ class AuthController extends Controller
         if (! $user) {
             $user = $this->createSocialUser($identity, $fallbackName);
             $created = true;
+        } elseif ($consent && ! $user->data_transfer_consented_at) {
+            // A pre-existing social account from before consent was captured here.
+            $user->forceFill(['data_transfer_consented_at' => now()])->save();
         }
 
         $token = $user->createToken('thatfridge')->plainTextToken;
@@ -205,6 +221,9 @@ class AuthController extends Controller
                 'password' => null,
                 'oauth_provider' => $identity->provider,
                 'oauth_sub' => $identity->sub,
+                // Completing the OAuth handshake past the cross-border notice on the sign-in
+                // screen is the affirmative consent act; record when it happened.
+                'data_transfer_consented_at' => now(),
             ]);
         } catch (QueryException $e) {
             // A concurrent first sign-in from the same device won the (provider, sub) unique

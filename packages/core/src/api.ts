@@ -332,17 +332,25 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   async function loginWithApple(
     identityToken: string,
     name?: string | null,
+    dataTransferConsent = true,
   ): Promise<AuthResult> {
     const res = await http.post<AuthResult>("/auth/apple", {
       identityToken,
       ...(name ? { name } : {}),
+      ...(dataTransferConsent ? { dataTransferConsent: true } : {}),
     });
     await tokens.set(res.token);
     return res;
   }
 
-  async function loginWithGoogle(idToken: string): Promise<AuthResult> {
-    const res = await http.post<AuthResult>("/auth/google", { idToken });
+  async function loginWithGoogle(
+    idToken: string,
+    dataTransferConsent = true,
+  ): Promise<AuthResult> {
+    const res = await http.post<AuthResult>("/auth/google", {
+      idToken,
+      ...(dataTransferConsent ? { dataTransferConsent: true } : {}),
+    });
     await tokens.set(res.token);
     return res;
   }

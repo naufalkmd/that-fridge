@@ -96,6 +96,10 @@ export default function SignIn() {
   }
 
   async function social(run: () => Promise<void>) {
+    if (!isLogin && !dataTransferConsent) {
+      setError("Please confirm the consent checkbox above to continue.");
+      return;
+    }
     setError(null);
     setBusy(true);
     try {
@@ -233,8 +237,8 @@ export default function SignIn() {
                     />
                     <Text className="flex-1 text-[11.5px] leading-4 text-faint">
                       I consent to my data (including chat messages and photos) being
-                      processed outside my country by ThatFridge's AI service providers, as
-                      described in the{" "}
+                      processed outside my country — on servers in Singapore and the United
+                      States — for ThatFridge's AI features, as described in the{" "}
                       <Text
                         className="font-semibold text-muted"
                         onPress={() => Linking.openURL("https://thatfridge.com/privacy")}
@@ -312,6 +316,18 @@ export default function SignIn() {
                   </Text>
                 </Pressable>
               )}
+
+              <Text className="text-center text-[11px] leading-4 text-faint">
+                Continuing sends your data to servers outside your country (Singapore, United
+                States) for AI features — see our{" "}
+                <Text
+                  className="font-semibold text-muted"
+                  onPress={() => Linking.openURL("https://thatfridge.com/privacy")}
+                >
+                  Privacy Policy
+                </Text>
+                .
+              </Text>
             </View>
           )}
 
