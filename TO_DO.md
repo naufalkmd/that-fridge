@@ -32,27 +32,15 @@ fast-follow.
   `v1.2.2` to trigger the build + auto-submit. `v1.2.1` (`7a1db9a`) is live in TestFlight but
   predates Google + all the onboarding work — everything since is OTA on runtime **1.2.2 only**,
   so the reviewed binary must be 1.2.2.
+  - Once it processes: re-run the key smoke paths on the actual binary (**especially "Continue
+    with Google"** — never in a shipped build before) and have the team re-check on TestFlight.
 - [ ] **Screenshots** — 10-frame marketing set (designed, not plain), plan in
   `apps/mobile/SCREENSHOTS.md`. Friend captures the 9 raw screens from the new build on the demo
   account (`keira@thatfridge.test`, hand over the new password) → send to Claude → Claude
   composites the frames via the `design` skill canvas or an HTML+headless-Chrome template (§5)
   and returns export-ready 1320×2868 PNGs. English set now; `ko` re-render post-approval.
-- [X] **Full real-device smoke test** — passed 2026-09-07 against the live API. Covered: core
-  loop (add / barcode / edit / mark-made decrements), receipt + fridge-photo camera, the
-  2026-09-06 deletion flows, the full first-run `/welcome` flow + Home spotlight + progress-path
-  checklist + `preview=1` replay, Apple **and** Google sign-in, paywall (trial CTA, real
-  $2.99/$19.99, Restore, Terms/Privacy links), purchase sheet "7 days free then $X" on a fresh
-  sandbox ID, account deletion from a clean install, local notifications firing + routing on tap.
-  Re-run the key paths once on the actual `v1.2.2` TestFlight binary.
-- [X] **App Store availability** — set 2026-09-06 to worldwide **minus** the EU-27 + Iceland +
-  Norway (avoids the DSA trader declaration; Switzerland + UK kept) and China. Subscriptions
-  (monthly + yearly) set to all storefronts — capped by app availability anyway. Base price
-  USD $2.99 / $19.99, MY + KR set manually, rest auto-converted.
-  - Primary category confirmed **Food & Drink** 2026-09-06.
-  - Drop South Korea if the KR privacy policy (`/privacy/ko/`) isn't live at submission.
-- [x] **TestFlight validated by the team** on real devices (2026-09-07). Re-check on the
-  `v1.2.2` build once it processes.
-- [ ] **Submit** — set release to **manual** in ASC, submit the version.
+- [ ] **Submit** — set release to **manual** in ASC, submit the version. Drop South Korea from
+  the storefront list if `/privacy/ko/` still 404s at submission time (see Korea rollout).
 
 ### Korea rollout (whenever the KR storefront ships — can trail the English launch)
 
