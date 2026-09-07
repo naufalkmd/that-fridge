@@ -4,8 +4,8 @@
 React Native — no Capacitor, no WebView. This launch is also our **RevenueCat Shipaton 2026**
 entry.
 
-**Target markets:** Malaysia + South Korea. API hosted in Singapore; v1 app UI English-only,
-localized store listings + Korean UI fast-follow.
+**Target markets:** Malaysia at launch (plus ~140 other storefronts); South Korea is a
+post-approval fast-follow (see Deferred). API hosted in Singapore; v1 app UI English-only.
 
 **Hard deadline: Sep 30, 2026, 11:45 pm PDT.** The app must be **fully published and live**
 (Apple review passed), not just submitted — review takes days, so submit ~2 weeks early.
@@ -24,7 +24,9 @@ fast-follow.
 
 ## What's left to do
 
-### Blocking submission
+### Ship by Sep 30 (App Store + Shipaton — one deadline)
+
+**App Store**
 
 - [ ] **Cut the `v1.2.2` submission binary** — `app.config.ts` version already bumped to 1.2.2
   (2026-09-07) with Google Sign-In wired into the native build (`@react-native-google-signin`
@@ -38,23 +40,10 @@ fast-follow.
   `apps/mobile/SCREENSHOTS.md`. Friend captures the 9 raw screens from the new build on the demo
   account (`keira@thatfridge.test`, hand over the new password) → send to Claude → Claude
   composites the frames via the `design` skill canvas or an HTML+headless-Chrome template (§5)
-  and returns export-ready 1320×2868 PNGs. English set now; `ko` re-render post-approval.
+  and returns export-ready 1320×2868 PNGs. English set.
 - [ ] **Submit** — set release to **manual** in ASC, submit the version.
 
-### Korea rollout (whenever the KR storefront ships — can trail the English launch)
-
-- [ ] Per-storefront subscription prices: Malaysia `RM12.90` / `RM89`, Korea `₩3,900` / `₩25,000`.
-- [ ] Korean listing metadata (subtitle, description, keywords, screenshots) — metadata-only,
-  lands after English approval with no binary re-review. Draft screenshot captions in
-  `SCREENSHOTS.md` §6.
-- [ ] **Korean privacy policy** — `/privacy/ko/` is a 404. Legal requirement for KR (PIPA),
-  needs a real translation. If it's not ready, launch **MY-first** and add KR later.
-- [ ] Korea PIPA: cross-border consent is now captured on every sign-up path (email checkbox +
-  a notice/affirmative-action before Apple/Google, recorded as `data_transfer_consented_at`) —
-  enough for MY/UK/CH. PIPA wants it as a **separate, explicit, unticked checkbox on every
-  path including social login**; gate that stricter version on KR locale before a KR launch.
-
-### Shipaton / Devpost (deadline: same Sep 30, 11:45pm PDT)
+**Shipaton / Devpost** (same Sep 30, 11:45pm PDT)
 
 - [ ] Devpost project page + feature description.
 - [ ] Demo video ≤2:00, public on YouTube/Vimeo, no copyrighted music/footage.
@@ -62,11 +51,39 @@ fast-follow.
 - [ ] Peace Prize impact statement (household food-waste → savings + environmental).
 - [ ] App Store URL on the submission.
 - [ ] **Submit on Devpost before the deadline.**
-
 - **Don't** market as "launched" anywhere public (TestFlight link, ProductHunt, press) before
   the store listing is live — risks Shipaton's "brand-new app" disqualification.
 
 ### Deferred to post-launch (don't work on these before Sep 30)
+
+- [ ] **Korea launch** — metadata-only fast-follow, no binary re-review. There is no PIPA
+  "pass/fail" or pre-approval to clear; the real gates are Apple review wanting a proper
+  localized policy, and your own exposure to Korean users. A disclaimer is not a substitute for
+  compliance. To turn KR back on:
+  - **Korean privacy policy** at `/privacy/ko/` (currently 404) — the one genuine blocker, and
+    cheap: ~$200–350 for a KR legal translator, or ~$300–600 for a PIPA-compliance consultant
+    who *adapts* it to PIPA norms rather than translating literally (you get the compliance
+    check too). Keep an "English version prevails" clause.
+  - **Stricter KR consent** — a *separate, explicit, unticked* cross-border checkbox on **every**
+    sign-in path including Apple/Google, gated on KR locale. Today's mechanism (email checkbox +
+    a notice/affirmative-action before social, recorded as `data_transfer_consented_at`) covers
+    MY/UK/CH but isn't PIPA gold-standard.
+  - Per-storefront prices: KR `₩3,900` / `₩25,000`. (MY `RM12.90` / `RM89` can go in at the
+    main launch.)
+  - Korean listing metadata (subtitle, description, keywords) + `ko` screenshot re-render —
+    captions drafted in `SCREENSHOTS.md` §6.
+  - Re-check the KR storefront in ASC → Availability (unchecked 2026-09-07).
+
+- [ ] **Getting a real translation** (the KR policy above; later the KR/MS app UI):
+  - Short legal docs: AI draft → *paid native review*, not translate-from-scratch.
+    Fiverr / Upwork $30–80 for a review pass; ProZ.com for actual professional legal
+    translators. Always keep "English version prevails".
+  - The operator is Malaysian — the `/privacy/pdpa/` Malay notice may just need your own
+    careful read.
+  - App UI strings (`react-i18next` JSON): a localization platform — Crowdin / Lokalise
+    (vetted translator marketplaces) or Weblate (self-host). ~$150–300 for a full KO set.
+  - Malaysia's PDP dept (pdp.gov.my) and Korea's PIPC (pipc.go.kr) publish model privacy
+    notices in the local language — adapting their structure often beats translating ours.
 
 - [ ] Onboarding polish — personalized payoff copy from the stored `preferences` tags + a
   peak-end "you're all set" beat, and contextual one-shot coach-marks (crew tabs in `/eat`,
@@ -96,8 +113,8 @@ fast-follow.
     ceiling above.
 - [ ] Sentry DSN (crash monitoring is scaffolded, currently a no-op).
 - [ ] `apps/web/lib/thatfridge` → `packages/core` extraction (most already moved).
-- [ ] `react-i18next` + `expo-localization` — ship Korean (and optionally Malay) UI as an OTA,
-  no rebuild needed.
+- [ ] `react-i18next` + `expo-localization` — the i18n plumbing so a Korean (or Malay) UI ships
+  as an OTA, no rebuild. Getting the actual strings translated is the "real translation" item above.
 - [ ] Android: `eas build -p android`, Play Console, Data Safety form, screenshots, submit.
   Decide personal vs. organization account type first.
 - [ ] Web deployment: `expo export -p web`, wide-viewport (≥900px) layouts, retire legacy
@@ -194,7 +211,7 @@ What's covered for the markets we sell in:
   this scale — revisit only with real traction there.
 - **Korea:** storefront **unchecked for launch**. Re-enable only after the Korean-language
   policy (`/privacy/ko/`) and the stricter unticked-checkbox consent on every path ship (see
-  Korea rollout).
+  Deferred → "Korea launch").
 - Adding the EU later is a much bigger lift (DSA trader info, GDPR lawful basis, tracking
   consent, EU representative) — treat as its own project.
 
