@@ -92,8 +92,10 @@ screen.** Skip entirely if it risks the deadline — it's the least important pi
 tab bar measures each pill + the "+" FAB and publishes their screen rects via
 `useOnboarding().setCoachRect(target, rect)` (`coachRects` map).
 
-**Phase A — empty fridge:** dims the screen, highlights the "+" with a ring + tooltip
-("Add your first item"), plus a bright tappable FAB copy → `/add`. Tap dim / Skip → dismiss.
+**Phase A — empty fridge:** dims the screen (the dim blocks the app but does **not**
+dismiss on tap), highlights the "+" with a ring + tooltip ("Add your first item"). The
+tooltip's "Next" button and the bright FAB copy both go to `/add`; only the top-right
+"Skip" closes the coach.
 
 **Phase B — once an item exists** (and ≤ 6 items, i.e. not an established fridge / demo
 account): a 3-stop "look around" pointing at the **Inventory**, **Crew** and **Chat** tabs

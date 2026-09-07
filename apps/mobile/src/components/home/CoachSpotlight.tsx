@@ -117,7 +117,7 @@ export function CoachSpotlight() {
         big
         title="Add your first item"
         body="Tap + — scan a barcode or just type it in. Your fridge fills in from there."
-        primaryLabel="Add an item"
+        primaryLabel="Next"
         onPrimary={() => router.push("/add")}
         onSkip={dismissCoach}
       />
@@ -175,10 +175,9 @@ function Overlay({
   const chip = big ? FAB_SIZE : 46;
   return (
     <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-      <Pressable
-        onPress={onSkip}
-        style={{ flex: 1, backgroundColor: "rgba(6,6,9,0.88)" }}
-      >
+      {/* opaque dim that blocks the app behind it — tapping it does NOT dismiss;
+          only the "Skip" button (or the primary action) closes the coach. */}
+      <View style={{ flex: 1, backgroundColor: "rgba(6,6,9,0.88)" }}>
         {/* tooltip, anchored above the highlighted target */}
         <View
           pointerEvents="box-none"
@@ -332,7 +331,7 @@ function Overlay({
             </Text>
           </Pressable>
         )}
-      </Pressable>
+      </View>
     </View>
   );
 }
