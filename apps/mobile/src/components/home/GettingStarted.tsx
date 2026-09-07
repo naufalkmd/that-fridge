@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useEffect, useMemo, useRef } from "react";
+import { Animated, Easing, Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -10,29 +10,37 @@ import { useShopping } from "@/lib/shopping";
 import { useOnboarding } from "@/lib/onboarding";
 
 const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
+const CANVAS = "#0a0a0c";
 const HAIRLINE = "rgba(255,255,255,0.09)";
 const INK = "#eaeaec";
 const MUTED = "rgba(234,234,236,0.58)";
 const FAINT = "rgba(234,234,236,0.34)";
+const RAIL = "rgba(234,234,236,0.16)";
 const GOOD = "#39e07f";
+const ACCENT = "#26c6da";
+
+const NODE_COL = 26;
+const LINE_X = NODE_COL / 2 - 1;
+const NODE_CENTER_Y = 10; // node marginTop (3) + radius (7)
 
 type Route = "/add" | "/chat" | "/recipes" | "/shopping" | "/fridges";
+type NodeState = "done" | "current" | "future";
 
 type Step = {
   id: string;
   label: string;
   hint: string;
-  /** null = not a task, just a pre-checked affirmation (endowed-progress head start). */
+  /** null = not a task, just the pre-checked head start. */
   route: Route | null;
   done: boolean;
 };
 
 /**
- * Self-paced "get started" card on Home — appears once the intro carousel is done and
- * hides itself when every step is complete or the user taps Hide. Follows the natural
- * hierarchy (account → fridge → items → the rest) and opens with the account row already
- * ticked (endowed progress) so it never reads as a daunting 0/N.
+ * Self-paced "get started" card on Home — a vertical progress path. Appears once the intro
+ * carousel is done, hides itself when every step is complete or the user taps Hide. Follows
+ * the natural hierarchy (account → fridge → items → the rest) and opens with the account
+ * node already filled (endowed progress) so it never reads as a daunting start-from-zero.
+ * The first unfinished step is the lit "you are here" node; the rest fade back.
  */
 export function GettingStarted() {
   const router = useRouter();
@@ -101,6 +109,7 @@ export function GettingStarted() {
   }, [items, recipes, shopping, fridges, checklistVisited]);
 
   const doneCount = steps.filter((s) => s.done).length;
+  const currentIndex = steps.findIndex((s) => !s.done);
 
   // Not for someone whose fridge is already established (e.g. a reinstall, or the demo
   // account) — the intro carousel can re-show there, but a beginner checklist shouldn't.
@@ -136,7 +145,7 @@ export function GettingStarted() {
           justifyContent: "space-between",
           paddingHorizontal: 14,
           paddingTop: 12,
-          paddingBottom: 8,
+          paddingBottom: 12,
         }}
       >
         <View>
@@ -144,7 +153,7 @@ export function GettingStarted() {
             Getting started
           </Text>
           <Text style={{ fontSize: 11, color: FAINT, marginTop: 1 }}>
-            {doneCount} of {steps.length} done
+            {doneCount} of {steps.length}
           </Text>
         </View>
         <Pressable onPress={dismissChecklist} hitSlop={8}>
@@ -154,76 +163,203 @@ export function GettingStarted() {
         </Pressable>
       </View>
 
-      <View
-        style={{
-          height: 3,
-          marginHorizontal: 14,
-          borderRadius: 2,
-          backgroundColor: SURFACE2,
-          overflow: "hidden",
-        }}
-      >
-        <View
-          style={{
-            height: "100%",
-            width: `${(doneCount / steps.length) * 100}%`,
-            backgroundColor: GOOD,
-          }}
-        />
-      </View>
-
-      <View style={{ paddingVertical: 4 }}>
-        {steps.map((step) => (
-          <Pressable
+      <View style={{ paddingHorizontal: 14, paddingBottom: 6 }}>
+        {steps.map((step, i) => (
+          <PathRow
             key={step.id}
+            step={step}
+            state={
+              step.done ? "done" : i === currentIndex ? "current" : "future"
+            }
+            isFirst={i === 0}
+            isLast={i === steps.length - 1}
             onPress={() => go(step)}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 11,
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-            }}
-          >
-            <View
-              style={{
-                width: 20,
-                height: 20,
-                borderRadius: 10,
-                borderWidth: step.done ? 0 : 1.5,
-                borderColor: "rgba(255,255,255,0.22)",
-                backgroundColor: step.done ? GOOD : "transparent",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {step.done && (
-                <MaterialCommunityIcons name="check" size={12} color="#0a0a0c" />
-              )}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontSize: 13,
-                  fontWeight: "600",
-                  color: step.done ? MUTED : INK,
-                  textDecorationLine: step.done ? "line-through" : "none",
-                }}
-              >
-                {step.label}
-              </Text>
-              {!step.done && (
-                <Text style={{ fontSize: 11, color: FAINT, marginTop: 1 }}>
-                  {step.hint}
-                </Text>
-              )}
-            </View>
-            {!step.done && (
-              <Ionicons name="chevron-forward" size={15} color={FAINT} />
-            )}
-          </Pressable>
+          />
         ))}
       </View>
+    </View>
+  );
+}
+
+function PathRow({
+  step,
+  state,
+  isFirst,
+  isLast,
+  onPress,
+}: {
+  step: Step;
+  state: NodeState;
+  isFirst: boolean;
+  isLast: boolean;
+  onPress: () => void;
+}) {
+  // The rail reads as "filled up to where you are": green through every done node and the
+  // current one, faint below.
+  const lineColor = state === "future" ? RAIL : GOOD;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={step.route === null}
+      style={{ flexDirection: "row" }}
+    >
+      <View style={{ width: NODE_COL, alignItems: "center" }}>
+        <View
+          style={{
+            position: "absolute",
+            left: LINE_X,
+            width: 2,
+            top: isFirst ? NODE_CENTER_Y : 0,
+            bottom: isLast ? undefined : 0,
+            height: isLast ? NODE_CENTER_Y : undefined,
+            backgroundColor: lineColor,
+          }}
+        />
+        <PathNode state={state} />
+      </View>
+
+      <View
+        style={{
+          flex: 1,
+          paddingBottom: isLast ? 6 : 16,
+          paddingLeft: 2,
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text
+            style={{
+              flex: 1,
+              fontSize: 13,
+              fontWeight: state === "current" ? "700" : "600",
+              color:
+                state === "done"
+                  ? MUTED
+                  : state === "current"
+                    ? INK
+                    : FAINT,
+              textDecorationLine: state === "done" ? "line-through" : "none",
+            }}
+          >
+            {step.label}
+          </Text>
+          {state === "current" && (
+            <Ionicons name="chevron-forward" size={15} color={ACCENT} />
+          )}
+        </View>
+        {state === "current" && !!step.hint && (
+          <Text style={{ fontSize: 11, color: FAINT, marginTop: 2 }}>
+            {step.hint}
+          </Text>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
+function PathNode({ state }: { state: NodeState }) {
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (state !== "current") return;
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 1400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 1400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [state, pulse]);
+
+  if (state === "future") {
+    return (
+      <View
+        style={{
+          marginTop: NODE_CENTER_Y - 4,
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          borderWidth: 1.5,
+          borderColor: FAINT,
+          backgroundColor: CANVAS,
+        }}
+      />
+    );
+  }
+
+  if (state === "done") {
+    return (
+      <View
+        style={{
+          marginTop: 3,
+          width: 14,
+          height: 14,
+          borderRadius: 7,
+          backgroundColor: GOOD,
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1,
+        }}
+      >
+        <MaterialCommunityIcons name="check" size={9} color={CANVAS} />
+      </View>
+    );
+  }
+
+  // current
+  return (
+    <View
+      style={{
+        marginTop: 3,
+        width: 14,
+        height: 14,
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1,
+      }}
+    >
+      <Animated.View
+        style={{
+          position: "absolute",
+          width: 14,
+          height: 14,
+          borderRadius: 7,
+          backgroundColor: ACCENT,
+          opacity: pulse.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.45, 0.1],
+          }),
+          transform: [
+            {
+              scale: pulse.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 1.9],
+              }),
+            },
+          ],
+        }}
+      />
+      <View
+        style={{
+          width: 14,
+          height: 14,
+          borderRadius: 7,
+          borderWidth: 2,
+          borderColor: ACCENT,
+          backgroundColor: SURFACE,
+        }}
+      />
     </View>
   );
 }
