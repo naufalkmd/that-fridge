@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { LayoutAnimation, Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -430,12 +430,130 @@ function QuestionsStep({
 
 // ---- step: meet the crew ---------------------------------------------
 
-const CREW_LINES = [
-  "I turn what's about to go off into tonight's dinner.",
-  "I flag food before it spoils — and what's risky to keep.",
-  "I say what belongs in the fridge, freezer or pantry.",
-  "I keep a running list of what you're running low on.",
+const CREW_BLUE = "#3d6fe0"; // Organizer's zone colour (matches Home's crew scene / Kitchen Score)
+
+// Order matches CREW in components/onboarding/shared: Chef, Guardian, Organizer, Shopkeeper.
+const CREW_INFO: { color: string; role: string; does: string; example: string }[] = [
+  {
+    color: WARN,
+    role: "Cooks from what you have",
+    does: "Turns whatever's about to go off into a plan for tonight — using what's already in your fridge, not a shopping trip.",
+    example: "Spinach and eggs are on their way out — a 10-minute frittata clears both.",
+  },
+  {
+    color: BAD,
+    role: "Watches the use-by dates",
+    does: "Flags food a few days before it turns, and tells you when something's already risky to keep.",
+    example: "That yogurt is 2 days past its date — give it a sniff before you trust it.",
+  },
+  {
+    color: CREW_BLUE,
+    role: "Knows where things belong",
+    does: "Says whether something keeps best in the fridge, freezer or pantry — and roughly how long it lasts there.",
+    example: "Bread lasts about 3× longer in the freezer. Want to move it?",
+  },
+  {
+    color: GOOD,
+    role: "Tracks what's running low",
+    does: "Builds your shopping list as things run out, so you catch it here instead of in an empty kitchen.",
+    example: "Down to your last 2 eggs — added them to the list.",
+  },
 ];
+
+function CrewCard({
+  name,
+  gif,
+  info,
+  open,
+  onToggle,
+}: {
+  name: string;
+  gif: number;
+  info: (typeof CREW_INFO)[number];
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onToggle}
+      style={{
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: open ? `${info.color}66` : HAIRLINE,
+        backgroundColor: open ? `${info.color}12` : SURFACE,
+        padding: 14,
+        gap: open ? 12 : 0,
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 13 }}>
+        <View
+          style={{
+            width: 50,
+            height: 50,
+            borderRadius: 13,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: `${info.color}1f`,
+            borderWidth: 1,
+            borderColor: `${info.color}33`,
+          }}
+        >
+          <Image source={gif} style={{ width: 34, height: 34 }} contentFit="contain" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 15, fontWeight: "800", color: INK }}>{name}</Text>
+          <Text
+            style={{ fontSize: 12.5, fontWeight: "600", color: info.color, marginTop: 1 }}
+          >
+            {info.role}
+          </Text>
+        </View>
+        <Ionicons
+          name="chevron-down"
+          size={17}
+          color={open ? info.color : FAINT}
+          style={{ transform: [{ rotate: open ? "180deg" : "0deg" }] }}
+        />
+      </View>
+
+      {open && (
+        <View style={{ gap: 10 }}>
+          <Text style={{ fontSize: 13.5, lineHeight: 19, color: MUTED }}>{info.does}</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 9,
+              backgroundColor: CANVAS,
+              borderRadius: 11,
+              borderLeftWidth: 2.5,
+              borderLeftColor: info.color,
+              paddingVertical: 9,
+              paddingHorizontal: 11,
+            }}
+          >
+            <Ionicons
+              name="chatbubble-ellipses"
+              size={13}
+              color={info.color}
+              style={{ marginTop: 2 }}
+            />
+            <Text
+              style={{
+                flex: 1,
+                fontSize: 12.5,
+                lineHeight: 17,
+                fontStyle: "italic",
+                color: INK,
+              }}
+            >
+              &ldquo;{info.example}&rdquo;
+            </Text>
+          </View>
+        </View>
+      )}
+    </Pressable>
+  );
+}
 
 function CrewStep({
   onBack,
@@ -448,52 +566,52 @@ function CrewStep({
 }) {
   const [open, setOpen] = useState<number | null>(0);
 
+  const toggle = (i: number) => {
+    LayoutAnimation.configureNext(
+      LayoutAnimation.create(170, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity),
+    );
+    setOpen((cur) => (cur === i ? null : i));
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CANVAS }}>
       <BackBar onBack={onBack} onHaveAccount={onHaveAccount} />
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 26, paddingTop: 10, paddingBottom: 20, gap: 12 }}
+        contentContainerStyle={{ paddingHorizontal: 26, paddingTop: 10, paddingBottom: 24, gap: 11 }}
       >
-        <View style={{ gap: 6 }}>
+        <View style={{ gap: 6, marginBottom: 2 }}>
           <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT }}>MEET THE CREW</PixelText>
           <Text
             style={{ fontSize: 25, lineHeight: 31, fontWeight: "800", color: INK, letterSpacing: -0.3 }}
           >
             Four of them, one job each
           </Text>
-          <Text style={{ fontSize: 13, color: FAINT }}>Tap a card to hear what they do.</Text>
+          <Text style={{ fontSize: 13, color: FAINT }}>Tap a card to see how they help.</Text>
         </View>
 
-        {CREW.map((c, i) => {
-          const isOpen = open === i;
-          return (
-            <Pressable
-              key={c.name}
-              onPress={() => setOpen(isOpen ? null : i)}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 13,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: isOpen ? ACCENT : HAIRLINE,
-                backgroundColor: isOpen ? "rgba(38,198,218,0.08)" : SURFACE,
-                padding: 13,
-              }}
-            >
-              <Image source={c.gif} style={{ width: 42, height: 42 }} contentFit="contain" />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14.5, fontWeight: "800", color: INK }}>{c.name}</Text>
-                <Text
-                  style={{ fontSize: 12.5, lineHeight: 17, color: isOpen ? MUTED : FAINT, marginTop: 2 }}
-                  numberOfLines={isOpen ? undefined : 1}
-                >
-                  {CREW_LINES[i]}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })}
+        {CREW.map((c, i) => (
+          <CrewCard
+            key={c.name}
+            name={c.name}
+            gif={c.gif}
+            info={CREW_INFO[i]}
+            open={open === i}
+            onToggle={() => toggle(i)}
+          />
+        ))}
+
+        <Text
+          style={{
+            fontSize: 12.5,
+            lineHeight: 18,
+            color: FAINT,
+            textAlign: "center",
+            marginTop: 10,
+          }}
+        >
+          Always on, never nagging. You&apos;ll meet them properly once your fridge has a few
+          things in it.
+        </Text>
       </ScrollView>
 
       <View style={{ paddingHorizontal: 26, paddingTop: 8, paddingBottom: 20 }}>
