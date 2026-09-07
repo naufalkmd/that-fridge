@@ -37,7 +37,7 @@ fast-follow.
   account (`keira@thatfridge.test`, hand over the new password) → send to Claude → Claude
   composites the frames via the `design` skill canvas or an HTML+headless-Chrome template (§5)
   and returns export-ready 1320×2868 PNGs. English set now; `ko` re-render post-approval.
-- [x] **Full real-device smoke test** — passed 2026-09-07 against the live API. Covered: core
+- [X] **Full real-device smoke test** — passed 2026-09-07 against the live API. Covered: core
   loop (add / barcode / edit / mark-made decrements), receipt + fridge-photo camera, the
   2026-09-06 deletion flows, the full first-run `/welcome` flow + Home spotlight + progress-path
   checklist + `preview=1` replay, Apple **and** Google sign-in, paywall (trial CTA, real
@@ -50,8 +50,8 @@ fast-follow.
   USD $2.99 / $19.99, MY + KR set manually, rest auto-converted.
   - Primary category confirmed **Food & Drink** 2026-09-06.
   - Drop South Korea if the KR privacy policy (`/privacy/ko/`) isn't live at submission.
-- [ ] **TestFlight validated by the team** on real devices — add internal testers + a "What to
-  Test" note.
+- [x] **TestFlight validated by the team** on real devices (2026-09-07). Re-check on the
+  `v1.2.2` build once it processes.
 - [ ] **Submit** — set release to **manual** in ASC, submit the version.
 
 ### Korea rollout (whenever the KR storefront ships — can trail the English launch)
