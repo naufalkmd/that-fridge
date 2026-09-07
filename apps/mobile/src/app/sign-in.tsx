@@ -324,6 +324,16 @@ export default function SignIn() {
             </Text>
           </Pressable>
 
+          <Pressable
+            className="mt-3 flex-row items-center justify-center gap-1.5"
+            onPress={() => router.push("/welcome")}
+          >
+            <Ionicons name="sparkles-outline" size={13} color="rgba(234,234,236,0.58)" />
+            <Text className="text-[12.5px] font-semibold text-muted">
+              See how ThatFridge works
+            </Text>
+          </Pressable>
+
           {__DEV__ && (
             <Pressable
               className="mt-6 items-center"
