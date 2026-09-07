@@ -448,7 +448,7 @@ function FreshnessArt() {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => setStep((s) => (s + 1) % FRESH_STATES.length), 1900);
+    const id = setInterval(() => setStep((s) => (s + 1) % FRESH_STATES.length), 1150);
     return () => clearInterval(id);
   }, []);
 
