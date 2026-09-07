@@ -394,11 +394,24 @@ which chains up to 3 model calls + 2 page fetches in one request. nginx's defaul
 (Already in `backend/DEPLOY.md`'s sample config.) The loop caps are `MAX_FETCHES` / `MAX_TOOL_ROUNDS`
 in `AgentService` if it needs tightening further.
 
-### A pasted TikTok / Instagram link "couldn't be read"
+### A pasted TikTok / Instagram / YouTube link "couldn't be read"
 
-Expected. Those sites serve a bot wall with no recipe text; `WebContentService` best-effort
-scrapes the caption JSON but usually gets nothing. YouTube works when the recipe is in the
-video description. Recipe blogs/sites work well. The chat tells the user to paste the text.
+`WebContentService` (2026-09-07) tries the platform's **public oEmbed endpoint first** for
+`youtube.com` / `youtu.be` / `tiktok.com` (a fixed, safe URL that isn't bot-walled), then
+still attempts the page itself for a fuller description — whichever returns text wins. So:
+
+- **YouTube** — reliable: oEmbed gives title + channel; the page usually adds the full
+  description (`ytInitialPlayerResponse.shortDescription`).
+- **TikTok** — usually works now: the oEmbed `title` field *is* the caption, which is where
+  the recipe lives. The video page itself is still a login wall from the VPS IP.
+- **Instagram** — still often fails; public oEmbed needs a Facebook token and the page is
+  login-walled. The chat tells the user to paste the text.
+- Recipe blogs/sites work well (page fetch, redirects now followed with a per-hop SSRF
+  re-check, `max 4`).
+
+If YouTube/TikTok stop working entirely, the oEmbed hosts may be rate-limiting the VPS IP —
+add the YouTube Data API (key + `videos.list?part=snippet`, free, 10k units/day) as a
+fallback in `fetchOembed`.
 
 ---
 

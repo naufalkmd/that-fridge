@@ -21,6 +21,8 @@ class WebContentService
 
     private const TIMEOUT_SECONDS = 8;
 
+    private const USER_AGENT = 'Mozilla/5.0 (compatible; ThatFridgeBot/1.0; +https://thatfridge.com)';
+
     /**
      * @return array{ok: bool, text: string, title: ?string, reason: ?string}
      */
@@ -30,47 +32,145 @@ class WebContentService
             return ['ok' => false, 'text' => '', 'title' => null, 'reason' => 'unsafe_url'];
         }
 
+        $host = strtolower(parse_url($url, PHP_URL_HOST) ?: '');
+
+        // YouTube and TikTok serve a bot wall to a datacenter IP as often as not, and their
+        // short links redirect. Their public oEmbed endpoint is a fixed, safe URL that
+        // reliably returns the title + author (and, for TikTok, the caption - which is where
+        // the recipe usually is). Try it first, then still attempt the page for a fuller
+        // description; whichever produced text wins.
+        $oembed = $this->isVideoHost($host) ? $this->fetchOembed($url, $host) : null;
+        $page = $this->fetchPage($url);
+
+        if ($oembed === null && $page === null) {
+            return ['ok' => false, 'text' => '', 'title' => null, 'reason' => 'fetch_failed'];
+        }
+
+        $title = $page['title'] ?? $oembed['title'] ?? null;
+        $caption = $page['video'] ?? $oembed['caption'] ?? null;
+        $author = $oembed['author'] ?? null;
+        $body = $page['body'] ?? null;
+
+        $text = trim(implode("\n\n", array_filter([
+            $title ? "Page title: {$title}" : null,
+            $author ? "Posted by: {$author}" : null,
+            $caption ? "Video description / caption:\n{$caption}" : null,
+            $body,
+        ])));
+
+        if ($text === '') {
+            return ['ok' => false, 'text' => '', 'title' => $title, 'reason' => 'empty'];
+        }
+
+        return [
+            'ok' => true,
+            'text' => mb_substr($text, 0, self::MAX_CHARS),
+            'title' => $title,
+            'reason' => null,
+        ];
+    }
+
+    private function isVideoHost(string $host): bool
+    {
+        return str_contains($host, 'youtube.com')
+            || str_contains($host, 'youtu.be')
+            || str_contains($host, 'tiktok.com');
+    }
+
+    /**
+     * Hit the platform's public oEmbed endpoint (a fixed host, so no SSRF surface). Returns
+     * null for a non-video host or any failure. For TikTok the `title` field carries the
+     * caption; for YouTube it's the video title and there's no caption.
+     *
+     * @return array{title: ?string, caption: ?string, author: ?string}|null
+     */
+    private function fetchOembed(string $url, string $host): ?array
+    {
+        $isTikTok = str_contains($host, 'tiktok.com');
+        $endpoint = $isTikTok
+            ? 'https://www.tiktok.com/oembed'
+            : 'https://www.youtube.com/oembed';
+        $oembedUrl = $endpoint.'?'.http_build_query(['url' => $url, 'format' => 'json']);
+
+        if (! $this->isSafeUrl($oembedUrl)) {
+            return null;
+        }
+
         try {
-            // Redirects are rejected outright rather than followed-and-revalidated - the
-            // simplest way to keep the SSRF check meaningful (a redirect could otherwise
-            // point straight at an internal address after the check already passed).
-            $response = Http::withOptions(['allow_redirects' => false])
+            $response = Http::timeout(self::TIMEOUT_SECONDS)
+                ->withHeaders(['User-Agent' => self::USER_AGENT, 'Accept' => 'application/json'])
+                ->get($oembedUrl);
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            $data = json_decode($response->body(), true);
+            if (! is_array($data)) {
+                return null;
+            }
+
+            $primary = is_string($data['title'] ?? null) ? trim($data['title']) : '';
+            $author = is_string($data['author_name'] ?? null) ? trim($data['author_name']) : '';
+
+            $result = [
+                'title' => $isTikTok || $primary === '' ? null : mb_substr($primary, 0, 200),
+                'caption' => $isTikTok && $primary !== '' ? mb_substr($primary, 0, self::MAX_CHARS) : null,
+                'author' => $author !== '' ? mb_substr($author, 0, 120) : null,
+            ];
+
+            return array_filter($result) === [] ? null : $result;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Fetch and parse the page itself. Redirects are followed up to a small limit, but every
+     * hop is re-checked against the SSRF guard so a redirect can't jump to an internal
+     * address after the first check passed. Returns null on any failure.
+     *
+     * @return array{title: ?string, video: ?string, body: string}|null
+     */
+    private function fetchPage(string $url): ?array
+    {
+        try {
+            $response = Http::withOptions([
+                'allow_redirects' => [
+                    'max' => 4,
+                    'strict' => true,
+                    'referer' => false,
+                    'protocols' => ['http', 'https'],
+                    'on_redirect' => function ($request, $response, $uri) {
+                        if (! $this->isSafeUrl((string) $uri)) {
+                            throw new \RuntimeException("unsafe redirect target: {$uri}");
+                        }
+                    },
+                ],
+            ])
                 ->timeout(self::TIMEOUT_SECONDS)
                 ->withHeaders([
-                    'User-Agent' => 'Mozilla/5.0 (compatible; ThatFridgeBot/1.0; +https://thatfridge.com)',
+                    'User-Agent' => self::USER_AGENT,
                     'Accept' => 'text/html,application/xhtml+xml',
+                    'Accept-Language' => 'en-US,en;q=0.9',
                 ])
                 ->get($url);
 
             if (! $response->successful()) {
-                return ['ok' => false, 'text' => '', 'title' => null, 'reason' => 'fetch_failed'];
+                return null;
             }
 
             $html = $response->body();
-            $title = $this->extractTitle($html);
-            $videoText = $this->extractVideoDescription($url, $html);
-            $bodyText = $this->extractReadableText($html);
-
-            $text = trim(implode("\n\n", array_filter([
-                $title ? "Page title: {$title}" : null,
-                $videoText ? "Video description / caption:\n{$videoText}" : null,
-                $bodyText,
-            ])));
-
-            if ($text === '') {
-                return ['ok' => false, 'text' => '', 'title' => $title, 'reason' => 'empty'];
-            }
 
             return [
-                'ok' => true,
-                'text' => mb_substr($text, 0, self::MAX_CHARS),
-                'title' => $title,
-                'reason' => null,
+                'title' => $this->extractTitle($html),
+                'video' => $this->extractVideoDescription($url, $html),
+                'body' => $this->extractReadableText($html),
             ];
         } catch (\Exception $e) {
-            Log::warning('Web fetch failed', ['url' => $url, 'error' => $e->getMessage()]);
+            Log::warning('Web page fetch failed', ['url' => $url, 'error' => $e->getMessage()]);
 
-            return ['ok' => false, 'text' => '', 'title' => null, 'reason' => 'exception'];
+            return null;
         }
     }
 

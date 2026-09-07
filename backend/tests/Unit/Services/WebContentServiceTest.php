@@ -79,7 +79,8 @@ class WebContentServiceTest extends TestCase
     public function test_fetch_pulls_the_youtube_description_out_of_the_page_json(): void
     {
         Http::fake([
-            'youtube.com/*' => Http::response(
+            '*youtube.com/oembed*' => Http::response('', 500),
+            'youtube.com/watch*' => Http::response(
                 '<html><head><title>15-min Carbonara - YouTube</title></head><body>'
                 .'<script>var ytInitialPlayerResponse = {"videoDetails":{"shortDescription":"Ingredients:\n200g spaghetti\n2 eggs\nPecorino\n\nBoil pasta, mix eggs and cheese, combine off heat."}};</script>'
                 .'<div>watch later share</div></body></html>',
@@ -92,5 +93,53 @@ class WebContentServiceTest extends TestCase
         $this->assertTrue($result['ok']);
         $this->assertStringContainsString('200g spaghetti', $result['text']);
         $this->assertStringContainsString('mix eggs and cheese', $result['text']);
+    }
+
+    public function test_fetch_uses_the_tiktok_oembed_caption(): void
+    {
+        Http::fake([
+            '*tiktok.com/oembed*' => Http::response([
+                'title' => '5-min mug cake 🍫 4 tbsp flour, 2 tbsp cocoa, 2 tbsp sugar, 3 tbsp milk, microwave 90s',
+                'author_name' => 'chefkeira',
+            ], 200),
+            // The video page itself is a login wall from a datacenter IP.
+            'tiktok.com/@*' => Http::response('<html><body>Log in to TikTok</body></html>', 200),
+        ]);
+
+        $result = $this->service()->fetch('https://www.tiktok.com/@chefkeira/video/12345');
+
+        $this->assertTrue($result['ok']);
+        $this->assertStringContainsString('4 tbsp flour', $result['text']);
+        $this->assertStringContainsString('chefkeira', $result['text']);
+    }
+
+    public function test_fetch_falls_back_to_youtube_oembed_when_the_page_is_blocked(): void
+    {
+        Http::fake([
+            '*youtube.com/oembed*' => Http::response([
+                'title' => '15-Minute Carbonara',
+                'author_name' => 'Pasta Pete',
+            ], 200),
+            'youtube.com/watch*' => Http::response('too many requests', 429),
+        ]);
+
+        $result = $this->service()->fetch('https://www.youtube.com/watch?v=blocked');
+
+        $this->assertTrue($result['ok']);
+        $this->assertSame('15-Minute Carbonara', $result['title']);
+        $this->assertStringContainsString('Pasta Pete', $result['text']);
+    }
+
+    public function test_fetch_fails_when_both_the_page_and_oembed_are_unavailable(): void
+    {
+        Http::fake([
+            '*tiktok.com/oembed*' => Http::response('', 404),
+            'tiktok.com/@*' => Http::response('', 403),
+        ]);
+
+        $result = $this->service()->fetch('https://www.tiktok.com/@x/video/1');
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame('fetch_failed', $result['reason']);
     }
 }
