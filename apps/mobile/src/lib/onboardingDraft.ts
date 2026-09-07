@@ -2,7 +2,7 @@ import * as SecureStore from "expo-secure-store";
 
 // Pre-sign-in onboarding choices, held locally until the user creates an account — then
 // hydrateFromOnboarding() replays them to the server and clears this. Per-device,
-// best-effort, same pattern as lib/chatQuota.ts. See PRE_SIGNUP_ONBOARDING.md.
+// best-effort, same pattern as lib/chatQuota.ts. See apps/mobile/ONBOARDING.md.
 
 const KEY = "thatfridge_onboarding_draft_v1";
 

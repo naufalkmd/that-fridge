@@ -7,7 +7,7 @@ import { ensureNotificationPermission } from "@/lib/localNotifications";
 import { clearOnboardingDraft, getOnboardingDraft } from "@/lib/onboardingDraft";
 
 // Replays the pre-sign-in onboarding draft to the server after the first successful auth.
-// See PRE_SIGNUP_ONBOARDING.md. Best-effort throughout — a failure logs a beacon and moves
+// See apps/mobile/ONBOARDING.md. Best-effort throughout — a failure logs a beacon and moves
 // on; the Home "Getting started" checklist is the backstop.
 
 /**

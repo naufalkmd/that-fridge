@@ -10,26 +10,26 @@ localized store listings + Korean UI fast-follow.
 **Hard deadline: Sep 30, 2026, 11:45 pm PDT.** The app must be **fully published and live**
 (Apple review passed), not just submitted — review takes days, so submit ~2 weeks early.
 
-**Where we are (2026-09-06):** backend, RevenueCat, and the mobile app are functionally complete
-and live. App Store Connect is largely set up — listing copy, age rating (9+), App Privacy, App
-Review notes + `app-review.pdf` attachment, subscriptions priced and "Ready to Submit", intro
-offers attached, paywall published (RC rev 17). What's left is a fresh native build, a
-real-device smoke test, screenshots, and the submission. **v1 ships an English-only listing;**
-Korea localization is a post-approval fast-follow.
+**Where we are (2026-09-07):** backend, RevenueCat, and the mobile app are functionally complete
+and live. The full pre-sign-in onboarding flow is built and OTA'd (see
+`apps/mobile/ONBOARDING.md`); Google Sign-In is wired into the native build. App Store Connect
+is largely set up — listing copy, age rating (9+), App Privacy, App Review notes +
+`app-review.pdf` attachment, subscriptions priced and "Ready to Submit", intro offers attached,
+paywall published (RC rev 17). What's left is the `v1.2.2` binary, a real-device smoke test,
+screenshots, and the submission. **v1 ships an English-only listing;** Korea localization is a
+post-approval fast-follow.
 
 ---
 
 ## What's left to do
 
 ### Blocking submission
-- [x] **New native build** — `v1.2.1` (commit `7a1db9a`, the camera-string bump) built on EAS
-  `production` profile (prod `EXPO_PUBLIC_API_URL`, `production` OTA channel) and auto-submitted;
-  confirmed listed + processed in TestFlight 2026-09-06. All JS since is OTA on the same runtime.
-  - [ ] **Cut `v1.2.2`** — version bumped 2026-09-07 (Google Sign-In now wired into the build:
-    native `@react-native-google-signin` URL scheme + client ids). Tag `v1.2.2` to build. This
-    is the submission binary — reviewed natively, not just via OTA.
-  - `GOOGLE_CLIENT_IDS` on the VPS confirmed to list both the iOS and Web client ids
-    (2026-09-07). Still: smoke-test "Continue with Google" on the v1.2.2 TestFlight build.
+- [ ] **Cut the `v1.2.2` submission binary** — `app.config.ts` version already bumped to 1.2.2
+  (2026-09-07) with Google Sign-In wired into the native build (`@react-native-google-signin`
+  URL scheme + client ids; `GOOGLE_CLIENT_IDS` on the VPS lists both the iOS and Web ids). Tag
+  `v1.2.2` to trigger the build + auto-submit. `v1.2.1` (`7a1db9a`) is live in TestFlight but
+  predates Google + all the onboarding work — everything since is OTA on runtime **1.2.2 only**,
+  so the reviewed binary must be 1.2.2.
 - [ ] **Screenshots** — 10-frame marketing set (designed, not plain), plan in
   `apps/mobile/SCREENSHOTS.md`. Friend captures the 9 raw screens from the new build on the demo
   account (`keira@thatfridge.test`, hand over the new password) → send to Claude → Claude
@@ -42,7 +42,13 @@ Korea localization is a post-approval fast-follow.
   - New deletion flows (2026-09-06): inventory bulk-delete in select mode; chat-history
     delete + "Clear all" actually stick after a refresh; notification "Clear" / "Clear all"
     removes rows (not grey-out); long-press a generated icon in the Add picker to delete it
-  - First-run: fresh no-items account → carousel, then the "+" spotlight on Home
+  - First-run (fresh install, no account): `/welcome` → 3-slide carousel (slide 1 = the walking
+    crew scene) → 3 chip questions → character-select "meet the crew" → first-win demo → name
+    fridge → check-in reminder → soft wall (Apple / Google / email). After auth: the 4-stop
+    Home spotlight tour, then the "Getting started" progress-path card (opens at account ✓).
+    Then Profile → "Replay intro & tips" → `/welcome?preview=1` walks every screen non-destructively.
+  - Sign-in: "Continue with Apple" **and** "Continue with Google" both complete on the 1.2.2
+    build (Google was never in a shipped binary before) and land a real session
   - Paywall on device: "Start 7-Day Free Trial" CTA, real $2.99 / $19.99 prices, Restore works,
     Terms/Privacy open `thatfridge.com`
   - Purchase sheet shows "7 days free, then $X" (fresh sandbox Apple ID, never subscribed)
@@ -79,38 +85,10 @@ Korea localization is a post-approval fast-follow.
   the store listing is live — risks Shipaton's "brand-new app" disqualification.
 
 ### Deferred to post-launch (don't work on these before Sep 30)
-- [x] ~~First-run onboarding~~ — built + simulator-verified 2026-09-06: skippable 3-slide
-  carousel (`onboarding.tsx`), then for an empty fridge a spotlight coach-mark on the "+"
-  button (`CoachSpotlight.tsx`), then a self-paced 5-step **"Getting started" checklist** on
-  Home (`GettingStarted.tsx`, hidden once done/dismissed or `items >= 5`). Gated via
-  `useOnboarding()` + `index.tsx` / `(tabs)/_layout.tsx`. Plan: `ONBOARDING_PLAN.md`. Pure JS,
-  already OTA'd. Smoke-test with a **fresh no-items account** (spotlight + checklist only show
-  on a near-empty fridge). Reviewer notes mention the skippable carousel.
-- [ ] Contextual onboarding coach-marks — one-shot tips fired at the right trigger for the
-  non-obvious bits: the crew tabs inside `/eat`, drag-to-reorder in Inventory, what the Kitchen
-  Score means. Plus lightweight analytics on carousel skip-rate + checklist completion to see
-  if any of it earns its keep. (The 14-step forced tour idea is deliberately not this — see
-  ONBOARDING_PLAN.md §4.)
-- [ ] Pre-sign-in onboarding (Duolingo-style) — move the intro before the auth wall. Full plan
-  + 5 build phases in `apps/mobile/PRE_SIGNUP_ONBOARDING.md`:
-  - [x] Phase 1 — analytics foundation. `POST /events` (public, optional-auth, batched),
-    `AnalyticsEvent` model, `lib/analytics.ts` (`track`/`flush`/`initAnalytics` + per-install
-    `anon_id`). Funnel events wired into `_layout` / `auth` / `onboarding`. 2026-09-07.
-  - [x] Phase 2 — plumbing. `users.preferences` JSON column + `POST /me/onboarding`,
-    `lib/onboardingDraft.ts` + `lib/hydrateOnboarding.ts` (wired into auth, inert until a
-    screen writes a draft). 2026-09-07.
-  - [x] Phase 3 — `/welcome` flow (carousel → "what brings you here?" → first-win demo →
-    name fridge → soft wall) + routing swap (`signedOut && !seen` → `/welcome`). Shared
-    onboarding components extracted; `onboarding.tsx` now the post-auth fallback. Race-safe
-    fridge creation via `ensureOnboardingFridge`. `welcome_*` events. 2026-09-07.
-    **Needs a real-device pass on the next build** (no mobile test runner).
-  - [x] Phase 4 — full `/welcome` flow: 3 crew-framed questions on one screen, meet-the-crew
-    step, "check-in reminder" step (→ `lib/fridgeReminder.ts` recurring local notification,
-    editable in Notification settings), and inline Apple/Google/email on the soft wall.
-    2026-09-07. **Needs a device pass on the v1.2.2 build.** Prune bleeding steps from
-    `app:onboarding-funnel` data.
-  - [ ] Phase 5 — payoff: personalized copy from the stored preference tags, peak-end
-    "you're all set" beat. Wait for funnel data.
+- [ ] Onboarding polish — personalized payoff copy from the stored `preferences` tags + a
+  peak-end "you're all set" beat, and contextual one-shot coach-marks (crew tabs in `/eat`,
+  drag-to-reorder in Inventory, the Kitchen Score). Both wait on `app:onboarding-funnel` data.
+  See `apps/mobile/ONBOARDING.md` → "Still open". The rest of onboarding is shipped.
 - [ ] Pro AI spend ceiling — meter real OpenRouter token cost per Pro user per billing cycle
   and cap it at ~$1.00–1.50 of model spend (well under the ~$2.09 net on a $2.99 plan). Debit
   the actual `usage` from each response into a per-user counter; at the ceiling, disable only

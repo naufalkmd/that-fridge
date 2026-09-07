@@ -311,7 +311,7 @@ export interface CurrentUser {
   name: string;
   username: string;
   email: string;
-  /** Coarse onboarding answer tags (see PRE_SIGNUP_ONBOARDING.md); flavours later copy. */
+  /** Coarse onboarding answer tags (see apps/mobile/ONBOARDING.md); flavours later copy. */
   preferences?: OnboardingPrefs | null;
 }
 

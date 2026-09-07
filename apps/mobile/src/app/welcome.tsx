@@ -36,9 +36,9 @@ import {
   topBar,
 } from "@/components/onboarding/shared";
 
-// Pre-sign-in onboarding (PRE_SIGNUP_ONBOARDING.md Phase 3 + 4). Deliver the "aha" and
-// collect a few choices while anonymous; the soft wall does the auth, and
-// hydrateFromOnboarding() (fired from lib/auth after the first auth) replays the draft.
+// Pre-sign-in onboarding (see apps/mobile/ONBOARDING.md). Deliver the "aha" and collect a
+// few choices while anonymous; the soft wall does the auth, and hydrateOnboarding() (fired
+// from lib/auth after the first auth) replays the draft.
 
 type Step =
   | "carousel"
