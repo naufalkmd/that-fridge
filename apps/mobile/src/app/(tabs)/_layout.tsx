@@ -40,8 +40,8 @@ export default function TabsLayout() {
         <Tabs.Screen name="eat" options={{ title: "Crew" }} />
       </Tabs>
 
-      {/* first-run spotlight on the + button, until the user adds an item */}
-      <CoachSpotlight />
+      {/* first-run spotlight — remounts on "Replay intro" so the nav tour re-arms */}
+      <CoachSpotlight key={onboarding.coachReplayNonce} />
     </View>
   );
 }

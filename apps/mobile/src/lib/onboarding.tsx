@@ -48,6 +48,8 @@ interface OnboardingValue {
   markChecklistVisited: (id: string) => Promise<void>;
   /** Bring the spotlight / nav tour / checklist back (keeps `seen`; clears any stale draft). */
   replayOnboarding: () => Promise<void>;
+  /** Bumped by replayOnboarding — key the spotlight off this to force a fresh mount. */
+  coachReplayNonce: number;
 }
 
 const OnboardingContext = createContext<OnboardingValue | null>(null);
@@ -62,6 +64,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   const [checklistDismissed, setChecklistDismissed] = useState(false);
   const [checklistVisited, setChecklistVisited] = useState<string[]>([]);
   const [coachTourSeen, setCoachTourSeen] = useState(false);
+  const [coachReplayNonce, setCoachReplayNonce] = useState(0);
 
   useEffect(() => {
     Promise.all([
@@ -160,6 +163,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     setChecklistDismissed(false);
     setChecklistVisited([]);
     setCoachTourSeen(false);
+    setCoachReplayNonce((n) => n + 1);
     await Promise.all([
       ...[
         COACH_DISMISSED_KEY,
@@ -187,6 +191,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       checklistVisited,
       markChecklistVisited,
       replayOnboarding,
+      coachReplayNonce,
     }),
     [
       ready,
@@ -203,6 +208,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       checklistVisited,
       markChecklistVisited,
       replayOnboarding,
+      coachReplayNonce,
     ],
   );
 
