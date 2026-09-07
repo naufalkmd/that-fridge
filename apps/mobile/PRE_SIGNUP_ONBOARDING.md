@@ -276,9 +276,10 @@ flow now matches §3 end-to-end:
   both. Editable in **Notification settings → Fridge check-in**.
 - Events: `welcome_questions_answered`, `welcome_reminder_set`, `welcome_social_auth`, plus
   the Phase 3 set.
-- **Preview:** Profile → "Preview welcome flow" opens `/welcome?preview=1` — walk every
-  screen without writing the draft, marking the intro seen, or touching auth; a "PREVIEW —
-  tap to exit" pill and every hand-off just close back. Not dev-gated (harmless).
+- **Replay:** Profile → Settings → "Replay intro & tips" — `replayOnboarding()` brings back
+  the Home spotlight / tour / checklist (keeps `seen`, so no `/onboarding` bounce), then opens
+  `/welcome?preview=1`: a non-destructive walk of every screen — no draft write, no auth, no
+  re-signup. A "PREVIEW — tap to exit" pill and every hand-off just close back to Profile.
 - **Data-driven cuts still apply** — if the funnel shows a step bleeding users, remove it;
   the state machine makes any step easy to skip.
 - **No mobile test runner** — `tsc` clean; needs the device pass on the next build.
@@ -307,11 +308,11 @@ data. Phase 3 is the milestone to aim for; everything after is optimization.
 
 ## 10. Open decisions
 
-| # | Decision | Needed by | Leaning |
-| --- | --- | --- | --- |
-| 1 | **Guest mode** — can the app ever be used with no account? | Phase 3 | No — the demo delivers the aha without one |
-| 2 | **How many questions at launch** — just "what brings you here?", or also waste-frequency / household? | Phase 3 (start), Phase 4 (expand) | One at Phase 3, add from data |
-| 3 | **The demo** — fixed mock data, or tap 3 items from a shortlist (more investment, more friction)? | Phase 3 | Fixed; revisit in Phase 5 |
-| 4 | **Goal mapping** — does the coarse tag seed a concrete `UserGoal`, or stay a copy-personalization tag only? | Phase 2 | Tag only for v1 |
-| 5 | **Reminder cadence** — options + default; ties into notif-permission timing. | Phase 4 | evening / twice-weekly / off; default off |
-| 6 | **Existing post-auth `onboarding.tsx`** — absorb fully, or keep as a fallback for pre-existing accounts? | Phase 3 | Absorb; thin fallback for old accounts |
+| # | Decision                                                                                                             | Needed by                         | Leaning                                     |
+| - | -------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------- |
+| 1 | **Guest mode** — can the app ever be used with no account?                                                    | Phase 3                           | No — the demo delivers the aha without one |
+| 2 | **How many questions at launch** — just "what brings you here?", or also waste-frequency / household?         | Phase 3 (start), Phase 4 (expand) | One at Phase 3, add from data               |
+| 3 | **The demo** — fixed mock data, or tap 3 items from a shortlist (more investment, more friction)?             | Phase 3                           | Fixed; revisit in Phase 5                   |
+| 4 | **Goal mapping** — does the coarse tag seed a concrete `UserGoal`, or stay a copy-personalization tag only? | Phase 2                           | Tag only for v1                             |
+| 5 | **Reminder cadence** — options + default; ties into notif-permission timing.                                  | Phase 4                           | evening / twice-weekly / off; default off   |
+| 6 | **Existing post-auth `onboarding.tsx`** — absorb fully, or keep as a fallback for pre-existing accounts?    | Phase 3                           | Absorb; thin fallback for old accounts      |

@@ -102,7 +102,8 @@ Home. Gets exactly one session: `coach_tour_seen_v1` is persisted on first show,
 force-quit mid-tour doesn't make it nag on every launch.
 
 Both phases end permanently on Skip / Got it (`coachDismissed`). "Replay intro & tips" in
-Profile → Settings (`resetOnboarding()`) clears all of it.
+Profile → Settings (`replayOnboarding()`) brings the spotlight / tour / checklist back and
+opens the full pre-sign-in flow in preview (`/welcome?preview=1`).
 
 ### 2c-alt. Home "Getting started" checklist (BUILT 2026-09-06)
 

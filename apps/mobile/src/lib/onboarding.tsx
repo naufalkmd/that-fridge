@@ -46,8 +46,8 @@ interface OnboardingValue {
   /** Ids of checklist steps completed by tapping through (no data signal of their own). */
   checklistVisited: string[];
   markChecklistVisited: (id: string) => Promise<void>;
-  /** Wipe every first-run flag so the carousel, spotlight and checklist all show again. */
-  resetOnboarding: () => Promise<void>;
+  /** Bring the spotlight / nav tour / checklist back (keeps `seen`; clears any stale draft). */
+  replayOnboarding: () => Promise<void>;
 }
 
 const OnboardingContext = createContext<OnboardingValue | null>(null);
@@ -152,15 +152,16 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     }
   }, []);
 
-  const resetOnboarding = useCallback(async () => {
-    setSeen(false);
+  // "Replay intro": bring back the spotlight, nav tour and checklist, and clear any stale
+  // pre-sign-in draft. Deliberately keeps `seen` — a signed-in user shouldn't get bounced
+  // into the /onboarding fallback route; the intro itself is reviewed via /welcome?preview=1.
+  const replayOnboarding = useCallback(async () => {
     setCoachDismissed(false);
     setChecklistDismissed(false);
     setChecklistVisited([]);
     setCoachTourSeen(false);
     await Promise.all([
       ...[
-        SEEN_KEY,
         COACH_DISMISSED_KEY,
         CHECKLIST_DISMISSED_KEY,
         CHECKLIST_VISITED_KEY,
@@ -185,7 +186,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       dismissChecklist,
       checklistVisited,
       markChecklistVisited,
-      resetOnboarding,
+      replayOnboarding,
     }),
     [
       ready,
@@ -201,7 +202,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       dismissChecklist,
       checklistVisited,
       markChecklistVisited,
-      resetOnboarding,
+      replayOnboarding,
     ],
   );
 

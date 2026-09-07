@@ -19,25 +19,15 @@ export default function Profile() {
   const { user, signOut, deleteAccount } = useAuth();
   const { isPro, available, restore, openCustomerCenter } = usePro();
   const { fridges } = useInventory();
-  const { resetOnboarding } = useOnboarding();
+  const { replayOnboarding } = useOnboarding();
   const { scope, setScope } = useScope();
   const [working, setWorking] = useState(false);
 
-  function replayIntro() {
-    Alert.alert(
-      "Replay the intro?",
-      "Shows the welcome slides and the getting-started tips again.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Replay",
-          onPress: async () => {
-            await resetOnboarding();
-            router.replace("/onboarding");
-          },
-        },
-      ],
-    );
+  async function replayIntro() {
+    // Bring back the Home spotlight / tour / checklist, then walk the full pre-sign-in
+    // intro in preview (non-destructive — no auth, no draft, no re-signup).
+    await replayOnboarding();
+    router.push("/welcome?preview=1");
   }
 
   async function doRestore() {
@@ -191,11 +181,6 @@ export default function Profile() {
             icon="refresh-outline"
             label="Replay intro & tips"
             onPress={replayIntro}
-          />
-          <LinkRow
-            icon="eye-outline"
-            label="Preview welcome flow"
-            onPress={() => router.push("/welcome?preview=1")}
           />
           <LinkRow
             icon="information-circle-outline"
