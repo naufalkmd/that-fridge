@@ -21,7 +21,8 @@ app launch, signedOut ──► onboarding.seen ?
    4  first-win demo — mock fridge (eggs / spinach / yogurt) → Chef + Guardian lines, no API
    5  name your fridge  (FridgeStep, stored in the local draft)
    6  check-in reminder — evening / 2×week / off  (stored in the draft)
-   7  soft wall — "Save your setup": inline Apple / Google / email  +  "I already have an account"
+   7  soft wall — "Save your setup": a cross-border-transfer consent checkbox gates inline
+      Apple / Google (email sign-up has its own checkbox on /sign-in); + "I already have an account"
    │
    ▼ auth success — hydrateOnboarding() replays the draft once:
      create fridge(name) if none · POST /me/onboarding {goal,waste,household} · schedule reminder

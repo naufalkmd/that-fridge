@@ -50,8 +50,10 @@ fast-follow.
   `SCREENSHOTS.md` §6.
 - [ ] **Korean privacy policy** — `/privacy/ko/` is a 404. Legal requirement for KR (PIPA),
   needs a real translation. If it's not ready, launch **MY-first** and add KR later.
-- [ ] Korea PIPA gap: the cross-border-transfer consent checkbox only covers email/password
-  sign-up — Apple/Google social sign-in skips it. Needs a pre-OAuth consent interstitial.
+- [ ] Korea PIPA: cross-border consent is now captured on every sign-up path (email checkbox +
+  a notice/affirmative-action before Apple/Google, recorded as `data_transfer_consented_at`) —
+  enough for MY/UK/CH. PIPA wants it as a **separate, explicit, unticked checkbox on every
+  path including social login**; gate that stricter version on KR locale before a KR launch.
 
 ### Shipaton / Devpost (deadline: same Sep 30, 11:45pm PDT)
 
@@ -169,6 +171,26 @@ protection against direct API hammering.
 `keira@thatfridge.test` — pre-seeded shared fridge ("Home Fridge") with items across all zones +
 11 recipes (no alcohol references). Password is now an env var (`DEMO_USER_PASSWORD`) — rotated
 2026-09-06, live value in the shared password manager, and pasted into ASC's Sign-In fields.
+
+### Privacy & compliance posture (2026-09-07)
+
+Sold worldwide **minus** the EU-27 + Iceland + Norway (dodges GDPR + the DSA trader
+declaration) and China (dodges PIPL). What's covered for the rest:
+
+- One English privacy policy (`/privacy/`) + Apple App Privacy labels + in-app account deletion
+  — the disclosure floor for ~everywhere we sell.
+- **Cross-border-transfer consent on every sign-up path** — email checkbox; a notice +
+  affirmative action before Apple / Google; recorded as `users.data_transfer_consented_at`.
+  Satisfies MY (PDPA) / UK / Switzerland.
+- **Malaysia:** bilingual Section 7 notice at `/privacy/pdpa/`; breach process in
+  `INCIDENT_RESPONSE.md`.
+- **UK / Switzerland:** policy has region sections + lawful bases. Art. 27 UK representative /
+  Swiss rep are *technically* applicable for a non-established operator but low-enforcement at
+  this scale — revisit only with real traction there.
+- **Korea:** deferred — needs the Korean-language policy + a stricter unticked-checkbox consent
+  (see Korea rollout). Don't enable the KR storefront until both are done.
+- Adding the EU later is a much bigger lift (DSA trader info, GDPR lawful basis, tracking
+  consent, EU representative) — treat as its own project.
 
 ### Locked decisions — no re-litigation
 

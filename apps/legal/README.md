@@ -6,6 +6,7 @@ Static pages for the marketing/legal domain `thatfridge.com`:
 | --- | --- |
 | `/` | `index.html` |
 | `/privacy/` | `privacy/index.html` — App Store **Privacy Policy URL** |
+| `/privacy/pdpa/` | `privacy/pdpa/index.html` — bilingual (BM + EN) Section 7 PDPA notice for Malaysia |
 | `/terms/` | `terms/index.html` — Terms of Service + EULA (Guideline 3.1.2 + Apple LAEULA additions) |
 | `/support/` | `support/index.html` — App Store **Support URL** |
 
@@ -27,16 +28,20 @@ Set up two addresses (real mailboxes or forwarding aliases):
 - **support@thatfridge.com** — on every page, the App Store support contact
 - **privacy@thatfridge.com** — the PIPA/PDPA privacy contact
 
-## Korea (PIPA) — still needed
+## Malaysia (PDPA) — done
 
-Target markets are Malaysia + Korea. Korean App Store review checks the privacy-policy link and
-PIPA compliance:
+- `/privacy/pdpa/` is the bilingual Section 7 notice.
+- The app collects cross-border-transfer consent on **every** sign-up path (email checkbox;
+  a notice + affirmative action before Apple / Google) — recorded server-side as
+  `users.data_transfer_consented_at`.
+- Breach-notification process: `INCIDENT_RESPONSE.md` at the repo root.
 
-- Add a **Korean translation** at `/privacy/ko/index.html` (fast-follow acceptable but do it
-  soon — the English policy already links to it).
-- The app's **sign-up screen** must collect explicit consent for data collection **and a
-  separate consent for cross-border transfer** (chat/photos → OpenRouter + fal.ai in the US).
-  That's an app change, tracked in `TO_DO.md` §4a — not something these pages can do alone.
+## Korea (PIPA) — still needed before a KR launch
+
+- **Korean translation** at `/privacy/ko/index.html` (the English policy links to it).
+- PIPA wants the cross-border consent as a *separate, explicit, unticked checkbox* on **every**
+  path including Apple/Google login — stronger than the notice-plus-affirmative-action that
+  satisfies MY/UK/CH. Gate it on KR locale. Tracked in `TO_DO.md` → Korea rollout.
 
 ## Deploy
 
