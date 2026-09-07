@@ -59,7 +59,7 @@ Full-screen, dark canvas, `#26c6da` accent, swipe or "Next", page dots, "Skip" t
 
 | # | Visual | Headline | Body |
 | --- | --- | --- | --- |
-| 1 | The four crew members (existing GIFs, animated in) | **Your kitchen has a crew now** | Chef, Guardian, Organizer and Shopkeeper watch what's in your fridge so you don't have to. |
+| 1 | The live "walking crew" scene from Home (`CrewScene showcase` — the pixel-art store with the four members pacing their zones, idle speech bubbles, no score meters, nothing tappable) | **Your kitchen has a crew now** | Chef, Guardian, Organizer and Shopkeeper watch what's in your fridge so you don't have to. |
 | 2 | An item card sliding from green → amber → red | **Know before it goes bad** | Track what you have and get a nudge a few days out — not a bad smell a week later. |
 | 3 | Chat bubble: "What can I cook tonight?" → a recipe | **Cook what you already have** | Ask the crew anything about your fridge in plain language. Less guessing, less waste. |
 

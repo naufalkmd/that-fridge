@@ -139,6 +139,7 @@ function CrewCharacter({
   box,
   count,
   score,
+  showcase,
   onPress,
   onOpenAlerts,
 }: {
@@ -146,6 +147,7 @@ function CrewCharacter({
   box: { w: number; h: number };
   count: number;
   score: number | null;
+  showcase: boolean;
   onPress: () => void;
   onOpenAlerts: () => void;
 }) {
@@ -203,7 +205,7 @@ function CrewCharacter({
     return () => clearInterval(id);
   }, []);
 
-  const alert = alertMessage(zone.id, count);
+  const alert = showcase ? null : alertMessage(zone.id, count);
   const idle = IDLE_LINES[zone.id];
   const message = alert ?? idle[lineIndex % idle.length];
   const isAlert = !!alert;
@@ -219,9 +221,10 @@ function CrewCharacter({
         top: Animated.subtract(pos.y, spriteW),
       }}
     >
-      <ScoreMeter score={score} color={zone.color} />
+      {!showcase && <ScoreMeter score={score} color={zone.color} />}
       <Pressable
         onPress={isAlert ? onOpenAlerts : onPress}
+        disabled={showcase}
         style={{
           position: "absolute",
           bottom: "100%",
@@ -249,19 +252,28 @@ function CrewCharacter({
           {message}
         </Text>
       </Pressable>
-      <Pressable onPress={onPress} style={{ flex: 1, transform: [{ scaleX: facing }] }}>
+      <Pressable
+        onPress={onPress}
+        disabled={showcase}
+        style={{ flex: 1, transform: [{ scaleX: facing }] }}
+      >
         <Image source={GIFS[zone.id]} style={{ flex: 1 }} contentFit="contain" />
       </Pressable>
     </Animated.View>
   );
 }
 
+const NO_PENDING = { expiring: 0, lowStock: 0, recipe: 0 } as const;
+
 export function CrewScene({
-  pendingByKind,
+  pendingByKind = NO_PENDING,
   scoreByKey,
+  showcase = false,
 }: {
-  pendingByKind: Record<"expiring" | "lowStock" | "recipe", number>;
-  scoreByKey: Record<KitchenScoreResult["key"], number | null>;
+  pendingByKind?: Record<"expiring" | "lowStock" | "recipe", number>;
+  scoreByKey?: Record<KitchenScoreResult["key"], number | null>;
+  /** Onboarding preview: no score meters, no alert lines, nothing tappable. */
+  showcase?: boolean;
 }) {
   const router = useRouter();
   const [box, setBox] = useState({ w: 0, h: 0 });
@@ -284,7 +296,8 @@ export function CrewScene({
             zone={zone}
             box={box}
             count={zone.notifKind ? pendingByKind[zone.notifKind] : 0}
-            score={scoreByKey[zone.scoreKey]}
+            score={scoreByKey?.[zone.scoreKey] ?? null}
+            showcase={showcase}
             onPress={() => router.navigate(zone.route as never)}
             onOpenAlerts={() => router.navigate("/notifications" as never)}
           />

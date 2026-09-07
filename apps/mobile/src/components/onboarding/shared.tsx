@@ -19,6 +19,7 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import Animated, { FadeIn } from "react-native-reanimated";
 
 import { PixelText } from "@/components/brand";
+import { CrewScene } from "@/components/home/CrewScene";
 
 // Shared onboarding UI — used by both `/welcome` (pre-sign-in) and `/onboarding` (the
 // post-sign-in fallback for reinstalls / "Replay intro"). Purely presentational; each
@@ -48,6 +49,8 @@ type Slide = {
   title: string;
   body: string;
   art: () => React.ReactNode;
+  /** Art-area height; defaults to 200. The crew scene needs more room. */
+  artHeight?: number;
 };
 
 const SLIDES: Slide[] = [
@@ -56,6 +59,7 @@ const SLIDES: Slide[] = [
     title: "Your kitchen has\na crew now",
     body: "Chef, Guardian, Organizer and Shopkeeper keep an eye on what's in your fridge so you don't have to.",
     art: () => <CrewArt />,
+    artHeight: 248,
   },
   {
     eyebrow: "STAY AHEAD OF EXPIRY",
@@ -166,7 +170,13 @@ export function IntroCarousel({
                 gap: 24,
               }}
             >
-              <View style={{ alignItems: "center", height: 200, justifyContent: "center" }}>
+              <View
+                style={{
+                  alignItems: "center",
+                  height: s.artHeight ?? 200,
+                  justifyContent: "center",
+                }}
+              >
                 <Glow />
                 {i === index ? s.art() : null}
               </View>
@@ -405,35 +415,13 @@ export function Glow() {
 }
 
 function CrewArt() {
+  // The live "walking crew" scene from Home, in a non-interactive preview mode.
   return (
     <Animated.View
-      entering={FadeIn.duration(250)}
-      style={{
-        flexDirection: "row",
-        flexWrap: "wrap",
-        width: 232,
-        justifyContent: "center",
-        gap: 14,
-      }}
+      entering={FadeIn.duration(300)}
+      style={{ width: "92%", alignSelf: "center" }}
     >
-      {CREW.map((c) => (
-        <View
-          key={c.name}
-          style={{
-            width: 100,
-            alignItems: "center",
-            gap: 6,
-            backgroundColor: SURFACE,
-            borderWidth: 1,
-            borderColor: HAIRLINE,
-            borderRadius: 14,
-            paddingVertical: 12,
-          }}
-        >
-          <Image source={c.gif} style={{ width: 52, height: 52 }} contentFit="contain" />
-          <Text style={{ fontSize: 11.5, fontWeight: "700", color: INK }}>{c.name}</Text>
-        </View>
-      ))}
+      <CrewScene showcase />
     </Animated.View>
   );
 }
