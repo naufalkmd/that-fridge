@@ -39,9 +39,6 @@ fast-follow.
   account (`keira@thatfridge.test`, hand over the new password) → send to Claude → Claude
   composites the frames via the `design` skill canvas or an HTML+headless-Chrome template (§5)
   and returns export-ready 1320×2868 PNGs. English set now; `ko` re-render post-approval.
-- [ ] **Set launch availability** — uncheck the storefronts listed under "Privacy & compliance
-  posture" (EU/EEA, China, **South Korea**, optionally RU/BY). South Korea comes back as a
-  metadata-only fast-follow once the Korea-rollout items ship.
 - [ ] **Submit** — set release to **manual** in ASC, submit the version.
 
 ### Korea rollout (whenever the KR storefront ships — can trail the English launch)
@@ -176,13 +173,12 @@ protection against direct API hammering.
 
 ### Privacy & compliance posture (2026-09-07)
 
-**App Store availability — uncheck:** the EU-27 + Iceland + Norway + Liechtenstein (GDPR + the
-DSA trader declaration), China (PIPL + ICP filing), and **South Korea** (temporary — re-enable
-once the KR items below ship). Optional: Russia + Belarus (data-localization law, sanctions
-friction, tiny market). **Keep everything else** (~140 territories incl. UK, Switzerland, US,
-Canada, Australia, Japan, and every GDPR-style-law country like Brazil / India / Thailand) —
-those laws don't block the storefront and the policy + consent + account deletion is a
-defensible baseline there.
+**App Store availability — set 2026-09-07:** unavailable in the EU-27 + Iceland + Norway (GDPR +
+the DSA trader declaration), the non-EU Balkans + Moldova + Ukraine, China (PIPL + ICP filing),
+Russia + Belarus, and **South Korea** (temporary — re-enable as a metadata-only fast-follow once
+the KR-rollout items ship). Available everywhere else (~140 territories incl. MY, US, UK,
+Switzerland) — those laws don't block the storefront and the policy + consent + account
+deletion is a defensible baseline there.
 
 What's covered for the markets we sell in:
 
