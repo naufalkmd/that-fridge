@@ -39,8 +39,10 @@ fast-follow.
   account (`keira@thatfridge.test`, hand over the new password) → send to Claude → Claude
   composites the frames via the `design` skill canvas or an HTML+headless-Chrome template (§5)
   and returns export-ready 1320×2868 PNGs. English set now; `ko` re-render post-approval.
-- [ ] **Submit** — set release to **manual** in ASC, submit the version. Drop South Korea from
-  the storefront list if `/privacy/ko/` still 404s at submission time (see Korea rollout).
+- [ ] **Set launch availability** — uncheck the storefronts listed under "Privacy & compliance
+  posture" (EU/EEA, China, **South Korea**, optionally RU/BY). South Korea comes back as a
+  metadata-only fast-follow once the Korea-rollout items ship.
+- [ ] **Submit** — set release to **manual** in ASC, submit the version.
 
 ### Korea rollout (whenever the KR storefront ships — can trail the English launch)
 
@@ -174,8 +176,15 @@ protection against direct API hammering.
 
 ### Privacy & compliance posture (2026-09-07)
 
-Sold worldwide **minus** the EU-27 + Iceland + Norway (dodges GDPR + the DSA trader
-declaration) and China (dodges PIPL). What's covered for the rest:
+**App Store availability — uncheck:** the EU-27 + Iceland + Norway + Liechtenstein (GDPR + the
+DSA trader declaration), China (PIPL + ICP filing), and **South Korea** (temporary — re-enable
+once the KR items below ship). Optional: Russia + Belarus (data-localization law, sanctions
+friction, tiny market). **Keep everything else** (~140 territories incl. UK, Switzerland, US,
+Canada, Australia, Japan, and every GDPR-style-law country like Brazil / India / Thailand) —
+those laws don't block the storefront and the policy + consent + account deletion is a
+defensible baseline there.
+
+What's covered for the markets we sell in:
 
 - One English privacy policy (`/privacy/`) + Apple App Privacy labels + in-app account deletion
   — the disclosure floor for ~everywhere we sell.
@@ -187,8 +196,9 @@ declaration) and China (dodges PIPL). What's covered for the rest:
 - **UK / Switzerland:** policy has region sections + lawful bases. Art. 27 UK representative /
   Swiss rep are *technically* applicable for a non-established operator but low-enforcement at
   this scale — revisit only with real traction there.
-- **Korea:** deferred — needs the Korean-language policy + a stricter unticked-checkbox consent
-  (see Korea rollout). Don't enable the KR storefront until both are done.
+- **Korea:** storefront **unchecked for launch**. Re-enable only after the Korean-language
+  policy (`/privacy/ko/`) and the stricter unticked-checkbox consent on every path ship (see
+  Korea rollout).
 - Adding the EU later is a much bigger lift (DSA trader info, GDPR lawful basis, tracking
   consent, EU representative) — treat as its own project.
 
