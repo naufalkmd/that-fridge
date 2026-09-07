@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import type { EdgeInsets } from "react-native-safe-area-context";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { useInventory } from "@/lib/inventory";
@@ -25,12 +24,15 @@ const ESTABLISHED = 6;
 
 type Ion = keyof typeof Ionicons.glyphMap;
 
-const LOOK_AROUND: {
-  target: Exclude<CoachTarget, "add" | "home">;
-  icon: Ion;
-  title: string;
-  body: string;
-}[] = [
+// One 4-stop tour: the "+" FAB, then the Inventory / Crew / Chat tabs. "Next" advances
+// through all four — it does NOT open the Add screen; the user explores after "Got it".
+const TOUR: { target: CoachTarget; icon: Ion; title: string; body: string }[] = [
+  {
+    target: "add",
+    icon: "add",
+    title: "Add to your fridge",
+    body: "Tap + — scan a barcode, snap a receipt, or just type it in.",
+  },
   {
     target: "inventory",
     icon: "file-tray-stacked",
@@ -52,16 +54,12 @@ const LOOK_AROUND: {
 ];
 
 /**
- * One-time onboarding spotlight, rendered from `(tabs)/_layout` over the tab bar.
- *
- * Phase A — empty fridge: dims the screen and highlights the "+" so the first action
- * is unmissable. Phase B — once an item exists: a short 3-stop "look around" of the
- * nav (inventory, crew, chat). Both phases draw the same bright icon chip in the ring
- * (the "+" or the tab's icon) so they read as one consistent treatment. Either phase
- * ends permanently on Skip / Got it, and it's suppressed for an established fridge.
+ * One-time onboarding spotlight, rendered from `(tabs)/_layout` over the tab bar: a
+ * 4-stop walk (+ FAB → Inventory → Crew → Chat) driven entirely by "Next". Each stop
+ * draws a bright icon chip in the ring. Shown once (per install, or after "Replay
+ * intro"), ends permanently on Skip / Got it, suppressed for an established fridge.
  */
 export function CoachSpotlight() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const { items, loading } = useInventory();
@@ -76,60 +74,32 @@ export function CoachSpotlight() {
   } = useOnboarding();
   const [step, setStep] = useState(0);
 
-  // Whether the look-around had already run in a previous session — captured once,
-  // so marking it "seen" now doesn't hide it out from under the current session.
+  // Whether the tour already ran in a previous session — captured once, so marking it
+  // "seen" now doesn't hide it out from under the current session.
   const ranBefore = useRef<boolean | null>(null);
   if (ready && ranBefore.current === null) ranBefore.current = coachTourSeen;
 
-  const inLookAround =
+  const visible =
+    ready &&
     seen &&
     !coachDismissed &&
     !loading &&
-    items.length > 0 &&
-    items.length <= ESTABLISHED;
+    items.length <= ESTABLISHED &&
+    !ranBefore.current;
 
   useEffect(() => {
-    if (!inLookAround) return;
-    // Shown-and-abandoned in an earlier session → stop nagging. First run → persist
-    // the marker so it only ever gets this one session.
-    if (ranBefore.current) void dismissCoach();
-    else void markCoachTourSeen();
-  }, [inLookAround, dismissCoach, markCoachTourSeen]);
+    if (visible) void markCoachTourSeen(); // persist so it's one session only
+  }, [visible, markCoachTourSeen]);
 
-  if (!seen || coachDismissed || loading || items.length > ESTABLISHED) {
-    return null;
-  }
-  if (items.length > 0 && ranBefore.current) return null;
+  if (!visible) return null;
 
-  const fallbackY = height - (insets.bottom || 10) - 34;
-
-  // ── Phase A — "add your first item" ──────────────────────────────────────
-  if (items.length === 0) {
-    const rect = coachRects.add;
-    const cx = rect ? rect.x + rect.width / 2 : width / 2;
-    const cy = rect ? rect.y + rect.height / 2 - 22 : fallbackY;
-    return (
-      <Overlay
-        insets={insets}
-        cx={cx}
-        cy={cy}
-        icon="add"
-        big
-        title="Add your first item"
-        body="Tap + — scan a barcode or just type it in. Your fridge fills in from there."
-        primaryLabel="Next"
-        onPrimary={() => router.push("/add")}
-        onSkip={dismissCoach}
-      />
-    );
-  }
-
-  // ── Phase B — look around ───────────────────────────────────────────────
-  const stop = LOOK_AROUND[Math.min(step, LOOK_AROUND.length - 1)];
-  const last = step >= LOOK_AROUND.length - 1;
+  const stop = TOUR[Math.min(step, TOUR.length - 1)];
+  const last = step >= TOUR.length - 1;
+  const isFab = stop.target === "add";
   const rect = coachRects[stop.target];
+  const fallbackY = height - (insets.bottom || 10) - 34;
   const cx = rect ? rect.x + rect.width / 2 : width / 2;
-  const cy = rect ? rect.y + rect.height / 2 : fallbackY;
+  const cy = rect ? rect.y + rect.height / 2 - (isFab ? 22 : 0) : fallbackY;
 
   return (
     <Overlay
@@ -137,9 +107,10 @@ export function CoachSpotlight() {
       cx={cx}
       cy={cy}
       icon={stop.icon}
+      big={isFab}
       title={stop.title}
       body={stop.body}
-      progress={`${step + 1} / ${LOOK_AROUND.length}`}
+      progress={`${step + 1} / ${TOUR.length}`}
       primaryLabel={last ? "Got it" : "Next"}
       onPrimary={() => (last ? void dismissCoach() : setStep(step + 1))}
       onSkip={last ? undefined : dismissCoach}

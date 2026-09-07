@@ -86,26 +86,24 @@ Store the answer on the user (`data.onboarding_goal`) for later use (e.g. which 
 lead with, or a tailored empty-state line). **v1: only build this if it's genuinely one extra
 screen.** Skip entirely if it risks the deadline — it's the least important piece.
 
-### 2c. Post-carousel spotlight tour (BUILT 2026-09-06, expanded 2026-09-06)
+### 2c. Post-carousel spotlight tour (BUILT 2026-09-06, unified to one 4-stop tour 2026-09-07)
 
 `components/home/CoachSpotlight.tsx`, rendered from `(tabs)/_layout` above the tab bar. The
 tab bar measures each pill + the "+" FAB and publishes their screen rects via
 `useOnboarding().setCoachRect(target, rect)` (`coachRects` map).
 
-**Phase A — empty fridge:** dims the screen (the dim blocks the app but does **not**
-dismiss on tap), highlights the "+" with a ring + tooltip ("Add your first item"). The
-tooltip's "Next" button and the bright FAB copy both go to `/add`; only the top-right
-"Skip" closes the coach.
+**One 4-stop walk:** the **"+" FAB** → **Inventory** → **Crew** → **Chat** tabs, each with a
+ring + bright icon chip + a one-line explainer + `N / 4`. **"Next" advances through all four**
+— it does *not* open the Add screen; the user explores after "Got it". The dim blocks the app
+but doesn't dismiss on tap; only the top-right "Skip" (steps 1–3) closes it early.
 
-**Phase B — once an item exists** (and ≤ 6 items, i.e. not an established fridge / demo
-account): a 3-stop "look around" pointing at the **Inventory**, **Crew** and **Chat** tabs
-with a one-line explainer each and Next / Skip / Got it. Non-navigating — the user stays on
-Home. Gets exactly one session: `coach_tour_seen_v1` is persisted on first show, so a
-force-quit mid-tour doesn't make it nag on every launch.
+Runs **once** — after the intro, on the first Home visit, for a fridge with ≤ 6 items.
+`coach_tour_seen_v1` is persisted on first show, so a force-quit mid-tour doesn't make it nag.
+Ends permanently on Skip / Got it (`coachDismissed`).
 
-Both phases end permanently on Skip / Got it (`coachDismissed`). "Replay intro & tips" in
-Profile → Settings (`replayOnboarding()`) brings the spotlight / tour / checklist back and
-opens the full pre-sign-in flow in preview (`/welcome?preview=1`).
+"Replay intro & tips" in Profile → Settings (`replayOnboarding()`) brings the tour / checklist
+back (bumps `coachReplayNonce`, keyed on `(tabs)/_layout` to force a remount) and opens the
+full pre-sign-in flow in preview (`/welcome?preview=1`).
 
 ### 2c-alt. Home "Getting started" checklist (BUILT 2026-09-06)
 

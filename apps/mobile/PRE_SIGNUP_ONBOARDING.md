@@ -78,7 +78,7 @@ app launch, signedOut ──► /welcome
  hydrate: create fridge(name) · save goal + answers to user ·
           schedule reminder + ask notif permission
    ▼
- Home ─► "+" spotlight ─► 3-stop nav tour ─► Getting Started (opens 3/7)
+ Home ─► one 4-stop spotlight tour (+ FAB → Inventory → Crew → Chat) ─► Getting Started (opens 2/7)
 ```
 
 7 steps. The three questions live on **one screen** (step 2) — stacked single-tap chip rows,
