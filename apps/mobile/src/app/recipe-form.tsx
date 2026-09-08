@@ -15,7 +15,12 @@ import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { describeError, type RecipeAttachment, type RecipeCategory } from "@thatfridge/core";
+import {
+  describeError,
+  guessFoodIcon,
+  type RecipeAttachment,
+  type RecipeCategory,
+} from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { takeRecipeSuggestion, useRecipes } from "@/lib/recipes";
 import { SheetHeader } from "@/components/sheet";
@@ -118,7 +123,9 @@ export default function RecipeForm() {
       name: name.trim(),
       minutes: Number(minutes) || 20,
       category,
-      ingredients: cleanIngredients.map((n) => ({ name: n, icon: "leftovers" })),
+      // Guess a food icon from each name so the recipe-book thumbnail (ingredients[0].icon)
+      // is meaningful; the form only collects names.
+      ingredients: cleanIngredients.map((n) => ({ name: n, icon: guessFoodIcon(n) ?? "leftovers" })),
       steps: cleanSteps,
       attachments,
     };

@@ -23,6 +23,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   daysLabel,
   describeError,
+  guessFoodIcon,
   routeChatAgent,
   type RecipeSuggestionBlock,
 } from "@thatfridge/core";
@@ -562,9 +563,12 @@ function Bubble({ msg }: { msg: Msg }) {
         name: msg.recipe.name,
         minutes: msg.recipe.minutes || 20,
         category: msg.recipe.category ?? null,
+        // The model only sends ingredient names, so derive each icon the same way the
+        // suggestion card does (guessFoodIcon of the name) — otherwise the saved recipe's
+        // thumbnail, which keys off ingredients[0].icon, wouldn't match the card.
         ingredients: msg.recipe.ingredients.map((i) => ({
           name: i.name,
-          icon: "leftovers",
+          icon: guessFoodIcon(i.name) ?? "leftovers",
         })),
         steps: msg.recipe.steps,
       });
