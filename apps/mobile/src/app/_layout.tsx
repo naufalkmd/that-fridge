@@ -191,10 +191,6 @@ export default function RootLayout() {
                                       }}
                                     />
                                     <Stack.Screen
-                                      name="goals"
-                                      options={{ headerShown: false }}
-                                    />
-                                    <Stack.Screen
                                       name="badges"
                                       options={{ headerShown: false }}
                                     />

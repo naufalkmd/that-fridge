@@ -171,7 +171,6 @@ export default function Profile() {
         <SectionHeader>Settings</SectionHeader>
         <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
           <LinkRow icon="restaurant-outline" label="Recipe book" onPress={() => router.push("/recipes")} />
-          <LinkRow icon="flag-outline" label="Goal" onPress={() => router.push("/goals")} />
           <LinkRow icon="ribbon-outline" label="Badges" onPress={() => router.push("/badges")} />
           <LinkRow icon="sync-outline" label="Organizer" onPress={() => router.push("/organizer")} />
           <LinkRow icon="sparkles-outline" label="AI Data & Memory" onPress={() => router.push("/ai-data")} />
