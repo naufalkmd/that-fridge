@@ -10,14 +10,16 @@ post-approval fast-follow (see Deferred). API hosted in Singapore; v1 app UI Eng
 **Hard deadline: Sep 30, 2026, 11:45 pm PDT.** The app must be **fully published and live**
 (Apple review passed), not just submitted — review takes days, so submit ~2 weeks early.
 
-**Where we are (2026-09-07):** backend, RevenueCat, and the mobile app are functionally complete
+**Where we are (2026-09-08):** backend, RevenueCat, and the mobile app are functionally complete
 and live. The full pre-sign-in onboarding flow is built and OTA'd (see
 `apps/mobile/ONBOARDING.md`); Google Sign-In is wired into the native build. App Store Connect
 is largely set up — listing copy, age rating (9+), App Privacy, App Review notes +
-`app-review.pdf` attachment, subscriptions priced and "Ready to Submit", intro offers attached,
-paywall published (RC rev 17). The full smoke test passed on a dev build 2026-09-07. What's
-left is the `v1.2.2` binary (+ a quick re-run of the key paths on it), screenshots, and the
-submission. **v1 ships an English-only listing;** Korea localization is a post-approval
+`app-review.pdf` attachment, subscriptions priced and "Ready to Submit", intro offers attached.
+Binary `1.2.2 (17)` built + uploaded to TestFlight from `main` on 2026-09-08 (contains
+everything since the Sep 7 build). The paywall was rewritten 2026-09-08 into a Free-vs-Pro
+comparison table — **draft, unpublished**, pending the price / trial checks in the RevenueCat
+section below. What's left: smoke-test `1.2.2 (17)`, publish the paywall, screenshots (done),
+and the submission. **v1 ships an English-only listing;** Korea localization is a post-approval
 fast-follow.
 
 ---
@@ -166,10 +168,59 @@ acquisition cost is ≈$0 but also caps growth speed), your own time, refunds.
 
 Two products, **permanent IDs — never reusable, don't typo**: `thatfridge_pro_monthly`
 ($2.99/mo) and `thatfridge_pro_yearly` ($19.99/yr, "1 Year Upfront"), both with a Free / 1-week
-intro offer, both "Ready to Submit" and attached to the version. Pro unlocks: unlimited AI
-chat/what-to-eat, receipt & photo bulk-add, multiple/shared fridges. Paywall = the RevenueCat
-dashboard paywall (`RevenueCatUI.Paywall`), published rev 17. Sandbox purchase + restore
+intro offer, both "Ready to Submit" and attached to the version. Pro unlocks: AI chat / icons /
+expiry scans without the free weekly caps, receipt & photo bulk-add, multiple + shared fridges.
+Paywall = the RevenueCat dashboard paywall (`RevenueCatUI.Paywall`). Sandbox purchase + restore
 verified 2026-09-06. ASC API key + vendor number `94767188` set in RevenueCat.
+
+**Paywall editor** — project `projc6c4cdf4`, paywall `pwec1165df9a414243`, offering
+`ofrngb7a8453e53`. Editor: `app.revenuecat.com/projects/c6c4cdf4/paywalls/pwec1165df9a414243/builder`.
+Edited 2026-09-08 into a Free-vs-Pro comparison table (see canonical content below). **Draft is
+unpublished** pending: (1) price rows show $9.99/$79.99 — confirm the packages serve
+`thatfridge_pro_*` not the old `monthly`/`yearly` test products; (2) confirm the 7-day intro
+offer is attached to `thatfridge_pro_*` in ASC; (3) minor: Terms/Privacy/Restore link spacing +
+placeholder feature icons (crosshair/map/question-mark) — do in the visual builder.
+
+#### Canonical paywall content (rebuild reference)
+
+- Headline: **Get more out of your fridge** (turquoise `#26c6da`, ~22pt bold, centered)
+- Subtitle: *Know before you open the door.*
+- Comparison card — header row `· / Free / Pro` (Pro header in accent), then:
+
+  | Feature | Free | Pro |
+  | --- | --- | --- |
+  | Fridge & pantry tracking, expiry alerts | ✓ | ✓ |
+  | AI crew chat | 5 / week | ✓ |
+  | AI food-icon generation | 5 / week | ✓ |
+  | Expiry-date photo scan | 10 / week | ✓ |
+  | Bulk-add from a receipt or fridge photo | – | ✓ |
+  | Own more than one fridge | – | ✓ |
+  | Share a fridge with your household | – | ✓ |
+
+- Footer line under the table: *Free keeps everything you use today. Pro lifts the weekly limits
+  and unlocks sharing.*
+- Rules: sentence case, **never the word "unlimited"** (a Pro AI spend ceiling is planned — see
+  §"Pro AI spend ceiling"), the ✓ + "N / week" already carry the contrast.
+- Trial line: *7-day free trial, then {{ product.price_per_period }}. Renews automatically until
+  you cancel.* CTA: **Get Pro access**.
+
+#### `app_context` used with the RC Paywall AI editor (`edit-paywall-ai`)
+
+```
+app_identity: name "ThatFridge", category "Food & Drink / kitchen inventory",
+  desc "Track what's in your fridge and pantry, get pinged before food goes bad, see what you
+  can cook with what you have. AI 'crew' of four agents (Chef, Guardian, Shopkeeper, Organizer)."
+brand: mission "Less food ends up in the bin"; values calm/helpful not naggy, pixel-art charm,
+  practical household utility.
+tone: friendly, plain-spoken, benefit-first, sentence case, NO hype/superlatives, speak to the
+  payoff (waste less, cook with what you have, keep the household in sync) not the mechanism.
+audience: home cook running a household, tired of throwing away forgotten groceries. Pains:
+  food goes bad before use; no idea what's in the fridge at the shop; adding groceries one by
+  one is tedious; partner/housemate double-buys or misses things.
+premium highlights: no weekly caps on AI crew chat / AI icons / expiry-date scans; bulk-add via
+  receipt or fridge photo; own more than one fridge + share a fridge with the household.
+visual: primary #26c6da, dark charcoal bg + cyan accent, bold sans headline / regular sans body.
+```
 
 ### Free-tier limits (all enforced server-side, not just client-side)
 
