@@ -349,20 +349,6 @@ export default function SignIn() {
               See how ThatFridge works
             </Text>
           </Pressable>
-
-          {__DEV__ && (
-            <Pressable
-              className="mt-6 items-center"
-              onPress={() => {
-                setMode("login");
-                setEmail("keira@thatfridge.test");
-                setPassword("password123");
-                setError(null);
-              }}
-            >
-              <Text className="text-[11px] text-faint">dev · fill demo account</Text>
-            </Pressable>
-          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
