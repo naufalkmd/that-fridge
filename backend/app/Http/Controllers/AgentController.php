@@ -207,11 +207,15 @@ class AgentController extends Controller
             ], 200);
         }
 
-        // Metered in AI credits (real messages only). A surcharge is taken after the fact
-        // below if the turn ran tools. Throws a 402 with the shortfall when the balance is
-        // short.
+        // Metered in AI credits (real messages only). A photo makes it a vision call (~3-5x
+        // the cost); a tool surcharge is taken after the fact below. Throws a 402 with the
+        // shortfall when the balance is short.
+        $hasImage = $request->hasFile('image');
+        $baseCost = $hasImage ? CreditCost::CHAT_IMAGE : CreditCost::CHAT;
+        $baseReason = $hasImage ? 'chat_image' : 'chat';
+
         if (! $compact) {
-            $this->credits->spend($request->user(), CreditCost::CHAT, 'chat');
+            $this->credits->spend($request->user(), $baseCost, $baseReason);
         }
 
         // Read directly from the DB rather than having the client fetch-and-forward these
@@ -236,7 +240,7 @@ class AgentController extends Controller
 
         if (! $result) {
             if (! $compact) {
-                $this->credits->grant($request->user(), CreditCost::CHAT, 'chat_refund');
+                $this->credits->grant($request->user(), $baseCost, 'chat_refund');
             }
 
             return response()->json(['error' => 'Failed to get agent response'], 500);

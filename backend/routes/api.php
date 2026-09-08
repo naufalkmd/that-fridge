@@ -43,10 +43,13 @@ Route::post('/webhooks/revenuecat', [RevenueCatWebhookController::class, 'handle
 // First-party analytics ingest. Public so pre-sign-in onboarding events get through;
 // batched client-side, so 20 requests/min per IP is generous (each carries up to 50 events).
 Route::middleware('throttle:20,1')->post('/events', [AnalyticsController::class, 'store']);
-// Rate-limited: /register and /login are brute-forceable; /forgot-password sends an
-// email, /reset-password is brute-forceable too.
+// /register has its own named limiter (per-minute floor + a per-day-per-IP cap on new
+// accounts, since each one carries free AI credits - see AppServiceProvider).
+Route::middleware('throttle:register')->post('/register', [AuthController::class, 'register']);
+
+// Rate-limited: /login is brute-forceable; /forgot-password sends an email,
+// /reset-password is brute-forceable too.
 Route::middleware('throttle:6,1')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/forgot-password', [PasswordResetController::class, 'forgot']);
     Route::post('/reset-password', [PasswordResetController::class, 'reset']);

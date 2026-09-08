@@ -405,6 +405,36 @@ class AgentControllerTest extends TestCase
         });
     }
 
+    public function test_a_photo_chat_costs_more_than_a_text_chat(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 10]);
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'A fridge.']]],
+        ], 200)]);
+
+        $this->actingAs($user)->post('/api/chat', [
+            'message' => 'what is this', 'agent' => 'Chef',
+            'image' => UploadedFile::fake()->image('fridge.jpg'),
+        ])->assertStatus(200)->assertJson(['credits' => 7]); // 10 - 3
+
+        $this->assertSame(7, $user->fresh()->ai_credits);
+    }
+
+    public function test_a_failed_photo_chat_refunds_the_full_vision_cost(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 10]);
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response(['error' => 'boom'], 500)]);
+
+        $this->actingAs($user)->post('/api/chat', [
+            'message' => 'what is this', 'agent' => 'Chef',
+            'image' => UploadedFile::fake()->image('fridge.jpg'),
+        ])->assertStatus(500);
+
+        $this->assertSame(10, $user->fresh()->ai_credits); // 3 charged, 3 refunded
+    }
+
     public function test_history_only_returns_the_authenticated_users_latest_session(): void
     {
         $user = User::factory()->create();

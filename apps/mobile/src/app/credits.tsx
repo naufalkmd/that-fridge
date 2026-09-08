@@ -20,6 +20,7 @@ const BAD = "#ff5567";
 
 const REASON_LABEL: Record<string, string> = {
   chat: "Quick Chat",
+  chat_image: "Quick Chat (photo)",
   chat_tools: "Quick Chat (tools)",
   chat_refund: "Chat refund",
   icon: "Icon generation",

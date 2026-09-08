@@ -11,6 +11,9 @@ final class CreditCost
     /** A plain Quick Chat / tip-card message. */
     public const CHAT = 1;
 
+    /** A Quick Chat message that carries a photo - vision runs ~3-5x the cost of plain text. */
+    public const CHAT_IMAGE = 3;
+
     /** Extra, charged after the fact, when that chat turn actually ran one or more tools. */
     public const CHAT_TOOL_SURCHARGE = 2;
 

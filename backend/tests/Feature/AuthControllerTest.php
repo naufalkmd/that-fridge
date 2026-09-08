@@ -52,6 +52,29 @@ class AuthControllerTest extends TestCase
         $this->assertDatabaseHas('users', ['username' => 'jordan_diaz']);
     }
 
+    public function test_register_is_capped_per_day_per_ip(): void
+    {
+        $make = fn (int $n) => $this->postJson('/api/register', [
+            'name' => "User {$n}",
+            'username' => "user_{$n}",
+            'email' => "u{$n}@example.com",
+            'password' => 'at-least-8-chars',
+            'dataTransferConsent' => true,
+        ]);
+
+        // 20/day is allowed - spread past the 6/min floor with a little time travel.
+        for ($i = 1; $i <= 20; $i++) {
+            if ($i % 5 === 1) {
+                $this->travel(2)->minutes();
+            }
+            $make($i)->assertStatus(201);
+        }
+
+        // The 21st from the same IP is blocked even after the per-minute window clears.
+        $this->travel(2)->minutes();
+        $make(21)->assertStatus(429);
+    }
+
     public function test_register_records_when_data_transfer_consent_was_given(): void
     {
         $response = $this->postJson('/api/register', [

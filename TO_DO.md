@@ -251,7 +251,7 @@ showcase (`RevenueCatVirtualCurrency::adjust`, no-op without `REVENUECAT_SECRET_
 | Add-item auto-fill | 1 | 402 → top-up prompt on the draft card |
 | Memory extraction | 0 | tiny call right after a chat that already paid; route-throttled |
 | Home crew tip cards (`compact`) | 0 | not charged; cached per user+agent per day (`compact_insight:` cache key) |
-| Chat with a photo | 1 | ⚠️ vision costs ~3-5× a text chat — underpriced, add `CHAT_IMAGE` later |
+| Quick Chat with a photo | 3 | `CHAT_IMAGE` — vision is ~3-5× a text chat; refund matches on failure |
 
 Grants: free accounts `CREDITS_FREE_MONTHLY` (50) topped up to that floor monthly; Pro
 `credits.pro_monthly` (400) added each month, rolling over up to `pro_rollover_cap` (800).
@@ -270,10 +270,14 @@ free. Without this, start trial → 400 credits → cancel day 6 → $0, repeata
 as `fetch_url` (it makes its own web fetch + model call), so one 3-credit chat turn can't
 trigger ~8 uncapped fetches.
 
-Still open abuse gaps (see the analysis, ranked): **email verification on signup** (biggest
-lever on free-account farming — `/register` is only `throttle:6,1`, no verify loop); a
-`CreditCost::CHAT_IMAGE`; dropping the rollover cap / monthly grant once real usage data exists.
-The hard backstop is the prepaid OpenRouter + fal.ai wallets with **auto-recharge OFF**.
+**Signup cap** (`AppServiceProvider` `register` limiter): 6/min + **20/day per IP** on
+`/register`, since each account carries free credits. Rotating IPs still get around it —
+full **email verification** on signup is the real fix but it needs a mobile verify screen,
+so it's a post-launch fast-follow, not a pre-Sep-30 change to the release-critical signup path.
+
+Still open (see the analysis): email verification (above); dropping the rollover cap /
+monthly grant once real usage data exists. The hard backstop is the prepaid OpenRouter +
+fal.ai wallets with **auto-recharge OFF** — total loss is capped at the pre-loaded balance.
 
 Barcode scan and manual add never touch credits. Every AI route keeps its floor-level
 `throttle` as hammering protection. `InsufficientCreditsException` renders a 402
