@@ -32,6 +32,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'data_transfer_consented_at' => 'datetime',
             'pro_expires_at' => 'datetime',
+            'is_demo' => 'boolean',
             'preferences' => 'array',
             'password' => 'hashed',
         ];

@@ -40,7 +40,7 @@ class DatabaseSeeder extends Seeder
         ] as $attrs) {
             User::updateOrCreate(
                 ['email' => $attrs['email']],
-                [...$attrs, 'password' => $demoPassword, 'email_verified_at' => now()],
+                [...$attrs, 'password' => $demoPassword, 'email_verified_at' => now(), 'is_demo' => true],
             );
         }
 

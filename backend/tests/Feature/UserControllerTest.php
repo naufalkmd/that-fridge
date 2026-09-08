@@ -83,6 +83,42 @@ class UserControllerTest extends TestCase
         $this->assertEqualsCanonicalizing(['jordan_lee'], $usernames);
     }
 
+    public function test_search_hides_demo_accounts_from_a_real_user(): void
+    {
+        $me = User::factory()->create();
+        User::factory()->create(['username' => 'jordan_real']);
+        User::factory()->create(['username' => 'jordan_demo', 'is_demo' => true]);
+
+        $response = $this->actingAs($me)->getJson('/api/users/search?q=jordan');
+
+        $response->assertStatus(200);
+        $usernames = collect($response->json('data'))->pluck('username')->all();
+        $this->assertEqualsCanonicalizing(['jordan_real'], $usernames);
+    }
+
+    public function test_search_from_a_demo_account_returns_demo_accounts_not_real_users(): void
+    {
+        $me = User::factory()->create(['is_demo' => true]);
+        User::factory()->create(['username' => 'jordan_real']);
+        User::factory()->create(['username' => 'jordan_demo', 'is_demo' => true]);
+
+        $response = $this->actingAs($me)->getJson('/api/users/search?q=jordan');
+
+        $response->assertStatus(200);
+        $usernames = collect($response->json('data'))->pluck('username')->all();
+        $this->assertEqualsCanonicalizing(['jordan_demo'], $usernames);
+    }
+
+    public function test_profile_of_a_demo_account_is_not_found_for_a_real_user(): void
+    {
+        $me = User::factory()->create();
+        $demo = User::factory()->create(['username' => 'keira', 'is_demo' => true]);
+
+        $response = $this->actingAs($me)->getJson("/api/users/{$demo->username}/profile");
+
+        $response->assertStatus(404);
+    }
+
     public function test_search_results_never_include_email(): void
     {
         $me = User::factory()->create();

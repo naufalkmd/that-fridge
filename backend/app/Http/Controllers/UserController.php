@@ -30,6 +30,10 @@ class UserController extends Controller
 
         $users = User::where('username', 'like', $data['q'].'%')
             ->where('id', '!=', $me->id)
+            // Demo/reviewer accounts and real users never surface to each other - keeps real
+            // users from finding @keira/@hazim/etc, while the demo accounts still find each
+            // other to test sharing. See the is_demo migration.
+            ->where('is_demo', (bool) $me->is_demo)
             ->whereNotIn('id', $blockedIds)
             ->orderBy('username')
             ->limit(20)
@@ -48,6 +52,10 @@ class UserController extends Controller
     public function profile(Request $request, User $user)
     {
         $viewer = $request->user();
+
+        // Mirror search(): a real user can't reach a demo account's profile (or vice versa)
+        // by guessing the username around the search filter.
+        abort_if((bool) $viewer->is_demo !== (bool) $user->is_demo, 404);
 
         $fridges = $user->fridges()
             ->withCount('members')
