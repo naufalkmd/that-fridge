@@ -22,8 +22,8 @@ below) — backend deployed, mobile OTA'd, but RevenueCat Virtual Currency + cre
 still need dashboard setup (checklist in that section). The paywall was rewritten 2026-09-08
 into a Free-vs-Pro comparison table — **draft, unpublished**, pending the price / trial checks
 **and** a copy pass for the credit model. What's left: the RC credit setup, smoke-test
-`1.2.2 (17)` + a fresh build with the credit code, publish the paywall, screenshots (done),
-and the submission. **v1 ships an English-only listing;** Korea localization is a post-approval
+the `v1.3.0` submission build (tagged 2026-09-08, EAS building), publish the paywall, and the
+submission. Screenshots uploaded. **v1 ships an English-only listing;** Korea localization is a post-approval
 fast-follow.
 
 ---
@@ -45,12 +45,11 @@ fast-follow.
     chat spends credits, swipe between tabs, long-press to copy text.
   - **Do not push mobile OTAs during Apple review** (behaviour change on the reviewed
     channel trips 2.3 / 3.1.x). Hotfixes only.
-- [ ] **Screenshots** — 10-frame marketing set (designed, not plain), plan in
-  `apps/mobile/SCREENSHOTS.md`. Friend captures the 9 raw screens from the new build on the demo
-  account (`keira@thatfridge.test`, hand over the new password) → send to Claude → Claude
-  composites the frames via the `design` skill canvas or an HTML+headless-Chrome template (§5)
-  and returns export-ready 1320×2868 PNGs. English set.
-- [ ] **Submit** — set release to **manual** in ASC, submit the version.
+- [x] **Screenshots** — uploaded to App Store Connect (2026-09-08).
+- [ ] **Submit** — once `v1.3.0` is on TestFlight and smoke-tested: in ASC pick build 1.3.0,
+  attach the 2 subscriptions + 3 credit IAPs to the version, paste the credit-model review
+  notes + attach `app-review.pdf` (v1.3.0), set release to **manual**, submit. Then publish
+  the RevenueCat paywall draft once the on-device price reads $2.99 / $19.99.
 
 **Shipaton / Devpost** (same Sep 30, 11:45pm PDT)
 
