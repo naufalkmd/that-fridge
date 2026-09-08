@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('app:check-item-freshness')->dailyAt('07:00');
 Schedule::command('app:snapshot-kitchen-scores')->weeklyOn(1, '07:30');
+Schedule::command('app:prune-stale-data')->dailyAt('04:00');

@@ -15,8 +15,9 @@ class ReceiptService
     public function processReceipt($file, $storeName = null, $purchasedAt = null)
     {
         try {
-            // Save file to storage
-            $path = $file->store('receipts', 'public');
+            // Save file to storage (config('filesystems.media_disk') - "public" locally, R2 in prod once flipped)
+            $disk = config('filesystems.media_disk');
+            $path = $file->store('receipts', $disk);
 
             if (! $this->vision->available()) {
                 // No API key configured at all - fall back to mock data so local dev/demoing
@@ -33,7 +34,7 @@ class ReceiptService
             return [
                 'receipt_id' => rand(1, 100000),
                 'file_path' => $path,
-                'file_url' => Storage::url($path),
+                'file_url' => Storage::disk($disk)->url($path),
                 'store_name' => $storeName,
                 'purchased_at' => $purchasedAt ?? now()->toDateString(),
                 'status' => 'processed',

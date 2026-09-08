@@ -17,6 +17,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Media Disk
+    |--------------------------------------------------------------------------
+    |
+    | Where user-uploaded media (recipe icons, generated icons, scan images,
+    | recipe attachments) is written. Defaults to the local "public" disk;
+    | set MEDIA_DISK=s3 (with the AWS_* / R2 vars) to offload it to object
+    | storage once the VPS disk gets tight. See backend/DEPLOY.md.
+    |
+    */
+
+    'media_disk' => env('MEDIA_DISK', 'public'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |

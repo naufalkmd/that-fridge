@@ -319,15 +319,15 @@ class RecipeController extends Controller
 
         $file = $request->file('file');
         $type = str_starts_with($file->getMimeType(), 'video/') ? 'video' : 'image';
-        $path = $file->store('recipe-attachments', 'public');
+        $disk = config('filesystems.media_disk');
+        $path = $file->store('recipe-attachments', $disk);
 
         return response()->json([
             'type' => $type,
-            // Storage::url() without a disk resolves against the *default* disk
-            // (FILESYSTEM_DISK=local), not the "public" disk the file was actually stored on -
-            // that mismatch was silently producing a bogus relative "/storage/..." URL instead
-            // of an absolute one, which is why the uploaded photo/video looked broken.
-            'url' => Storage::disk('public')->url($path),
+            // Always resolve the URL against the disk the file was actually written to, not
+            // the default disk (FILESYSTEM_DISK=local) - that mismatch was silently producing
+            // a bogus relative "/storage/..." URL instead of an absolute one.
+            'url' => Storage::disk($disk)->url($path),
         ]);
     }
 

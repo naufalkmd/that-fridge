@@ -15,8 +15,9 @@ class PhotoService
     public function processPhoto($file)
     {
         try {
-            // Save file to storage
-            $path = $file->store('photos', 'public');
+            // Save file to storage (config('filesystems.media_disk') - "public" locally, R2 in prod once flipped)
+            $disk = config('filesystems.media_disk');
+            $path = $file->store('photos', $disk);
 
             if (! $this->vision->available()) {
                 // No API key configured at all - fall back to mock data so local dev/demoing
@@ -33,7 +34,7 @@ class PhotoService
             return [
                 'photo_scan_id' => rand(1, 100000),
                 'file_path' => $path,
-                'file_url' => Storage::url($path),
+                'file_url' => Storage::disk($disk)->url($path),
                 'status' => 'processed',
                 'detected_items' => $detectedItems,
             ];

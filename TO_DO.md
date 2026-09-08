@@ -108,6 +108,11 @@ fast-follow.
   photo (`image_url` on `recipes`, `flux/schnell` no-rembg ~$0.003, `kind` `recipe_photo` at maybe
   2 credits) rendered large on the card + detail. Web parity for the icon picker is also unbuilt
   (legacy `apps/web` — fold into the web retirement below).
+- [ ] **Flip media storage to Cloudflare R2** when `df -h` on the VPS shows the droplet disk
+  past ~50%, or before ~500 active users. All uploads already route through
+  `config('filesystems.media_disk')` (default `public`); the switch is env vars + a one-off
+  file copy + URL rewrite. Full runbook: `backend/DEPLOY.md` §13a. Cost: ~$0 under R2's 10 GB
+  free tier, then ~$2–5/mo.
 - [ ] Sentry DSN (crash monitoring is scaffolded, currently a no-op).
 - [ ] `apps/web/lib/thatfridge` → `packages/core` extraction (most already moved).
 - [ ] `react-i18next` + `expo-localization` — the i18n plumbing so a Korean (or Malay) UI ships
@@ -187,6 +192,17 @@ Mobile: `fridge/[id]` shows a Pro-upsell card instead of the invite UI; `find-fr
 
 Every AI-calling route also has a floor-level `throttle` regardless of Pro status, as abuse
 protection against direct API hammering.
+
+### Data retention
+
+`app:prune-stale-data` runs daily (04:00, `routes/console.php`) and bounds the few unbounded
+tables + orphaned upload files: `analytics_events` >180d, `notification_events` (done >60d /
+any >180d), terminal `fridge_join_requests` >90d, and `photos/` + `receipts/` scan images +
+orphaned `icons/` files >7d. Not pruned: `chat_history` (user-visible — needs a "kept 12
+months" UI message first), and the user's real data (items, recipes, usage history, memory).
+`--dry-run` reports without deleting. Note: `photo_scans` / `receipts` / `receipt_line_items`
+tables are dead schema — the vision services store the file and return it inline, never
+writing a row.
 
 ### Demo / reviewer account
 

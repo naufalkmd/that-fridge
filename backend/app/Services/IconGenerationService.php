@@ -77,11 +77,13 @@ class IconGenerationService
         $cutout = $this->client->removeBackground($result['image_url']);
         $imageUrl = $cutout['ok'] ? $cutout['image_url'] : $result['image_url'];
 
+        $disk = config('filesystems.media_disk');
+
         try {
             $bytes = Http::get($imageUrl)->body();
             $bytes = $this->toPixelArt($bytes);
             $path = 'icons/'.Str::uuid().'.png';
-            Storage::disk('public')->put($path, $bytes);
+            Storage::disk($disk)->put($path, $bytes);
         } catch (\Exception $e) {
             Log::error('Failed to download generated icon', ['error' => $e->getMessage()]);
 
@@ -94,7 +96,7 @@ class IconGenerationService
             'credits' => self::CREDIT_COST[$kind] ?? 1,
             'prompt' => $prompt,
             'image_path' => $path,
-            'image_url' => Storage::disk('public')->url($path),
+            'image_url' => Storage::disk($disk)->url($path),
         ]);
 
         return [

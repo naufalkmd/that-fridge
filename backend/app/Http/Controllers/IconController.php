@@ -85,7 +85,7 @@ class IconController extends Controller
     {
         $this->authorize('delete', $generatedIcon);
 
-        Storage::disk('public')->delete($generatedIcon->image_path);
+        Storage::disk(config('filesystems.media_disk'))->delete($generatedIcon->image_path);
         $generatedIcon->delete();
 
         return response()->noContent();

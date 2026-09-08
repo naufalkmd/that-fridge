@@ -385,11 +385,60 @@ First deploy is still manual (§1–§11). After that, merging to `main` ships t
 
 ## 13. Post-launch hardening (not blocking)
 
-- Move `storage/app/public` to S3 (`FILESYSTEM_DISK=s3`) so photos survive a server rebuild.
+- **Move user media to Cloudflare R2** — see §13a below. Do this once `df -h` shows the
+  droplet disk past ~50%, or before ~500 active users, whichever comes first.
 - Sentry: `composer require sentry/sentry-laravel`, set `SENTRY_LARAVEL_DSN`.
 - Rate-limit `/api/login` + `/api/register` (`throttle` middleware) against credential stuffing.
 - Managed Postgres + Redis; separate app server.
 - Restrict `config/cors.php` `allowed_origins` to the real web origin.
+
+---
+
+## 13a. Moving user media to Cloudflare R2
+
+All user-uploaded media (generated icons, recipe icons, fridge/receipt scan images, recipe
+attachments) is written through `config('filesystems.media_disk')`, which defaults to the
+local `public` disk. R2 is S3-compatible with **zero egress fees** — the right target for an
+image-heavy app. ~$0 under the 10 GB free tier, then $0.015/GB/mo.
+
+**1. Create the bucket + token** (Cloudflare dashboard → R2):
+- Bucket `thatfridge-media`. Under Settings, either enable the `r2.dev` public URL or (better)
+  attach a custom domain like `media.thatfridge.com`.
+- R2 → Manage API Tokens → create a token scoped to that bucket with **Object Read & Write**.
+  Note the Access Key ID, Secret, and your account's S3 endpoint
+  `https://<accountid>.r2.cloudflarestorage.com`.
+
+**2. Add to the server `.env`:**
+```
+MEDIA_DISK=s3
+AWS_ACCESS_KEY_ID=<token access key id>
+AWS_SECRET_ACCESS_KEY=<token secret>
+AWS_DEFAULT_REGION=auto
+AWS_BUCKET=thatfridge-media
+AWS_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
+AWS_URL=https://media.thatfridge.com          # or the r2.dev URL
+AWS_USE_PATH_STYLE_ENDPOINT=true
+```
+Then `php artisan config:cache`.
+
+**3. Copy existing files + rewrite URLs** (one-off):
+```bash
+# new uploads already go to R2; this moves what's already on disk
+rclone copy storage/app/public s3-r2:thatfridge-media --exclude ".gitignore"
+sudo -u deploy php artisan tinker --execute="
+  foreach (\App\Models\GeneratedIcon::cursor() as \$g) {
+    \$g->update(['image_url' => \Storage::disk('s3')->url(\$g->image_path)]);
+  }
+"
+```
+Recipe attachment URLs are stored inline in the `recipes.attachments` JSON — rewrite those
+with a small loop over `App\Models\Recipe::whereNotNull('attachments')` swapping the
+`APP_URL.'/storage/'` prefix for `AWS_URL.'/'`. Scan images (`photos/`, `receipts/`) aren't
+stored anywhere and self-prune in 7 days (`app:prune-stale-data`), so they need no rewrite.
+
+**4. Verify** a fresh icon generation + a recipe-attachment upload return `media.thatfridge.com`
+URLs and render in the app, then delete `storage/app/public/{icons,recipe-attachments}` and
+drop the tar line for them from §11.
 
 ---
 
