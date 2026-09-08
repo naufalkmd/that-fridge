@@ -209,6 +209,10 @@ export default function FindFriend() {
                       <Text style={{ fontSize: 11.5, fontWeight: "700", color: GOOD }}>Joined</Text>
                     ) : pending ? (
                       <Text style={{ fontSize: 11.5, fontWeight: "700", color: FAINT }}>Requested</Text>
+                    ) : f.shareable === false ? (
+                      // Hosting a shared fridge is Pro-only — a free owner's fridge can't take
+                      // new members, so there's nothing to request.
+                      <Text style={{ fontSize: 11.5, fontWeight: "700", color: FAINT }}>Not shared</Text>
                     ) : (
                       <Pressable
                         onPress={() => requestJoin(f.id)}

@@ -52,6 +52,12 @@ class FridgeJoinRequestController extends Controller
             throw ValidationException::withMessages(['fridge' => "You can't join this fridge."]);
         }
 
+        // Hosting a shared fridge is a Pro feature - a free owner can't approve anyone, so a
+        // request here would only ever be a dead pending row. Stop it up front.
+        if (! $fridge->user->isPro()) {
+            throw ValidationException::withMessages(['fridge' => "This fridge isn't open to new members."]);
+        }
+
         $existing = FridgeJoinRequest::where('fridge_id', $fridge->id)
             ->where('requester_id', $request->user()->id)
             ->first();
@@ -94,6 +100,13 @@ class FridgeJoinRequestController extends Controller
     public function invite(Request $request, Fridge $fridge)
     {
         $this->authorize('manageMembers', $fridge);
+
+        // manageMembers => the caller is the owner. Hosting a shared fridge is Pro-only, so a
+        // free owner can't send invites at all (clean message before the user search, on top
+        // of the attachMember() chokepoint that also guards the accept path).
+        if (! $request->user()->isPro()) {
+            abort(402, 'Inviting people to your fridge is a Pro feature. Upgrade to Pro to share it.');
+        }
 
         $data = $request->validate([
             'userId' => ['required', 'integer', 'exists:users,id'],
@@ -295,6 +308,15 @@ class FridgeJoinRequestController extends Controller
     {
         if ($fridge->isMember($joiner)) {
             return;
+        }
+
+        // Hosting a shared fridge is a Pro feature: the owner pays, guests join free. This is
+        // the one chokepoint every membership add funnels through. Only *adding* is gated -
+        // an existing member of a fridge whose owner later drops to free is left in place.
+        if (! $fridge->user->isPro()) {
+            abort(402, $joinerIsCaller
+                ? "@{$fridge->user->username} is on the free plan, which doesn't include shared fridges — they'd need Pro before anyone can join."
+                : 'Sharing a fridge with other people is a Pro feature. Upgrade to Pro to invite people into this one.');
         }
 
         if (! $joiner->canJoinAnotherSharedFridge()) {

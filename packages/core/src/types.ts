@@ -368,6 +368,9 @@ export interface FriendFridgeSummary {
   memberCount: number;
   role: FridgeRole | null;
   requestStatus: JoinRequestStatus | null;
+  /** False when the owner is on the free plan — hosting a shared fridge is Pro-only, so
+   *  there's nothing to request to join. */
+  shareable: boolean;
 }
 
 export interface FriendProfile {

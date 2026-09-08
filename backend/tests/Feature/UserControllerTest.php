@@ -147,6 +147,22 @@ class UserControllerTest extends TestCase
         $this->assertEquals(["Jordan's Kitchen"], $fridgeNames);
     }
 
+    public function test_profile_marks_fridges_shareable_only_when_the_owner_is_pro(): void
+    {
+        $viewer = User::factory()->create();
+        $free = User::factory()->create(['username' => 'freebie']);
+        Fridge::create(['user_id' => $free->id, 'name' => "Free's Kitchen"]);
+        $pro = User::factory()->create(['username' => 'prouser', 'pro_expires_at' => now()->addMonth()]);
+        Fridge::create(['user_id' => $pro->id, 'name' => "Pro's Kitchen"]);
+
+        $this->actingAs($viewer)->getJson('/api/users/freebie/profile')
+            ->assertStatus(200)
+            ->assertJson(['data' => ['fridges' => [['shareable' => false]]]]);
+        $this->actingAs($viewer)->getJson('/api/users/prouser/profile')
+            ->assertStatus(200)
+            ->assertJson(['data' => ['fridges' => [['shareable' => true]]]]);
+    }
+
     public function test_profile_includes_member_count_but_not_fridge_contents(): void
     {
         $viewer = User::factory()->create();

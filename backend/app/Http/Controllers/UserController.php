@@ -57,6 +57,11 @@ class UserController extends Controller
         // by guessing the username around the search filter.
         abort_if((bool) $viewer->is_demo !== (bool) $user->is_demo, 404);
 
+        // Hosting a shared fridge is Pro-only, so a free user's fridges can't take new
+        // members - the client uses this to hide the "Request to join" affordance rather
+        // than show one that always fails.
+        $ownerCanShare = $user->isPro();
+
         $fridges = $user->fridges()
             ->withCount('members')
             ->with(['members' => fn ($q) => $q->where('users.id', $viewer->id)])
@@ -69,6 +74,7 @@ class UserController extends Controller
                 'memberCount' => $fridge->members_count,
                 'role' => $fridge->members->first()?->pivot->role,
                 'requestStatus' => $fridge->joinRequests->first()?->status,
+                'shareable' => $ownerCanShare,
             ]);
 
         $user->setAttribute('profileFridges', $fridges);

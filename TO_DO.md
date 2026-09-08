@@ -168,13 +168,22 @@ verified 2026-09-06. ASC API key + vendor number `94767188` set in RevenueCat.
 
 ### Free-tier limits (all enforced server-side, not just client-side)
 
-| Feature                                                  | Free tier     | Pro       |
-| -------------------------------------------------------- | ------------- | --------- |
-| AI chat (Quick Chat + "Activate {agent}", shared budget) | 5/week        | Unlimited |
-| Icon generation                                          | 5/week        | Unlimited |
-| Expiry-date photo scan                                   | 10/week       | Unlimited |
-| Receipt / fridge-photo scan                              | Not available | Unlimited |
-| Fridges (owned or joined, total)                         | 1             | Unlimited |
+| Feature                                                  | Free tier      | Pro       |
+| -------------------------------------------------------- | -------------- | --------- |
+| AI chat (Quick Chat + "Activate {agent}", shared budget) | 5/week         | Unlimited |
+| AI image generation (item + recipe icons, shared budget) | 5/week         | Unlimited |
+| Expiry-date photo scan                                   | 10/week        | Unlimited |
+| Receipt / fridge-photo scan                              | Not available  | Unlimited |
+| Fridges you own                                          | 1              | Unlimited |
+| Join a shared fridge you're invited to                   | 1              | Unlimited |
+| **Host a shared fridge** (invite people into yours)      | **Not available** | Yes    |
+
+"Host a shared fridge" is enforced in `FridgeJoinRequestController` — `invite()`, the
+request-to-join path, and the `attachMember()` chokepoint all require `$fridge->user->isPro()`.
+Being *invited* stays free (the acquisition loop). Grandfathering: the gate only blocks *adding*
+a member, so anyone already in a fridge whose owner later drops to free keeps their access.
+Mobile: `fridge/[id]` shows a Pro-upsell card instead of the invite UI; `find-friend` shows
+"Not shared" instead of a Request button (`FriendFridgeSummary.shareable`).
 
 Every AI-calling route also has a floor-level `throttle` regardless of Pro status, as abuse
 protection against direct API hammering.

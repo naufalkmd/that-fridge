@@ -28,9 +28,16 @@ class NotificationDeliveryTest extends TestCase
         return $fridge;
     }
 
+    /** Hosting a shared fridge is Pro-only (FridgeJoinRequestController), so owners who send
+     *  invites / approve requests over HTTP must be Pro. */
+    private function proOwner(array $attrs = []): User
+    {
+        return User::factory()->create([...$attrs, 'pro_expires_at' => now()->addMonth()]);
+    }
+
     public function test_requesting_to_join_notifies_the_owner(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create(['username' => 'sam']);
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Kitchen']);
 
@@ -46,7 +53,7 @@ class NotificationDeliveryTest extends TestCase
 
     public function test_an_invite_reaches_the_invitee_feed_before_they_are_a_member(): void
     {
-        $owner = User::factory()->create(['username' => 'jordan']);
+        $owner = $this->proOwner(['username' => 'jordan']);
         $target = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Loft']);
 
@@ -67,7 +74,7 @@ class NotificationDeliveryTest extends TestCase
 
     public function test_approving_a_request_notifies_the_requester(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Kitchen']);
         $jr = FridgeJoinRequest::create([
@@ -137,7 +144,7 @@ class NotificationDeliveryTest extends TestCase
 
     public function test_social_pref_off_suppresses_the_event(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         NotificationPref::create(['user_id' => $owner->id, 'social' => false]);
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Kitchen']);
@@ -184,7 +191,7 @@ class NotificationDeliveryTest extends TestCase
     {
         Bus::fake([SendPushNotification::class]);
 
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Kitchen']);
 
@@ -246,7 +253,7 @@ class NotificationDeliveryTest extends TestCase
 
     public function test_clearing_a_notification_deletes_it_from_the_feed(): void
     {
-        $owner = User::factory()->create(['username' => 'jo']);
+        $owner = $this->proOwner(['username' => 'jo']);
         $target = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Loft']);
         $this->actingAs($owner)->postJson("/api/fridges/{$fridge->id}/invites", ['userId' => $target->id]);
@@ -260,7 +267,7 @@ class NotificationDeliveryTest extends TestCase
 
     public function test_clear_all_wipes_the_users_whole_feed(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $target = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Loft']);
         $this->actingAs($owner)->postJson("/api/fridges/{$fridge->id}/invites", ['userId' => $target->id]);

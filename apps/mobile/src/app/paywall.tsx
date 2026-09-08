@@ -12,7 +12,8 @@ const BENEFITS = [
   "Unlimited AI chat with the crew",
   "Unlimited “what to eat” suggestions",
   "Receipt & photo scanning for bulk add",
-  "Multiple and shared fridges",
+  "Share a fridge with your household",
+  "Unlimited fridges",
 ];
 
 const TERMS_URL = "https://thatfridge.com/terms/";

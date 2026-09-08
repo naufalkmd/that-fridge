@@ -13,9 +13,19 @@ class FridgeJoinRequestControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Hosting a shared fridge is a Pro feature (FridgeJoinRequestController) - so every test
+     * where someone is expected to actually join needs a Pro owner. The free-owner path has
+     * its own dedicated tests below.
+     */
+    private function proOwner(array $attrs = []): User
+    {
+        return User::factory()->create([...$attrs, 'pro_expires_at' => now()->addMonth()]);
+    }
+
     public function test_a_user_can_request_to_join_a_fridge(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
 
@@ -28,7 +38,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_requesting_to_join_a_fridge_youre_already_a_member_of_is_a_validation_error(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $member = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $fridge->members()->attach($member->id, ['role' => 'member']);
@@ -40,7 +50,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_requesting_to_join_a_fridge_owned_by_someone_youve_blocked_is_a_validation_error(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $requester->blocking()->attach($owner->id);
@@ -52,7 +62,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_requesting_to_join_a_fridge_owned_by_someone_who_blocked_you_is_a_validation_error(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $owner->blocking()->attach($requester->id);
@@ -64,7 +74,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_re_requesting_after_a_decline_flips_the_existing_row_back_to_pending(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $existing = FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $requester->id, 'status' => 'declined']);
@@ -78,7 +88,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_only_the_owner_can_list_pending_requests(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $member = User::factory()->create();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
@@ -94,7 +104,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_only_the_owner_can_approve_or_decline(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $member = User::factory()->create();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
@@ -107,7 +117,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_approving_a_request_attaches_the_requester_as_a_member(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $joinRequest = FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $requester->id, 'status' => 'pending']);
@@ -122,7 +132,7 @@ class FridgeJoinRequestControllerTest extends TestCase
     public function test_approving_a_request_succeeds_when_the_requester_only_owns_their_own_fridge(): void
     {
         // Having your own fridge no longer blocks joining one shared fridge for free.
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         Fridge::create(['user_id' => $requester->id, 'name' => 'Requesters own fridge']);
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
@@ -136,7 +146,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_approving_a_request_is_rejected_when_the_requester_is_already_in_another_shared_fridge(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         $otherShared = Fridge::create(['user_id' => User::factory()->create()->id, 'name' => 'Their other shared fridge']);
         $otherShared->members()->attach($requester->id, ['role' => 'member']);
@@ -154,7 +164,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_approving_a_request_succeeds_when_the_requester_is_pro_despite_already_being_in_another_shared_fridge(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
         $otherShared = Fridge::create(['user_id' => User::factory()->create()->id, 'name' => 'Their other shared fridge']);
         $otherShared->members()->attach($requester->id, ['role' => 'member']);
@@ -172,7 +182,7 @@ class FridgeJoinRequestControllerTest extends TestCase
         // Simulates a double-click/two-tab race: the requester is already a member (as if a
         // first approve() call already went through) by the time a second approve() call for
         // the same request lands - it must stay idempotent, not 500 on the unique constraint.
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $fridge->members()->attach($requester->id, ['role' => 'member']);
@@ -189,7 +199,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_declining_a_request_does_not_create_a_membership(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $joinRequest = FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $requester->id, 'status' => 'pending']);
@@ -203,7 +213,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_an_owner_can_invite_a_user_directly(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $invitee = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
 
@@ -216,7 +226,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_only_the_owner_can_send_an_invite(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $member = User::factory()->create();
         $invitee = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
@@ -227,7 +237,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_inviting_someone_already_a_member_is_a_validation_error(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $member = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $fridge->members()->attach($member->id, ['role' => 'member']);
@@ -237,7 +247,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_inviting_someone_youve_blocked_is_a_validation_error(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $invitee = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $owner->blocking()->attach($invitee->id);
@@ -249,7 +259,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_the_invited_user_can_accept_their_own_invite_but_the_owner_cannot(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $invitee = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $invite = FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $invitee->id, 'status' => 'pending', 'initiated_by' => 'owner']);
@@ -263,7 +273,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_the_invited_user_can_decline_their_own_invite_but_a_stranger_cannot(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $invitee = User::factory()->create();
         $stranger = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
@@ -278,7 +288,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_the_owner_can_cancel_an_invite_they_sent_but_a_stranger_cannot(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $invitee = User::factory()->create();
         $stranger = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
@@ -294,7 +304,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_sent_invites_lists_only_pending_owner_initiated_invites_for_that_fridge(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $invitee = User::factory()->create();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
@@ -314,7 +324,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_only_the_owner_can_list_sent_invites(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $member = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $fridge->members()->attach($member->id, ['role' => 'member']);
@@ -324,7 +334,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_inviting_a_user_who_already_requested_to_join_approves_them_immediately(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $existing = FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $requester->id, 'status' => 'pending', 'initiated_by' => 'requester']);
@@ -339,7 +349,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_requesting_to_join_a_fridge_you_were_already_invited_to_accepts_the_invite_immediately(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $invitee = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $existing = FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $invitee->id, 'status' => 'pending', 'initiated_by' => 'owner']);
@@ -354,7 +364,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_the_join_requests_list_excludes_owner_initiated_invites(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         $invitee = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
@@ -370,7 +380,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_my_invites_lists_only_my_own_pending_invites_with_fridge_and_inviter_identity(): void
     {
-        $owner = User::factory()->create(['username' => 'jordan']);
+        $owner = $this->proOwner(['username' => 'jordan']);
         $invitee = User::factory()->create();
         $someoneElse = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => "Jordan's Kitchen"]);
@@ -390,7 +400,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_my_requests_lists_pending_requests_across_every_fridge_i_own(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requesterA = User::factory()->create(['username' => 'alice']);
         $requesterB = User::factory()->create(['username' => 'bob']);
         $someoneElse = User::factory()->create();
@@ -415,7 +425,7 @@ class FridgeJoinRequestControllerTest extends TestCase
 
     public function test_a_newly_approved_member_can_actually_manage_items_in_the_shared_fridge(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->proOwner();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'General']);
@@ -432,5 +442,59 @@ class FridgeJoinRequestControllerTest extends TestCase
 
         $this->actingAs($requester)->patchJson("/api/items/{$itemId}", ['name' => 'Oat Milk'])->assertStatus(200);
         $this->actingAs($requester)->deleteJson("/api/items/{$itemId}")->assertStatus(204);
+    }
+
+    public function test_inviting_someone_is_rejected_when_the_owner_is_not_on_pro(): void
+    {
+        $owner = User::factory()->create(); // free
+        $invitee = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
+
+        $response = $this->actingAs($owner)->postJson("/api/fridges/{$fridge->id}/invites", ['userId' => $invitee->id]);
+
+        $response->assertStatus(402);
+        $this->assertDatabaseMissing('fridge_join_requests', ['fridge_id' => $fridge->id, 'requester_id' => $invitee->id]);
+    }
+
+    public function test_requesting_to_join_a_free_owners_fridge_is_rejected(): void
+    {
+        $owner = User::factory()->create(); // free
+        $requester = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
+
+        $response = $this->actingAs($requester)->postJson("/api/fridges/{$fridge->id}/join-requests");
+
+        $response->assertStatus(422);
+        $this->assertDatabaseMissing('fridge_join_requests', ['fridge_id' => $fridge->id, 'requester_id' => $requester->id]);
+    }
+
+    public function test_approving_a_request_is_rejected_once_the_owner_has_dropped_to_free(): void
+    {
+        // Pending request predates the downgrade; the owner-Pro check on the accept path still
+        // blocks it rather than silently adding a member to a now-free fridge.
+        $owner = User::factory()->create(); // free
+        $requester = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
+        $joinRequest = FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $requester->id, 'status' => 'pending']);
+
+        $response = $this->actingAs($owner)->postJson("/api/join-requests/{$joinRequest->id}/approve");
+
+        $response->assertStatus(402);
+        $this->assertDatabaseMissing('fridge_members', ['fridge_id' => $fridge->id, 'user_id' => $requester->id]);
+    }
+
+    public function test_an_existing_member_keeps_access_when_the_owner_is_on_the_free_plan(): void
+    {
+        // Grandfathering: the gate only blocks *adding* a member. Someone already in a fridge
+        // whose owner later drops to free stays in and can still use it.
+        $owner = User::factory()->create(); // free
+        $member = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
+        $fridge->members()->attach($member->id, ['role' => 'member']);
+        $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'General']);
+
+        $this->actingAs($member)->getJson("/api/fridges/{$fridge->id}")->assertStatus(200);
+        $this->actingAs($member)->postJson("/api/sections/{$section->id}/items", ['name' => 'Milk', 'icon' => 'milk'])
+            ->assertStatus(201);
     }
 }

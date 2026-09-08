@@ -7,6 +7,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import {
+  ApiError,
   describeError,
   type FridgeJoinRequest,
   type FridgeMember,
@@ -15,6 +16,7 @@ import {
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useInventory } from "@/lib/inventory";
+import { usePro } from "@/lib/pro";
 import { useScope } from "@/lib/scope";
 import { useSocial } from "@/lib/social";
 import { SheetHeader } from "@/components/sheet";
@@ -42,6 +44,7 @@ export default function ManageFridge() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const { isPro } = usePro();
   const { fridges, refresh } = useInventory();
   const { scope, setScope } = useScope();
   const { refresh: refreshSocial } = useSocial();
@@ -121,6 +124,10 @@ export default function ManageFridge() {
       setInviteResults([]);
       Alert.alert("Invite sent", "They'll see it under Find a friend.");
     } catch (e) {
+      if (e instanceof ApiError && e.status === 402) {
+        router.push("/paywall");
+        return;
+      }
       Alert.alert("Error", describeError(e, "Couldn't send that invite."));
     } finally {
       setBusy(false);
@@ -290,7 +297,28 @@ export default function ManageFridge() {
           ))}
         </View>
 
-        {isOwner && (
+        {isOwner && !isPro && (
+          <Pressable
+            onPress={() => router.push("/paywall")}
+            style={{
+              borderWidth: 1,
+              borderColor: `${AMBER}66`,
+              backgroundColor: `${AMBER}12`,
+              borderRadius: 8,
+              padding: 14,
+              marginBottom: 20,
+              gap: 4,
+            }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "800", color: INK }}>Share this fridge</Text>
+            <Text style={{ fontSize: 11.5, lineHeight: 16, color: MUTED }}>
+              Keep one fridge in sync with a partner or housemate. Inviting people in is a Pro
+              feature — upgrade to share.
+            </Text>
+          </Pressable>
+        )}
+
+        {isOwner && isPro && (
           <>
             <Label>INVITE SOMEONE</Label>
             <TextInput
