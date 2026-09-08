@@ -16,9 +16,13 @@ and live. The full pre-sign-in onboarding flow is built and OTA'd (see
 is largely set up — listing copy, age rating (9+), App Privacy, App Review notes +
 `app-review.pdf` attachment, subscriptions priced and "Ready to Submit", intro offers attached.
 Binary `1.2.2 (17)` built + uploaded to TestFlight from `main` on 2026-09-08 (contains
-everything since the Sep 7 build). The paywall was rewritten 2026-09-08 into a Free-vs-Pro
-comparison table — **draft, unpublished**, pending the price / trial checks in the RevenueCat
-section below. What's left: smoke-test `1.2.2 (17)`, publish the paywall, screenshots (done),
+everything since the Sep 7 build; the credit-metering rewrite that landed after it is OTA).
+AI usage was moved from weekly Pro caps to a **credit model** on 2026-09-08 (see "AI credits"
+below) — backend deployed, mobile OTA'd, but RevenueCat Virtual Currency + credit-pack IAPs
+still need dashboard setup (checklist in that section). The paywall was rewritten 2026-09-08
+into a Free-vs-Pro comparison table — **draft, unpublished**, pending the price / trial checks
+**and** a copy pass for the credit model. What's left: the RC credit setup, smoke-test
+`1.2.2 (17)` + a fresh build with the credit code, publish the paywall, screenshots (done),
 and the submission. **v1 ships an English-only listing;** Korea localization is a post-approval
 fast-follow.
 
@@ -96,24 +100,21 @@ fast-follow.
   ("items rescued" = used before it spoiled), a live card on Home, an honest timeframe, maybe a
   badge. Backend `user_goals` table + `UserGoalController` + core `progress.ts` goal code are
   still there, unused by the client.
-- [ ] Pro AI spend ceiling — meter real OpenRouter token cost per Pro user per billing cycle
-  and cap it at ~$1.00–1.50 of model spend (well under the ~$2.09 net on a $2.99 plan). Debit
-  the actual `usage` from each response into a per-user counter; at the ceiling, disable only
-  the expensive paths (browsing, receipt/fridge-photo scan, vision) and keep basic text chat.
-  Reset on the RevenueCat renewal date (or ISO-month). Update paywall + App Store copy: drop
-  the literal "unlimited", use fair-use wording or an allowance. Floor `throttle:15,1` already
-  covers hammering; this is margin protection against the heavy-browsing tail.
-  - Stopgap now: pre-load a fixed ~$20–30 on **both** the OpenRouter and fal.ai wallets and
+- [x] Pro AI spend ceiling — **done via the credit system** (`50f4034` / `c5640bf`, 2026-09-08).
+  Pro is capped at 400 credits/month (+800 rollover); every model call is metered per action,
+  so per-user model spend is now bounded by construction. Pack buyers can spend more, but they
+  paid for it. What's left is only wallet hygiene:
+  - Pre-load a fixed ~$20–30 on **both** the OpenRouter and fal.ai wallets and
     turn on their low-balance email alerts. **Leave auto top-up / auto-recharge OFF on both**
     — a drained balance is a degraded app, but auto top-up removes the only hard ceiling and
     lets a scripted trial-abuser or a bug bill your card with no cap. Top up manually as real
-    usage grows. Flip auto top-up on only once the per-user spend ceiling below ships (then
-    spend scales predictably with paying users and the runaway cases are capped per account).
+    usage grows. Now that per-user spend is capped by credits, auto top-up is defensible once
+    real paying volume makes manual refills annoying.
 - [ ] Photographic recipe hero image. Recipes now carry `icon` + `icon_url` (curated pixel key
-  or a generated pixel icon, picked in `recipe-form` → `recipe-icon-picker`, shared weekly budget
-  via `generated_icons.kind`/`credits`, `SUM(credits) <= 5`). Still open: an optional full-bleed
-  photo (`image_url` on `recipes`, `flux/schnell` no-rembg ~$0.003, `kind` `recipe_photo` at maybe
-  2 credits) rendered large on the card + detail. Web parity for the icon picker is also unbuilt
+  or a generated pixel icon, picked in `recipe-form` → `recipe-icon-picker`; generation costs
+  3 AI credits, curated picks are free). Still open: an optional full-bleed
+  photo (`image_url` on `recipes`, `flux/schnell` no-rembg ~$0.003) rendered large on the card +
+  detail. Web parity for the icon picker is also unbuilt
   (legacy `apps/web` — fold into the web retirement below).
 - [ ] **Flip media storage to Cloudflare R2** when `df -h` on the VPS shows the droplet disk
   past ~50%, or before ~500 active users. All uploads already route through
@@ -161,7 +162,7 @@ Break-even is **≈20 paying subscribers** at 15% commission, **≈25** at 30% �
 achievable bar at this infra scale. Blended contribution margin per subscriber is
 **≈$1.24-1.56/mo** (65/35 annual/monthly mix assumption) after Apple's cut and AI cost. AI cost
 itself is trivial (~$0.15-0.40/mo per active Pro subscriber, ~$0.10/mo per free user) — the
-real risk was ever unbounded free-tier usage, which is now closed (see Free-tier limits below).
+real risk was ever unbounded AI usage, now closed by per-action credit metering (see "AI credits").
 Full reasoning, psychology notes, and benchmark-vs-confirmed figure tagging: see git history
 (`3a. Business & pricing analysis`, commit history 2026-09-05) if this needs revisiting with
 real post-launch data.
@@ -173,8 +174,9 @@ acquisition cost is ≈$0 but also caps growth speed), your own time, refunds.
 
 Two products, **permanent IDs — never reusable, don't typo**: `thatfridge_pro_monthly`
 ($2.99/mo) and `thatfridge_pro_yearly` ($19.99/yr, "1 Year Upfront"), both with a Free / 1-week
-intro offer, both "Ready to Submit" and attached to the version. Pro unlocks: AI chat / icons /
-expiry scans without the free weekly caps, receipt & photo bulk-add, multiple + shared fridges.
+intro offer, both "Ready to Submit" and attached to the version. Pro grants a **400-credit
+monthly bundle** (vs 50 free), rolls over up to 800, and unlocks **hosting** shared fridges
+(see "AI credits" below — metering replaced the old weekly caps 2026-09-08).
 Paywall = the RevenueCat dashboard paywall (`RevenueCatUI.Paywall`). Sandbox purchase + restore
 verified 2026-09-06. ASC API key + vendor number `94767188` set in RevenueCat.
 
@@ -184,7 +186,9 @@ Edited 2026-09-08 into a Free-vs-Pro comparison table (see canonical content bel
 unpublished** pending: (1) price rows show $9.99/$79.99 — confirm the packages serve
 `thatfridge_pro_*` not the old `monthly`/`yearly` test products; (2) confirm the 7-day intro
 offer is attached to `thatfridge_pro_*` in ASC; (3) minor: Terms/Privacy/Restore link spacing +
-placeholder feature icons (crosshair/map/question-mark) — do in the visual builder.
+placeholder feature icons (crosshair/map/question-mark) — do in the visual builder;
+(4) **the table copy still says "5 / week" etc. — reword to the credit model** (rows below
+updated to match; the "weekly limit" framing is gone).
 
 #### Canonical paywall content (rebuild reference)
 
@@ -195,17 +199,16 @@ placeholder feature icons (crosshair/map/question-mark) — do in the visual bui
   | Feature | Free | Pro |
   | --- | --- | --- |
   | Fridge & pantry tracking, expiry alerts | ✓ | ✓ |
-  | AI crew chat | 5 / week | ✓ |
-  | AI food-icon generation | 5 / week | ✓ |
-  | Expiry-date photo scan | 10 / week | ✓ |
-  | Bulk-add from a receipt or fridge photo | – | ✓ |
+  | Monthly AI credits (chat, scans, icons) | 50 | 400 |
+  | Bulk-add from a receipt or fridge photo | Uses credits | Uses credits |
+  | Buy more credits anytime | ✓ | ✓ |
   | Own more than one fridge | – | ✓ |
-  | Share a fridge with your household | – | ✓ |
+  | Host a shared fridge for your household | – | ✓ |
 
-- Footer line under the table: *Free keeps everything you use today. Pro lifts the weekly limits
-  and unlocks sharing.*
-- Rules: sentence case, **never the word "unlimited"** (a Pro AI spend ceiling is planned — see
-  §"Pro AI spend ceiling"), the ✓ + "N / week" already carry the contrast.
+- Footer line under the table: *Every AI action spends credits. Free gives you 50 a month; Pro
+  gives you 400, rolls the unused ones over, and unlocks hosting shared fridges.*
+- Rules: sentence case, **never the word "unlimited"**, lead with the credit number not a
+  weekly cap.
 - Trial line: *7-day free trial, then {{ product.price_per_period }}. Renews automatically until
   you cancel.* CTA: **Get Pro access**.
 
@@ -222,37 +225,64 @@ tone: friendly, plain-spoken, benefit-first, sentence case, NO hype/superlatives
 audience: home cook running a household, tired of throwing away forgotten groceries. Pains:
   food goes bad before use; no idea what's in the fridge at the shop; adding groceries one by
   one is tedious; partner/housemate double-buys or misses things.
-premium highlights: no weekly caps on AI crew chat / AI icons / expiry-date scans; bulk-add via
-  receipt or fridge photo; own more than one fridge + share a fridge with the household.
+premium highlights: 400 AI credits a month vs 50 (credits pay for crew chat, receipt/fridge
+  scans, icon generation), unused credits roll over; own more than one fridge; host a shared
+  fridge for the household.
 visual: primary #26c6da, dark charcoal bg + cyan accent, bold sans headline / regular sans body.
 ```
 
-### Free-tier limits (all enforced server-side, not just client-side)
+### AI credits (metered, server-authoritative)
 
-| Feature                                                  | Free tier      | Pro       |
-| -------------------------------------------------------- | -------------- | --------- |
-| AI chat (Quick Chat + "Activate {agent}", shared budget) | 5/week         | Unlimited |
-| AI memory extraction (fires after a chat)                | tied to chat budget | Unlimited |
-| Add-item "Auto-fill"                                     | 40/week        | Unlimited |
-| AI image generation (item + recipe icons, shared budget) | 5/week         | Unlimited |
-| Expiry-date photo scan                                   | 10/week        | Unlimited |
-| Receipt / fridge-photo scan                              | Not available  | Unlimited |
-| Fridges you own                                          | 1              | Unlimited |
-| Join a shared fridge you're invited to                   | 1              | Unlimited |
-| **Host a shared fridge** (invite people into yours)      | **Not available** | Yes    |
+Shipped 2026-09-08 (`50f4034` backend + deploy, `c5640bf` mobile). Every AI action spends
+credits from `users.ai_credits`; `App\Support\ChatQuota` and the client `chatQuota.ts` are
+**deleted**. The backend ledger (`ai_credit_ledger`, unique on `reason`+`ref`) is authoritative
+for spend; RevenueCat Virtual Currency (`AICR`) is a best-effort mirror for display / Shipaton
+showcase (`RevenueCatVirtualCurrency::adjust`, no-op without `REVENUECAT_SECRET_API_KEY` +
+`REVENUECAT_PROJECT_ID`).
 
-"Host a shared fridge" is enforced in `FridgeJoinRequestController` — `invite()`, the
-request-to-join path, and the `attachMember()` chokepoint all require `$fridge->user->isPro()`.
-Being *invited* stays free (the acquisition loop). Grandfathering: the gate only blocks *adding*
-a member, so anyone already in a fridge whose owner later drops to free keeps their access.
-Mobile: `fridge/[id]` shows a Pro-upsell card instead of the invite UI; `find-friend` shows
-"Not shared" instead of a Request button (`FriendFridgeSummary.shareable`).
+| Action | Cost | Notes (`App\Support\CreditCost`) |
+| --- | --- | --- |
+| Quick Chat message | 1 | `+2` surcharge (best-effort) when the crew used a tool |
+| AI icon generation (item + recipe) | 3 | curated pixel picks are free |
+| Expiry-date photo scan | 2 | no refund — the vision call runs even on "not found" |
+| Receipt scan | 3 | refunded on hard failure |
+| Fridge-photo scan | 3 | refunded on hard failure |
+| Add-item auto-fill | 1 | 402 → top-up prompt on the draft card |
+| Memory extraction | 0 | tiny call right after a chat that already paid; route-throttled |
 
-Every AI-calling route also has a floor-level `throttle` regardless of Pro status, as abuse
-protection against direct API hammering. As of this pass, **no AI endpoint is unguarded**:
-`/memory/extract` gained `throttle:15,1` + skips extraction once a non-Pro user's weekly chat
-budget is spent (shared logic in `App\Support\ChatQuota`); `/items/suggest-details` gained a
-lenient 40/week cache cap.
+Grants: free accounts `CREDITS_FREE_MONTHLY` (50) topped up to that floor monthly; Pro
+`credits.pro_monthly` (400) added each month, rolling over up to `pro_rollover_cap` (800).
+`app:grant-monthly-credits` runs `monthlyOn(1, 00:15)`; the RevenueCat webhook also grants the
+Pro bundle on `INITIAL_PURCHASE` / `RENEWAL` and grants pack credits on a consumable
+`NON_RENEWING_PURCHASE` (`credits.packs`: `credits_100/500/1500`). Idempotent via the ledger's
+`reason`+`ref` unique key (event id / `monthly:YYYY-MM`). Demo account: 9999.
+
+Barcode scan and manual add never touch credits. Every AI route keeps its floor-level
+`throttle` as hammering protection. `InsufficientCreditsException` renders a 402
+`{error: "insufficient_credits", balance, needed}`; the client routes every 402 to `/credits`.
+
+**Host a shared fridge** stays a hard Pro gate (not credits) — `FridgeJoinRequestController`
+`invite()` / request-to-join / `attachMember()` all require `$fridge->user->isPro()`. Being
+*invited* is free (the acquisition loop); already-joined members keep access if the owner drops
+to free. Mobile: `fridge/[id]` upsell card; `find-friend` "Not shared" (`FriendFridgeSummary.shareable`).
+
+**Manual setup still owed** (code is deployed and degrades gracefully until these are done —
+credits work off the backend ledger; only the RC mirror + real pack purchases wait on this):
+
+- [ ] RevenueCat → create Virtual Currency, code **`AICR`**.
+- [ ] App Store Connect → 3 consumable IAPs `credits_100` / `credits_500` / `credits_1500`,
+      priced; then in RevenueCat create products for them + a **`credits`** offering with one
+      package per pack. (The mobile `/credits` screen reads `getOfferings().all["credits"]`.)
+- [ ] RevenueCat → on each consumable + the Pro subscription, no store-side VC config is
+      needed; the backend webhook does the granting. Just confirm the webhook fires for
+      `NON_RENEWING_PURCHASE`.
+- [ ] prod `.env` → `REVENUECAT_SECRET_API_KEY=…`, `REVENUECAT_PROJECT_ID=projc6c4cdf4`
+      (optional: `REVENUECAT_CURRENCY_CODE`, `CREDITS_FREE_MONTHLY`). Then `php artisan
+      config:cache` as `deploy`.
+- [ ] prod → confirm `2026_09_08_000007_add_ai_credits_and_ledger` ran (`php artisan migrate`
+      is in `deploy.sh`); spot-check `select ai_credits from users limit 5;`.
+- [ ] prod → set the demo account high: `php artisan tinker` →
+      `User::where('is_demo',true)->each->forceFill(['ai_credits'=>9999])->save()` (or re-seed).
 
 ### Shared icon pack (curated from user generations)
 
@@ -274,9 +304,10 @@ Agents can call kitchen tools on top of `fetch_url` browsing. Shipped: `list_ite
 execute directly (reversible); `remove_item` / `clear_expired_items` take `confirm:false`
 first and the prompt forbids the model self-confirming. Loop bounded by `MAX_TOOL_ROUNDS = 5`
 + `MAX_TOOL_CALLS = 8` (fetch_url keeps its own `MAX_FETCHES = 2`). Client passes `fridge_id`
-(active scope) and refreshes inventory when the reply carries `mutated: true`. Same weekly
-cap — a whole tool exchange still counts as one message. All agents get all tools (the
-confirm-first pattern is the safety, not per-agent gating).
+(active scope) and refreshes inventory when the reply carries `mutated: true`. A tool exchange
+costs the 1-credit message + a best-effort `+2` surcharge (`chat_tools`, `spendUpTo` so it
+never hard-fails mid-reply). All agents get all tools (the confirm-first pattern is the safety,
+not per-agent gating).
 
 Deferred (Tier 2/3): `add_item`, `check_off_shopping` / `remove_from_shopping`, `get_recipe`,
 `save_recipe`, `mark_recipe_made`, `import_recipe_from_link`, `move_item`, `remember_fact`,
@@ -382,6 +413,7 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
 | Core loop     | add item, barcode scan (camera allow/deny/deny-then-enable), inventory edit/delete, mark recipe made decrements stock |
 | Notifications | local alert fires at the right time, taps route to the item, permission denied handled                                |
 | Paywall       | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow                                        |
+| AI credits    | balance shows on chat + profile, spend decrements it, 0 credits routes to /credits, pack purchase tops up, Pro renewal grants the bundle |
 | Native chrome | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe                                 |
 | Network       | airplane mode on every screen, slow 3G, API 500s, retry paths                                                         |
 | Lifecycle     | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly                               |

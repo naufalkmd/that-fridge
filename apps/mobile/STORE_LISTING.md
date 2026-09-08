@@ -90,7 +90,7 @@ WHAT YOU CAN DO
 
 THATFRIDGE PRO
 
-Unlock unlimited AI chat, receipt and photo bulk-add, and multiple shared fridges. Every plan starts with a 7-day free trial.
+Every AI action - asking the crew, scanning a receipt or your fridge, generating an icon - spends AI credits. Everyone gets a monthly allowance; ThatFridge Pro adds a much larger monthly bundle, lets you host shared fridges for your household, and starts with a 7-day free trial.
 
 - ThatFridge Pro Monthly: auto-renews monthly after the free trial.
 - ThatFridge Pro Yearly: auto-renews yearly after the free trial, save vs. monthly.
@@ -210,7 +210,7 @@ questionnaire on 2026-09-06 — the result was 9+ (see bottom).**
 | Simulated Gambling                          | None          | No betting/wagering mechanics                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Contests                                    | None          | Kitchen Score / streaks / badges are personal and private — no leaderboard, no user-vs-user ranking (verified: no such code)                                                                                                                                                                                                                                                                                                                                                                                     |
 | Gambling (real money)                       | No            | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| Loot Boxes                                  | No            | Pro unlocks a fixed feature set; nothing randomized-for-purchase                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Loot Boxes                                  | No            | Pro unlocks a fixed feature set; AI-credit packs grant a fixed, disclosed number of credits - nothing randomized-for-purchase                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 **Calculated result: 9+** (walked through 2026-09-06). Under the reworked system, declaring
 **User-Generated Content = Yes** floors a general-audience app around 9+ even when the UGC is
@@ -278,17 +278,21 @@ WHAT TO TEST
 - Home: AI crew tips based on the current inventory, and a Kitchen Score.
 - Inventory: tap an item for its freshness / expiry detail. Add an item with the "Add" button -
   barcode scan and manual entry are free.
-- Chat: ask a crew member something, e.g. "what should I cook tonight?" (free tier: 5 messages
-  per week, shared across the whole crew).
+- Chat: ask a crew member something, e.g. "what should I cook tonight?" (each message spends
+  an AI credit; the balance and a "Get more" link are shown under the composer).
 - Recipes: sample recipes are visible in the recipe book from first login.
 
-PRO FEATURES AND THE FREE TRIAL
-Pro unlocks unlimited AI chat, receipt scanning, fridge-photo scanning, and multiple/shared
-fridges. The app offers a 7-day free trial with no promo code needed - start it from
-Profile tab -> Go Pro. In the App Store sandbox environment this grants all Pro features
-immediately. (Receipt and fridge-photo scanning are Pro-only and will show an upgrade prompt
-on the free tier; barcode scanning and manual add are always free; expiry-date photo scan and
-AI icon generation are limited on the free tier and unlimited on Pro.)
+AI CREDITS, PRO, AND THE FREE TRIAL
+Every AI action spends credits from the user's balance: chat (1, or 3 when the crew acts on
+the fridge), receipt / fridge-photo / expiry-date scan (2-3), AI icon generation (3), item
+auto-fill (1). Barcode scanning and manual add are always free and never touch credits.
+Every account gets a monthly credit allowance; ThatFridge Pro grants a much larger monthly
+bundle and lets the user host shared fridges (being invited to someone else's fridge is
+free). Credit packs can be bought by anyone from the AI credits screen. When the balance
+hits zero, AI actions show a top-up prompt instead of failing silently.
+The app offers a 7-day free trial with no promo code needed - start it from Profile tab ->
+Go Pro. In the App Store sandbox environment this grants Pro (and its monthly credit bundle)
+immediately.
 
 SHARED CONTENT / USER-GENERATED CONTENT
 Fridge names, sticky notes and recipe notes are visible only to members that a fridge owner has
