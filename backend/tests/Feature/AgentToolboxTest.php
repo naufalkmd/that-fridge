@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Fridge;
 use App\Models\FridgeNote;
 use App\Models\Item;
+use App\Models\Recipe;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\AgentToolbox;
@@ -154,5 +155,132 @@ class AgentToolboxTest extends TestCase
 
         $this->assertStringContainsString('no accessible item', $out['content']);
         $this->assertFalse($out['mutated']);
+    }
+
+    public function test_list_fridges_shows_the_users_fridges_with_counts(): void
+    {
+        $this->item();
+
+        $out = $this->toolbox->run('list_fridges', [], $this->user, $this->fridge->id);
+
+        $this->assertStringContainsString('Home', $out['content']);
+        $this->assertStringContainsString('owner', $out['content']);
+        $this->assertStringContainsString('1 item(s)', $out['content']);
+    }
+
+    public function test_get_kitchen_score_reports_the_scores(): void
+    {
+        $this->item(['expiry_date' => now()->subDays(2)]);
+
+        $out = $this->toolbox->run('get_kitchen_score', [], $this->user, $this->fridge->id);
+
+        $this->assertStringContainsString('Waste Saver:', $out['content']);
+        $this->assertStringContainsString('Overdue items right now: 1', $out['content']);
+        $this->assertFalse($out['mutated']);
+    }
+
+    public function test_get_recipe_returns_ingredients_and_steps(): void
+    {
+        $recipe = Recipe::create([
+            'user_id' => $this->user->id, 'name' => 'Omelette', 'minutes' => 10,
+            'ingredients' => [['name' => '3 eggs', 'icon' => 'eggs']],
+            'steps' => ['Beat the eggs', 'Fry gently'], 'made_count' => 0,
+        ]);
+
+        $out = $this->toolbox->run('get_recipe', ['recipe_id' => $recipe->id], $this->user, $this->fridge->id);
+
+        $this->assertStringContainsString('3 eggs', $out['content']);
+        $this->assertStringContainsString('1. Beat the eggs', $out['content']);
+    }
+
+    public function test_add_item_creates_an_item_with_a_guessed_icon(): void
+    {
+        $out = $this->toolbox->run('add_item', [
+            'name' => 'Cheddar cheese', 'quantity' => 2, 'shelf_life_days' => 14, 'section' => 'Dairy',
+        ], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $this->assertDatabaseHas('items', [
+            'name' => 'Cheddar cheese', 'icon' => 'cheese', 'nutrition_category' => 'dairy', 'quantity' => 2,
+        ]);
+        $this->assertDatabaseHas('sections', ['fridge_id' => $this->fridge->id, 'name' => 'Dairy']);
+    }
+
+    public function test_add_item_falls_back_to_the_first_section_when_none_named(): void
+    {
+        $out = $this->toolbox->run('add_item', ['name' => 'Mystery jar'], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $item = Item::where('name', 'Mystery jar')->first();
+        $this->assertSame($this->section->id, $item->section_id);
+        $this->assertSame('leftovers', $item->icon);
+    }
+
+    public function test_move_item_changes_its_section(): void
+    {
+        $item = $this->item();
+
+        $out = $this->toolbox->run('move_item', ['item_id' => $item->id, 'section' => 'Door', 'location' => 'freezer'], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $fresh = $item->fresh();
+        $this->assertSame('freezer', $fresh->location);
+        $this->assertSame('Door', $fresh->section->name);
+    }
+
+    public function test_check_off_and_remove_from_shopping(): void
+    {
+        $this->toolbox->run('add_to_shopping', ['name' => 'Bananas'], $this->user, $this->fridge->id);
+
+        $checked = $this->toolbox->run('check_off_shopping', ['name' => 'banana'], $this->user, $this->fridge->id);
+        $this->assertTrue($checked['mutated']);
+        $this->assertDatabaseHas('shopping_items', ['name' => 'Bananas', 'checked' => true]);
+
+        $removed = $this->toolbox->run('remove_from_shopping', ['name' => 'banana'], $this->user, $this->fridge->id);
+        $this->assertTrue($removed['mutated']);
+        $this->assertDatabaseMissing('shopping_items', ['name' => 'Bananas']);
+    }
+
+    public function test_remember_fact_appends_and_dedupes(): void
+    {
+        $this->toolbox->run('remember_fact', ['fact' => 'Vegetarian'], $this->user, $this->fridge->id);
+        $dupe = $this->toolbox->run('remember_fact', ['fact' => 'vegetarian'], $this->user, $this->fridge->id);
+
+        $this->assertStringContainsString('Already remembered', $dupe['content']);
+        $this->assertSame(['Vegetarian'], $this->user->userMemory()->first()->facts);
+    }
+
+    public function test_save_recipe_creates_a_recipe(): void
+    {
+        $out = $this->toolbox->run('save_recipe', [
+            'name' => 'Fried Rice', 'minutes' => 15,
+            'ingredients' => ['2 cups rice', '2 eggs'], 'steps' => ['Cook rice', 'Fry with egg'],
+        ], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $recipe = $this->user->recipes()->first();
+        $this->assertSame('Fried Rice', $recipe->name);
+        $this->assertSame('eggs', $recipe->ingredients[1]['icon']);
+    }
+
+    public function test_save_recipe_rejects_an_incomplete_recipe(): void
+    {
+        $out = $this->toolbox->run('save_recipe', ['name' => 'Nothing', 'minutes' => 5, 'ingredients' => [], 'steps' => []], $this->user, $this->fridge->id);
+
+        $this->assertFalse($out['mutated']);
+        $this->assertStringContainsString('at least one ingredient', $out['content']);
+    }
+
+    public function test_mark_recipe_made_increments_the_count(): void
+    {
+        $recipe = Recipe::create([
+            'user_id' => $this->user->id, 'name' => 'Soup', 'minutes' => 30,
+            'ingredients' => [['name' => 'stock', 'icon' => 'leftovers']], 'steps' => ['Simmer'], 'made_count' => 0,
+        ]);
+
+        $out = $this->toolbox->run('mark_recipe_made', ['recipe_id' => $recipe->id], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $this->assertSame(1, $recipe->fresh()->made_count);
     }
 }

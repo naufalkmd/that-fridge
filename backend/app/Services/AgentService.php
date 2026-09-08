@@ -29,7 +29,7 @@ class AgentService
 
     // Hard cap on total tool executions in one message, across all tools, on top of the
     // per-tool MAX_FETCHES sub-limit for fetch_url.
-    private const MAX_TOOL_CALLS = 8;
+    private const MAX_TOOL_CALLS = 10;
 
     /**
      * Send message to agent and get response. $history is the prior turns of this same
@@ -361,7 +361,7 @@ class AgentService
         // The tool schemas already describe each one; this sets the behavioural rules -
         // check real data before claiming, and never delete anything without asking first.
         $toolsInstruction = $hasTools
-            ? ' You have tools to read and act on the user\'s actual kitchen: list_items, list_notes, list_shopping, list_recipes, add_to_shopping, add_note, update_item, mark_item_used, remove_item, clear_expired_items. Call list_items rather than trusting the short inventory summary above when the user asks about specific items, quantities, or what\'s expiring. When the user asks you to add, change, use up, or remove something, do it with the matching tool - don\'t just describe it. Use mark_item_used when they finished an item, remove_item only for something wasted or added by mistake. For remove_item and clear_expired_items you MUST first call the tool with confirm:false, tell the user exactly what will be deleted, and wait for them to agree in a later message before calling again with confirm:true. Never pass confirm:true on your own initiative.'
+            ? ' You have tools to read and act on the user\'s actual kitchen. Reads: list_items, list_notes, list_shopping, list_recipes, list_fridges, get_recipe, get_kitchen_score. Writes: add_item, update_item, move_item, mark_item_used, add_to_shopping, check_off_shopping, remove_from_shopping, add_note, remember_fact, save_recipe, mark_recipe_made, import_recipe_from_link. Deletes (confirm-first): remove_item, clear_expired_items. Call list_items rather than trusting the short inventory summary above when the user asks about specific items, quantities, or what\'s expiring. When the user asks you to add, change, move, use up, buy, save or remove something, do it with the matching tool - don\'t just describe it. Use mark_item_used when they finished an item, remove_item only for something wasted or added by mistake. Only call remember_fact for lasting things (allergies, diets, habits), never one-off requests. For remove_item and clear_expired_items you MUST first call the tool with confirm:false, tell the user exactly what will be deleted, and wait for them to agree in a later message before calling again with confirm:true. Never pass confirm:true on your own initiative.'
             : '';
 
         // Caught live: with no inventory shared (a fresh account, or scoped to an empty

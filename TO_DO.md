@@ -182,13 +182,14 @@ verified 2026-09-06. ASC API key + vendor number `94767188` set in RevenueCat.
 
 **Paywall editor** — project `projc6c4cdf4`, paywall `pwec1165df9a414243`, offering
 `ofrngb7a8453e53`. Editor: `app.revenuecat.com/projects/c6c4cdf4/paywalls/pwec1165df9a414243/builder`.
-Edited 2026-09-08 into a Free-vs-Pro comparison table (see canonical content below). **Draft is
-unpublished** pending: (1) price rows show $9.99/$79.99 — confirm the packages serve
-`thatfridge_pro_*` not the old `monthly`/`yearly` test products; (2) confirm the 7-day intro
-offer is attached to `thatfridge_pro_*` in ASC; (3) minor: Terms/Privacy/Restore link spacing +
-placeholder feature icons (crosshair/map/question-mark) — do in the visual builder;
-(4) **the table copy still says "5 / week" etc. — reword to the credit model** (rows below
-updated to match; the "weekly limit" framing is gone).
+Edited 2026-09-08: Free-vs-Pro comparison table, then reworded to the **credit model** (rows =
+canonical content below; "50 / 400 monthly AI credits", rollover, top-up, own/host a fridge).
+**Draft is unpublished** pending: (1) price rows show $9.99/$79.99 because the Monthly/Yearly
+packages still have the RC **Test Store** products (`monthly`, `yearly`) attached alongside
+`thatfridge_pro_*` — detach the Test Store pair after the first submission syncs the real
+prices; (2) confirm the 7-day intro offer shows on-device; (3) minor: Terms/Privacy/Restore
+spacing + placeholder feature icons — do in the visual builder. On a real device StoreKit
+serves the right price regardless of the dashboard, so the smoke test is the real check.
 
 #### Canonical paywall content (rebuild reference)
 
@@ -269,20 +270,23 @@ to free. Mobile: `fridge/[id]` upsell card; `find-friend` "Not shared" (`FriendF
 **Manual setup still owed** (code is deployed and degrades gracefully until these are done —
 credits work off the backend ledger; only the RC mirror + real pack purchases wait on this):
 
-- [ ] RevenueCat → create Virtual Currency, code **`AICR`**.
-- [ ] App Store Connect → 3 consumable IAPs `credits_100` / `credits_500` / `credits_1500`,
-      priced; then in RevenueCat create products for them + a **`credits`** offering with one
-      package per pack. (The mobile `/credits` screen reads `getOfferings().all["credits"]`.)
-- [ ] RevenueCat → on each consumable + the Pro subscription, no store-side VC config is
-      needed; the backend webhook does the granting. Just confirm the webhook fires for
-      `NON_RENEWING_PURCHASE`.
-- [ ] prod `.env` → `REVENUECAT_SECRET_API_KEY=…`, `REVENUECAT_PROJECT_ID=projc6c4cdf4`
-      (optional: `REVENUECAT_CURRENCY_CODE`, `CREDITS_FREE_MONTHLY`). Then `php artisan
-      config:cache` as `deploy`.
-- [ ] prod → confirm `2026_09_08_000007_add_ai_credits_and_ledger` ran (`php artisan migrate`
-      is in `deploy.sh`); spot-check `select ai_credits from users limit 5;`.
-- [ ] prod → set the demo account high: `php artisan tinker` →
-      `User::where('is_demo',true)->each->forceFill(['ai_credits'=>9999])->save()` (or re-seed).
+- [x] RevenueCat → Virtual Currency `AICR` created (via API 2026-09-08 — not shown in the
+      dashboard nav yet, but live: `list-virtual-currencies` returns it).
+- [x] RevenueCat → 3 consumable products (`credits_100/500/1500`) + a **`credits`** offering
+      (`ofrngd3a38a3ab9`, not current) with one custom package per pack, created via API. The
+      mobile `/credits` screen reads `getOfferings().all["credits"]`.
+- [x] prod → migration `2026_09_08_000007` confirmed run; all 7 users backfilled; demo
+      accounts set to 9999; `config:cache` done.
+- [ ] App Store Connect → 3 consumable IAPs `credits_100` / `credits_500` / `credits_1500`
+      priced + "Ready to Submit" (done), then **submitted with a build** — until then RC shows
+      "Could not check" and no `indicative_price` (ASC only exposes IAP metadata post-submission).
+- [ ] RevenueCat webhook → confirm it's not filtering out `NON_RENEWING_PURCHASE` (the
+      consumable-purchase event the credit grant keys off).
+- [ ] prod `.env` → `REVENUECAT_SECRET_API_KEY=…` for the credit→VC mirror (project id defaults
+      to `projc6c4cdf4`). Optional; the ledger is authoritative without it. Then `config:cache`.
+- [ ] After submission: detach the two Test Store products (`monthly`, `yearly`) from the
+      Monthly/Yearly packages so the paywall serves only `thatfridge_pro_*`, then publish the
+      paywall draft (already reworded for credits — see below).
 
 ### Shared icon pack (curated from user generations)
 
@@ -298,22 +302,34 @@ food icons.
 
 ### Quick Chat tools (`AgentToolbox`)
 
-Agents can call kitchen tools on top of `fetch_url` browsing. Shipped: `list_items`,
-`list_notes`, `list_shopping`, `list_recipes`, `add_to_shopping`, `add_note`, `update_item`,
-`mark_item_used`, `remove_item`, `clear_expired_items`. Reads run freely; low-stakes writes
-execute directly (reversible); `remove_item` / `clear_expired_items` take `confirm:false`
-first and the prompt forbids the model self-confirming. Loop bounded by `MAX_TOOL_ROUNDS = 5`
-+ `MAX_TOOL_CALLS = 8` (fetch_url keeps its own `MAX_FETCHES = 2`). Client passes `fridge_id`
-(active scope) and refreshes inventory when the reply carries `mutated: true`. A tool exchange
-costs the 1-credit message + a best-effort `+2` surcharge (`chat_tools`, `spendUpTo` so it
-never hard-fails mid-reply). All agents get all tools (the confirm-first pattern is the safety,
-not per-agent gating).
+Agents can call kitchen tools on top of `fetch_url` browsing. All 21 shipped (Tier 1 in
+`f0fcc7b`, Tier 2/3 added 2026-09-08):
 
-Deferred (Tier 2/3): `add_item`, `check_off_shopping` / `remove_from_shopping`, `get_recipe`,
-`save_recipe`, `mark_recipe_made`, `import_recipe_from_link`, `move_item`, `remember_fact`,
-`get_kitchen_score`, `list_fridges`. A confirm *card* in the UI (vs the text round-trip) is
-also deferred. Consider bumping tool-use turns to Sonnet if Haiku 4.5 tool reliability is poor
-in practice.
+- **Reads:** `list_items`, `list_notes`, `list_shopping`, `list_recipes`, `list_fridges`,
+  `get_recipe`, `get_kitchen_score`
+- **Writes (direct, reversible):** `add_item`, `update_item`, `move_item`, `mark_item_used`,
+  `add_to_shopping`, `check_off_shopping`, `remove_from_shopping`, `add_note`, `remember_fact`,
+  `save_recipe`, `mark_recipe_made`, `import_recipe_from_link`
+- **Deletes (confirm-first — `confirm:false` preview, prompt forbids self-confirming):**
+  `remove_item`, `clear_expired_items`
+
+Loop bounded by `MAX_TOOL_ROUNDS = 5` + `MAX_TOOL_CALLS = 10` (fetch_url keeps its own
+`MAX_FETCHES = 2`). Client passes `fridge_id` (active scope) and refreshes inventory when the
+reply carries `mutated: true` — note that flag currently only triggers an *inventory* refresh
+on mobile, so a shopping/notes/recipe write won't refresh those views until the next open.
+A tool exchange costs the 1-credit message + a best-effort `+2` surcharge (`chat_tools`,
+`spendUpTo` so it never hard-fails mid-reply). All agents get all tools; model stays Haiku 4.5.
+
+Notes / still open:
+- `add_item` / `save_recipe` guess icons from a **curated-10 keyword map** only (the full pack's
+  keywords live in a generated TS file); unknowns get `leftovers`. Post-launch: port the full
+  `guessFoodIcon` (copy `food-icon-manifest.json` + keyword data into the backend).
+- `save_recipe` skips the `meal_type`/`vibes`/`food_focus` "what to eat" tags (that needs an
+  extra model call that would make `AgentToolbox` depend on `AgentService` circularly). Tags
+  are advisory; re-saving from the app fills them in.
+- A confirm *card* in the UI (vs the text round-trip) is still deferred.
+- Sonnet-on-tool-turns: 1-line change at `AgentService.php`'s `runWithTools`. Only do it if
+  Haiku fumbles the larger toolset in practice — the `+2` surcharge already makes the user pay.
 
 ### Data retention
 
