@@ -26,6 +26,7 @@ import {
   type StorageLocation,
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
+import { DateField, daysUntil, isoInDays } from "@/components/draft-item";
 import { useInventory } from "@/lib/inventory";
 import { useShopping } from "@/lib/shopping";
 import { useKitchenScore } from "@/lib/kitchenScore";
@@ -52,11 +53,6 @@ const BEST_BEFORE_PRESETS = [
   { label: "1 month", days: 30 },
 ];
 
-function isoInDays(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
 
 export default function ItemDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -74,7 +70,8 @@ export default function ItemDetail() {
   const [category, setCategory] = useState<NutritionCategory | null>(null);
   const [note, setNote] = useState("");
   const [shopUrl, setShopUrl] = useState("");
-  const [expiryDays, setExpiryDays] = useState<number | null>(null);
+  const [expiryDate, setExpiryDate] = useState<string | null>(null);
+  const [expiryTouched, setExpiryTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -118,7 +115,8 @@ export default function ItemDetail() {
     setCategory(item!.nutritionCategory ?? null);
     setNote(item!.note ?? "");
     setShopUrl(item!.shopUrl ?? "");
-    setExpiryDays(null);
+    setExpiryDate(isoInDays(item!.days));
+    setExpiryTouched(false);
     setEditing(true);
   }
 
@@ -135,8 +133,11 @@ export default function ItemDetail() {
         nutrition_category: category,
         note: note.trim(),
         shop_url: normalizeShopUrl(shopUrl),
-        ...(expiryDays != null
-          ? { expiry_date: isoInDays(expiryDays), shelf_life_days: expiryDays }
+        ...(expiryTouched && expiryDate
+          ? {
+              expiry_date: expiryDate,
+              shelf_life_days: Math.max(1, daysUntil(expiryDate)),
+            }
           : {}),
       });
       setEditing(false);
@@ -301,18 +302,38 @@ export default function ItemDetail() {
             />
           </Field>
           <Field label="BEST BEFORE">
-            <ChipRow
-              options={BEST_BEFORE_PRESETS.map((p) => ({
-                key: String(p.days),
-                label: p.label,
-              }))}
-              value={expiryDays == null ? null : String(expiryDays)}
-              onChange={(k) => setExpiryDays(Number(k))}
-            />
+            <View style={{ flexDirection: "row" }}>
+              <DateField
+                value={expiryDate}
+                onChange={(iso) => {
+                  setExpiryDate(iso);
+                  setExpiryTouched(true);
+                }}
+              />
+            </View>
+            <View style={{ marginTop: 8 }}>
+              <ChipRow
+                options={BEST_BEFORE_PRESETS.map((p) => ({
+                  key: String(p.days),
+                  label: p.label,
+                }))}
+                value={
+                  expiryTouched && expiryDate
+                    ? (BEST_BEFORE_PRESETS.find(
+                        (p) => isoInDays(p.days) === expiryDate,
+                      )?.days.toString() ?? null)
+                    : null
+                }
+                onChange={(k) => {
+                  setExpiryDate(isoInDays(Number(k)));
+                  setExpiryTouched(true);
+                }}
+              />
+            </View>
             <Text style={{ marginTop: 6, fontSize: 11, color: FAINT }}>
-              {expiryDays == null
-                ? `Currently ${daysLabel(item.days)} — leave untouched to keep it`
-                : `New best-before: ${isoInDays(expiryDays)}`}
+              {expiryTouched
+                ? `New best-before: ${expiryDate}`
+                : `Currently ${daysLabel(item.days)} — leave untouched to keep it`}
             </Text>
           </Field>
           <Field label="NOTE (OPTIONAL)">

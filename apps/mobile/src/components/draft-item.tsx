@@ -750,12 +750,14 @@ export function AutoFillButton({
   );
 }
 
-function DateField({
+export function DateField({
   value,
   onChange,
+  label = "Best before",
 }: {
   value: string | null;
   onChange: (iso: string) => void;
+  label?: string;
 }) {
   const [open, setOpen] = useState(false);
   const current = value ? new Date(`${value}T00:00:00`) : new Date();
@@ -808,7 +810,7 @@ function DateField({
             }}
           >
             <Text style={{ fontSize: 13, fontWeight: "700", color: FAINT }}>
-              Best before
+              {label}
             </Text>
             <Pressable onPress={() => setOpen(false)} hitSlop={8}>
               <Text style={{ fontSize: 15, fontWeight: "700", color: AMBER }}>
