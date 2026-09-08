@@ -33,7 +33,7 @@
 \pagestyle{fancy}
 \fancyhf{}
 \lhead{\small\color{brand}ThatFridge --- App Review Guide}
-\rhead{\small v1.2.1}
+\rhead{\small v1.2.2}
 \cfoot{\small\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 
@@ -62,13 +62,16 @@
 \toprule
 App name            & ThatFridge \\
 Bundle ID           & \texttt{test.thatfridge.app} \\
-Version             & 1.2.1 (build number auto-incremented by EAS) \\
+Version             & 1.2.2 (build number auto-incremented by EAS) \\
 Platform            & iOS only, iPhone; minimum iOS 15.1 \\
 Category            & Food \& Drink \\
 Age rating          & 9+ \\
-Primary markets     & Malaysia and South Korea; English-language UI \\
+Primary market      & Malaysia at launch (plus \textasciitilde140 other storefronts); South Korea is a
+                      post-approval fast-follow. English-language UI. \\
 Account             & Required for full use --- demo account provided below \\
-In-app purchases    & One auto-renewable subscription (ThatFridge Pro) with a 7-day free trial \\
+In-app purchases    & One auto-renewable subscription (\emph{ThatFridge Pro}, 7-day free trial) and
+                      three consumable ``AI credit'' packs (\texttt{credits\_100}, \texttt{credits\_500},
+                      \texttt{credits\_1500}). See \S\ref{sec:iap}. \\
 Third-party login   & Sign in with Apple (native) and email/password; Google Sign-In where available \\
 Backend             & Live production REST API at \texttt{api.thatfridge.com} (hosted in Singapore) \\
 Advertising / tracking & None. No ad SDK, no analytics SDK, no tracking. \\
@@ -82,8 +85,13 @@ and pantry; the app sends expiry reminders and an AI ``crew'' of four assistants
 \textbf{Chef}, \textbf{Guardian}, \textbf{Organizer} and \textbf{Shopkeeper} --- suggests
 meals from current stock, flags food about to spoil, advises on storage, and builds a
 shopping list. A household can share one fridge so every member sees the same live
-inventory. Pro unlocks unlimited AI use, receipt/photo bulk-add, and multiple shared
-fridges.
+inventory.
+
+Every AI action --- a chat message, a receipt or fridge-photo scan, generating a food icon
+--- spends ``AI credits'' from a monthly balance. Every account gets a free monthly
+allowance; \emph{ThatFridge Pro} grants a much larger monthly bundle and lets the user host
+a shared fridge for their household. Anyone can also buy one-off credit packs. Barcode
+scanning and manual entry are always free and never use credits.
 
 \section{Demo account and sign-in}
 
@@ -101,11 +109,15 @@ Password & As entered in the \emph{App Review Information} $\rightarrow$ \emph{S
         two-factor step, and no invitation code is required.
   \item On first sign-in a short 3-slide intro carousel appears. It is skippable --- tap
         \textbf{Skip} (top-right) to go straight to the app.
-  \item The account is pre-populated: a shared fridge with items across all three storage
+  \item The account is pre-populated: shared fridges with items across all three storage
         zones (fridge, freezer, pantry) and a recipe book with sample recipes. Every screen
         has real content on first launch --- there are no empty states to work around.
+  \item \textbf{The demo account has ThatFridge Pro active and a large AI-credit balance},
+        so every feature --- receipt/photo scanning, hosting a shared fridge, and the AI
+        crew --- is available without any purchase. To review the purchase flows themselves,
+        see \S\ref{sec:iap}.
   \item Alternatively, \textbf{Sign in with Apple} on the same screen creates a fresh
-        account with no data.
+        account with no data (free tier, 50 AI credits).
 \end{itemize}
 
 \section{Guided walkthrough}
@@ -117,14 +129,17 @@ Password & As entered in the \emph{App Review Information} $\rightarrow$ \emph{S
   \item \textbf{Inventory tab.} The full item list grouped by storage zone. Tap any item
         for its freshness percentage, expiry date, quantity and notes. Freshness colour:
         green = fresh, amber = due soon, red = overdue.
-  \item \textbf{Add (centre ``+'' button).} Four ways to add stock: \emph{Scan barcode}
-        (free), \emph{Add manually} (free), \emph{Scan receipt} (Pro), \emph{Photo of
-        fridge} (Pro). Barcode and manual entry work on the demo account without a
-        subscription. The three camera methods open the camera directly, with an
-        ``upload from library'' option for testing without a physical receipt or fridge.
+  \item \textbf{Add (centre ``+'' button).} Four ways to add stock: \emph{Scan barcode} and
+        \emph{Add manually} are always free; \emph{Scan receipt} and \emph{Photo of fridge}
+        each spend AI credits (the demo account has plenty). Each method is labelled with its
+        credit cost. The camera methods open the camera directly, with an ``upload from
+        library'' option for testing without a physical receipt or fridge.
   \item \textbf{Chat tab.} Ask the crew in plain language, e.g.\ ``what can I cook
-        tonight?''. The free tier allows 5 messages per week shared across the crew.
-        Responses are produced server-side (see \S\ref{sec:third-party}).
+        tonight?''. Each message spends one AI credit (three when the crew acts on the fridge);
+        the running balance and a ``Get more'' link sit under the composer. The crew can also
+        read and act on the user's own kitchen when asked (add an item, tick off the shopping
+        list, leave a note) --- destructive actions ask for confirmation first. Responses are
+        produced server-side (see \S\ref{sec:third-party}).
   \item \textbf{Crew tab.} One panel per assistant: Chef (recipes ranked by expiry),
         Guardian (food-safety flags), Organizer (storage guidance and a ``misplaced items''
         sweep), Shopkeeper (shopping list and ``don't rebuy'' hints).
@@ -134,36 +149,69 @@ Password & As entered in the \emph{App Review Information} $\rightarrow$ \emph{S
   \item \textbf{Sharing} (Profile $\rightarrow$ Fridges, or the ``+'' on the Home fridge
         carousel). Create or rename fridges, invite another user by exact username, and
         approve join requests. Content in a fridge is visible only to approved members.
-  \item \textbf{Profile tab.} Subscription status, a \textbf{Go Pro} button (and a
+        Hosting a shared fridge requires Pro; being invited to one is free. The demo account
+        has Pro, so all of this is available.
+  \item \textbf{Profile tab.} An \textbf{AI credits} card (current balance $\rightarrow$
+        the credits screen), subscription status, a \textbf{Go Pro} button (and a
         \emph{Restore purchases} link), \textbf{Manage subscription} once subscribed (opens
         the RevenueCat Customer Center), notification settings, ``AI Data \& Memory''
-        controls, Sign out, and \textbf{Delete account}.
+        controls (view and clear what the crew remembers), Sign out, and \textbf{Delete
+        account}.
 \end{enumerate}
 
-\section{Reviewing the subscription (Guideline 3.1)}
+\section{Reviewing the in-app purchases (Guidelines 3.1, 3.1.1, 3.1.2)}
+\label{sec:iap}
+
+All purchases are \textbf{StoreKit only}, via RevenueCat. There is no external or
+alternative purchase mechanism anywhere in the app.
+
+\subsection{Subscription --- ThatFridge Pro}
 
 \begin{itemize}
   \item \textbf{Products.} \emph{ThatFridge Pro Monthly} (\texttt{thatfridge\_pro\_monthly})
         and \emph{ThatFridge Pro Yearly} (\texttt{thatfridge\_pro\_yearly}). Both are
         auto-renewable and both include a 7-day free trial.
-  \item \textbf{Purchase path.} StoreKit only, via RevenueCat. There is no external or
-        alternative purchase mechanism anywhere in the app.
-  \item \textbf{Opening the paywall.} Profile tab $\rightarrow$ \textbf{Go Pro}, or attempt
-        a Pro-only action such as \emph{Scan receipt}.
+  \item \textbf{What Pro gives.} A much larger monthly AI-credit bundle (unused credits roll
+        over), and the ability to host a shared fridge for the household. It is \emph{not} a
+        toggle that unlocks locked features --- every feature is available on the free tier,
+        subject to the shared AI-credit balance.
+  \item \textbf{Opening the paywall.} Profile tab $\rightarrow$ \textbf{Go Pro}; or when the
+        AI-credit balance is exhausted; or when a free user tries to host/share a second
+        fridge.
   \item \textbf{The paywall shows} each plan's price and billing period, the 7-day
         free-trial terms and the price after it, a \textbf{Restore Purchases} control, the
         standard auto-renew disclosure, and links to the
         \href{https://thatfridge.com/terms/}{Terms of Use} and
         \href{https://thatfridge.com/privacy/}{Privacy Policy}.
-  \item \textbf{Sandbox.} Starting the free trial in the review environment grants all Pro
-        entitlements immediately; no promo code is required. \textbf{Restore Purchases}
-        re-syncs entitlements for the signed-in Apple ID.
+  \item \textbf{Sandbox.} Starting the free trial in the review environment grants Pro (and
+        its monthly credit bundle) immediately; no promo code is required. The demo account
+        already has Pro, so no purchase is needed to see Pro features.
+        \textbf{Restore Purchases} re-syncs entitlements for the signed-in Apple ID.
   \item \textbf{Cancelling.} Cancelling the trial or subscription (Manage subscription, or
         iOS Settings) does not remove Pro immediately --- access continues until the end of
         the current period, per Apple's model, then the app returns to the free tier on the
         next launch or foreground. Deleting the ThatFridge account likewise does \emph{not}
         cancel the Apple subscription; that is managed by the user in iOS Settings, and the
         app says so at the point of deletion.
+\end{itemize}
+
+\subsection{Consumables --- AI credit packs}
+
+\begin{itemize}
+  \item \textbf{Products.} \texttt{credits\_100}, \texttt{credits\_500} and
+        \texttt{credits\_1500} --- consumable in-app purchases that add exactly 100 / 500 /
+        1500 AI credits to the account. The amount granted is fixed and disclosed on the
+        purchase button; nothing is randomised. \textbf{These are not loot boxes.}
+  \item \textbf{Where to buy.} Profile tab $\rightarrow$ \textbf{AI credits}, or the
+        \textbf{Get more} link shown under the chat composer / when the balance runs low ---
+        this opens the \emph{AI credits} screen, which lists the current balance, what each
+        action costs, and the three packs with their prices.
+  \item \textbf{After purchase.} Credits are granted server-side via the RevenueCat purchase
+        webhook and the on-screen balance updates within a few seconds. Consumed credits are
+        spent per AI action and do not expire.
+  \item \textbf{Testing.} The demo account already holds a large balance, so credits are not
+        required to exercise any feature. To review the purchase flow itself, use a sandbox
+        Apple ID on the \emph{AI credits} screen.
 \end{itemize}
 
 \section{Answers to likely review questions}
@@ -200,8 +248,9 @@ and there is no associated tracking.
 
 \subsection{Guideline 5.1.1 --- Data collection and storage}
 \textbf{Collected:} account name, username and email; user-created content (items, notes,
-chat messages); photos the user chooses to attach; subscription status (via RevenueCat); an
-Expo push token; and product-interaction history used to compute the Kitchen Score.
+chat messages); photos the user chooses to attach; subscription status and AI-credit balance
+(via RevenueCat); an Expo push token; and product-interaction history used to compute the
+Kitchen Score.
 \textbf{Not collected:} location, contacts, health data, and card/financial data (Apple
 handles payment). No advertising identifiers, no third-party analytics, no tracking SDKs.
 The App Privacy section and \href{https://thatfridge.com/privacy/}{thatfridge.com/privacy}
@@ -264,8 +313,8 @@ OpenRouter & LLM inference for chat, and OCR / vision for receipt and fridge-pho
 The user's message or the attached image, plus relevant fridge context. Not used for model
 training. \\
 fal.ai & Generates a custom food icon from a text prompt & The text prompt only \\
-RevenueCat & Subscription and entitlement management & An app-user identifier and purchase
-status \\
+RevenueCat & Subscription, consumable-purchase and entitlement management & An app-user
+identifier, purchase status, and the AI-credit balance (mirrored for display) \\
 Expo & Delivers push notifications & The device push token \\
 \bottomrule
 \end{tabular}
