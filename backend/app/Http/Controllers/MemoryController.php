@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Services\MemoryService;
-use App\Support\ChatQuota;
 use Illuminate\Http\Request;
 
 class MemoryController extends Controller
@@ -32,13 +31,8 @@ class MemoryController extends Controller
 
         $memory = $request->user()->userMemory()->firstOrCreate([], ['facts' => []]);
 
-        // The client fires this right after a chat reply, so it's only a real call when the
-        // user still had chat allowance. If a non-Pro user has spent their weekly budget,
-        // don't burn an LLM call here - just hand back what's already remembered.
-        if (ChatQuota::isExhaustedFor($request->user())) {
-            return response()->json(['facts' => $memory->facts ?? []]);
-        }
-
+        // Not separately metered - it's a tiny call the client only fires right after a chat
+        // reply that already spent a credit, and it's throttled at the route.
         $facts = $this->memoryService->extractAndUpdate(
             $memory->facts ?? [],
             $data['user_message'],

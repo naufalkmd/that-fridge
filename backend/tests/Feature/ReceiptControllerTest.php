@@ -20,22 +20,20 @@ class ReceiptControllerTest extends TestCase
         return Section::create(['fridge_id' => $fridge->id, 'name' => 'General']);
     }
 
-    public function test_scan_is_rejected_for_a_non_pro_user(): void
+    public function test_scan_is_rejected_when_out_of_credits(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['ai_credits' => 2]); // RECEIPT_SCAN costs 3
         $section = $this->sectionFor($user);
         config(['services.openrouter.key' => null]);
 
-        $response = $this->actingAs($user)->post("/api/sections/{$section->id}/items/receipt/scan", [
+        $this->actingAs($user)->post("/api/sections/{$section->id}/items/receipt/scan", [
             'image' => UploadedFile::fake()->image('receipt.jpg'),
-        ]);
-
-        $response->assertStatus(402);
+        ])->assertStatus(402)->assertJson(['error' => 'insufficient_credits']);
     }
 
-    public function test_scan_succeeds_for_a_pro_user(): void
+    public function test_scan_succeeds_and_spends_credits(): void
     {
-        $user = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
+        $user = User::factory()->create(['ai_credits' => 10]);
         $section = $this->sectionFor($user);
         config(['services.openrouter.key' => null]); // forces the mock detection path
 
@@ -45,5 +43,6 @@ class ReceiptControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJsonStructure(['receipt_id', 'status', 'file_url', 'detected_items']);
+        $this->assertSame(7, $user->fresh()->ai_credits);
     }
 }

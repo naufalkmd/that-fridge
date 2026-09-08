@@ -4,27 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\GeneratedIcon;
 use App\Models\SharedIcon;
+use App\Services\CreditService;
 use App\Services\IconGenerationService;
-use Carbon\Carbon;
+use App\Support\CreditCost;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class IconController extends Controller
 {
-    // Same shape as AgentController::FREE_CHATS_PER_WEEK - icon generation had no Pro gate and
-    // no per-user cap at all (only the route's throttle:10,1), found while modeling AI costs in
-    // TO_DO.md §3a. Per-image cost (fal.ai flux/schnell, ~$0.01-0.025) is noticeably higher than
-    // a chat message (~$0.002), so free tier stays capped rather than fully blocked - matches
-    // "Pro removes AI limits" rather than "Pro unlocks generation" (never documented as a
-    // Pro-only feature anywhere).
-    //
-    // One budget across every kind of AI image (item icons + recipe icons), counted as
-    // SUM(credits) since the week start rather than a row count - see the generated_icons
-    // kind/credits migration and IconGenerationService::CREDIT_COST.
-    private const FREE_GENERATION_CREDITS_PER_WEEK = 5;
-
-    public function __construct(protected IconGenerationService $iconService) {}
+    public function __construct(
+        protected IconGenerationService $iconService,
+        protected CreditService $credits,
+    ) {}
 
     /**
      * Every icon a user generates is already persisted (see IconGenerationService), so their
@@ -73,24 +65,15 @@ class IconController extends Controller
             'kind' => ['sometimes', Rule::in(array_keys(IconGenerationService::CREDIT_COST))],
         ]);
         $kind = $data['kind'] ?? 'icon';
-        $cost = IconGenerationService::CREDIT_COST[$kind];
 
-        if (! $request->user()->isPro()) {
-            $weekStart = Carbon::now()->startOfWeek(Carbon::MONDAY);
-            $used = (int) GeneratedIcon::where('user_id', $request->user()->id)
-                ->where('created_at', '>=', $weekStart)
-                ->sum('credits');
-
-            if ($used + $cost > self::FREE_GENERATION_CREDITS_PER_WEEK) {
-                return response()->json([
-                    'message' => "You've used your ".self::FREE_GENERATION_CREDITS_PER_WEEK.' free AI image generations this week. Upgrade to Pro for unlimited AI icons and images.',
-                ], 402);
-            }
-        }
+        // Metered in AI credits (402 with the shortfall when the balance is short).
+        $this->credits->spend($request->user(), CreditCost::ICON, 'icon');
 
         $result = $this->iconService->generateIcon($data['prompt'], $request->user()->id, $kind);
 
         if (! $result['ok']) {
+            $this->credits->grant($request->user(), CreditCost::ICON, 'icon_refund');
+
             return response()->json(['message' => 'Failed to generate icon'], 502);
         }
 

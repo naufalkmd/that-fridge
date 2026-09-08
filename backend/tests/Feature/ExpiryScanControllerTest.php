@@ -7,7 +7,6 @@ use App\Models\Section;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class ExpiryScanControllerTest extends TestCase
@@ -28,51 +27,32 @@ class ExpiryScanControllerTest extends TestCase
         ]);
     }
 
-    public function test_scan_succeeds_under_the_free_weekly_limit(): void
+    public function test_scan_spends_credits(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['ai_credits' => 5]);
         $section = $this->sectionFor($user);
-        config(['services.openrouter.key' => null]); // forces the no-key path, still a 200
+        config(['services.openrouter.key' => null]); // no-key path, still a 200
 
-        $response = $this->scan($user, $section);
-
-        $response->assertStatus(200);
+        $this->scan($user, $section)->assertStatus(200);
+        $this->assertSame(3, $user->fresh()->ai_credits); // EXPIRY_SCAN = 2
     }
 
-    public function test_scan_is_rejected_after_the_free_weekly_limit_for_a_non_pro_user(): void
+    public function test_scan_is_rejected_when_out_of_credits(): void
     {
-        $user = User::factory()->create();
-        $section = $this->sectionFor($user);
-        config(['services.openrouter.key' => null]);
-
-        for ($i = 0; $i < 10; $i++) {
-            $this->scan($user, $section)->assertStatus(200);
-        }
-
-        $this->scan($user, $section)->assertStatus(402);
-    }
-
-    public function test_scan_is_unlimited_for_a_pro_user(): void
-    {
-        $user = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
+        $user = User::factory()->create(['ai_credits' => 1]); // EXPIRY_SCAN costs 2
         $section = $this->sectionFor($user);
         config(['services.openrouter.key' => null]);
 
-        for ($i = 0; $i < 12; $i++) {
-            $this->scan($user, $section)->assertStatus(200);
-        }
+        $this->scan($user, $section)->assertStatus(402)->assertJson(['error' => 'insufficient_credits']);
     }
 
-    public function test_scan_quota_is_scoped_per_user(): void
+    public function test_scan_credits_are_scoped_per_user(): void
     {
-        $capped = User::factory()->create();
-        $other = User::factory()->create();
-        $section = $this->sectionFor($capped);
-        $otherSection = $this->sectionFor($other);
+        $broke = User::factory()->create(['ai_credits' => 0]);
+        $other = User::factory()->create(['ai_credits' => 10]);
         config(['services.openrouter.key' => null]);
-        Cache::put('expiry_scan_quota:'.$capped->id.':'.now()->format('oW'), 10, now()->addWeek());
 
-        $this->scan($capped, $section)->assertStatus(402);
-        $this->scan($other, $otherSection)->assertStatus(200);
+        $this->scan($broke, $this->sectionFor($broke))->assertStatus(402);
+        $this->scan($other, $this->sectionFor($other))->assertStatus(200);
     }
 }

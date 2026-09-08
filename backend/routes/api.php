@@ -8,6 +8,7 @@ use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\BlockController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CreditController;
 use App\Http\Controllers\ExpiryScanController;
 use App\Http\Controllers\FridgeController;
 use App\Http\Controllers\FridgeJoinRequestController;
@@ -55,6 +56,7 @@ Route::middleware('throttle:6,1')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/me/credits', [CreditController::class, 'show']);
     Route::post('/me/onboarding', [AuthController::class, 'onboarding']);
     // Name / username edits are rate-limited per rolling 30 days in the controller; the
     // throttle here is just an anti-hammering floor.

@@ -3,39 +3,36 @@
 namespace App\Http\Controllers;
 
 use App\Models\Section;
+use App\Services\CreditService;
 use App\Services\PhotoService;
+use App\Support\CreditCost;
 use Illuminate\Http\Request;
 
 class PhotoController extends Controller
 {
-    protected $photoService;
-
-    public function __construct(PhotoService $photoService)
-    {
-        $this->photoService = $photoService;
-    }
+    public function __construct(
+        protected PhotoService $photoService,
+        protected CreditService $credits,
+    ) {}
 
     /**
-     * Upload fridge photo and detect items
+     * Upload fridge photo and detect items. Metered in AI credits (used to be Pro-only).
      */
     public function scan(Request $request, Section $section)
     {
         $this->authorize('update', $section);
 
-        // Fridge-photo scan is a Pro-exclusive feature (add.tsx blocks free users from reaching
-        // this mode client-side) - this closes the server-side hole that let anyone call the
-        // vision API directly regardless of what the UI shows.
-        if (! $request->user()->isPro()) {
-            return response()->json(['message' => 'Fridge photo scanning is a Pro feature. Upgrade to Pro to use it.'], 402);
-        }
-
         $request->validate([
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
         ]);
 
+        $this->credits->spend($request->user(), CreditCost::PHOTO_SCAN, 'photo_scan');
+
         $result = $this->photoService->processPhoto($request->file('image'));
 
-        if (!$result) {
+        if (! $result) {
+            $this->credits->grant($request->user(), CreditCost::PHOTO_SCAN, 'photo_scan_refund');
+
             return response()->json(['error' => 'Failed to process photo'], 500);
         }
 
@@ -78,7 +75,7 @@ class PhotoController extends Controller
             'photo_scan_id' => $request->input('photo_scan_id'),
             'status' => 'imported',
             'created_items' => $confirmedItems,
-            'message' => count($confirmedItems) . ' items added to inventory',
+            'message' => count($confirmedItems).' items added to inventory',
         ], 201);
     }
 }

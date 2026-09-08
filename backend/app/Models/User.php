@@ -34,6 +34,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'data_transfer_consented_at' => 'datetime',
             'pro_expires_at' => 'datetime',
+            'ai_credits' => 'integer',
             'is_demo' => 'boolean',
             'preferences' => 'array',
             'password' => 'hashed',
@@ -103,6 +104,11 @@ class User extends Authenticatable
     public function usageHistory(): HasMany
     {
         return $this->hasMany(UsageHistory::class);
+    }
+
+    public function aiCreditLedger(): HasMany
+    {
+        return $this->hasMany(AiCreditLedger::class);
     }
 
     public function userMemory(): HasOne

@@ -60,6 +60,13 @@ return [
         // constant-time against the incoming Authorization header. Not a HMAC signing secret;
         // that's a separate (and plan-gated) verification method RevenueCat also offers.
         'webhook_secret' => env('REVENUECAT_WEBHOOK_SECRET'),
+
+        // For mirroring the AI-credit balance into RevenueCat Virtual Currency (display only;
+        // the backend ledger stays authoritative). A v2 secret API key + the project id.
+        // Leave unset to disable the mirror (local dev / tests).
+        'secret_api_key' => env('REVENUECAT_SECRET_API_KEY'),
+        'project_id' => env('REVENUECAT_PROJECT_ID', 'projc6c4cdf4'),
+        'currency_code' => env('REVENUECAT_CURRENCY_CODE', 'AICR'),
     ],
 
 ];

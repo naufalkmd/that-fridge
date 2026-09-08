@@ -96,6 +96,8 @@ class AgentService
                     'mocked' => false,
                     // A tool call changed the user's data - the client refreshes after this.
                     'mutated' => $result['mutated'] ?? false,
+                    // Any tool ran this turn (kitchen action or fetch_url) - costs a surcharge.
+                    'tools_used' => $result['tools_used'] ?? false,
                 ];
             }
 
@@ -147,13 +149,13 @@ class AgentService
             $last = $this->client->complete($messages, $maxTokens, 'anthropic/claude-haiku-4.5', $offerTools ? $tools : []);
 
             if (! $last['ok']) {
-                return [...$last, 'mutated' => $mutated];
+                return [...$last, 'mutated' => $mutated, 'tools_used' => $callCount > 0];
             }
 
             $calls = $last['tool_calls'] ?? null;
 
             if (! $calls) {
-                return [...$last, 'mutated' => $mutated];
+                return [...$last, 'mutated' => $mutated, 'tools_used' => $callCount > 0];
             }
 
             // Keep the assistant's tool-call turn in the transcript, then answer each call.
@@ -176,7 +178,7 @@ class AgentService
 
         // Ran out of rounds with the model still wanting tools - hand back whatever text it
         // last produced (may be empty, which the caller turns into "No response").
-        return [...($last ?? ['ok' => false, 'reason' => 'exception']), 'mutated' => $mutated];
+        return [...($last ?? ['ok' => false, 'reason' => 'exception']), 'mutated' => $mutated, 'tools_used' => $callCount > 0];
     }
 
     private function fetchUrlTool(): array

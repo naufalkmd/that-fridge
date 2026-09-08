@@ -3,31 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\Section;
+use App\Services\CreditService;
 use App\Services\ReceiptService;
+use App\Support\CreditCost;
 use Illuminate\Http\Request;
 
 class ReceiptController extends Controller
 {
-    protected $receiptService;
-
-    public function __construct(ReceiptService $receiptService)
-    {
-        $this->receiptService = $receiptService;
-    }
+    public function __construct(
+        protected ReceiptService $receiptService,
+        protected CreditService $credits,
+    ) {}
 
     /**
-     * Upload receipt image and extract items via OCR
+     * Upload receipt image and extract items via OCR. Metered in AI credits (used to be
+     * Pro-only).
      */
     public function scan(Request $request, Section $section)
     {
         $this->authorize('update', $section);
-
-        // Receipt scan is a Pro-exclusive feature (add.tsx blocks free users from reaching this
-        // mode client-side) - this closes the server-side hole that let anyone call the vision
-        // API directly regardless of what the UI shows.
-        if (! $request->user()->isPro()) {
-            return response()->json(['message' => 'Receipt scanning is a Pro feature. Upgrade to Pro to use it.'], 402);
-        }
 
         $request->validate([
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
@@ -35,13 +29,17 @@ class ReceiptController extends Controller
             'purchased_at' => 'nullable|date_format:Y-m-d',
         ]);
 
+        $this->credits->spend($request->user(), CreditCost::RECEIPT_SCAN, 'receipt_scan');
+
         $result = $this->receiptService->processReceipt(
             $request->file('image'),
             $request->input('store_name'),
             $request->input('purchased_at')
         );
 
-        if (!$result) {
+        if (! $result) {
+            $this->credits->grant($request->user(), CreditCost::RECEIPT_SCAN, 'receipt_scan_refund');
+
             return response()->json(['error' => 'Failed to process receipt'], 500);
         }
 
@@ -84,7 +82,7 @@ class ReceiptController extends Controller
             'receipt_id' => $request->input('receipt_id'),
             'status' => 'imported',
             'created_items' => $confirmedItems,
-            'message' => count($confirmedItems) . ' items added to inventory',
+            'message' => count($confirmedItems).' items added to inventory',
         ], 201);
     }
 }

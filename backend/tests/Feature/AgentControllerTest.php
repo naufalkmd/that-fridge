@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Models\UserMemory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -72,103 +71,49 @@ class AgentControllerTest extends TestCase
         ]);
     }
 
-    public function test_chat_is_rejected_after_the_free_weekly_limit_for_a_non_pro_user(): void
+    public function test_chat_spends_a_credit_and_returns_the_new_balance(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['ai_credits' => 10]);
         config(['services.openrouter.key' => null]);
-        $this->seedChatHistory($user, 5);
 
-        $response = $this->actingAs($user)->postJson('/api/chat', [
-            'message' => 'One more please',
-            'agent' => 'Chef',
-        ]);
+        $response = $this->actingAs($user)->postJson('/api/chat', ['message' => 'hi', 'agent' => 'Chef']);
 
-        $response->assertStatus(402);
-        $this->assertDatabaseCount('chat_history', 5); // the rejected message was never persisted
+        $response->assertStatus(200)->assertJson(['credits' => 9]);
+        $this->assertSame(9, $user->fresh()->ai_credits);
+        $this->assertDatabaseHas('ai_credit_ledger', ['user_id' => $user->id, 'delta' => -1, 'reason' => 'chat']);
     }
 
-    public function test_compact_calls_are_rejected_once_real_messages_have_used_up_the_weekly_limit(): void
+    public function test_chat_is_rejected_with_402_when_out_of_credits(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['ai_credits' => 0]);
         config(['services.openrouter.key' => null]);
-        $this->seedChatHistory($user, 5);
 
-        $response = $this->actingAs($user)->postJson('/api/chat', [
-            'message' => 'Quick tip?',
-            'agent' => 'Chef',
-            'compact' => true,
-        ]);
+        $response = $this->actingAs($user)->postJson('/api/chat', ['message' => 'hi', 'agent' => 'Chef']);
 
-        $response->assertStatus(402);
+        $response->assertStatus(402)->assertJson(['error' => 'insufficient_credits', 'balance' => 0, 'needed' => 1]);
+        $this->assertDatabaseCount('chat_history', 0);
     }
 
-    public function test_compact_calls_count_toward_the_same_weekly_limit_as_real_messages(): void
+    public function test_a_tool_turn_takes_the_surcharge(): void
     {
-        $user = User::factory()->create();
-        config(['services.openrouter.key' => null]);
+        $user = User::factory()->create(['ai_credits' => 10]);
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
+        $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'F']);
+        $item = Item::create(['section_id' => $section->id, 'name' => 'Milk', 'icon' => 'milk', 'quantity' => 1]);
 
-        // 5 compact calls (Activate / Home tip cards) use up the whole free budget on their
-        // own, even with zero real chat_history rows - this is the "no longer a free-tier
-        // loophole" behaviour.
-        for ($i = 0; $i < 5; $i++) {
-            $this->actingAs($user)->postJson('/api/chat', [
-                'message' => 'Quick tip?',
-                'agent' => 'Chef',
-                'compact' => true,
-            ])->assertStatus(200);
-        }
-
-        $response = $this->actingAs($user)->postJson('/api/chat', [
-            'message' => 'One more tip?',
-            'agent' => 'Chef',
-            'compact' => true,
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::sequence()
+            ->push(['choices' => [['message' => ['content' => null, 'tool_calls' => [[
+                'id' => 'c1', 'type' => 'function',
+                'function' => ['name' => 'list_items', 'arguments' => '{}'],
+            ]]]]]])
+            ->push(['choices' => [['message' => ['content' => 'You have milk.']]]]),
         ]);
 
-        $response->assertStatus(402);
-        $this->assertDatabaseCount('chat_history', 0); // compact calls still aren't persisted
-    }
+        $response = $this->actingAs($user)->postJson('/api/chat', ['message' => "what's in my fridge", 'agent' => 'Chef', 'fridge_id' => $fridge->id]);
 
-    public function test_compact_calls_are_unlimited_for_a_pro_user(): void
-    {
-        $user = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
-        config(['services.openrouter.key' => null]);
-
-        for ($i = 0; $i < 8; $i++) {
-            $this->actingAs($user)->postJson('/api/chat', [
-                'message' => 'Quick tip?',
-                'agent' => 'Chef',
-                'compact' => true,
-            ])->assertStatus(200);
-        }
-    }
-
-    public function test_chat_is_unlimited_for_a_pro_user(): void
-    {
-        $user = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
-        config(['services.openrouter.key' => null]);
-        $this->seedChatHistory($user, 5);
-
-        $response = $this->actingAs($user)->postJson('/api/chat', [
-            'message' => 'One more please',
-            'agent' => 'Chef',
-        ]);
-
-        $response->assertStatus(200);
-    }
-
-    public function test_chat_quota_only_counts_this_weeks_messages(): void
-    {
-        $user = User::factory()->create();
-        config(['services.openrouter.key' => null]);
-        $this->seedChatHistory($user, 5);
-        ChatHistory::where('user_id', $user->id)->update(['created_at' => now()->subWeeks(2)]);
-
-        $response = $this->actingAs($user)->postJson('/api/chat', [
-            'message' => 'First one this week',
-            'agent' => 'Chef',
-        ]);
-
-        $response->assertStatus(200);
+        $response->assertStatus(200)->assertJson(['credits' => 7]); // 1 base + 2 tool surcharge
+        $this->assertDatabaseHas('ai_credit_ledger', ['user_id' => $user->id, 'reason' => 'chat_tools', 'delta' => -2]);
     }
 
     public function test_chat_passes_the_compact_flag_through_to_the_agent_service(): void
@@ -404,23 +349,22 @@ class AgentControllerTest extends TestCase
         $response->assertJsonStructure(['shelf_life_days', 'location', 'nutrition_category']);
     }
 
-    public function test_suggest_item_details_is_rejected_after_the_free_weekly_autofill_limit(): void
+    public function test_suggest_item_details_is_rejected_when_out_of_credits(): void
     {
-        $user = User::factory()->create();
-        Cache::put('autofill_quota:'.$user->id.':'.now()->format('oW'), 40, now()->addWeek());
+        $user = User::factory()->create(['ai_credits' => 0]);
 
         $this->actingAs($user)->postJson('/api/items/suggest-details', ['name' => 'Milk'])
-            ->assertStatus(402);
+            ->assertStatus(402)->assertJson(['error' => 'insufficient_credits']);
     }
 
-    public function test_suggest_item_details_has_no_autofill_limit_for_a_pro_user(): void
+    public function test_suggest_item_details_spends_a_credit(): void
     {
-        $user = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
-        Cache::put('autofill_quota:'.$user->id.':'.now()->format('oW'), 999, now()->addWeek());
+        $user = User::factory()->create(['ai_credits' => 3]);
         config(['services.openrouter.key' => null]);
 
         $this->actingAs($user)->postJson('/api/items/suggest-details', ['name' => 'Milk'])
             ->assertStatus(200);
+        $this->assertSame(2, $user->fresh()->ai_credits);
     }
 
     public function test_delete_session_removes_only_that_session(): void

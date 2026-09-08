@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\CreditService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -52,7 +53,31 @@ class RevenueCatWebhookController extends Controller
         $event = $request->input('event', []);
         $appUserId = $event['app_user_id'] ?? null;
         $type = $event['type'] ?? null;
+        $eventId = $event['id'] ?? null;
+        $productId = $event['product_id'] ?? null;
 
+        $user = $appUserId ? User::find($appUserId) : null;
+        if (! $user) {
+            // Not an error - TEST events, anonymous ids, a user we don't have, etc.
+            return response()->json(['ignored' => true], 200);
+        }
+
+        // ---- AI credit grants -------------------------------------------------
+        $credits = app(CreditService::class);
+
+        // A consumable credit-pack purchase.
+        if (isset(config('credits.packs')[$productId]) && $eventId) {
+            $credits->grant($user, config('credits.packs')[$productId], 'pack_purchase', $eventId);
+        }
+
+        // A Pro subscription's first purchase or a renewal - top up the monthly allowance.
+        if (in_array($productId, config('credits.pro_products'), true)
+            && in_array($type, ['INITIAL_PURCHASE', 'RENEWAL', 'NON_RENEWING_PURCHASE'], true)
+            && $eventId) {
+            $credits->grant($user, config('credits.pro_monthly'), 'pro_grant', $eventId, config('credits.pro_rollover_cap'));
+        }
+
+        // ---- Pro entitlement sync ------------------------------------------------
         // `entitlement_ids` (array) is current; `entitlement_id` (string) is the legacy field
         // some older event shapes still send.
         $entitlementIds = $event['entitlement_ids'] ?? [];
@@ -60,18 +85,8 @@ class RevenueCatWebhookController extends Controller
             $entitlementIds[] = $event['entitlement_id'];
         }
 
-        if (! $appUserId || ! in_array('thatfridge_pro', $entitlementIds, true)) {
-            // Not an error - plenty of real event types (TEST, TRANSFER without this
-            // entitlement, a payload RevenueCat added since this was written, ...) legitimately
-            // have nothing for us to do. Always 200 so RevenueCat doesn't retry these forever.
-            return response()->json(['ignored' => true], 200);
-        }
-
-        $user = User::find($appUserId);
-        if (! $user) {
-            Log::warning('RevenueCat webhook: no user matches app_user_id', ['app_user_id' => $appUserId]);
-
-            return response()->json(['ignored' => true], 200);
+        if (! in_array('thatfridge_pro', $entitlementIds, true)) {
+            return response()->json(['ok' => true], 200);
         }
 
         $expirationMs = $event['expiration_at_ms'] ?? null;

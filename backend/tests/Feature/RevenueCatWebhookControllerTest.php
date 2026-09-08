@@ -170,4 +170,44 @@ class RevenueCatWebhookControllerTest extends TestCase
 
         $response->assertStatus(200);
     }
+
+    public function test_webhook_grants_credits_for_a_consumable_pack_purchase(): void
+    {
+        config(['services.revenuecat.webhook_secret' => 'the-real-secret']);
+        $user = User::factory()->create(['ai_credits' => 10]);
+
+        $this->postJson('/api/webhooks/revenuecat', ['event' => [
+            'id' => 'evt_pack_1',
+            'type' => 'NON_RENEWING_PURCHASE',
+            'app_user_id' => (string) $user->id,
+            'product_id' => 'credits_500',
+        ]], ['Authorization' => 'the-real-secret'])->assertStatus(200);
+
+        $this->assertSame(510, $user->fresh()->ai_credits);
+
+        // Re-delivery is a no-op.
+        $this->postJson('/api/webhooks/revenuecat', ['event' => [
+            'id' => 'evt_pack_1', 'type' => 'NON_RENEWING_PURCHASE',
+            'app_user_id' => (string) $user->id, 'product_id' => 'credits_500',
+        ]], ['Authorization' => 'the-real-secret'])->assertStatus(200);
+        $this->assertSame(510, $user->fresh()->ai_credits);
+    }
+
+    public function test_webhook_grants_the_monthly_bundle_on_a_pro_renewal(): void
+    {
+        config(['services.revenuecat.webhook_secret' => 'the-real-secret']);
+        $user = User::factory()->create(['ai_credits' => 50]);
+
+        $this->postJson('/api/webhooks/revenuecat', ['event' => [
+            'id' => 'evt_renew_1',
+            'type' => 'RENEWAL',
+            'app_user_id' => (string) $user->id,
+            'product_id' => 'thatfridge_pro_monthly',
+            'entitlement_ids' => ['thatfridge_pro'],
+            'expiration_at_ms' => now()->addMonth()->getTimestampMs(),
+        ]], ['Authorization' => 'the-real-secret'])->assertStatus(200);
+
+        $this->assertSame(450, $user->fresh()->ai_credits); // 50 + 400 pro grant
+        $this->assertTrue($user->fresh()->isPro());
+    }
 }

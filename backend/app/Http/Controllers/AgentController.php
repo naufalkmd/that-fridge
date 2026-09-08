@@ -3,33 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Services\AgentService;
-use App\Support\ChatQuota;
-use Carbon\Carbon;
+use App\Services\CreditService;
+use App\Support\CreditCost;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class AgentController extends Controller
 {
-    protected $agentService;
-
-    public function __construct(AgentService $agentService)
-    {
-        $this->agentService = $agentService;
-    }
+    public function __construct(
+        protected AgentService $agentService,
+        protected CreditService $credits,
+    ) {}
 
     private const HISTORY_LIMIT = 200;
 
     private const SESSION_LIST_LIMIT = 50;
 
     private const CHAT_CONTEXT_TURNS = 8;
-
-    // Add-item "Auto-fill" is a cheap text call (~$0.0007) that previously had no per-user cap
-    // at all - only the route throttle. This lenient weekly ceiling (cache-tracked, same shape
-    // as ExpiryScanController) is well above any real session; it just stops a script racking
-    // up thousands. Pro is uncapped. The weekly free chat allowance lives in ChatQuota.
-    private const FREE_AUTOFILL_PER_WEEK = 40;
 
     /**
      * Get the authenticated user's most recent chat session, oldest message first.
@@ -191,17 +182,10 @@ class AgentController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
         ]);
 
-        // Compact calls (Home tip cards / "Activate {agent}") share the same weekly budget as
-        // real Quick Chat messages for a non-Pro user - previously they were fully exempt, which
-        // meant a free user could get unlimited AI replies just by never using Quick Chat
-        // directly. They're still not persisted to chat_history (see below), so they can't be
-        // counted from a DB row the way real messages are - tracked in cache instead (see
-        // ChatQuota), and added to the chat_history count for the combined total.
-        if (ChatQuota::isExhaustedFor($request->user())) {
-            return response()->json([
-                'message' => "You've used your ".ChatQuota::FREE_PER_WEEK.' free AI replies this week. Upgrade to Pro for unlimited AI chat.',
-            ], 402);
-        }
+        // Metered in AI credits. Charge the base cost up front for any message (real or a
+        // compact tip-card call); a surcharge is taken after the fact below if the turn ends
+        // up running tools. Throws a 402 with the shortfall when the balance is short.
+        $this->credits->spend($request->user(), CreditCost::CHAT, 'chat');
 
         // Read directly from the DB rather than having the client fetch-and-forward these
         // on every message like inventory/usage_history - facts exist only to serve
@@ -224,7 +208,15 @@ class AgentController extends Controller
         );
 
         if (! $result) {
+            $this->credits->grant($request->user(), CreditCost::CHAT, 'chat_refund');
+
             return response()->json(['error' => 'Failed to get agent response'], 500);
+        }
+
+        // A turn that actually ran tools (kitchen actions or fetch_url) costs more - take the
+        // surcharge now that we know, without failing (the user already has their answer).
+        if ($result['tools_used'] ?? false) {
+            $this->credits->spendUpTo($request->user(), CreditCost::CHAT_TOOL_SURCHARGE, 'chat_tools');
         }
 
         // Compact calls are Home's tip-card auto-fetches (see AGENT_ACTIVATE_PROMPT on the
@@ -233,8 +225,6 @@ class AgentController extends Controller
         // history() and clutter the Chat History session list with entries that just come
         // back on the next page load.
         if ($request->boolean('compact')) {
-            ChatQuota::recordCompactCall($request->user());
-
             return response()->json([
                 'session_id' => $request->input('session_id'),
                 'user_message' => $result['user_message'],
@@ -243,6 +233,7 @@ class AgentController extends Controller
                 'recipe_suggestion' => $result['recipe_suggestion'] ?? null,
                 'created_at' => now()->toIso8601String(),
                 'mocked' => $result['mocked'] ?? false,
+                'credits' => $this->credits->balance($request->user()),
             ], 200);
         }
 
@@ -267,6 +258,7 @@ class AgentController extends Controller
             'mocked' => $result['mocked'] ?? false,
             // True when a tool call changed the user's data - the client refreshes.
             'mutated' => $result['mutated'] ?? false,
+            'credits' => $this->credits->balance($request->user()),
         ], 200);
     }
 
@@ -282,18 +274,7 @@ class AgentController extends Controller
             'icon' => 'nullable|string|max:255',
         ]);
 
-        if (! $request->user()->isPro()) {
-            $weekKey = 'autofill_quota:'.$request->user()->id.':'.Carbon::now()->format('oW');
-            $used = (int) Cache::get($weekKey, 0);
-
-            if ($used >= self::FREE_AUTOFILL_PER_WEEK) {
-                return response()->json([
-                    'message' => "You've used your ".self::FREE_AUTOFILL_PER_WEEK.' free auto-fills this week. Upgrade to Pro for unlimited, or fill the fields in yourself.',
-                ], 402);
-            }
-
-            Cache::put($weekKey, $used + 1, now()->addWeek());
-        }
+        $this->credits->spend($request->user(), CreditCost::AUTOFILL, 'autofill');
 
         $suggestion = $this->agentService->suggestItemDetails($data['name'], $data['icon'] ?? null);
 
