@@ -91,6 +91,11 @@ fast-follow.
   peak-end "you're all set" beat, and contextual one-shot coach-marks (crew tabs in `/eat`,
   drag-to-reorder in Inventory, the Kitchen Score). Both wait on `app:onboarding-funnel` data.
   See `apps/mobile/ONBOARDING.md` → "Still open". The rest of onboarding is shipped.
+- [ ] Personal-goal feature, done right (the old Goal screen was removed for v1 — orphan,
+  confusing metrics, dishonest weekly/monthly period). If rebuilt: one intuitive metric
+  ("items rescued" = used before it spoiled), a live card on Home, an honest timeframe, maybe a
+  badge. Backend `user_goals` table + `UserGoalController` + core `progress.ts` goal code are
+  still there, unused by the client.
 - [ ] Pro AI spend ceiling — meter real OpenRouter token cost per Pro user per billing cycle
   and cap it at ~$1.00–1.50 of model spend (well under the ~$2.09 net on a $2.99 plan). Debit
   the actual `usage` from each response into a per-user counter; at the ceiling, disable only
