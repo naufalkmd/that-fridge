@@ -48,9 +48,13 @@ return [
     | considered expired. This will override any values set in the token's
     | "expires_at" attribute, but first-party sessions are not affected.
     |
+    | 90 days: long enough that the app rarely forces a re-login, short enough
+    | that a leaked bearer token doesn't stay valid forever. The client already
+    | handles a 401 by routing to sign-in (see apps/mobile/src/lib/api.ts).
+    |
     */
 
-    'expiration' => null,
+    'expiration' => (int) env('SANCTUM_TOKEN_EXPIRATION_MINUTES', 60 * 24 * 90),
 
     /*
     |--------------------------------------------------------------------------

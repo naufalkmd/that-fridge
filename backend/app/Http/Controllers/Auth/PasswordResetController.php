@@ -11,6 +11,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -22,6 +24,11 @@ use Illuminate\Validation\ValidationException;
 class PasswordResetController extends Controller
 {
     private const CODE_TTL_MINUTES = 15;
+
+    /** Wrong-code guesses allowed per email before the code is burned - a 6-digit code has
+     *  only 1e6 values, so without this a botnet rotating IPs past the per-IP throttle could
+     *  brute-force it inside the 15-minute window. */
+    private const MAX_CODE_ATTEMPTS = 5;
 
     public function forgot(Request $request): JsonResponse
     {
@@ -56,15 +63,28 @@ class PasswordResetController extends Controller
             'password' => ['required', 'string', 'min:8'],
         ]);
 
+        $attemptKey = 'pwreset:'.Str::lower($data['email']);
+
+        if (RateLimiter::tooManyAttempts($attemptKey, self::MAX_CODE_ATTEMPTS)) {
+            // Burn the code so the window can't just be waited out with the same one.
+            DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
+            throw ValidationException::withMessages([
+                'code' => ['Too many incorrect attempts. Request a new code.'],
+            ]);
+        }
+
         $row = DB::table('password_reset_tokens')->where('email', $data['email'])->first();
 
         $expired = $row && Carbon::parse($row->created_at)->addMinutes(self::CODE_TTL_MINUTES)->isPast();
 
         if (! $row || $expired || ! Hash::check($data['code'], $row->token)) {
+            RateLimiter::hit($attemptKey, self::CODE_TTL_MINUTES * 60);
             throw ValidationException::withMessages([
                 'code' => ['That code is invalid or has expired.'],
             ]);
         }
+
+        RateLimiter::clear($attemptKey);
 
         $user = User::where('email', $data['email'])->firstOrFail();
 

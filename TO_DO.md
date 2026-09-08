@@ -365,6 +365,41 @@ months" UI message first), and the user's real data (items, recipes, usage histo
 tables are dead schema — the vision services store the file and return it inline, never
 writing a row.
 
+### Security review (2026-09-08)
+
+Full backend pass. **Fixed this session:**
+- Password-reset code brute-force — 6-digit code now burns after 5 wrong attempts per email
+  (`RateLimiter` keyed on email), on top of the per-IP throttle.
+- SSRF via DNS rebinding in `WebContentService` — was validating the resolved IP once then
+  letting Guzzle re-resolve. Now resolves all A/AAAA records, rejects the URL if *any* is
+  private/reserved (incl. IPv6 loopback/ULA/link-local and IPv4-mapped `::ffff:`), pins the
+  connection to the validated IP (`CURLOPT_RESOLVE`), and walks redirects by hand re-validating
+  + re-pinning each hop.
+- Sanctum tokens were non-expiring → now 90 days (`SANCTUM_TOKEN_EXPIRATION_MINUTES`). App
+  relaunch handles a 401 by clearing the token and routing to sign-in; a mid-session expiry
+  (90-day continuous session) shows an error until relaunch — acceptable, rare.
+- Push-token hijack — `/push-tokens` now requires the `ExponentPushToken[...]` format (stops
+  claiming an arbitrary string; a leaked *real* token can still be re-homed — inherent to
+  Expo's model, `destroy` on sign-out is the mitigation).
+- `CreditCost::CHAT_IMAGE` + `/register` 20/day-per-IP cap (see "AI credits").
+
+**Verify on prod:** `APP_DEBUG=false`, `APP_ENV=production` (`.env.example` ships `true`/`local`
+— if prod inherited that, every 500 leaks a stack trace + env).
+
+**Open, lower priority (post-launch):**
+- Recipe / profile data is world-readable to any authed user (`RecipePolicy::view` = true;
+  `GET /recipes/{id}` IDOR-enumerable; `/users/{username}/profile` exposes owned-fridge names +
+  every custom recipe). Deliberate "no privacy toggle" design — consider a private flag.
+- `POST /events` is public + bulk-writes rows (attacker-controlled `name`/`props`).
+- `/recipes/attachments` — no throttle, orphans not pruned → 20MB×N storage fill.
+- No per-account login lockout (per-IP only); block doesn't stop profile viewing; image-gen
+  has no content moderation.
+
+**Solid:** OAuth verification (sig/iss/aud/exp, fails closed); consistent policy-based authz
+(no IDOR found outside the intentional recipe/profile openness); no SQLi (Eloquent + bound
+`whereRaw`); mass-assignment locked (`#[Fillable]`, sensitive fields excluded); no account
+enumeration on login/forgot; Bearer auth (no CSRF); webhook `hash_equals` + event-id idempotency.
+
 ### Demo / reviewer account
 
 `keira@thatfridge.test` — pre-seeded shared fridge ("Home Fridge") with items across all zones +

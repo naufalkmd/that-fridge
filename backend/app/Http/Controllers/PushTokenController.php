@@ -16,7 +16,10 @@ class PushTokenController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'token' => ['required', 'string', 'max:255'],
+            // Must look like a real Expo push token - "ExponentPushToken[...]" or
+            // "ExpoPushToken[...]". Stops a caller claiming an arbitrary string (or re-homing
+            // someone else's token to their own account to hijack their notifications).
+            'token' => ['required', 'string', 'max:255', 'regex:/^Exp(o|onent)PushToken\[[^\]]+\]$/'],
             'platform' => ['nullable', Rule::in(['ios', 'android'])],
         ]);
 

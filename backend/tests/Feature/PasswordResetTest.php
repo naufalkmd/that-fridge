@@ -107,6 +107,30 @@ class PasswordResetTest extends TestCase
         ])->assertStatus(422);
     }
 
+    public function test_the_code_is_burned_after_five_wrong_attempts(): void
+    {
+        User::factory()->create(['email' => 'grace@example.com', 'password' => Hash::make('old')]);
+        DB::table('password_reset_tokens')->insert([
+            'email' => 'grace@example.com',
+            'token' => Hash::make('123456'),
+            'created_at' => now(),
+        ]);
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/reset-password', [
+                'email' => 'grace@example.com', 'code' => '000000', 'password' => 'brand-new-password',
+            ])->assertStatus(422);
+        }
+
+        // Now locked: the next request burns the row, so even the correct code fails.
+        $this->postJson('/api/reset-password', [
+            'email' => 'grace@example.com', 'code' => '123456', 'password' => 'brand-new-password',
+        ])->assertStatus(422);
+
+        $this->assertDatabaseMissing('password_reset_tokens', ['email' => 'grace@example.com']);
+        $this->assertTrue(Hash::check('old', User::where('email', 'grace@example.com')->first()->password));
+    }
+
     public function test_requesting_a_code_again_replaces_the_previous_one(): void
     {
         Mail::fake();

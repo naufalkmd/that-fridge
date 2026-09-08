@@ -35,6 +35,28 @@ class WebContentServiceTest extends TestCase
         $this->assertTrue($this->service()->isSafeUrl('https://1.1.1.1/'));
     }
 
+    public function test_is_safe_url_rejects_ipv6_loopback_ula_and_ipv4_mapped(): void
+    {
+        $this->assertFalse($this->service()->isSafeUrl('http://[::1]/'));
+        $this->assertFalse($this->service()->isSafeUrl('http://[fd00::1]/'));           // unique-local
+        $this->assertFalse($this->service()->isSafeUrl('http://[fe80::1]/'));           // link-local
+        $this->assertFalse($this->service()->isSafeUrl('http://[::ffff:169.254.169.254]/')); // mapped metadata IP
+    }
+
+    public function test_fetch_does_not_follow_a_redirect_to_an_internal_address(): void
+    {
+        Http::fake([
+            '1.1.1.1/*' => Http::response('', 302, ['Location' => 'http://169.254.169.254/latest/meta-data/']),
+            '169.254.169.254/*' => Http::response('SECRET', 200),
+        ]);
+
+        $result = $this->service()->fetch('https://1.1.1.1/redir');
+
+        $this->assertFalse($result['ok']);
+        $this->assertStringNotContainsString('SECRET', $result['text']);
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '169.254.169.254'));
+    }
+
     public function test_fetch_refuses_an_unsafe_url_without_making_a_request(): void
     {
         Http::fake();

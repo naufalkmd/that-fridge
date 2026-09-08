@@ -21,6 +21,8 @@ class WebContentService
 
     private const TIMEOUT_SECONDS = 8;
 
+    private const MAX_REDIRECTS = 3;
+
     private const USER_AGENT = 'Mozilla/5.0 (compatible; ThatFridgeBot/1.0; +https://thatfridge.com)';
 
     /**
@@ -126,47 +128,62 @@ class WebContentService
     }
 
     /**
-     * Fetch and parse the page itself. Redirects are followed up to a small limit, but every
-     * hop is re-checked against the SSRF guard so a redirect can't jump to an internal
-     * address after the first check passed. Returns null on any failure.
+     * Fetch and parse the page. Redirects are NOT auto-followed - we walk them by hand so
+     * every hop is validated AND the connection is pinned to the exact IP we validated
+     * (curl's CURLOPT_RESOLVE), closing the DNS-rebinding window where a host resolves to a
+     * public IP for the safety check and an internal one for the actual request.
+     * Returns null on any failure.
      *
      * @return array{title: ?string, video: ?string, body: string}|null
      */
     private function fetchPage(string $url): ?array
     {
         try {
-            $response = Http::withOptions([
-                'allow_redirects' => [
-                    'max' => 4,
-                    'strict' => true,
-                    'referer' => false,
-                    'protocols' => ['http', 'https'],
-                    'on_redirect' => function ($request, $response, $uri) {
-                        if (! $this->isSafeUrl((string) $uri)) {
-                            throw new \RuntimeException("unsafe redirect target: {$uri}");
-                        }
-                    },
-                ],
-            ])
-                ->timeout(self::TIMEOUT_SECONDS)
-                ->withHeaders([
-                    'User-Agent' => self::USER_AGENT,
-                    'Accept' => 'text/html,application/xhtml+xml',
-                    'Accept-Language' => 'en-US,en;q=0.9',
-                ])
-                ->get($url);
+            $current = $url;
 
-            if (! $response->successful()) {
-                return null;
+            for ($hop = 0; $hop <= self::MAX_REDIRECTS; $hop++) {
+                $pin = $this->safeResolve($current);
+                if ($pin === null) {
+                    return null;
+                }
+
+                $response = Http::withOptions([
+                    'allow_redirects' => false,
+                    'curl' => [CURLOPT_RESOLVE => ["{$pin['host']}:{$pin['port']}:{$pin['ip']}"]],
+                ])
+                    ->timeout(self::TIMEOUT_SECONDS)
+                    ->withHeaders([
+                        'User-Agent' => self::USER_AGENT,
+                        'Accept' => 'text/html,application/xhtml+xml',
+                        'Accept-Language' => 'en-US,en;q=0.9',
+                    ])
+                    ->get($current);
+
+                if ($response->redirect()) {
+                    $location = $response->header('Location');
+                    if (! $location) {
+                        return null;
+                    }
+                    // Resolve a relative Location against the URL that issued the redirect.
+                    $current = $this->absoluteUrl($current, $location);
+
+                    continue;
+                }
+
+                if (! $response->successful()) {
+                    return null;
+                }
+
+                $html = $response->body();
+
+                return [
+                    'title' => $this->extractTitle($html),
+                    'video' => $this->extractVideoDescription($current, $html),
+                    'body' => $this->extractReadableText($html),
+                ];
             }
 
-            $html = $response->body();
-
-            return [
-                'title' => $this->extractTitle($html),
-                'video' => $this->extractVideoDescription($url, $html),
-                'body' => $this->extractReadableText($html),
-            ];
+            return null; // too many redirects
         } catch (\Exception $e) {
             Log::warning('Web page fetch failed', ['url' => $url, 'error' => $e->getMessage()]);
 
@@ -174,25 +191,96 @@ class WebContentService
         }
     }
 
+    /** Resolve a possibly-relative Location header against the URL it came from. */
+    private function absoluteUrl(string $base, string $location): string
+    {
+        if (preg_match('#^https?://#i', $location)) {
+            return $location;
+        }
+        $b = parse_url($base);
+        $scheme = $b['scheme'] ?? 'https';
+        $host = $b['host'] ?? '';
+        $port = isset($b['port']) ? ':'.$b['port'] : '';
+        $path = str_starts_with($location, '/') ? $location : '/'.$location;
+
+        return "{$scheme}://{$host}{$port}{$path}";
+    }
+
     /**
      * Blocks the classic SSRF targets (localhost, cloud metadata endpoints, internal/private
-     * networks) by resolving the host and rejecting anything outside the public IP space,
-     * on top of only allowing http/https to begin with.
+     * networks). Kept as a plain boolean for callers that just need a yes/no (oEmbed, tests);
+     * fetchPage() uses safeResolve() directly so it can pin the connection.
      */
     public function isSafeUrl(string $url): bool
+    {
+        return $this->safeResolve($url) !== null;
+    }
+
+    /**
+     * Parse + resolve a URL and validate EVERY IP the host resolves to (A and AAAA). Returns
+     * the host/port and one validated IP to pin the connection to, or null if anything about
+     * it is unsafe: non-http(s) scheme, unresolvable host, or any resolved address in a
+     * private / reserved / loopback / link-local range (which is where cloud metadata and
+     * internal services live).
+     *
+     * @return array{host: string, port: int, ip: string}|null
+     */
+    private function safeResolve(string $url): ?array
     {
         $parts = parse_url($url);
 
         if (! $parts || ! in_array($parts['scheme'] ?? null, ['http', 'https'], true) || empty($parts['host'])) {
-            return false;
+            return null;
         }
 
         $host = $parts['host'];
-        $ip = filter_var($host, FILTER_VALIDATE_IP) ? $host : gethostbyname($host);
+        $port = (int) ($parts['port'] ?? ($parts['scheme'] === 'https' ? 443 : 80));
 
-        // gethostbyname() returns the input unchanged when resolution fails.
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            $ips = [$host];
+        } else {
+            $ips = array_merge(
+                gethostbynamel($host) ?: [],
+                array_column(@dns_get_record($host, DNS_AAAA) ?: [], 'ipv6'),
+            );
+        }
+
+        if ($ips === []) {
+            return null;
+        }
+
+        // One bad address anywhere in the set fails the whole URL - a rebind attack relies on
+        // returning a good IP and a bad IP and hoping the connection picks the bad one.
+        foreach ($ips as $ip) {
+            if (! $this->ipIsPublic($ip)) {
+                return null;
+            }
+        }
+
+        return ['host' => $host, 'port' => $port, 'ip' => $ips[0]];
+    }
+
+    /** True only for a genuinely public IP. Covers the IPv6 gaps PHP's range filter misses:
+     *  IPv4-mapped addresses (::ffff:169.254.169.254), ULA (fc00::/7), link-local (fe80::/10). */
+    private function ipIsPublic(string $ip): bool
+    {
         if (! filter_var($ip, FILTER_VALIDATE_IP)) {
             return false;
+        }
+
+        // Unwrap an IPv4-mapped IPv6 address and judge it as IPv4.
+        if (preg_match('/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i', $ip, $m)) {
+            $ip = $m[1];
+        }
+
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+            $packed = inet_pton($ip);
+            $first = ord($packed[0]);
+            if ($ip === '::1'                       // loopback
+                || ($first & 0xFE) === 0xFC         // fc00::/7 unique-local
+                || ($first === 0xFE && (ord($packed[1]) & 0xC0) === 0x80)) { // fe80::/10 link-local
+                return false;
+            }
         }
 
         return (bool) filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE);
