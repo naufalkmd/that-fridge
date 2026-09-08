@@ -57,6 +57,13 @@ class UserController extends Controller
         // by guessing the username around the search filter.
         abort_if((bool) $viewer->is_demo !== (bool) $user->is_demo, 404);
 
+        // If the target blocked the viewer, the profile 404s (they're gone, like search hides
+        // them). The viewer can still see profiles of people THEY blocked, to unblock them.
+        abort_if(
+            $viewer->id !== $user->id && $user->blocking()->where('users.id', $viewer->id)->exists(),
+            404,
+        );
+
         // Hosting a shared fridge is Pro-only, so a free user's fridges can't take new
         // members - the client uses this to hide the "Request to join" affordance rather
         // than show one that always fails.

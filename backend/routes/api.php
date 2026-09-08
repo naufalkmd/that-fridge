@@ -40,9 +40,10 @@ Route::post('/auth/google', [AuthController::class, 'google']);
 // RevenueCat calls this directly, not a logged-in app user - auth is the Authorization header
 // secret checked inside the controller, not auth:sanctum. See services.revenuecat.webhook_secret.
 Route::post('/webhooks/revenuecat', [RevenueCatWebhookController::class, 'handle']);
-// First-party analytics ingest. Public so pre-sign-in onboarding events get through;
-// batched client-side, so 20 requests/min per IP is generous (each carries up to 50 events).
-Route::middleware('throttle:20,1')->post('/events', [AnalyticsController::class, 'store']);
+// First-party analytics ingest. Public so pre-sign-in onboarding events get through (an
+// anonymous caller can only write the funnel events - see ANON_EVENT_PREFIXES); batched
+// client-side, so 12 requests/min per IP is plenty (each carries up to 25 events).
+Route::middleware('throttle:12,1')->post('/events', [AnalyticsController::class, 'store']);
 // /register has its own named limiter (per-minute floor + a per-day-per-IP cap on new
 // accounts, since each one carries free AI credits - see AppServiceProvider).
 Route::middleware('throttle:register')->post('/register', [AuthController::class, 'register']);
@@ -194,7 +195,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/recipes', [RecipeController::class, 'index']);
     Route::post('/recipes', [RecipeController::class, 'store']);
     Route::get('/recipes/suggest', [RecipeController::class, 'suggest']);
-    Route::post('/recipes/attachments', [RecipeController::class, 'uploadAttachment']);
+    // Each call writes a file (up to 20MB) - throttle so a script can't fill the disk.
+    Route::middleware('throttle:20,1')->post('/recipes/attachments', [RecipeController::class, 'uploadAttachment']);
     Route::post('/recipes/import-link', [RecipeController::class, 'importFromLink']);
     // After /suggest so that literal path still wins; before the {recipe} write routes.
     Route::get('/recipes/{recipe}', [RecipeController::class, 'show']);

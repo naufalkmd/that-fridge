@@ -386,14 +386,24 @@ Full backend pass. **Fixed this session:**
 **Verify on prod:** `APP_DEBUG=false`, `APP_ENV=production` (`.env.example` ships `true`/`local`
 — if prod inherited that, every 500 leaks a stack trace + env).
 
+**Also fixed (second pass):**
+- `POST /events` — anonymous callers can now only write the pre-sign-in funnel events
+  (`ANON_EVENT_PREFIXES`); batch cap 50→25, throttle 20→12/min.
+- `/recipes/attachments` — `throttle:20,1` added; `app:prune-stale-data` now sweeps
+  `recipe-attachments/` orphans (>7d, not referenced by any recipe).
+- Per-account login lockout — 5 wrong passwords per email → ~15 min lock (`RateLimiter`).
+- A user who blocked you now 404s their profile to you (you can still see people *you* blocked).
+- `DEPLOY.md` nginx block hardened: no PHP under `/storage/`, `server_tokens off`, HSTS +
+  nosniff, hide `X-Powered-By`; SSH root/password-auth off + `.env` chmod 600.
+
 **Open, lower priority (post-launch):**
 - Recipe / profile data is world-readable to any authed user (`RecipePolicy::view` = true;
   `GET /recipes/{id}` IDOR-enumerable; `/users/{username}/profile` exposes owned-fridge names +
   every custom recipe). Deliberate "no privacy toggle" design — consider a private flag.
-- `POST /events` is public + bulk-writes rows (attacker-controlled `name`/`props`).
-- `/recipes/attachments` — no throttle, orphans not pruned → 20MB×N storage fill.
-- No per-account login lockout (per-IP only); block doesn't stop profile viewing; image-gen
-  has no content moderation.
+- Image-gen (`/icons/generate`) has no content moderation on the prompt.
+- Account hygiene (not code): 2FA on GitHub / DigitalOcean / App Store Connect / RevenueCat /
+  registrar / recovery email; `gitleaks` scan of history; turn on Sentry DSN so attacks are
+  visible; verify DB backups are copied off-box.
 
 **Solid:** OAuth verification (sig/iss/aud/exp, fails closed); consistent policy-based authz
 (no IDOR found outside the intentional recipe/profile openness); no SQLi (Eloquent + bound

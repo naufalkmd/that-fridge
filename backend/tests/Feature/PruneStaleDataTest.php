@@ -7,6 +7,7 @@ use App\Models\Fridge;
 use App\Models\FridgeJoinRequest;
 use App\Models\GeneratedIcon;
 use App\Models\NotificationEvent;
+use App\Models\Recipe;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -103,6 +104,28 @@ class PruneStaleDataTest extends TestCase
 
         Storage::disk('public')->assertMissing('icons/orphan.png');
         Storage::disk('public')->assertExists('icons/kept.png');
+    }
+
+    public function test_it_deletes_orphaned_recipe_attachments_but_keeps_referenced_ones(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('recipe-attachments/orphan.jpg', 'x');
+        Storage::disk('public')->put('recipe-attachments/kept.jpg', 'x');
+        touch(Storage::disk('public')->path('recipe-attachments/orphan.jpg'), now()->subDays(30)->getTimestamp());
+        touch(Storage::disk('public')->path('recipe-attachments/kept.jpg'), now()->subDays(30)->getTimestamp());
+
+        Recipe::create([
+            'user_id' => User::factory()->create()->id,
+            'name' => 'Stew', 'minutes' => 40,
+            'ingredients' => [['name' => 'x', 'icon' => 'leftovers']], 'steps' => ['cook'],
+            'attachments' => [['type' => 'image', 'url' => 'https://cdn.test/storage/recipe-attachments/kept.jpg']],
+            'made_count' => 0,
+        ]);
+
+        $this->artisan('app:prune-stale-data')->assertSuccessful();
+
+        Storage::disk('public')->assertMissing('recipe-attachments/orphan.jpg');
+        Storage::disk('public')->assertExists('recipe-attachments/kept.jpg');
     }
 
     public function test_dry_run_reports_without_deleting(): void

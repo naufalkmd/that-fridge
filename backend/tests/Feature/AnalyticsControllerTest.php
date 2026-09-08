@@ -60,11 +60,26 @@ class AnalyticsControllerTest extends TestCase
             ->assertStatus(422);
     }
 
+    public function test_a_guest_can_only_write_the_pre_signin_funnel_events(): void
+    {
+        $this->postJson('/api/events', [
+            'events' => [
+                ['name' => 'welcome_started', 'anon_id' => 'a1'],
+                ['name' => 'purchase_completed', 'anon_id' => 'a1'], // not a funnel event
+                ['name' => 'admin_backdoor', 'anon_id' => 'a1'],
+            ],
+        ])->assertNoContent();
+
+        $this->assertDatabaseCount('analytics_events', 1);
+        $this->assertDatabaseHas('analytics_events', ['name' => 'welcome_started']);
+        $this->assertDatabaseMissing('analytics_events', ['name' => 'admin_backdoor']);
+    }
+
     public function test_oversized_props_are_dropped_not_rejected(): void
     {
         $huge = ['blob' => str_repeat('x', 5000)];
 
-        $this->postJson('/api/events', [
+        $this->actingAs(User::factory()->create())->postJson('/api/events', [
             'events' => [['name' => 'big_event', 'props' => $huge]],
         ])->assertNoContent();
 

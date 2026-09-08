@@ -131,6 +131,21 @@ class AuthControllerTest extends TestCase
         $meResponse->assertJson(['user' => ['username' => 'jordan']]);
     }
 
+    public function test_login_locks_the_account_after_five_wrong_passwords(): void
+    {
+        User::factory()->create(['email' => 'jordan@example.com']); // factory password: "password"
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/login', ['email' => 'jordan@example.com', 'password' => 'wrong'])
+                ->assertStatus(422);
+        }
+
+        // Locked: even the correct password is refused now.
+        $this->postJson('/api/login', ['email' => 'jordan@example.com', 'password' => 'password'])
+            ->assertStatus(422)
+            ->assertJsonFragment(['email' => ['Too many failed attempts. Try again in a few minutes.']]);
+    }
+
     public function test_onboarding_merges_preference_tags_and_returns_them(): void
     {
         $user = User::factory()->create();

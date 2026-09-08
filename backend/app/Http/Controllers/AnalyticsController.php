@@ -5,11 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\AnalyticsEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class AnalyticsController extends Controller
 {
     /** Cap on the JSON-encoded size of a single event's props, to keep rows small. */
     private const MAX_PROPS_BYTES = 2000;
+
+    /**
+     * The only events an UNAUTHENTICATED caller may write - the pre-sign-in funnel. Anything
+     * else from an anonymous client is dropped, so a script can't hammer this public endpoint
+     * to inject arbitrary rows. A signed-in client is rate-limited per user and attributable,
+     * so it isn't restricted.
+     */
+    private const ANON_EVENT_PREFIXES = ['app_open', 'onboarding_', 'welcome_'];
 
     /**
      * Ingest a batch of first-party events. Public route (pre-sign-in events have no token) —
@@ -20,7 +29,7 @@ class AnalyticsController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'events' => ['required', 'array', 'min:1', 'max:50'],
+            'events' => ['required', 'array', 'min:1', 'max:25'],
             'events.*.name' => ['required', 'string', 'max:80'],
             'events.*.props' => ['nullable', 'array'],
             'events.*.anon_id' => ['nullable', 'string', 'max:64'],
@@ -37,6 +46,11 @@ class AnalyticsController extends Controller
 
         $rows = [];
         foreach ($data['events'] as $event) {
+            // Anonymous callers are limited to the pre-sign-in funnel events.
+            if (! $userId && ! Str::startsWith($event['name'], self::ANON_EVENT_PREFIXES)) {
+                continue;
+            }
+
             $props = $event['props'] ?? null;
             if ($props !== null && strlen(json_encode($props)) > self::MAX_PROPS_BYTES) {
                 $props = null;
@@ -57,7 +71,9 @@ class AnalyticsController extends Controller
             ];
         }
 
-        AnalyticsEvent::insert($rows);
+        if ($rows !== []) {
+            AnalyticsEvent::insert($rows);
+        }
 
         return response()->noContent();
     }

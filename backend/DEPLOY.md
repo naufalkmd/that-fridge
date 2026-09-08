@@ -211,20 +211,45 @@ server {
     root /var/www/thatfridge/backend/public;
     index index.php;
 
+    server_tokens off;                     # don't advertise the nginx version
     client_max_body_size 12M;              # receipt / fridge photos
+
+    # API responses aren't rendered in a browser, but HSTS + nosniff are free.
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
 
     location / {
         try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # Nothing under the public upload dir may ever be executed as PHP, even if a
+    # file with a .php extension somehow lands there.
+    location ^~ /storage/ {
+        location ~ \.php$ { return 403; }
     }
 
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:/run/php/php8.5-fpm.sock;
         fastcgi_read_timeout 120s;         # Quick Chat browsing chains a few model calls + link fetches
+        fastcgi_hide_header X-Powered-By;   # don't leak the PHP version
     }
 
     location ~ /\.(?!well-known).* { deny all; }
 }
+```
+
+After adding the server block, also lock down SSH and file perms:
+
+```bash
+# key-only SSH, no root login
+sudo sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/; s/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+sudo systemctl restart ssh
+
+chmod 600 /var/www/thatfridge/backend/.env
+
+# confirm Redis + Postgres only listen on localhost
+sudo ss -tlnp | grep -E '6379|5432'      # expect 127.0.0.1, never 0.0.0.0
 ```
 
 ```bash

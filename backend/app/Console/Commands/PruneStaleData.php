@@ -6,6 +6,7 @@ use App\Models\AnalyticsEvent;
 use App\Models\FridgeJoinRequest;
 use App\Models\GeneratedIcon;
 use App\Models\NotificationEvent;
+use App\Models\Recipe;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -39,6 +40,9 @@ class PruneStaleData extends Command
 
     /** Generated-icon files with no owning row (a generation that failed mid-write). */
     private const ORPHAN_ICON_RETENTION_DAYS = 7;
+
+    /** Recipe-attachment uploads never attached to a saved recipe (abandoned drafts). */
+    private const ORPHAN_ATTACHMENT_RETENTION_DAYS = 7;
 
     public function handle(): int
     {
@@ -74,6 +78,7 @@ class PruneStaleData extends Command
         $this->pruneScanFiles('photos', $dry);
         $this->pruneScanFiles('receipts', $dry);
         $this->pruneOrphanIconFiles($dry);
+        $this->pruneOrphanRecipeAttachments($dry);
 
         return self::SUCCESS;
     }
@@ -142,5 +147,35 @@ class PruneStaleData extends Command
 
         $verb = $dry ? 'would delete' : 'deleted';
         $this->{$dry ? 'warn' : 'info'}("  icons/ orphan files: {$verb} {$deleted} file(s)");
+    }
+
+    private function pruneOrphanRecipeAttachments(bool $dry): void
+    {
+        $disk = Storage::disk(config('filesystems.media_disk'));
+
+        // Every referenced attachment, matched on basename so it works whether the stored url
+        // is a local "/storage/..." path or an absolute R2 url.
+        $referenced = Recipe::whereNotNull('attachments')
+            ->pluck('attachments')
+            ->flatMap(fn ($a) => collect($a)->pluck('url'))
+            ->filter()
+            ->map(fn ($u) => basename(parse_url((string) $u, PHP_URL_PATH) ?: (string) $u))
+            ->flip();
+
+        $cutoff = Carbon::now()->subDays(self::ORPHAN_ATTACHMENT_RETENTION_DAYS)->getTimestamp();
+        $deleted = 0;
+
+        foreach ($disk->files('recipe-attachments') as $path) {
+            if ($referenced->has(basename($path)) || $disk->lastModified($path) >= $cutoff) {
+                continue;
+            }
+            if (! $dry) {
+                $disk->delete($path);
+            }
+            $deleted++;
+        }
+
+        $verb = $dry ? 'would delete' : 'deleted';
+        $this->{$dry ? 'warn' : 'info'}("  recipe-attachments/ orphan files: {$verb} {$deleted} file(s)");
     }
 }

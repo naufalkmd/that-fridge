@@ -248,4 +248,14 @@ class UserControllerTest extends TestCase
         $after = $this->actingAs($viewer)->getJson('/api/users/jordan/profile');
         $after->assertJson(['data' => ['blockedByMe' => true]]);
     }
+
+    public function test_profile_is_not_found_for_a_user_who_blocked_the_viewer(): void
+    {
+        $viewer = User::factory()->create();
+        $target = User::factory()->create(['username' => 'jordan']);
+
+        $target->blocking()->attach($viewer->id);
+
+        $this->actingAs($viewer)->getJson('/api/users/jordan/profile')->assertStatus(404);
+    }
 }

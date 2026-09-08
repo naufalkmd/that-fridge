@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -56,15 +57,27 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        // Per-account lockout on top of the per-IP route throttle - stops credential stuffing
+        // that rotates IPs to stay under the 6/min limit. 5 misses => locked ~15 min.
+        $throttleKey = 'login:'.Str::lower($data['email']);
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            throw ValidationException::withMessages([
+                'email' => ['Too many failed attempts. Try again in a few minutes.'],
+            ]);
+        }
+
         $user = User::where('email', $data['email'])->first();
 
         // A social-only account has no password; Hash::check on null still returns false, but
         // guard explicitly so the intent is clear.
         if (! $user || ! $user->password || ! Hash::check($data['password'], $user->password)) {
+            RateLimiter::hit($throttleKey, 900);
             throw ValidationException::withMessages([
                 'email' => ['These credentials do not match our records.'],
             ]);
         }
+
+        RateLimiter::clear($throttleKey);
 
         $token = $user->createToken('thatfridge')->plainTextToken;
 
