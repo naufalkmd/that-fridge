@@ -63,8 +63,10 @@ class FridgeControllerTest extends TestCase
         $this->assertDatabaseCount('fridges', 1);
     }
 
-    public function test_store_is_rejected_for_a_non_pro_user_whose_only_fridge_is_one_they_joined(): void
+    public function test_store_succeeds_for_a_non_pro_user_whose_only_fridge_is_one_they_joined(): void
     {
+        // Owning is capped independently of joining: being in someone else's shared fridge
+        // doesn't use up your one free owned-fridge slot.
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Owned by someone else']);
@@ -72,7 +74,8 @@ class FridgeControllerTest extends TestCase
 
         $response = $this->actingAs($member)->postJson('/api/fridges', ['name' => 'My Own']);
 
-        $response->assertStatus(402);
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('fridges', ['user_id' => $member->id, 'name' => 'My Own']);
     }
 
     public function test_store_succeeds_for_a_pro_user_who_already_has_a_fridge(): void

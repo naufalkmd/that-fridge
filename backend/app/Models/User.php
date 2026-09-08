@@ -160,15 +160,26 @@ class User extends Authenticatable
     }
 
     /**
-     * "Multiple / shared fridges" is a Pro feature - a free user can be part of exactly one
-     * fridge at a time (owned or joined; the owner is auto-attached as a member, so
-     * memberFridges() alone covers both cases). That one fridge can still have any number of
-     * members - this only blocks a single user from accumulating more than one fridge, not
-     * basic household sharing on it. Checked wherever a membership row actually gets created:
-     * FridgeController::store() and FridgeJoinRequestController::attachMember().
+     * The free tier gets one fridge slot of each kind: one fridge you own, plus one shared
+     * fridge you've joined. Pro lifts both caps. They're separate because "I keep my own
+     * fridge AND join my partner's" is the ordinary household case and shouldn't cost
+     * anything - the old single "one fridge total" rule forced anyone who'd finished
+     * onboarding (everyone gets an auto-created fridge) to delete theirs before they could
+     * join a shared one, which made the shared-fridge feature unusable for free users.
+     *
+     * Owner vs joined is read from the fridge_members `role` pivot ('owner' on your own
+     * fridge - set in Fridge::booted() - vs 'member' on one you joined via
+     * FridgeJoinRequestController::attachMember). isPro() tracks `pro_expires_at`, synced
+     * from RevenueCat by RevenueCatWebhookController.
      */
-    public function canJoinAnotherFridge(): bool
+    public function canOwnAnotherFridge(): bool
     {
-        return $this->isPro() || $this->memberFridges()->count() < 1;
+        return $this->isPro() || $this->fridges()->count() < 1;
+    }
+
+    public function canJoinAnotherSharedFridge(): bool
+    {
+        return $this->isPro()
+            || $this->memberFridges()->wherePivot('role', 'member')->count() < 1;
     }
 }

@@ -31,15 +31,20 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   const toast = useToast();
   const router = useRouter();
 
-  // Approving/accepting can fail (already a member, blocked user, or - for the requester
-  // specifically - the "one fridge on the free tier" cap) after the row's already been
-  // optimistically removed from the pending list; refresh() puts it back, and this surfaces
-  // why instead of the request just silently reappearing.
+  // Approving/accepting can fail (already a member, blocked user, or the "one shared fridge
+  // on the free tier" cap) after the row's already been optimistically removed from the
+  // pending list; refresh() puts it back, and this surfaces why instead of the request just
+  // silently reappearing.
+  //
+  // `selfService`: only offer the "Upgrade" shortcut when it's the current user who's capped
+  // (accepting their own invite). When an owner approves someone else's request and it's the
+  // *requester* who lacks Pro, the server message already says so - don't send the owner to
+  // their own paywall.
   const notifyFailure = useCallback(
-    (e: unknown) => {
+    (e: unknown, selfService = false) => {
       toast.show(
         describeError(e, "Couldn't complete that."),
-        e instanceof ApiError && e.status === 402
+        selfService && e instanceof ApiError && e.status === 402
           ? { actionLabel: "Upgrade", onAction: () => router.push("/paywall") }
           : undefined,
       );
@@ -66,7 +71,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
       setMyInvites((p) => p.filter((i) => i.id !== id));
       await api.approveJoinRequest(id).catch((e) => {
         refresh();
-        notifyFailure(e);
+        notifyFailure(e, true); // accepting my own invite - if I'm capped, I can upgrade
       });
       await refreshInventory();
     },

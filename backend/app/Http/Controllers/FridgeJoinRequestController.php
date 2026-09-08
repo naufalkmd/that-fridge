@@ -57,7 +57,7 @@ class FridgeJoinRequestController extends Controller
             ->first();
 
         if ($existing && $existing->status === 'pending' && $existing->initiated_by === 'owner') {
-            $this->attachMember($fridge, $request->user());
+            $this->attachMember($fridge, $request->user(), joinerIsCaller: true);
             $existing->update(['status' => 'accepted']);
 
             Notifier::notify(
@@ -214,7 +214,13 @@ class FridgeJoinRequestController extends Controller
             $this->authorize('manageMembers', $joinRequest->fridge);
         }
 
-        $this->attachMember($joinRequest->fridge, $joinRequest->requester);
+        // initiated_by 'owner' => the abort_if above proved the caller is the requester
+        // accepting their own invite; 'requester' => the caller is the owner approving.
+        $this->attachMember(
+            $joinRequest->fridge,
+            $joinRequest->requester,
+            joinerIsCaller: $joinRequest->initiated_by === 'owner',
+        );
         $joinRequest->update(['status' => 'accepted']);
 
         if ($joinRequest->initiated_by === 'owner') {
@@ -278,24 +284,29 @@ class FridgeJoinRequestController extends Controller
      * its own auto-accept path above): fridge_members has a unique (fridge_id, user_id) index,
      * so a second concurrent attach() would 500. The membership check narrows the window; the
      * catch covers what's left of it rather than trusting a check-then-act to be atomic.
+     *
+     * `$joinerIsCaller` picks the 402 wording: the person being added is sometimes the caller
+     * (requesting to join, accepting their own invite) and sometimes not (a fridge owner
+     * approving someone else's request). Only the former should read as "you need Pro" - an
+     * owner seeing "upgrade to Pro" when it's the requester who's capped is the bug this
+     * fixes.
      */
-    private function attachMember(Fridge $fridge, User $user): void
+    private function attachMember(Fridge $fridge, User $joiner, bool $joinerIsCaller = false): void
     {
-        if ($fridge->isMember($user)) {
+        if ($fridge->isMember($joiner)) {
             return;
         }
 
-        if (! $user->canJoinAnotherFridge()) {
-            // $user is whoever's about to become a member, not necessarily the caller (an owner
-            // approving someone else's request hits this branch too) - kept generic so it reads
-            // sensibly from either side.
-            abort(402, 'Multiple / shared fridges is a Pro feature - the person joining needs to upgrade to Pro first.');
+        if (! $joiner->canJoinAnotherSharedFridge()) {
+            abort(402, $joinerIsCaller
+                ? "You're already in a shared fridge — being in more than one needs Pro. Upgrade to Pro to join this one too."
+                : "@{$joiner->username} is already in another shared fridge and isn't on Pro, so they can't join a second one. They'll need to upgrade to Pro (or leave the other fridge) before you can add them.");
         }
 
         try {
-            $fridge->members()->attach($user->id, ['role' => 'member']);
+            $fridge->members()->attach($joiner->id, ['role' => 'member']);
         } catch (QueryException $e) {
-            if (! $fridge->isMember($user)) {
+            if (! $fridge->isMember($joiner)) {
                 throw $e;
             }
         }

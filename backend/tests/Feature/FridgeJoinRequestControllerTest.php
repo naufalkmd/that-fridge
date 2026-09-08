@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Fridge;
 use App\Models\FridgeJoinRequest;
+use App\Models\Section;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -118,8 +119,9 @@ class FridgeJoinRequestControllerTest extends TestCase
         $this->assertDatabaseHas('fridge_join_requests', ['id' => $joinRequest->id, 'status' => 'accepted']);
     }
 
-    public function test_approving_a_request_is_rejected_when_the_requester_already_has_a_non_pro_fridge(): void
+    public function test_approving_a_request_succeeds_when_the_requester_only_owns_their_own_fridge(): void
     {
+        // Having your own fridge no longer blocks joining one shared fridge for free.
         $owner = User::factory()->create();
         $requester = User::factory()->create();
         Fridge::create(['user_id' => $requester->id, 'name' => 'Requesters own fridge']);
@@ -128,16 +130,34 @@ class FridgeJoinRequestControllerTest extends TestCase
 
         $response = $this->actingAs($owner)->postJson("/api/join-requests/{$joinRequest->id}/approve");
 
+        $response->assertStatus(204);
+        $this->assertDatabaseHas('fridge_members', ['fridge_id' => $fridge->id, 'user_id' => $requester->id, 'role' => 'member']);
+    }
+
+    public function test_approving_a_request_is_rejected_when_the_requester_is_already_in_another_shared_fridge(): void
+    {
+        $owner = User::factory()->create();
+        $requester = User::factory()->create();
+        $otherShared = Fridge::create(['user_id' => User::factory()->create()->id, 'name' => 'Their other shared fridge']);
+        $otherShared->members()->attach($requester->id, ['role' => 'member']);
+        $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
+        $joinRequest = FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $requester->id, 'status' => 'pending']);
+
+        $response = $this->actingAs($owner)->postJson("/api/join-requests/{$joinRequest->id}/approve");
+
         $response->assertStatus(402);
+        // the message names the requester, not "you", and doesn't tell the owner to upgrade
+        $response->assertJsonFragment(['message' => "@{$requester->username} is already in another shared fridge and isn't on Pro, so they can't join a second one. They'll need to upgrade to Pro (or leave the other fridge) before you can add them."]);
         $this->assertDatabaseMissing('fridge_members', ['fridge_id' => $fridge->id, 'user_id' => $requester->id]);
         $this->assertDatabaseHas('fridge_join_requests', ['id' => $joinRequest->id, 'status' => 'pending']);
     }
 
-    public function test_approving_a_request_succeeds_when_the_requester_is_pro_despite_already_having_a_fridge(): void
+    public function test_approving_a_request_succeeds_when_the_requester_is_pro_despite_already_being_in_another_shared_fridge(): void
     {
         $owner = User::factory()->create();
         $requester = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
-        Fridge::create(['user_id' => $requester->id, 'name' => 'Requesters own fridge']);
+        $otherShared = Fridge::create(['user_id' => User::factory()->create()->id, 'name' => 'Their other shared fridge']);
+        $otherShared->members()->attach($requester->id, ['role' => 'member']);
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
         $joinRequest = FridgeJoinRequest::create(['fridge_id' => $fridge->id, 'requester_id' => $requester->id, 'status' => 'pending']);
 
@@ -398,7 +418,7 @@ class FridgeJoinRequestControllerTest extends TestCase
         $owner = User::factory()->create();
         $requester = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $owner->id, 'name' => 'Shared']);
-        $section = \App\Models\Section::create(['fridge_id' => $fridge->id, 'name' => 'General']);
+        $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'General']);
 
         $joinRequest = $this->actingAs($requester)->postJson("/api/fridges/{$fridge->id}/join-requests")->json('data');
         $this->actingAs($owner)->postJson("/api/join-requests/{$joinRequest['id']}/approve")->assertStatus(204);

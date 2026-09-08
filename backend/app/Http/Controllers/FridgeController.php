@@ -38,8 +38,8 @@ class FridgeController extends Controller
 
     public function store(Request $request)
     {
-        if (! $request->user()->canJoinAnotherFridge()) {
-            abort(402, 'Multiple fridges is a Pro feature. Upgrade to Pro to create another one.');
+        if (! $request->user()->canOwnAnotherFridge()) {
+            abort(402, 'Creating more than one fridge needs Pro. Upgrade to Pro to add another.');
         }
 
         $data = $request->validate([
