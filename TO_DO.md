@@ -11,19 +11,15 @@ post-approval fast-follow (see Deferred). API hosted in Singapore; v1 app UI Eng
 (Apple review passed), not just submitted — review takes days, so submit ~2 weeks early.
 
 **Where we are (2026-09-08):** backend, RevenueCat, and the mobile app are functionally complete
-and live. The full pre-sign-in onboarding flow is built and OTA'd (see
-`apps/mobile/ONBOARDING.md`); Google Sign-In is wired into the native build. App Store Connect
-is largely set up — listing copy, age rating (9+), App Privacy, App Review notes +
-`app-review.pdf` attachment, subscriptions priced and "Ready to Submit", intro offers attached.
-Binary `1.2.2 (17)` built + uploaded to TestFlight from `main` on 2026-09-08 (contains
-everything since the Sep 7 build; the credit-metering rewrite that landed after it is OTA).
-AI usage was moved from weekly Pro caps to a **credit model** on 2026-09-08 (see "AI credits"
-below) — backend deployed, mobile OTA'd, but RevenueCat Virtual Currency + credit-pack IAPs
-still need dashboard setup (checklist in that section). The paywall was rewritten 2026-09-08
-into a Free-vs-Pro comparison table — **draft, unpublished**, pending the price / trial checks
-**and** a copy pass for the credit model. What's left: the RC credit setup, smoke-test
-the `v1.3.0` submission build (tagged 2026-09-08, EAS building), publish the paywall, and the
-submission. Screenshots uploaded. **v1 ships an English-only listing;** Korea localization is a post-approval
+and live. Onboarding built + OTA'd; Google Sign-In in the native build. AI usage moved from
+weekly Pro caps to a **credit model** (see "AI credits") — backend deployed, mobile in the
+1.3.0 build. Paywall reworded to the credit model and **published (rev 36)**. RevenueCat AICR
+virtual currency + the 3 consumable products + `credits` offering are wired via API; the ASC
+consumable IAPs + price sync still need finishing (checklist in "AI credits"). Screenshots
+uploaded; App Privacy / review notes / `app-review.pdf` updated for the credit model.
+**`v1.3.0` submission binary** tagged 2026-09-08 → EAS built + auto-submitted to TestFlight.
+What's left: smoke-test the 1.3.0 binary, verify on-device prices, attach the IAPs to the
+version and submit for review. **v1 ships an English-only listing;** Korea is a post-approval
 fast-follow.
 
 ---
@@ -184,14 +180,14 @@ verified 2026-09-06. ASC API key + vendor number `94767188` set in RevenueCat.
 
 **Paywall editor** — project `projc6c4cdf4`, paywall `pwec1165df9a414243`, offering
 `ofrngb7a8453e53`. Editor: `app.revenuecat.com/projects/c6c4cdf4/paywalls/pwec1165df9a414243/builder`.
-Edited 2026-09-08: Free-vs-Pro comparison table, then reworded to the **credit model** (rows =
-canonical content below; "50 / 400 monthly AI credits", rollover, top-up, own/host a fridge).
-**Draft is unpublished** pending: (1) price rows show $9.99/$79.99 because the Monthly/Yearly
-packages still have the RC **Test Store** products (`monthly`, `yearly`) attached alongside
-`thatfridge_pro_*` — detach the Test Store pair after the first submission syncs the real
-prices; (2) confirm the 7-day intro offer shows on-device; (3) minor: Terms/Privacy/Restore
-spacing + placeholder feature icons — do in the visual builder. On a real device StoreKit
-serves the right price regardless of the dashboard, so the smoke test is the real check.
+Edited 2026-09-08 to the **credit model** (rows = canonical content below; "50 / 400 monthly
+AI credits", rollover, top-up, own/host a fridge). **Published 2026-09-08, revision 36** —
+live in the app. Still to verify / tidy: (1) on-device the price should read $2.99 / $19.99
+via StoreKit (the RC dashboard preview still shows Test Store $9.99/$79.99 until the ASC
+products sync post-submission); (2) confirm the 7-day intro offer shows on-device; (3) after
+the ASC products sync, detach the RC **Test Store** products (`monthly`, `yearly`) from the
+Monthly/Yearly packages so the dashboard matches; (4) minor: Terms/Privacy/Restore spacing +
+placeholder feature icons in the visual builder.
 
 #### Canonical paywall content (rebuild reference)
 
