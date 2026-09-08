@@ -132,6 +132,10 @@ export default function RootLayout() {
                                       options={{ title: "Notification settings" }}
                                     />
                                     <Stack.Screen
+                                      name="edit-profile"
+                                      options={{ title: "Edit profile" }}
+                                    />
+                                    <Stack.Screen
                                       name="shopping"
                                       options={{ title: "Shopping list" }}
                                     />

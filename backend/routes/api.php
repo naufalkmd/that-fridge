@@ -56,6 +56,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/me/onboarding', [AuthController::class, 'onboarding']);
+    // Name / username edits are rate-limited per rolling 30 days in the controller; the
+    // throttle here is just an anti-hammering floor.
+    Route::middleware('throttle:12,1')->patch('/me/profile', [AuthController::class, 'updateProfile']);
     Route::delete('/me', [AuthController::class, 'destroy']);
 
     // TRACK B: Ingestion & Agents

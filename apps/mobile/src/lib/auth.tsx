@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import * as AppleAuthentication from "expo-apple-authentication";
-import type { CurrentUser } from "@thatfridge/core";
+import type { CurrentUser, ProfileFields } from "@thatfridge/core";
 
 import { api, secureTokenStore } from "@/lib/api";
 import { unregisterPush } from "@/lib/push";
@@ -34,6 +34,7 @@ interface AuthContextValue {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
+  updateProfile: (fields: ProfileFields) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -145,6 +146,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStatus("signedOut");
   }, []);
 
+  const updateProfile = useCallback(async (fields: ProfileFields) => {
+    setUser(await api.updateProfile(fields));
+  }, []);
+
   const deleteAccount = useCallback(async () => {
     await unregisterPush().catch(() => {});
     await api.deleteAccount(); // must succeed — the account is really being deleted
@@ -164,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithGoogle,
       signOut,
       deleteAccount,
+      updateProfile,
     }),
     [
       status,
@@ -175,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithGoogle,
       signOut,
       deleteAccount,
+      updateProfile,
     ],
   );
 

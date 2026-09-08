@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'username', 'email', 'password', 'oauth_provider', 'oauth_sub', 'data_transfer_consented_at', 'preferences'])]
@@ -182,5 +184,57 @@ class User extends Authenticatable
     {
         return $this->isPro()
             || $this->memberFridges()->wherePivot('role', 'member')->count() < 1;
+    }
+
+    /**
+     * How many times each editable profile field may change inside a rolling
+     * PROFILE_CHANGE_WINDOW_DAYS window. Username is the tighter of the two - churning a
+     * handle enables squatting / impersonation and breaks anyone who bookmarked the old
+     * one - while the display name is cosmetic. Enforced in AuthController::updateProfile
+     * against the user_profile_changes log.
+     */
+    public const PROFILE_CHANGE_WINDOW_DAYS = 30;
+
+    public const PROFILE_CHANGE_LIMITS = [
+        'name' => 3,
+        'username' => 1,
+    ];
+
+    public function profileChanges(): HasMany
+    {
+        return $this->hasMany(UserProfileChange::class);
+    }
+
+    /** Timestamps of this field's changes inside the current window, oldest first. */
+    private function recentProfileChanges(string $field): Collection
+    {
+        return $this->profileChanges()
+            ->where('field', $field)
+            ->where('created_at', '>=', now()->subDays(self::PROFILE_CHANGE_WINDOW_DAYS))
+            ->orderBy('created_at')
+            ->pluck('created_at');
+    }
+
+    public function profileChangesRemaining(string $field): int
+    {
+        $limit = self::PROFILE_CHANGE_LIMITS[$field] ?? 0;
+
+        return max(0, $limit - $this->recentProfileChanges($field)->count());
+    }
+
+    /**
+     * When the next change of this field becomes allowed, or null if one is allowed now.
+     * The oldest change still inside the window is the one that has to roll off.
+     */
+    public function nextProfileChangeAllowedAt(string $field): ?Carbon
+    {
+        $limit = self::PROFILE_CHANGE_LIMITS[$field] ?? 0;
+        $used = $this->recentProfileChanges($field);
+
+        if ($used->count() < $limit) {
+            return null;
+        }
+
+        return $used->first()->copy()->addDays(self::PROFILE_CHANGE_WINDOW_DAYS);
     }
 }

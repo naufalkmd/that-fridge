@@ -9,6 +9,7 @@ use App\Services\OAuth\OAuthVerifier;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -148,6 +149,69 @@ class AuthController extends Controller
     }
 
     /**
+     * Change display name and/or username. Both are rate-limited on a rolling 30-day window
+     * (User::PROFILE_CHANGE_LIMITS - username 1, name 3) against the append-only
+     * user_profile_changes log, so a genuine typo fix is fine but handle-churn isn't. A
+     * no-op value (unchanged, or same after trimming) never spends a slot.
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'username' => [
+                'sometimes', 'required', 'string', 'max:255', 'alpha_dash',
+                Rule::unique('users', 'username')->ignore($user->id),
+            ],
+        ]);
+
+        // The seeded demo / App Review accounts are managed - App Review signs in expecting
+        // @keira, and the demo accounts find each other by fixed handle to test sharing.
+        if ($data && $user->is_demo) {
+            abort(403, 'This is a managed demo account — its name and username are fixed.');
+        }
+
+        $changes = [];
+        foreach (['name', 'username'] as $field) {
+            if (! array_key_exists($field, $data)) {
+                continue;
+            }
+            $value = $field === 'username' ? $data[$field] : trim($data[$field]);
+            if ($value === $user->{$field}) {
+                continue; // unchanged — don't spend a rate-limit slot
+            }
+            if ($user->profileChangesRemaining($field) < 1) {
+                $next = $user->nextProfileChangeAllowedAt($field);
+                throw ValidationException::withMessages([
+                    $field => [sprintf(
+                        "You've changed your %s as many times as you can this month. You can change it again %s.",
+                        $field,
+                        $next ? $next->diffForHumans() : 'soon',
+                    )],
+                ]);
+            }
+            $changes[$field] = $value;
+        }
+
+        if ($changes) {
+            DB::transaction(function () use ($user, $changes) {
+                foreach ($changes as $field => $value) {
+                    $user->profileChanges()->create([
+                        'field' => $field,
+                        'old_value' => $user->{$field},
+                        'new_value' => $value,
+                    ]);
+                    $user->{$field} = $value;
+                }
+                $user->save();
+            });
+        }
+
+        return response()->json(['user' => $this->userPayload($user->refresh())]);
+    }
+
+    /**
      * Permanently delete the authenticated user and everything they own. Required by
      * Apple App Store Guideline 5.1.1(v) for any app with account registration.
      *
@@ -269,6 +333,9 @@ class AuthController extends Controller
      * Shared shape for the "current user" payload returned by register/login/me. Needs its
      * own id (the shared-fridge member list renders "(you)" and disables self-removal by
      * comparing against it) and username (find-a-friend search matches on this).
+     *
+     * `profileChanges` lets the edit-profile screen show "1 change left this month" and,
+     * once spent, when the field unlocks again - without a second round-trip.
      */
     private function userPayload(User $user): array
     {
@@ -278,6 +345,13 @@ class AuthController extends Controller
             'username' => $user->username,
             'email' => $user->email,
             'preferences' => $user->preferences ?? null,
+            'profileChanges' => $user->is_demo ? null : collect(User::PROFILE_CHANGE_LIMITS)
+                ->mapWithKeys(fn ($limit, $field) => [$field => [
+                    'limit' => $limit,
+                    'remaining' => $user->profileChangesRemaining($field),
+                    'nextAllowedAt' => $user->nextProfileChangeAllowedAt($field)?->toIso8601String(),
+                ]])
+                ->all(),
         ];
     }
 }

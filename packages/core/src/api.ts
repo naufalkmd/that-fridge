@@ -23,6 +23,7 @@ import type {
   NutritionCategory,
   OnboardingPrefs,
   OrganizerTally,
+  ProfileFields,
   Recipe,
   RecipeAttachment,
   RecipeCategory,
@@ -366,6 +367,16 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
 
   async function me(): Promise<CurrentUser> {
     const res = await http.get<{ user: CurrentUser }>("/me");
+    return res.user;
+  }
+
+  /**
+   * Change display name and/or username. Rate-limited server-side on a rolling 30-day
+   * window (username once, name three times) — over the limit comes back as a 422 with a
+   * per-field message. The returned user carries the refreshed `profileChanges` budget.
+   */
+  async function updateProfile(fields: ProfileFields): Promise<CurrentUser> {
+    const res = await http.patch<{ user: CurrentUser }>("/me/profile", fields);
     return res.user;
   }
 
@@ -911,6 +922,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     loginWithGoogle,
     logout,
     me,
+    updateProfile,
     deleteAccount,
     getChatHistory,
     sendChat,

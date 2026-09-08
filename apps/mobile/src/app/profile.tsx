@@ -84,7 +84,10 @@ export default function Profile() {
 
   return (
     <ScrollView className="flex-1 bg-canvas" contentContainerClassName="p-6 gap-7">
-      <View className="flex-row items-center gap-3.5">
+      <Pressable
+        onPress={() => router.push("/edit-profile")}
+        className="flex-row items-center gap-3.5 active:opacity-70"
+      >
         <View className="h-14 w-14 items-center justify-center rounded-full border border-hairline bg-surface">
           <Text className="text-lg font-bold text-ink">
             {user?.name?.slice(0, 1).toUpperCase() ?? "?"}
@@ -95,7 +98,8 @@ export default function Profile() {
           <Text className="text-[13px] text-muted">@{user?.username}</Text>
           <Text className="text-[12px] text-faint">{user?.email}</Text>
         </View>
-      </View>
+        <Ionicons name="pencil-outline" size={16} color="rgba(234,234,236,0.34)" />
+      </Pressable>
 
       <View className="rounded-[10px] border border-hairline bg-surface p-4">
         <Eyebrow color="rgba(234,234,236,0.34)">Subscription</Eyebrow>

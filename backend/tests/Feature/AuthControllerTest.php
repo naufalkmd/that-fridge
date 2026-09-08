@@ -150,6 +150,95 @@ class AuthControllerTest extends TestCase
         $this->postJson('/api/me/onboarding', ['goal' => 'save_money'])->assertStatus(401);
     }
 
+    public function test_update_profile_changes_name_and_username_and_logs_them(): void
+    {
+        $user = User::factory()->create(['name' => 'Jordan', 'username' => 'jordan']);
+
+        $response = $this->actingAs($user)->patchJson('/api/me/profile', [
+            'name' => 'Jordan Diaz',
+            'username' => 'jordandiaz',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['user' => ['name' => 'Jordan Diaz', 'username' => 'jordandiaz']]);
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'name' => 'Jordan Diaz', 'username' => 'jordandiaz']);
+        $this->assertDatabaseHas('user_profile_changes', [
+            'user_id' => $user->id, 'field' => 'username', 'old_value' => 'jordan', 'new_value' => 'jordandiaz',
+        ]);
+    }
+
+    public function test_update_profile_reports_remaining_changes(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->patchJson('/api/me/profile', ['username' => 'freshhandle']);
+
+        $response->assertStatus(200);
+        $response->assertJson(['user' => ['profileChanges' => [
+            'username' => ['limit' => 1, 'remaining' => 0],
+            'name' => ['limit' => 3, 'remaining' => 3],
+        ]]]);
+        $this->assertNotNull($response->json('user.profileChanges.username.nextAllowedAt'));
+    }
+
+    public function test_update_profile_blocks_a_username_change_once_the_monthly_limit_is_spent(): void
+    {
+        $user = User::factory()->create(['username' => 'jordan']);
+
+        $this->actingAs($user)->patchJson('/api/me/profile', ['username' => 'jordan2'])->assertStatus(200);
+
+        $this->actingAs($user)->patchJson('/api/me/profile', ['username' => 'jordan3'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('username');
+
+        $this->assertSame('jordan2', $user->fresh()->username);
+    }
+
+    public function test_update_profile_allows_a_second_name_change_within_the_month(): void
+    {
+        $user = User::factory()->create(['name' => 'A']);
+
+        $this->actingAs($user)->patchJson('/api/me/profile', ['name' => 'B'])->assertStatus(200);
+        $this->actingAs($user)->patchJson('/api/me/profile', ['name' => 'C'])->assertStatus(200);
+        $this->actingAs($user)->patchJson('/api/me/profile', ['name' => 'D'])->assertStatus(200);
+        $this->actingAs($user)->patchJson('/api/me/profile', ['name' => 'E'])->assertStatus(422);
+    }
+
+    public function test_update_profile_does_not_spend_a_slot_when_the_value_is_unchanged(): void
+    {
+        $user = User::factory()->create(['username' => 'jordan']);
+
+        $this->actingAs($user)->patchJson('/api/me/profile', ['username' => 'jordan'])->assertStatus(200);
+
+        $this->assertDatabaseCount('user_profile_changes', 0);
+        $this->actingAs($user)->patchJson('/api/me/profile', ['username' => 'jordan_new'])->assertStatus(200);
+    }
+
+    public function test_update_profile_rejects_a_taken_username(): void
+    {
+        $user = User::factory()->create();
+        User::factory()->create(['username' => 'taken']);
+
+        $this->actingAs($user)->patchJson('/api/me/profile', ['username' => 'taken'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('username');
+    }
+
+    public function test_update_profile_is_forbidden_for_a_managed_demo_account(): void
+    {
+        $user = User::factory()->create(['is_demo' => true, 'username' => 'keira']);
+
+        $this->actingAs($user)->patchJson('/api/me/profile', ['username' => 'keira_new'])
+            ->assertStatus(403);
+
+        $this->assertSame('keira', $user->fresh()->username);
+    }
+
+    public function test_update_profile_requires_auth(): void
+    {
+        $this->patchJson('/api/me/profile', ['name' => 'X'])->assertStatus(401);
+    }
+
     public function test_delete_me_removes_the_user_their_tokens_and_owned_fridges(): void
     {
         $user = User::factory()->create();

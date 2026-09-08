@@ -313,7 +313,18 @@ export interface CurrentUser {
   email: string;
   /** Coarse onboarding answer tags (see apps/mobile/ONBOARDING.md); flavours later copy. */
   preferences?: OnboardingPrefs | null;
+  /**
+   * Per-field budget for name / username edits on a rolling 30-day window. Lets the
+   * edit-profile screen show "1 change left" and, once spent, when the field unlocks.
+   * Null for managed demo / App Review accounts, which can't change either field.
+   */
+  profileChanges?: Record<
+    "name" | "username",
+    { limit: number; remaining: number; nextAllowedAt: string | null }
+  > | null;
 }
+
+export type ProfileFields = Partial<Pick<CurrentUser, "name" | "username">>;
 
 export type OnboardingGoal =
   | "waste_less"
