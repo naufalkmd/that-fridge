@@ -34,14 +34,17 @@ fast-follow.
 
 **App Store**
 
-- [ ] **Cut the `v1.2.2` submission binary** — `app.config.ts` version already bumped to 1.2.2
-  (2026-09-07) with Google Sign-In wired into the native build (`@react-native-google-signin`
-  URL scheme + client ids; `GOOGLE_CLIENT_IDS` on the VPS lists both the iOS and Web ids). Tag
-  `v1.2.2` to trigger the build + auto-submit. `v1.2.1` (`7a1db9a`) is live in TestFlight but
-  predates Google + all the onboarding work — everything since is OTA on runtime **1.2.2 only**,
-  so the reviewed binary must be 1.2.2.
-  - Once it processes: re-run the key smoke paths on the actual binary (**especially "Continue
-    with Google"** — never in a shipped build before) and have the team re-check on TestFlight.
+- [ ] **`v1.3.0` submission binary** — `app.config.ts` bumped to 1.3.0 (2026-09-08); tag
+  `v1.3.0` triggers `testflight.yml` (EAS build + auto-submit). This is the binary Apple
+  reviews: it must bundle the credit system, 27-tool Quick Chat, swipe nav, selectable text,
+  demo-is-Pro and the dev-button cleanup natively — NOT rely on OTA (the reviewer might not
+  get the update, and the credit-pack IAPs are attached to this version). Everything since
+  `1.2.2 (17)` is JS-only, so no other native changes. `runtimeVersion` follows `version`,
+  so 1.3.0 gets its own OTA channel; 1.2.2 testers must update via TestFlight.
+  - After it processes: smoke-test the actual binary — paywall price, buy a credit pack,
+    chat spends credits, swipe between tabs, long-press to copy text.
+  - **Do not push mobile OTAs during Apple review** (behaviour change on the reviewed
+    channel trips 2.3 / 3.1.x). Hotfixes only.
 - [ ] **Screenshots** — 10-frame marketing set (designed, not plain), plan in
   `apps/mobile/SCREENSHOTS.md`. Friend captures the 9 raw screens from the new build on the demo
   account (`keira@thatfridge.test`, hand over the new password) → send to Claude → Claude
