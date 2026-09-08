@@ -30,6 +30,8 @@ import {
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
+import { useNotes } from "@/lib/notes";
+import { useShopping } from "@/lib/shopping";
 import { useScope } from "@/lib/scope";
 import { useOnboarding } from "@/lib/onboarding";
 import { useCredits } from "@/lib/credits";
@@ -67,6 +69,8 @@ export default function Chat() {
   const insets = useSafeAreaInsets();
   const { session } = useLocalSearchParams<{ session?: string }>();
   const { items, refresh: refreshInventory } = useInventory();
+  const { refresh: refreshNotes } = useNotes();
+  const { refresh: refreshShopping } = useShopping();
   const { scope } = useScope();
   const { markChecklistVisited } = useOnboarding();
   const { balance: credits, setBalance: setCredits, refresh: refreshCredits } = useCredits();
@@ -172,8 +176,13 @@ export default function Chat() {
         },
       );
       if (res.session_id) setSessionId(res.session_id);
-      // A tool call changed the fridge — pull the fresh inventory so the other tabs match.
-      if (res.mutated) void refreshInventory();
+      // A tool call changed the user's data — the mutated flag doesn't say which of
+      // inventory / notes / shopping, so refresh all three (cheap) so every tab matches.
+      if (res.mutated) {
+        void refreshInventory();
+        void refreshNotes();
+        void refreshShopping();
+      }
       setMessages((m) => [
         ...m,
         {

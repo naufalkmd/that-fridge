@@ -325,23 +325,22 @@ food icons.
 
 ### Quick Chat tools (`AgentToolbox`)
 
-Agents can call kitchen tools on top of `fetch_url` browsing. All 21 shipped (Tier 1 in
-`f0fcc7b`, Tier 2/3 added 2026-09-08):
+Agents can call kitchen tools on top of `fetch_url` browsing. 22 tools (Tier 1 in `f0fcc7b`,
+Tier 2/3 + `remove_note` added 2026-09-08):
 
 - **Reads:** `list_items`, `list_notes`, `list_shopping`, `list_recipes`, `list_fridges`,
   `get_recipe`, `get_kitchen_score`
 - **Writes (direct, reversible):** `add_item`, `update_item`, `move_item`, `mark_item_used`,
-  `add_to_shopping`, `check_off_shopping`, `remove_from_shopping`, `add_note`, `remember_fact`,
-  `save_recipe`, `mark_recipe_made`, `import_recipe_from_link`
+  `add_to_shopping`, `check_off_shopping`, `remove_from_shopping`, `add_note`, `remove_note`,
+  `remember_fact`, `save_recipe`, `mark_recipe_made`, `import_recipe_from_link`
 - **Deletes (confirm-first — `confirm:false` preview, prompt forbids self-confirming):**
   `remove_item`, `clear_expired_items`
 
 Loop bounded by `MAX_TOOL_ROUNDS = 5` + `MAX_TOOL_CALLS = 10` (fetch_url keeps its own
-`MAX_FETCHES = 2`). Client passes `fridge_id` (active scope) and refreshes inventory when the
-reply carries `mutated: true` — note that flag currently only triggers an *inventory* refresh
-on mobile, so a shopping/notes/recipe write won't refresh those views until the next open.
-A tool exchange costs the 1-credit message + a best-effort `+2` surcharge (`chat_tools`,
-`spendUpTo` so it never hard-fails mid-reply). All agents get all tools; model stays Haiku 4.5.
+`MAX_FETCHES = 2`). Client passes `fridge_id` (active scope); a `mutated: true` reply now
+refreshes inventory + notes + shopping (the flag doesn't say which changed). A tool exchange
+costs the 1-credit message + a best-effort `+2` surcharge (`chat_tools`, `spendUpTo` so it
+never hard-fails mid-reply). All agents get all tools; model stays Haiku 4.5.
 
 Notes / still open:
 - `add_item` / `save_recipe` guess icons from a **curated-10 keyword map** only (the full pack's

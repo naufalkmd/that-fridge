@@ -87,6 +87,32 @@ class AgentToolboxTest extends TestCase
         $this->assertDatabaseHas('fridge_notes', ['fridge_id' => $this->fridge->id, 'text' => 'leftovers are Toms', 'user_id' => $this->user->id]);
     }
 
+    public function test_remove_note_deletes_by_id_and_by_unique_text_match(): void
+    {
+        $a = FridgeNote::create(['fridge_id' => $this->fridge->id, 'user_id' => $this->user->id, 'text' => 'buy milk', 'color' => 'amber']);
+        $b = FridgeNote::create(['fridge_id' => $this->fridge->id, 'user_id' => $this->user->id, 'text' => 'pizza friday', 'color' => 'amber']);
+
+        $byId = $this->toolbox->run('remove_note', ['note_id' => $a->id], $this->user, $this->fridge->id);
+        $this->assertTrue($byId['mutated']);
+        $this->assertDatabaseMissing('fridge_notes', ['id' => $a->id]);
+
+        $byText = $this->toolbox->run('remove_note', ['text' => 'pizza'], $this->user, $this->fridge->id);
+        $this->assertTrue($byText['mutated']);
+        $this->assertDatabaseMissing('fridge_notes', ['id' => $b->id]);
+    }
+
+    public function test_remove_note_refuses_to_guess_when_the_text_matches_several(): void
+    {
+        FridgeNote::create(['fridge_id' => $this->fridge->id, 'user_id' => $this->user->id, 'text' => 'call the plumber', 'color' => 'amber']);
+        FridgeNote::create(['fridge_id' => $this->fridge->id, 'user_id' => $this->user->id, 'text' => 'call mum', 'color' => 'amber']);
+
+        $out = $this->toolbox->run('remove_note', ['text' => 'call'], $this->user, $this->fridge->id);
+
+        $this->assertFalse($out['mutated']);
+        $this->assertStringContainsString('matches 2 notes', $out['content']);
+        $this->assertDatabaseCount('fridge_notes', 2);
+    }
+
     public function test_update_item_changes_quantity(): void
     {
         $item = $this->item(['quantity' => 4]);

@@ -99,6 +99,10 @@ class AgentToolbox
                 'text' => ['type' => 'string'],
                 'color' => ['type' => 'string', 'enum' => FridgeNote::COLORS, 'description' => 'Optional accent colour; defaults to amber.'],
             ], ['text']),
+            $fn('remove_note', 'Delete a sticky note. Pass note_id from list_notes, or a text fragment to match - if the fragment matches more than one note it will not guess, so read them back and ask which.', [
+                'note_id' => ['type' => 'integer'],
+                'text' => ['type' => 'string', 'description' => 'Case-insensitive fragment of the note text. Only used when note_id is omitted.'],
+            ]),
             $fn('update_item', 'Change one field on an item: quantity, whether it is opened, its expiry date, or its storage location. Get the item_id from list_items first.', [
                 'item_id' => ['type' => 'integer'],
                 'quantity' => ['type' => 'integer', 'description' => 'New quantity (>= 1). To use an item up entirely, call mark_item_used instead.'],
@@ -178,6 +182,7 @@ class AgentToolbox
                 'list_recipes' => $this->listRecipes($user, $args),
                 'add_to_shopping' => $this->addToShopping($user, $fridgeId, $args),
                 'add_note' => $this->addNote($user, $fridgeId, $args),
+                'remove_note' => $this->removeNote($user, $args),
                 'update_item' => $this->updateItem($user, $args),
                 'mark_item_used' => $this->markItemUsed($user, $args),
                 'remove_item' => $this->removeItem($user, $args),
@@ -346,6 +351,39 @@ class AgentToolbox
         $this->mutated = true;
 
         return "Left a note on {$fridge->name}: \"{$text}\".";
+    }
+
+    private function removeNote(User $user, array $args): string
+    {
+        $notes = FridgeNote::whereIn('fridge_id', $this->fridgeIds($user));
+
+        if (isset($args['note_id'])) {
+            $note = $notes->find((int) $args['note_id']);
+            if (! $note) {
+                return 'Error: no note with that id. Call list_notes for valid ids.';
+            }
+        } else {
+            $fragment = trim((string) ($args['text'] ?? ''));
+            if ($fragment === '') {
+                return 'Error: pass note_id or a text fragment to match.';
+            }
+            $matches = $notes->whereRaw('lower(text) like ?', ['%'.Str::lower($fragment).'%'])->get();
+            if ($matches->isEmpty()) {
+                return "No note matches \"{$fragment}\".";
+            }
+            if ($matches->count() > 1) {
+                $list = $matches->map(fn ($n) => "#{$n->id} \"{$n->text}\"")->implode('; ');
+
+                return "That matches {$matches->count()} notes: {$list}. Ask the user which one, then call remove_note with its note_id.";
+            }
+            $note = $matches->first();
+        }
+
+        $text = $note->text;
+        $note->delete();
+        $this->mutated = true;
+
+        return "Removed the note \"{$text}\".";
     }
 
     private function updateItem(User $user, array $args): string
