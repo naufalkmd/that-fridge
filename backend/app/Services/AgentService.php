@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 
@@ -10,6 +11,7 @@ class AgentService
     public function __construct(
         protected OpenRouterClient $client,
         protected WebContentService $web,
+        protected AgentToolbox $toolbox,
     ) {}
 
     /**
@@ -20,7 +22,14 @@ class AgentService
      */
     private const MAX_FETCHES = 2;
 
-    private const MAX_TOOL_ROUNDS = 2;
+    // How many model<->tool round-trips a single chat message may run. Higher than the old
+    // value of 2 now that the agents have real kitchen tools (list_items -> mark_item_used
+    // -> ... is a normal chain), but still bounded so one message can't loop forever.
+    private const MAX_TOOL_ROUNDS = 5;
+
+    // Hard cap on total tool executions in one message, across all tools, on top of the
+    // per-tool MAX_FETCHES sub-limit for fetch_url.
+    private const MAX_TOOL_CALLS = 8;
 
     /**
      * Send message to agent and get response. $history is the prior turns of this same
@@ -34,7 +43,7 @@ class AgentService
      * string to the multimodal `content` array format OpenRouterVisionService already uses
      * for the fridge-photo scan flow - same underlying model, just a different call shape.
      */
-    public function chat($message, $agent = 'Chef', $inventory = null, $usageHistory = null, $compact = false, $memory = null, $history = [], $streakContext = null, ?UploadedFile $image = null)
+    public function chat($message, $agent = 'Chef', $inventory = null, $usageHistory = null, $compact = false, $memory = null, $history = [], $streakContext = null, ?UploadedFile $image = null, ?User $user = null, ?int $fridgeId = null)
     {
         // Mock response if no API key (for testing)
         if (! $this->client->available()) {
@@ -42,7 +51,8 @@ class AgentService
         }
 
         try {
-            $systemPrompt = $this->getSystemPrompt($agent, $inventory, $usageHistory, $compact, $memory, $streakContext);
+            $hasTools = $user !== null && ! $compact && ! $image;
+            $systemPrompt = $this->getSystemPrompt($agent, $inventory, $usageHistory, $compact, $memory, $streakContext, $hasTools);
 
             // Non-compact Chef replies can carry a trailing <<<RECIPE_SUGGESTION>>> JSON block
             // on top of the normal prose - give those a bit more room than the 1000-token
@@ -59,12 +69,13 @@ class AgentService
                 ['role' => 'user', 'content' => $userContent],
             ];
 
-            // Browsing: a plain-text chat turn (no photo, not a compact tip-card call) can
-            // ask the model to read a link the user shared. An image turn skips tools - the
-            // vision path doesn't combine with tool-use here and the model has the picture.
+            // Tools: a plain-text chat turn (no photo, not a compact tip-card call) gets the
+            // fetch_url browsing tool plus, when we know who's asking, the kitchen toolbox
+            // (list/add/remove items, notes, shopping, recipes). An image turn skips tools -
+            // the vision path doesn't combine with tool-use here and the model has the picture.
             $result = $image || $compact
                 ? $this->client->complete($messages, $maxTokens)
-                : $this->runWithTools($messages, $maxTokens);
+                : $this->runWithTools($messages, $maxTokens, $user, $fridgeId);
 
             if ($result['ok']) {
                 $response = $result['content'] ?: 'No response';
@@ -83,6 +94,8 @@ class AgentService
                     'recipe_suggestion' => $recipeSuggestion,
                     'status' => 'success',
                     'mocked' => false,
+                    // A tool call changed the user's data - the client refreshes after this.
+                    'mutated' => $result['mutated'] ?? false,
                 ];
             }
 
@@ -116,25 +129,31 @@ class AgentService
      * what it has). Returns the same ['ok' => ..., 'content' => ...] shape as a plain
      * OpenRouterClient::complete call so the caller doesn't care which path ran.
      */
-    private function runWithTools(array $messages, int $maxTokens): array
+    private function runWithTools(array $messages, int $maxTokens, ?User $user = null, ?int $fridgeId = null): array
     {
         $tools = [$this->fetchUrlTool()];
+        if ($user) {
+            $tools = [...$tools, ...$this->toolbox->schemas()];
+        }
+
         $fetches = 0;
+        $callCount = 0;
+        $mutated = false;
         $last = null;
 
         for ($round = 0; $round <= self::MAX_TOOL_ROUNDS; $round++) {
-            $offerTools = $round < self::MAX_TOOL_ROUNDS && $fetches < self::MAX_FETCHES;
+            $offerTools = $round < self::MAX_TOOL_ROUNDS && $callCount < self::MAX_TOOL_CALLS;
 
             $last = $this->client->complete($messages, $maxTokens, 'anthropic/claude-haiku-4.5', $offerTools ? $tools : []);
 
             if (! $last['ok']) {
-                return $last;
+                return [...$last, 'mutated' => $mutated];
             }
 
             $calls = $last['tool_calls'] ?? null;
 
             if (! $calls) {
-                return $last;
+                return [...$last, 'mutated' => $mutated];
             }
 
             // Keep the assistant's tool-call turn in the transcript, then answer each call.
@@ -144,17 +163,20 @@ class AgentService
             $messages[] = $assistantTurn;
 
             foreach ($calls as $call) {
+                $callCount++;
+                [$content, $didMutate] = $this->runToolCall($call, $fetches, $callCount, $user, $fridgeId);
+                $mutated = $mutated || $didMutate;
                 $messages[] = [
                     'role' => 'tool',
                     'tool_call_id' => $call['id'] ?? '',
-                    'content' => $this->runToolCall($call, $fetches),
+                    'content' => $content,
                 ];
             }
         }
 
         // Ran out of rounds with the model still wanting tools - hand back whatever text it
         // last produced (may be empty, which the caller turns into "No response").
-        return $last ?? ['ok' => false, 'reason' => 'exception'];
+        return [...($last ?? ['ok' => false, 'reason' => 'exception']), 'mutated' => $mutated];
     }
 
     private function fetchUrlTool(): array
@@ -179,18 +201,36 @@ class AgentService
     }
 
     /**
-     * @param  int  $fetches  running count, incremented here so the cap spans all calls in a turn
+     * Dispatch one tool call. Returns [result string for the model, did-it-mutate-data].
+     *
+     * @param  int  $fetches  running fetch_url count, by ref so the cap spans the whole turn
      */
-    private function runToolCall(array $call, int &$fetches): string
+    private function runToolCall(array $call, int &$fetches, int $callCount, ?User $user, ?int $fridgeId): array
     {
         $name = $call['function']['name'] ?? '';
+        $args = json_decode($call['function']['arguments'] ?? '{}', true);
+        $args = is_array($args) ? $args : [];
 
-        if ($name !== 'fetch_url') {
-            return "Error: unknown tool \"{$name}\".";
+        if ($callCount > self::MAX_TOOL_CALLS) {
+            return ['Error: reached the tool-call limit for this message. Answer with what you have.', false];
         }
 
-        $args = json_decode($call['function']['arguments'] ?? '{}', true);
-        $url = is_array($args) && is_string($args['url'] ?? null) ? trim($args['url']) : '';
+        if ($name === 'fetch_url') {
+            return [$this->runFetchUrl($args, $fetches), false];
+        }
+
+        if ($user) {
+            $result = $this->toolbox->run($name, $args, $user, $fridgeId);
+
+            return [$result['content'], $result['mutated']];
+        }
+
+        return ["Error: unknown tool \"{$name}\".", false];
+    }
+
+    private function runFetchUrl(array $args, int &$fetches): string
+    {
+        $url = is_string($args['url'] ?? null) ? trim($args['url']) : '';
 
         if ($url === '') {
             return 'Error: no url was provided.';
@@ -265,7 +305,7 @@ class AgentService
     /**
      * Get system prompt based on agent type
      */
-    private function getSystemPrompt($agent, $inventory = null, $usageHistory = null, $compact = false, $memory = null, $streakContext = null)
+    private function getSystemPrompt($agent, $inventory = null, $usageHistory = null, $compact = false, $memory = null, $streakContext = null, $hasTools = false)
     {
         // Inventory item names and usage history are user-editable text, so a crafted item
         // name could otherwise inject instructions into the system prompt. Fence them in
@@ -315,6 +355,13 @@ class AgentService
             ? ''
             : ' If the user shares or points to a link - a recipe page, an article, or a YouTube / TikTok / Instagram video - call the fetch_url tool to read it before answering, and work from what it actually says. Only ever fetch a URL the user themselves provided; never invent one. If a page cannot be read (video sites often block this), say so plainly and ask them to paste the recipe text.';
 
+        // Kitchen tools (AgentToolbox): only on real chat turns where we know who's asking.
+        // The tool schemas already describe each one; this sets the behavioural rules -
+        // check real data before claiming, and never delete anything without asking first.
+        $toolsInstruction = $hasTools
+            ? ' You have tools to read and act on the user\'s actual kitchen: list_items, list_notes, list_shopping, list_recipes, add_to_shopping, add_note, update_item, mark_item_used, remove_item, clear_expired_items. Call list_items rather than trusting the short inventory summary above when the user asks about specific items, quantities, or what\'s expiring. When the user asks you to add, change, use up, or remove something, do it with the matching tool - don\'t just describe it. Use mark_item_used when they finished an item, remove_item only for something wasted or added by mistake. For remove_item and clear_expired_items you MUST first call the tool with confirm:false, tell the user exactly what will be deleted, and wait for them to agree in a later message before calling again with confirm:true. Never pass confirm:true on your own initiative.'
+            : '';
+
         // Caught live: with no inventory shared (a fresh account, or scoped to an empty
         // fridge), Shopkeeper confidently invented specific items, quantities, and "your
         // shopping patterns" / "since you use them regularly" claims out of nothing, every
@@ -335,13 +382,13 @@ class AgentService
             : '';
 
         $prompts = [
-            'Chef' => 'You are Chef. Your role is to suggest recipes and meals based on available ingredients. Prioritize items that are expiring soon. Be enthusiastic about cooking!'.$styleInstruction.$browsingInstruction.$groundingInstruction.$recipeBlockInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
+            'Chef' => 'You are Chef. Your role is to suggest recipes and meals based on available ingredients. Prioritize items that are expiring soon. Be enthusiastic about cooking!'.$styleInstruction.$browsingInstruction.$toolsInstruction.$groundingInstruction.$recipeBlockInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
 
-            'Guardian' => 'You are Guardian. Your role is to alert about food safety issues and spoilage. Flag items that are expired or close to expiring. Warn about risky storage. Be direct and clear about safety concerns.'.$styleInstruction.$browsingInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
+            'Guardian' => 'You are Guardian. Your role is to alert about food safety issues and spoilage. Flag items that are expired or close to expiring. Warn about risky storage. Be direct and clear about safety concerns.'.$styleInstruction.$browsingInstruction.$toolsInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
 
-            'Organizer' => 'You are Organizer. Your role is to suggest optimal storage locations for items (fridge, freezer, pantry). Explain why each storage location is best for that food. Help maintain an organized fridge.'.$styleInstruction.$browsingInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
+            'Organizer' => 'You are Organizer. Your role is to suggest optimal storage locations for items (fridge, freezer, pantry). Explain why each storage location is best for that food. Help maintain an organized fridge.'.$styleInstruction.$browsingInstruction.$toolsInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
 
-            'Shopkeeper' => "You are Shopkeeper. Your role is to recommend items to buy based on what's running low in inventory and what the user tends to buy again. Suggest quantities. Consider meal planning needs.".$styleInstruction.$browsingInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
+            'Shopkeeper' => "You are Shopkeeper. Your role is to recommend items to buy based on what's running low in inventory and what the user tends to buy again. Suggest quantities. Consider meal planning needs.".$styleInstruction.$browsingInstruction.$toolsInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
         ];
 
         return $prompts[$agent] ?? $prompts['Chef'];

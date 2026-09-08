@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AgentController extends Controller
 {
@@ -173,6 +174,12 @@ class AgentController extends Controller
             'usage_history' => 'nullable|string', // frequently-used-items summary for context
             'streak_context' => 'nullable|string', // one-line Waste Saver streak summary for context
             'session_id' => 'nullable|uuid',
+            // The chat's active fridge - the default target for tool writes (add to shopping,
+            // leave a note, clear expired). Null when chatting across all fridges. Must be one
+            // the user is a member of.
+            'fridge_id' => ['nullable', 'integer', Rule::exists('fridges', 'id')->where(
+                fn ($q) => $q->whereIn('id', $request->user()->memberFridges()->pluck('fridges.id'))
+            )],
             // Set by the Home tip cards / "Activate" button, not real user chat messages -
             // asks for one short plain-text sentence instead of a looser 2-3 sentence reply,
             // so those small fixed-size cards read consistently instead of one being a plain
@@ -211,7 +218,9 @@ class AgentController extends Controller
             $memory,
             $this->recentSessionHistory($request),
             $request->input('streak_context'),
-            $request->file('image')
+            $request->file('image'),
+            $request->user(),
+            $request->input('fridge_id') ? (int) $request->input('fridge_id') : null,
         );
 
         if (! $result) {
@@ -256,6 +265,8 @@ class AgentController extends Controller
             'recipe_suggestion' => $record->recipe_suggestion,
             'created_at' => $record->created_at->toIso8601String(),
             'mocked' => $result['mocked'] ?? false,
+            // True when a tool call changed the user's data - the client refreshes.
+            'mutated' => $result['mutated'] ?? false,
         ], 200);
     }
 

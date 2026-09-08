@@ -266,6 +266,24 @@ Legal cover: `apps/legal/terms` §4 (licence to include generated images in the 
 no attribution) + `privacy` §3/§5 (review + retention). Only promote generic, non-personal
 food icons.
 
+### Quick Chat tools (`AgentToolbox`)
+
+Agents can call kitchen tools on top of `fetch_url` browsing. Shipped: `list_items`,
+`list_notes`, `list_shopping`, `list_recipes`, `add_to_shopping`, `add_note`, `update_item`,
+`mark_item_used`, `remove_item`, `clear_expired_items`. Reads run freely; low-stakes writes
+execute directly (reversible); `remove_item` / `clear_expired_items` take `confirm:false`
+first and the prompt forbids the model self-confirming. Loop bounded by `MAX_TOOL_ROUNDS = 5`
++ `MAX_TOOL_CALLS = 8` (fetch_url keeps its own `MAX_FETCHES = 2`). Client passes `fridge_id`
+(active scope) and refreshes inventory when the reply carries `mutated: true`. Same weekly
+cap — a whole tool exchange still counts as one message. All agents get all tools (the
+confirm-first pattern is the safety, not per-agent gating).
+
+Deferred (Tier 2/3): `add_item`, `check_off_shopping` / `remove_from_shopping`, `get_recipe`,
+`save_recipe`, `mark_recipe_made`, `import_recipe_from_link`, `move_item`, `remember_fact`,
+`get_kitchen_score`, `list_fridges`. A confirm *card* in the UI (vs the text round-trip) is
+also deferred. Consider bumping tool-use turns to Sonnet if Haiku 4.5 tool reliability is poor
+in practice.
+
 ### Data retention
 
 `app:prune-stale-data` runs daily (04:00, `routes/console.php`) and bounds the few unbounded

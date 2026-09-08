@@ -29,6 +29,7 @@ import {
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
+import { useScope } from "@/lib/scope";
 import { useOnboarding } from "@/lib/onboarding";
 import { usePro } from "@/lib/pro";
 import {
@@ -68,7 +69,8 @@ export default function Chat() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session } = useLocalSearchParams<{ session?: string }>();
-  const { items } = useInventory();
+  const { items, refresh: refreshInventory } = useInventory();
+  const { scope } = useScope();
   const { markChecklistVisited } = useOnboarding();
   const { isPro, presentPaywallIfNeeded } = usePro();
   const [messages, setMessages] = useState<Msg[]>([GREETING]);
@@ -172,12 +174,15 @@ export default function Chat() {
         {
           inventory: inventorySummary,
           sessionId,
+          fridgeId: scope === "all" ? undefined : scope,
           image: img
             ? { uri: img, name: "photo.jpg", type: "image/jpeg" }
             : undefined,
         },
       );
       if (res.session_id) setSessionId(res.session_id);
+      // A tool call changed the fridge — pull the fresh inventory so the other tabs match.
+      if (res.mutated) void refreshInventory();
       setMessages((m) => [
         ...m,
         {

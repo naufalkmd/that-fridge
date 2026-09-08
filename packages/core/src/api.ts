@@ -171,6 +171,9 @@ export interface SendChatResult {
   recipe_suggestion: RecipeSuggestionBlock | null;
   session_id: string | null;
   mocked: boolean;
+  /** True when a tool call in this turn changed the user's data (items / notes / shopping) —
+   *  the client should refresh those. Absent on compact / photo replies. */
+  mutated?: boolean;
 }
 
 export interface ChatHistoryRow {
@@ -432,6 +435,9 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
        * a short plain-text reply and skips saving it into chat history/sessions. Still counts
        * against the free weekly quota, same as a real Quick Chat message. */
       compact?: boolean;
+      /** The chat's active fridge — the default target for tool writes (add to shopping,
+       * leave a note, clear expired). Omit when chatting across all fridges. */
+      fridgeId?: string;
     } = {},
   ): Promise<SendChatResult> {
     if (opts.image && typeof FormData !== "undefined") {
@@ -441,6 +447,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       if (opts.inventory) fd.append("inventory", opts.inventory);
       if (opts.sessionId) fd.append("session_id", opts.sessionId);
       if (opts.compact) fd.append("compact", "1");
+      if (opts.fridgeId) fd.append("fridge_id", opts.fridgeId);
       // RN's FormData accepts { uri, name, type }; the DOM one accepts Blob/File.
       fd.append("image", opts.image as never);
       return http.post<SendChatResult>("/chat", fd);
@@ -451,6 +458,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       inventory: opts.inventory,
       session_id: opts.sessionId || undefined,
       compact: opts.compact || undefined,
+      fridge_id: opts.fridgeId || undefined,
     });
   }
 

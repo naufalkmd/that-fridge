@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\ChatHistory;
+use App\Models\Fridge;
+use App\Models\Item;
+use App\Models\Section;
 use App\Models\User;
 use App\Models\UserMemory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -187,6 +190,48 @@ class AgentControllerTest extends TestCase
 
             return str_contains($systemPrompt, 'ONE short, plain sentence');
         });
+    }
+
+    public function test_a_tool_call_runs_against_the_users_kitchen_and_flags_the_mutation(): void
+    {
+        $user = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
+        $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'Fridge']);
+        $item = Item::create(['section_id' => $section->id, 'name' => 'Milk', 'icon' => 'milk', 'quantity' => 1, 'expiry_date' => now()->addDays(2)]);
+
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::sequence()
+            ->push(['choices' => [['message' => [
+                'content' => null,
+                'tool_calls' => [[
+                    'id' => 'c1',
+                    'type' => 'function',
+                    'function' => ['name' => 'mark_item_used', 'arguments' => json_encode(['item_id' => $item->id])],
+                ]],
+            ]]]])
+            ->push(['choices' => [['message' => ['content' => 'Done — logged the milk.']]]]),
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'I used the last of the milk',
+            'agent' => 'Guardian',
+            'fridge_id' => $fridge->id,
+        ]);
+
+        $response->assertStatus(200)->assertJson(['mutated' => true, 'agent_response' => 'Done — logged the milk.']);
+        $this->assertDatabaseMissing('items', ['id' => $item->id]);
+        $this->assertDatabaseHas('usage_history', ['user_id' => $user->id, 'key' => 'milk']);
+    }
+
+    public function test_chat_rejects_a_fridge_id_the_user_is_not_a_member_of(): void
+    {
+        $user = User::factory()->create();
+        $strangersFridge = Fridge::create(['user_id' => User::factory()->create()->id, 'name' => 'Not Yours']);
+        config(['services.openrouter.key' => null]);
+
+        $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'hi', 'agent' => 'Chef', 'fridge_id' => $strangersFridge->id,
+        ])->assertStatus(422);
     }
 
     public function test_compact_calls_are_not_persisted_to_chat_history(): void
