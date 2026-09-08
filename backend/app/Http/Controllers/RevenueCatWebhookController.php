@@ -70,11 +70,30 @@ class RevenueCatWebhookController extends Controller
             $credits->grant($user, config('credits.packs')[$productId], 'pack_purchase', $eventId);
         }
 
-        // A Pro subscription's first purchase or a renewal - top up the monthly allowance.
-        if (in_array($productId, config('credits.pro_products'), true)
-            && in_array($type, ['INITIAL_PURCHASE', 'RENEWAL', 'NON_RENEWING_PURCHASE'], true)
-            && $eventId) {
-            $credits->grant($user, config('credits.pro_monthly'), 'pro_grant', $eventId, config('credits.pro_rollover_cap'));
+        // Pro subscription credit handling. A free-trial period grants NOTHING - a trial user
+        // keeps their free-tier balance, and the 400-credit bundle lands only once the
+        // subscription converts to a paid period. Without this, starting the 7-day trial and
+        // cancelling on day 6 nets 400 credits for $0, repeatable per Apple ID.
+        // `period_type` is TRIAL / INTRO / NORMAL / PROMOTIONAL.
+        if (in_array($productId, config('credits.pro_products'), true) && $eventId) {
+            $periodType = strtoupper((string) ($event['period_type'] ?? 'NORMAL'));
+            $isTrial = in_array($periodType, ['TRIAL', 'INTRO'], true);
+            $isPurchase = in_array($type, ['INITIAL_PURCHASE', 'RENEWAL', 'NON_RENEWING_PURCHASE'], true);
+
+            if ($isTrial) {
+                // Record when the trial ends so app:grant-monthly-credits treats them as a
+                // free user until they actually pay.
+                $trialEnd = isset($event['expiration_at_ms'])
+                    ? Carbon::createFromTimestampMs($event['expiration_at_ms'])
+                    : Carbon::now()->addDays(14);
+                $user->forceFill(['pro_trial_until' => $trialEnd])->save();
+            } elseif ($isPurchase) {
+                $credits->grant($user, config('credits.pro_monthly'), 'pro_grant', $eventId, config('credits.pro_rollover_cap'));
+
+                if ($user->pro_trial_until !== null) {
+                    $user->forceFill(['pro_trial_until' => null])->save();
+                }
+            }
         }
 
         // ---- Pro entitlement sync ------------------------------------------------

@@ -250,13 +250,30 @@ showcase (`RevenueCatVirtualCurrency::adjust`, no-op without `REVENUECAT_SECRET_
 | Fridge-photo scan | 3 | refunded on hard failure |
 | Add-item auto-fill | 1 | 402 → top-up prompt on the draft card |
 | Memory extraction | 0 | tiny call right after a chat that already paid; route-throttled |
+| Home crew tip cards (`compact`) | 0 | not charged; cached per user+agent per day (`compact_insight:` cache key) |
+| Chat with a photo | 1 | ⚠️ vision costs ~3-5× a text chat — underpriced, add `CHAT_IMAGE` later |
 
 Grants: free accounts `CREDITS_FREE_MONTHLY` (50) topped up to that floor monthly; Pro
 `credits.pro_monthly` (400) added each month, rolling over up to `pro_rollover_cap` (800).
 `app:grant-monthly-credits` runs `monthlyOn(1, 00:15)`; the RevenueCat webhook also grants the
-Pro bundle on `INITIAL_PURCHASE` / `RENEWAL` and grants pack credits on a consumable
+Pro bundle on a paid `INITIAL_PURCHASE` / `RENEWAL` and pack credits on a consumable
 `NON_RENEWING_PURCHASE` (`credits.packs`: `credits_100/500/1500`). Idempotent via the ledger's
 `reason`+`ref` unique key (event id / `monthly:YYYY-MM`). Demo account: 9999.
+
+**Trial farming guard** (`2026_09_08_000008`): a `period_type: TRIAL` `INITIAL_PURCHASE` grants
+**nothing** — the trial user keeps their free 50 — and sets `users.pro_trial_until`. The 400
+bundle lands only when it converts to a paid `RENEWAL` (`period_type: NORMAL`), which clears
+the flag. `app:grant-monthly-credits` also treats a user with a future `pro_trial_until` as
+free. Without this, start trial → 400 credits → cancel day 6 → $0, repeatable per Apple ID.
+
+**Tool-loop cost guard**: `import_recipe_from_link` draws on the same `MAX_FETCHES = 2` budget
+as `fetch_url` (it makes its own web fetch + model call), so one 3-credit chat turn can't
+trigger ~8 uncapped fetches.
+
+Still open abuse gaps (see the analysis, ranked): **email verification on signup** (biggest
+lever on free-account farming — `/register` is only `throttle:6,1`, no verify loop); a
+`CreditCost::CHAT_IMAGE`; dropping the rollover cap / monthly grant once real usage data exists.
+The hard backstop is the prepaid OpenRouter + fal.ai wallets with **auto-recharge OFF**.
 
 Barcode scan and manual add never touch credits. Every AI route keeps its floor-level
 `throttle` as hammering protection. `InsufficientCreditsException` renders a 402
@@ -275,6 +292,8 @@ credits work off the backend ledger; only the RC mirror + real pack purchases wa
 - [x] RevenueCat → 3 consumable products (`credits_100/500/1500`) + a **`credits`** offering
       (`ofrngd3a38a3ab9`, not current) with one custom package per pack, created via API. The
       mobile `/credits` screen reads `getOfferings().all["credits"]`.
+- [ ] prod → `2026_09_08_000008_add_pro_trial_until_to_users` deploys with the trial-guard
+      commit; `deploy.sh` runs `migrate`, just confirm.
 - [x] prod → migration `2026_09_08_000007` confirmed run; all 7 users backfilled; demo
       accounts set to 9999; `config:cache` done.
 - [ ] App Store Connect → 3 consumable IAPs `credits_100` / `credits_500` / `credits_1500`

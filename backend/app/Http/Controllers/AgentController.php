@@ -6,6 +6,7 @@ use App\Services\AgentService;
 use App\Services\CreditService;
 use App\Support\CreditCost;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -182,10 +183,36 @@ class AgentController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
         ]);
 
-        // Metered in AI credits. Charge the base cost up front for any message (real or a
-        // compact tip-card call); a surcharge is taken after the fact below if the turn ends
-        // up running tools. Throws a 402 with the shortfall when the balance is short.
-        $this->credits->spend($request->user(), CreditCost::CHAT, 'chat');
+        $compact = $request->boolean('compact');
+
+        // Compact calls are Home's crew tip-card auto-fetches - background, one per agent per
+        // app launch, not something the user asked for. They're NOT charged in credits (that
+        // silently drained a free user's whole allowance on tips they never read), and the
+        // result is cached per user + agent for the rest of the day so a launch loop or a
+        // script can't turn them into free model calls.
+        $compactCacheKey = $compact
+            ? 'compact_insight:'.$request->user()->id.':'.$request->input('agent').':'.now()->toDateString()
+            : null;
+
+        if ($compactCacheKey && ($cached = Cache::get($compactCacheKey)) !== null) {
+            return response()->json([
+                'session_id' => $request->input('session_id'),
+                'user_message' => $request->input('message'),
+                'agent' => $request->input('agent'),
+                'agent_response' => $cached,
+                'recipe_suggestion' => null,
+                'created_at' => now()->toIso8601String(),
+                'mocked' => false,
+                'credits' => $this->credits->balance($request->user()),
+            ], 200);
+        }
+
+        // Metered in AI credits (real messages only). A surcharge is taken after the fact
+        // below if the turn ran tools. Throws a 402 with the shortfall when the balance is
+        // short.
+        if (! $compact) {
+            $this->credits->spend($request->user(), CreditCost::CHAT, 'chat');
+        }
 
         // Read directly from the DB rather than having the client fetch-and-forward these
         // on every message like inventory/usage_history - facts exist only to serve
@@ -198,7 +225,7 @@ class AgentController extends Controller
             $request->input('agent'),
             $request->input('inventory'),
             $request->input('usage_history'),
-            $request->boolean('compact'),
+            $compact,
             $memory,
             $this->recentSessionHistory($request),
             $request->input('streak_context'),
@@ -208,7 +235,9 @@ class AgentController extends Controller
         );
 
         if (! $result) {
-            $this->credits->grant($request->user(), CreditCost::CHAT, 'chat_refund');
+            if (! $compact) {
+                $this->credits->grant($request->user(), CreditCost::CHAT, 'chat_refund');
+            }
 
             return response()->json(['error' => 'Failed to get agent response'], 500);
         }
@@ -219,12 +248,15 @@ class AgentController extends Controller
             $this->credits->spendUpTo($request->user(), CreditCost::CHAT_TOOL_SURCHARGE, 'chat_tools');
         }
 
-        // Compact calls are Home's tip-card auto-fetches (see AGENT_ACTIVATE_PROMPT on the
-        // client), not messages in a real conversation - the client never restores or lists
-        // them. Persisting them would make them win the "most recent session" restore in
-        // history() and clutter the Chat History session list with entries that just come
-        // back on the next page load.
-        if ($request->boolean('compact')) {
+        // Compact calls aren't persisted to chat_history - the client never restores or lists
+        // them, and persisting would make them win the "most recent session" restore in
+        // history() and clutter the Chat History list. Cache the reply for the rest of the
+        // day so repeat launches don't re-hit the model.
+        if ($compact) {
+            if ($compactCacheKey && ! ($result['mocked'] ?? false) && trim((string) $result['agent_response']) !== '') {
+                Cache::put($compactCacheKey, $result['agent_response'], now()->endOfDay());
+            }
+
             return response()->json([
                 'session_id' => $request->input('session_id'),
                 'user_message' => $result['user_message'],

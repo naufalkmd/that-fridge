@@ -8,6 +8,7 @@ use App\Models\Item;
 use App\Models\Section;
 use App\Models\User;
 use App\Models\UserMemory;
+use App\Services\RecipeLinkImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
@@ -137,6 +138,29 @@ class AgentControllerTest extends TestCase
         });
     }
 
+    public function test_compact_tip_card_calls_are_free_and_cached_for_the_day(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 5]);
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'Use the spinach first.']]],
+        ], 200)]);
+
+        $first = $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'insight', 'agent' => 'Guardian', 'compact' => true,
+        ]);
+        $first->assertStatus(200)->assertJson(['agent_response' => 'Use the spinach first.']);
+        $this->assertSame(5, $user->fresh()->ai_credits); // not charged
+
+        // Second identical call is served from cache - no new model request.
+        $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'insight', 'agent' => 'Guardian', 'compact' => true,
+        ])->assertStatus(200)->assertJson(['agent_response' => 'Use the spinach first.']);
+
+        Http::assertSentCount(1);
+        $this->assertSame(5, $user->fresh()->ai_credits);
+    }
+
     public function test_a_tool_call_runs_against_the_users_kitchen_and_flags_the_mutation(): void
     {
         $user = User::factory()->create();
@@ -224,6 +248,32 @@ class AgentControllerTest extends TestCase
 
         $response->assertStatus(200)->assertJson(['mutated' => true, 'agent_response' => 'Done.']);
         $this->assertDatabaseHas('shopping_items', ['fridge_id' => $fridge->id, 'name' => 'Eggs']);
+    }
+
+    public function test_import_recipe_from_link_draws_on_the_shared_fetch_budget(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 20]);
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
+
+        $importer = \Mockery::mock(RecipeLinkImportService::class);
+        // MAX_FETCHES is 2 - the third call in the same turn is blocked before it runs.
+        $importer->shouldReceive('importFromUrl')->twice()
+            ->andReturn(['found' => false, 'reason' => 'not_recognized']);
+        $this->app->instance(RecipeLinkImportService::class, $importer);
+
+        config(['services.openrouter.key' => 'test-key']);
+        $importCall = fn ($n) => [
+            'id' => "c{$n}", 'type' => 'function',
+            'function' => ['name' => 'import_recipe_from_link', 'arguments' => json_encode(['url' => "https://example.com/r{$n}"])],
+        ];
+        Http::fake(['openrouter.ai/*' => Http::sequence()
+            ->push(['choices' => [['message' => ['content' => null, 'tool_calls' => [$importCall(1), $importCall(2), $importCall(3)]]]]])
+            ->push(['choices' => [['message' => ['content' => 'Here is what I found.']]]]),
+        ]);
+
+        $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'import these', 'agent' => 'Chef', 'fridge_id' => $fridge->id,
+        ])->assertStatus(200);
     }
 
     public function test_chat_rejects_a_fridge_id_the_user_is_not_a_member_of(): void

@@ -261,6 +261,16 @@ class AgentService
         }
 
         if ($user) {
+            // import_recipe_from_link makes its own outbound fetch + model call, so it draws
+            // on the same MAX_FETCHES budget as fetch_url - otherwise the model could call it
+            // ~8 times in one turn (each an uncapped web fetch) for a single chat's credits.
+            if ($name === 'import_recipe_from_link') {
+                if ($fetches >= self::MAX_FETCHES) {
+                    return ['Error: reached the limit on pages to fetch for this message. Ask the user to paste the recipe text.', false];
+                }
+                $fetches++;
+            }
+
             $result = $this->toolbox->run($name, $args, $user, $fridgeId);
 
             return [$result['content'], $result['mutated']];

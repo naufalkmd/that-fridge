@@ -210,4 +210,46 @@ class RevenueCatWebhookControllerTest extends TestCase
         $this->assertSame(450, $user->fresh()->ai_credits); // 50 + 400 pro grant
         $this->assertTrue($user->fresh()->isPro());
     }
+
+    public function test_webhook_withholds_the_bundle_during_a_free_trial(): void
+    {
+        config(['services.revenuecat.webhook_secret' => 'the-real-secret']);
+        $user = User::factory()->create(['ai_credits' => 50]);
+        $trialEnd = now()->addDays(7);
+
+        $this->postJson('/api/webhooks/revenuecat', ['event' => [
+            'id' => 'evt_trial_1',
+            'type' => 'INITIAL_PURCHASE',
+            'period_type' => 'TRIAL',
+            'app_user_id' => (string) $user->id,
+            'product_id' => 'thatfridge_pro_monthly',
+            'entitlement_ids' => ['thatfridge_pro'],
+            'expiration_at_ms' => $trialEnd->getTimestampMs(),
+        ]], ['Authorization' => 'the-real-secret'])->assertStatus(200);
+
+        $fresh = $user->fresh();
+        $this->assertSame(50, $fresh->ai_credits); // no 400 bundle during the trial
+        $this->assertTrue($fresh->isPro()); // entitlement still active
+        $this->assertNotNull($fresh->pro_trial_until);
+    }
+
+    public function test_webhook_grants_the_bundle_when_the_trial_converts_to_paid(): void
+    {
+        config(['services.revenuecat.webhook_secret' => 'the-real-secret']);
+        $user = User::factory()->create(['ai_credits' => 50, 'pro_trial_until' => now()->addDays(3)]);
+
+        $this->postJson('/api/webhooks/revenuecat', ['event' => [
+            'id' => 'evt_convert_1',
+            'type' => 'RENEWAL',
+            'period_type' => 'NORMAL',
+            'app_user_id' => (string) $user->id,
+            'product_id' => 'thatfridge_pro_monthly',
+            'entitlement_ids' => ['thatfridge_pro'],
+            'expiration_at_ms' => now()->addMonth()->getTimestampMs(),
+        ]], ['Authorization' => 'the-real-secret'])->assertStatus(200);
+
+        $fresh = $user->fresh();
+        $this->assertSame(450, $fresh->ai_credits);
+        $this->assertNull($fresh->pro_trial_until);
+    }
 }

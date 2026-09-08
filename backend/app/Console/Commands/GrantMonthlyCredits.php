@@ -30,7 +30,11 @@ class GrantMonthlyCredits extends Command
 
         User::query()->where('is_demo', false)->chunkById(200, function ($users) use ($credits, $month, $free, $pro, $cap, &$freeCount, &$proCount) {
             foreach ($users as $user) {
-                if ($user->isPro()) {
+                // A subscriber still inside their free trial is treated as a free user - no
+                // 400-credit bundle until the trial converts to a paid renewal.
+                $onTrial = $user->pro_trial_until !== null && $user->pro_trial_until->isFuture();
+
+                if ($user->isPro() && ! $onTrial) {
                     if ($credits->grant($user, $pro, 'pro_grant', "monthly:{$month}", $cap)) {
                         $proCount++;
                     }

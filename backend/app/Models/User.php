@@ -34,6 +34,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'data_transfer_consented_at' => 'datetime',
             'pro_expires_at' => 'datetime',
+            'pro_trial_until' => 'datetime',
             'ai_credits' => 'integer',
             'is_demo' => 'boolean',
             'preferences' => 'array',
