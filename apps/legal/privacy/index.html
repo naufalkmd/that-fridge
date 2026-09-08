@@ -59,22 +59,40 @@
   <h3>AI chat &amp; "remembered facts"</h3>
   <ul>
     <li>Your <strong>chat messages</strong> and conversation history with the AI crew.</li>
-    <li>The <strong>inventory context</strong> (your current items) sent alongside a message so the AI can answer usefully.</li>
+    <li><strong>Kitchen context</strong> sent alongside a message so the AI can answer usefully. This
+      is your current inventory, and — when a question calls for it — your sticky notes, shopping
+      list, saved recipes, remembered facts and usage history. It is sent to the AI provider with
+      the message and is not retained by them.</li>
+    <li><strong>Actions the crew takes for you.</strong> When you ask, the AI can act in your own
+      account — add or edit an item, tick off the shopping list, leave or remove a note, save a
+      recipe. It only ever changes your own data, and it asks you to confirm before deleting
+      anything.</li>
+    <li><strong>Links you share.</strong> If you paste a recipe or article link, our server fetches
+      that page, reduces it to plain text, and sends the text to the AI provider so it can read
+      the recipe. We fetch only the address you provided.</li>
     <li><strong>Remembered facts</strong> — the AI extracts short notes about your preferences and household (e.g. "prefers vegetarian meals") from conversations and stores them to personalise future replies. You can view and delete every remembered fact in <em>Profile → AI Data &amp; Memory</em>.</li>
   </ul>
 
   <h3>Usage &amp; diagnostic data</h3>
   <ul>
     <li><strong>Usage history</strong> — which items you used up or threw away and when. This powers your "Kitchen Score", streaks, weekly score snapshots and organizer tallies. Deletable in the app.</li>
+    <li><strong>Product-analytics events</strong> — first-party, no third-party SDK. We record
+      coarse events such as app opens and which onboarding steps you reached, with a random
+      device id and (once you sign in) your account id, so we can see where the sign-up flow
+      loses people and fix it. Small, non-sensitive event properties only; deleted automatically
+      after 180 days.</li>
     <li><strong>Server logs</strong> — IP address, device/browser user-agent and timestamps, kept for security and debugging.</li>
   </ul>
 
-  <h3>Subscriptions</h3>
-  <p>ThatFridge Pro is an auto-renewing subscription sold through Apple. <strong>Apple processes
-  your payment</strong> — we never receive your card details. We use <strong>RevenueCat</strong>
-  to manage entitlements; RevenueCat receives a pseudonymous app-user ID (your account ID),
-  purchase and receipt data, and device/platform information, so we can tell whether your Pro
-  access is active.</p>
+  <h3>Purchases &amp; AI credits</h3>
+  <p>AI features are metered in "AI credits". We keep your current credit balance and a log of
+  credit transactions (grants and what each was spent on) tied to your account.</p>
+  <p><strong>ThatFridge Pro</strong> is an auto-renewing subscription, and you can also buy one-off
+  <strong>AI-credit packs</strong>. Both are sold through Apple — <strong>Apple processes your
+  payment</strong> and we never receive your card details. We use <strong>RevenueCat</strong> to
+  manage entitlements and purchases; RevenueCat receives a pseudonymous app-user ID (your account
+  ID), purchase and receipt data, device/platform information, and your AI-credit balance (mirrored
+  for display), so we can tell whether your Pro access is active and keep your balance in sync.</p>
 
   <h3>Notifications</h3>
   <p>Expiry and low-stock reminders are scheduled <strong>locally on your device</strong> and
@@ -97,8 +115,9 @@
   <ul>
     <li>To provide the core service — store your inventory, sync it across your devices and household, and send reminders.</li>
     <li>To generate AI features — recipe suggestions, "what should I eat", chat answers, receipt/photo parsing, and food-icon generation.</li>
+    <li>To carry out actions you ask the AI crew to take in your own account (e.g. adding an item, updating your shopping list).</li>
     <li>To calculate your Kitchen Score and progress.</li>
-    <li>To operate subscriptions and unlock Pro features.</li>
+    <li>To operate purchases — your Pro subscription and AI-credit packs — and meter AI usage against your credit balance.</li>
     <li>To secure the service, prevent abuse, debug problems and meet legal obligations.</li>
     <li>To review AI-generated icons and their prompts so we can curate generic, non-personal
       ones into a shared icon set offered to all users. A curated icon is stripped of any link
@@ -113,10 +132,10 @@
     <tr><th>Provider</th><th>Purpose</th><th>Data shared</th></tr>
     <tr><td>DigitalOcean, LLC (servers in Singapore)</td><td>Runs our servers and database</td><td>All application data, at rest</td></tr>
     <tr><td>Cloudflare, Inc.</td><td>DNS and hosting for our public website (this page)</td><td>Standard web request logs (IP, user-agent); no account content</td></tr>
-    <tr><td>OpenRouter</td><td>Routes AI chat / recipe requests to large-language-model providers</td><td>Your message text and inventory context</td></tr>
+    <tr><td>OpenRouter</td><td>Routes AI chat / recipe requests to large-language-model providers</td><td>Your message text and the kitchen context for that question (inventory, and where relevant your notes, shopping list, recipes, remembered facts, usage history); the text of any link you ask the crew to read</td></tr>
     <tr><td>Downstream LLM providers (via OpenRouter)</td><td>Generate the AI responses</td><td>Same as above, per OpenRouter's routing</td></tr>
     <tr><td>fal.ai</td><td>Receipt / fridge-photo vision parsing and food-icon image generation</td><td>The image you submitted and short prompts</td></tr>
-    <tr><td>RevenueCat</td><td>Subscription entitlement management</td><td>Account ID, purchase / receipt data, device info</td></tr>
+    <tr><td>RevenueCat</td><td>Subscription and in-app-purchase entitlement management</td><td>Account ID, purchase / receipt data, device info, AI-credit balance</td></tr>
     <tr><td>Expo (650 Industries, Inc.)</td><td>Delivers push notifications</td><td>Push token, notification title and body</td></tr>
     <tr><td>Apple</td><td>App distribution, payments, in-app purchases, push delivery</td><td>Handled under Apple's privacy policy</td></tr>
   </table>
@@ -126,7 +145,8 @@
   <h2>5. Data retention</h2>
   <p>We keep your data while your account is active. You can delete individual chat sessions,
   remembered facts and usage history at any time in the app. When you delete your account
-  (see &sect;6) we <strong>hard-delete</strong> your user record, authentication tokens, and the
+  (see &sect;6) we <strong>hard-delete</strong> your user record, authentication tokens, chat
+  history, remembered facts, your AI-credit balance and transaction log, and the
   fridges you own together with their items, notes, sections and shopping lists, and your
   AI-generated icon library. Backups containing residual copies are rotated out within 30 days.
   Fridges owned by other people that you were merely a member of are not deleted, but your

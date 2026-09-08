@@ -433,6 +433,13 @@ the KR-rollout items ship). Available everywhere else (~140 territories incl. MY
 Switzerland) — those laws don't block the storefront and the policy + consent + account
 deletion is a defensible baseline there.
 
+Privacy policy + terms reworded 2026-09-08 for the credit model: the AI crew now reads *and
+acts on* your kitchen data (adds items, edits shopping/notes) and fetches links you paste — so
+the OpenRouter "data shared" row now lists notes/shopping/recipes/usage + fetched page text;
+consumable AI-credit packs + the RevenueCat credit-balance mirror are disclosed; terms §3 covers
+credits (consumable, non-refundable once bought, no cash value); first-party product-analytics
+events disclosed (were not before). `app-review.pdf` updated to match.
+
 What's covered for the markets we sell in:
 
 - One English privacy policy (`/privacy/`) + Apple App Privacy labels + in-app account deletion
