@@ -168,6 +168,64 @@ class AgentControllerTest extends TestCase
         $this->assertDatabaseHas('usage_history', ['user_id' => $user->id, 'key' => 'milk']);
     }
 
+    public function test_a_silent_turn_after_a_tool_call_is_recovered_not_shown_as_no_response(): void
+    {
+        $user = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
+        $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'Fridge']);
+        $item = Item::create(['section_id' => $section->id, 'name' => 'Chicken', 'icon' => 'meat', 'quantity' => 1]);
+
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::sequence()
+            // round 0: the model updates the item
+            ->push(['choices' => [['message' => [
+                'content' => null,
+                'tool_calls' => [[
+                    'id' => 'c1', 'type' => 'function',
+                    'function' => ['name' => 'update_item', 'arguments' => json_encode(['item_id' => $item->id, 'expiry_date' => '2026-10-21'])],
+                ]],
+            ]]]])
+            // round 1: goes silent instead of summarising
+            ->push(['choices' => [['message' => ['content' => '']]]])
+            // the forced no-tools retry
+            ->push(['choices' => [['message' => ['content' => 'Set the chicken to expire Oct 21.']]]]),
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'set it to 21 october 2026', 'agent' => 'Chef', 'fridge_id' => $fridge->id,
+        ]);
+
+        $response->assertStatus(200)->assertJson(['mutated' => true, 'agent_response' => 'Set the chicken to expire Oct 21.']);
+        $this->assertSame('2026-10-21', $item->fresh()->expiry_date->toDateString());
+    }
+
+    public function test_a_silent_turn_that_stays_silent_but_mutated_confirms_plainly(): void
+    {
+        $user = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
+        Section::create(['fridge_id' => $fridge->id, 'name' => 'Fridge']);
+
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::sequence()
+            ->push(['choices' => [['message' => [
+                'content' => null,
+                'tool_calls' => [[
+                    'id' => 'c1', 'type' => 'function',
+                    'function' => ['name' => 'add_to_shopping', 'arguments' => json_encode(['name' => 'Eggs'])],
+                ]],
+            ]]]])
+            ->push(['choices' => [['message' => ['content' => '']]]])
+            ->push(['choices' => [['message' => ['content' => '']]]]),
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/api/chat', [
+            'message' => 'add eggs to the list', 'agent' => 'Shopkeeper', 'fridge_id' => $fridge->id,
+        ]);
+
+        $response->assertStatus(200)->assertJson(['mutated' => true, 'agent_response' => 'Done.']);
+        $this->assertDatabaseHas('shopping_items', ['fridge_id' => $fridge->id, 'name' => 'Eggs']);
+    }
+
     public function test_chat_rejects_a_fridge_id_the_user_is_not_a_member_of(): void
     {
         $user = User::factory()->create();

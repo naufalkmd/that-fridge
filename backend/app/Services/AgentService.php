@@ -78,7 +78,19 @@ class AgentService
                 : $this->runWithTools($messages, $maxTokens, $user, $fridgeId);
 
             if ($result['ok']) {
-                $response = $result['content'] ?: 'No response';
+                $response = trim((string) ($result['content'] ?? ''));
+
+                // The model returned nothing usable. If a tool still changed the user's data
+                // (it went silent after acting), confirm that plainly; otherwise treat it as
+                // a failure so the caller can refund the credit.
+                if ($response === '') {
+                    if ($result['mutated'] ?? false) {
+                        $response = 'Done.';
+                    } else {
+                        return null;
+                    }
+                }
+
                 $recipeSuggestion = null;
 
                 if ($compact) {
@@ -155,6 +167,14 @@ class AgentService
             $calls = $last['tool_calls'] ?? null;
 
             if (! $calls) {
+                // Normal exit: the model answered in text. But Haiku sometimes returns an
+                // empty turn right after a tool result instead of summarising it - recover
+                // with one forced no-tools completion so the user gets a reply, not "No
+                // response" (which they were still charged for).
+                if ($callCount > 0 && trim((string) ($last['content'] ?? '')) === '') {
+                    $last = $this->forceTextAnswer($messages, $maxTokens) ?? $last;
+                }
+
                 return [...$last, 'mutated' => $mutated, 'tools_used' => $callCount > 0];
             }
 
@@ -176,9 +196,28 @@ class AgentService
             }
         }
 
-        // Ran out of rounds with the model still wanting tools - hand back whatever text it
-        // last produced (may be empty, which the caller turns into "No response").
-        return [...($last ?? ['ok' => false, 'reason' => 'exception']), 'mutated' => $mutated, 'tools_used' => $callCount > 0];
+        // Ran out of rounds with the model still wanting tools - force a final plain-text
+        // answer from the results it has rather than handing back an empty turn.
+        $forced = $this->forceTextAnswer($messages, $maxTokens);
+
+        return [...($forced ?? $last ?? ['ok' => false, 'reason' => 'exception']), 'mutated' => $mutated, 'tools_used' => $callCount > 0];
+    }
+
+    /**
+     * One completion with no tools offered, nudging the model to summarise the tool results
+     * it already has. Returns null if it still comes back empty or errors, so the caller can
+     * fall back to whatever it had.
+     */
+    private function forceTextAnswer(array $messages, int $maxTokens): ?array
+    {
+        $messages[] = [
+            'role' => 'user',
+            'content' => 'Reply now in plain text based on what the tools returned. Do not call any more tools.',
+        ];
+
+        $res = $this->client->complete($messages, $maxTokens, 'anthropic/claude-haiku-4.5');
+
+        return ($res['ok'] && trim((string) ($res['content'] ?? '')) !== '') ? $res : null;
     }
 
     private function fetchUrlTool(): array
