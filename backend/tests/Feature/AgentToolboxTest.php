@@ -256,6 +256,94 @@ class AgentToolboxTest extends TestCase
         $this->assertDatabaseHas('sections', ['fridge_id' => $this->fridge->id, 'name' => 'Dairy']);
     }
 
+    public function test_bulk_add_items_adds_many_in_one_call(): void
+    {
+        $out = $this->toolbox->run('bulk_add_items', [
+            'items' => [
+                ['name' => 'Eggs', 'quantity' => 12],
+                ['name' => 'Spinach', 'shelf_life_days' => 5, 'location' => 'fridge'],
+                ['name' => '', 'quantity' => 1], // skipped, no name
+            ],
+        ], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $this->assertDatabaseHas('items', ['name' => 'Eggs', 'quantity' => 12]);
+        $this->assertDatabaseHas('items', ['name' => 'Spinach', 'icon' => 'spinach']);
+        $this->assertSame(2, Item::whereHas('section', fn ($q) => $q->where('fridge_id', $this->fridge->id))->count());
+    }
+
+    public function test_update_item_renames_and_recategorises(): void
+    {
+        $item = $this->item(['name' => 'Mystery box']);
+
+        $out = $this->toolbox->run('update_item', [
+            'item_id' => $item->id, 'name' => 'Chicken curry', 'category' => 'protein',
+        ], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $fresh = $item->fresh();
+        $this->assertSame('Chicken curry', $fresh->name);
+        $this->assertSame('protein', $fresh->nutrition_category);
+    }
+
+    public function test_update_item_rejects_an_unknown_category(): void
+    {
+        $item = $this->item();
+
+        $out = $this->toolbox->run('update_item', ['item_id' => $item->id, 'category' => 'snacks'], $this->user, $this->fridge->id);
+
+        $this->assertFalse($out['mutated']);
+        $this->assertStringContainsString('category must be one of', $out['content']);
+    }
+
+    public function test_update_note_edits_the_text(): void
+    {
+        $note = FridgeNote::create(['fridge_id' => $this->fridge->id, 'user_id' => $this->user->id, 'text' => 'pizza friday', 'color' => 'amber']);
+
+        $out = $this->toolbox->run('update_note', ['note_id' => $note->id, 'text' => 'pizza saturday'], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $this->assertSame('pizza saturday', $note->fresh()->text);
+    }
+
+    public function test_list_and_forget_facts(): void
+    {
+        $this->toolbox->run('remember_fact', ['fact' => 'Vegetarian'], $this->user, $this->fridge->id);
+        $this->toolbox->run('remember_fact', ['fact' => 'Allergic to peanuts'], $this->user, $this->fridge->id);
+
+        $list = $this->toolbox->run('list_facts', [], $this->user, $this->fridge->id);
+        $this->assertStringContainsString('Vegetarian', $list['content']);
+        $this->assertStringContainsString('Allergic to peanuts', $list['content']);
+
+        $forget = $this->toolbox->run('forget_fact', ['text' => 'peanut'], $this->user, $this->fridge->id);
+        $this->assertTrue($forget['mutated']);
+        $this->assertSame(['Vegetarian'], $this->user->fresh()->userMemory->facts);
+    }
+
+    public function test_delete_recipe_confirms_first_and_only_touches_your_own(): void
+    {
+        $mine = Recipe::create([
+            'user_id' => $this->user->id, 'name' => 'My Soup', 'minutes' => 20,
+            'ingredients' => [['name' => 'x', 'icon' => 'leftovers']], 'steps' => ['boil'], 'made_count' => 0,
+        ]);
+        $curated = Recipe::create([
+            'user_id' => null, 'name' => 'Curated Stew', 'minutes' => 30,
+            'ingredients' => [['name' => 'y', 'icon' => 'leftovers']], 'steps' => ['simmer'], 'made_count' => 0,
+        ]);
+
+        $curatedTry = $this->toolbox->run('delete_recipe', ['recipe_id' => $curated->id, 'confirm' => true], $this->user, $this->fridge->id);
+        $this->assertFalse($curatedTry['mutated']);
+        $this->assertDatabaseHas('recipes', ['id' => $curated->id]);
+
+        $preview = $this->toolbox->run('delete_recipe', ['recipe_id' => $mine->id], $this->user, $this->fridge->id);
+        $this->assertFalse($preview['mutated']);
+        $this->assertDatabaseHas('recipes', ['id' => $mine->id]);
+
+        $done = $this->toolbox->run('delete_recipe', ['recipe_id' => $mine->id, 'confirm' => true], $this->user, $this->fridge->id);
+        $this->assertTrue($done['mutated']);
+        $this->assertDatabaseMissing('recipes', ['id' => $mine->id]);
+    }
+
     public function test_add_item_falls_back_to_the_first_section_when_none_named(): void
     {
         $out = $this->toolbox->run('add_item', ['name' => 'Mystery jar'], $this->user, $this->fridge->id);

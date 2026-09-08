@@ -325,16 +325,18 @@ food icons.
 
 ### Quick Chat tools (`AgentToolbox`)
 
-Agents can call kitchen tools on top of `fetch_url` browsing. 22 tools (Tier 1 in `f0fcc7b`,
-Tier 2/3 + `remove_note` added 2026-09-08):
+Agents can call kitchen tools on top of `fetch_url` browsing. 27 tools (Tier 1 in `f0fcc7b`,
+Tier 2/3 + editing/batch/memory batch added 2026-09-08):
 
 - **Reads:** `list_items`, `list_notes`, `list_shopping`, `list_recipes`, `list_fridges`,
-  `get_recipe`, `get_kitchen_score`
-- **Writes (direct, reversible):** `add_item`, `update_item`, `move_item`, `mark_item_used`,
-  `add_to_shopping`, `check_off_shopping`, `remove_from_shopping`, `add_note`, `remove_note`,
-  `remember_fact`, `save_recipe`, `mark_recipe_made`, `import_recipe_from_link`
+  `get_recipe`, `get_kitchen_score`, `list_facts`
+- **Writes (direct, reversible):** `add_item`, `bulk_add_items`, `update_item` (name / qty /
+  opened / location / category / expiry / shop_url), `move_item`, `mark_item_used`,
+  `add_to_shopping`, `check_off_shopping`, `remove_from_shopping`, `add_note`, `update_note`,
+  `remove_note`, `remember_fact`, `forget_fact`, `save_recipe`, `mark_recipe_made`,
+  `import_recipe_from_link`
 - **Deletes (confirm-first — `confirm:false` preview, prompt forbids self-confirming):**
-  `remove_item`, `clear_expired_items`
+  `remove_item`, `clear_expired_items`, `delete_recipe` (own recipes only)
 
 Loop bounded by `MAX_TOOL_ROUNDS = 5` + `MAX_TOOL_CALLS = 10` (fetch_url keeps its own
 `MAX_FETCHES = 2`). Client passes `fridge_id` (active scope); a `mutated: true` reply now
@@ -354,6 +356,9 @@ Notes / still open:
   extra model call that would make `AgentToolbox` depend on `AgentService` circularly). Tags
   are advisory; re-saving from the app fills them in.
 - A confirm *card* in the UI (vs the text round-trip) is still deferred.
+- Still no tools for: recipe favourite/unfavourite, `suggest_recipes` (the real expiry-aware
+  ranker), user-defined categories, or a shopping→fridge "I bought everything" handoff. All
+  nice-to-have, none hit in week one.
 - Sonnet-on-tool-turns: 1-line change at `AgentService.php`'s `runWithTools`. Only do it if
   Haiku fumbles the larger toolset in practice — the `+2` surcharge already makes the user pay.
 

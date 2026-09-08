@@ -18,10 +18,10 @@ use Illuminate\Support\Str;
  * The tools Quick Chat's agents can call to read and act on the user's kitchen. Everything
  * runs server-side AS the authenticated user and is scoped to fridges they're a member of -
  * same authorisation as the REST endpoints. Read tools execute freely; low-stakes writes
- * (add/move an item, adjust one, mark it used, shopping-list edits, notes, a remembered fact,
+ * (add/move an item, adjust one, mark it used, shopping-list edits, notes, remembered facts,
  * saving a recipe) execute directly since they're all easily reversible; the destructive ones
- * (remove_item, clear_expired_items) take a `confirm` flag and return a preview first, so the
- * agent has to check with the user before anything is deleted.
+ * (remove_item, clear_expired_items, delete_recipe) take a `confirm` flag and return a preview
+ * first, so the agent has to check with the user before anything is deleted.
  *
  * See AgentService::runWithTools for the loop that drives these.
  */
@@ -104,14 +104,40 @@ class AgentToolbox
                 'note_id' => ['type' => 'integer'],
                 'text' => ['type' => 'string', 'description' => 'Case-insensitive fragment of the note text. Only used when note_id is omitted.'],
             ]),
-            $fn('update_item', 'Change one field on an item: quantity, whether it is opened, its expiry date, its storage location, or a buy-again link. Get the item_id from list_items first.', [
+            $fn('update_item', 'Change one or more fields on an item: name, quantity, whether it is opened, its expiry date, its storage location, its food group, or a buy-again link. Get the item_id from list_items first.', [
                 'item_id' => ['type' => 'integer'],
+                'name' => ['type' => 'string', 'description' => 'Rename the item.'],
                 'quantity' => ['type' => 'integer', 'description' => 'New quantity (>= 1). To use an item up entirely, call mark_item_used instead.'],
                 'opened' => ['type' => 'boolean'],
                 'expiry_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD.'],
                 'location' => ['type' => 'string', 'enum' => ['fridge', 'freezer', 'pantry']],
+                'category' => ['type' => 'string', 'enum' => ['protein', 'vegetables', 'fruit', 'grains', 'dairy', 'other_extras'], 'description' => 'Food group (feeds the Food Balance score).'],
                 'shop_url' => ['type' => 'string', 'description' => 'An http(s) link to buy this item again. Empty string clears it.'],
             ], ['item_id']),
+            $fn('bulk_add_items', 'Add several food items to the fridge in one call - use this for a grocery haul instead of calling add_item many times.', [
+                'items' => [
+                    'type' => 'array',
+                    'description' => 'Up to 30 items. Each needs a name; quantity/location/expiry_date/shelf_life_days/section are optional.',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => (object) [
+                            'name' => ['type' => 'string'],
+                            'quantity' => ['type' => 'integer'],
+                            'location' => ['type' => 'string', 'enum' => ['fridge', 'freezer', 'pantry']],
+                            'expiry_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD.'],
+                            'shelf_life_days' => ['type' => 'integer'],
+                            'section' => ['type' => 'string'],
+                        ],
+                        'required' => ['name'],
+                    ],
+                ],
+                'fridge_id' => ['type' => 'integer', 'description' => 'From list_fridges. Omit for the active/default fridge.'],
+            ], ['items']),
+            $fn('update_note', 'Edit an existing sticky note - its text and/or colour. Get note_id from list_notes.', [
+                'note_id' => ['type' => 'integer'],
+                'text' => ['type' => 'string'],
+                'color' => ['type' => 'string', 'enum' => FridgeNote::COLORS],
+            ], ['note_id']),
             $fn('mark_item_used', 'Record that the user used up an item (or some of it) while it was still good. This removes it (or lowers the quantity) AND logs it to their usage history, which feeds their Kitchen Score and the Shopkeeper. Use this for "I used the last of the milk", NOT for throwing something away - that is remove_item.', [
                 'item_id' => ['type' => 'integer'],
                 'quantity_used' => ['type' => 'integer', 'description' => 'How many units were used. Omit to use up the whole item.'],
@@ -153,6 +179,15 @@ class AgentToolbox
             $fn('remember_fact', 'Save one durable fact about the user for future chats - a dietary restriction, allergy, strong preference, or household habit. Not for one-off requests or anything about a single item. Keep it under 10 words.', [
                 'fact' => ['type' => 'string'],
             ], ['fact']),
+            $fn('list_facts', 'List everything you currently remember about this user (from remember_fact). Use it when they ask what you know / remember about them.', []),
+            $fn('forget_fact', 'Delete one remembered fact. Pass its index from list_facts, or a text fragment to match.', [
+                'index' => ['type' => 'integer'],
+                'text' => ['type' => 'string', 'description' => 'Fragment of the fact. Only used when index is omitted.'],
+            ]),
+            $fn('delete_recipe', "Permanently delete one of the user's OWN saved recipes (not curated ones). Call once with confirm:false to preview, then again with confirm:true only after they agree.", [
+                'recipe_id' => ['type' => 'integer'],
+                'confirm' => ['type' => 'boolean', 'description' => 'Must be true to actually delete. Never set true without explicit user agreement.'],
+            ], ['recipe_id']),
             $fn('save_recipe', "Save a new recipe to the user's recipe book - use it when they ask you to keep a dish you described, or they dictate one. Ingredients and steps are plain strings.", [
                 'name' => ['type' => 'string'],
                 'minutes' => ['type' => 'integer', 'description' => 'Total time in minutes.'],
@@ -185,7 +220,9 @@ class AgentToolbox
                 'add_to_shopping' => $this->addToShopping($user, $fridgeId, $args),
                 'add_note' => $this->addNote($user, $fridgeId, $args),
                 'remove_note' => $this->removeNote($user, $args),
+                'update_note' => $this->updateNote($user, $args),
                 'update_item' => $this->updateItem($user, $args),
+                'bulk_add_items' => $this->bulkAddItems($user, $fridgeId, $args),
                 'mark_item_used' => $this->markItemUsed($user, $args),
                 'remove_item' => $this->removeItem($user, $args),
                 'clear_expired_items' => $this->clearExpired($user, $fridgeId, $args),
@@ -197,8 +234,11 @@ class AgentToolbox
                 'check_off_shopping' => $this->checkOffShopping($user, $args),
                 'remove_from_shopping' => $this->removeFromShopping($user, $args),
                 'remember_fact' => $this->rememberFact($user, $args),
+                'list_facts' => $this->listFacts($user),
+                'forget_fact' => $this->forgetFact($user, $args),
                 'save_recipe' => $this->saveRecipe($user, $args),
                 'mark_recipe_made' => $this->markRecipeMade($user, $args),
+                'delete_recipe' => $this->deleteRecipe($user, $args),
                 'import_recipe_from_link' => $this->importRecipeFromLink($args),
                 default => "Error: unknown tool \"{$name}\".",
             };
@@ -418,6 +458,16 @@ class AgentToolbox
         }
 
         $data = [];
+        if (isset($args['name']) && trim((string) $args['name']) !== '') {
+            $data['name'] = Str::limit(trim((string) $args['name']), 255, '');
+        }
+        if (isset($args['category'])) {
+            $groups = ['protein', 'vegetables', 'fruit', 'grains', 'dairy', 'other_extras'];
+            if (! in_array($args['category'], $groups, true)) {
+                return 'Error: category must be one of '.implode(', ', $groups).'.';
+            }
+            $data['nutrition_category'] = $args['category'];
+        }
         if (isset($args['quantity']) && (int) $args['quantity'] >= 1) {
             $data['quantity'] = (int) $args['quantity'];
         }
@@ -442,13 +492,37 @@ class AgentToolbox
         }
 
         if (! $data) {
-            return 'Error: nothing to change - pass at least one of quantity, opened, location, expiry_date.';
+            return 'Error: nothing to change - pass at least one of name, quantity, opened, location, category, expiry_date, shop_url.';
         }
 
         $item->update($data);
         $this->mutated = true;
 
-        return "Updated \"{$item->name}\": ".collect($data)->map(fn ($v, $k) => "{$k}=".(is_bool($v) ? ($v ? 'true' : 'false') : $v))->implode(', ').'.';
+        return "Updated \"{$item->name}\": ".collect($data)->map(fn ($v, $k) => "{$k}=".(is_bool($v) ? ($v ? 'true' : 'false') : ($v ?? 'cleared')))->implode(', ').'.';
+    }
+
+    private function updateNote(User $user, array $args): string
+    {
+        $note = FridgeNote::whereIn('fridge_id', $this->fridgeIds($user))->find($args['note_id'] ?? null);
+        if (! $note) {
+            return 'Error: no note with that id. Call list_notes for valid ids.';
+        }
+
+        $data = [];
+        if (isset($args['text']) && trim((string) $args['text']) !== '') {
+            $data['text'] = Str::limit(trim((string) $args['text']), 500, '');
+        }
+        if (isset($args['color']) && in_array($args['color'], FridgeNote::COLORS, true)) {
+            $data['color'] = $args['color'];
+        }
+        if (! $data) {
+            return 'Error: pass text and/or a valid color to change.';
+        }
+
+        $note->update($data);
+        $this->mutated = true;
+
+        return "Updated the note: \"{$note->text}\".";
     }
 
     private function markItemUsed(User $user, array $args): string
@@ -575,31 +649,84 @@ class AgentToolbox
 
     private function addItem(User $user, ?int $fridgeId, array $args): string
     {
-        $name = trim((string) ($args['name'] ?? ''));
-        if ($name === '') {
+        if (trim((string) ($args['name'] ?? '')) === '') {
             return 'Error: a name is required.';
         }
 
-        $wanted = isset($args['fridge_id']) && $this->fridgeIds($user)->contains((int) $args['fridge_id'])
-            ? (int) $args['fridge_id']
-            : $fridgeId;
-        $fridge = $this->targetFridge($user, $wanted);
-
-        $location = in_array($args['location'] ?? null, ['fridge', 'freezer', 'pantry'], true)
-            ? $args['location'] : 'fridge';
-
-        $expiry = null;
-        if (isset($args['expiry_date'])) {
-            try {
-                $expiry = Carbon::parse($args['expiry_date'])->toDateString();
-            } catch (\Throwable) {
-                return 'Error: expiry_date must be a valid date like 2026-09-20.';
-            }
-        } elseif (isset($args['shelf_life_days']) && (int) $args['shelf_life_days'] >= 1) {
-            $expiry = Carbon::now()->addDays((int) $args['shelf_life_days'])->toDateString();
+        $fridge = $this->targetFridge($user, $this->wantedFridgeId($user, $args['fridge_id'] ?? null, $fridgeId));
+        $item = $this->createItem($fridge, $args);
+        if (is_string($item)) {
+            return 'Error: '.$item;
         }
 
-        $section = $this->sectionFor($fridge, $args['section'] ?? null, $location);
+        return "Added \"{$item->name}\" ({$item->quantity}x) to {$item->section->name} in {$fridge->name}".
+            ($item->expiry_date ? ' · expires '.$item->expiry_date->toDateString() : '').'.';
+    }
+
+    private function bulkAddItems(User $user, ?int $fridgeId, array $args): string
+    {
+        $specs = is_array($args['items'] ?? null) ? $args['items'] : [];
+        if ($specs === []) {
+            return 'Error: pass an "items" array, each entry with at least a name.';
+        }
+
+        $fridge = $this->targetFridge($user, $this->wantedFridgeId($user, $args['fridge_id'] ?? null, $fridgeId));
+
+        $added = [];
+        $skipped = [];
+        foreach (array_slice($specs, 0, 30) as $spec) {
+            if (! is_array($spec) || trim((string) ($spec['name'] ?? '')) === '') {
+                continue;
+            }
+            $r = $this->createItem($fridge, $spec);
+            if (is_string($r)) {
+                $skipped[] = trim($spec['name']).' ('.$r.')';
+            } else {
+                $added[] = "{$r->name} ({$r->quantity}x)";
+            }
+        }
+
+        if ($added === []) {
+            return 'Nothing was added. '.implode('; ', $skipped);
+        }
+
+        return "Added to {$fridge->name}: ".implode(', ', $added).'.'.
+            ($skipped ? ' Skipped: '.implode('; ', $skipped).'.' : '');
+    }
+
+    private function wantedFridgeId(User $user, mixed $explicit, ?int $chatFridgeId): ?int
+    {
+        return isset($explicit) && $this->fridgeIds($user)->contains((int) $explicit)
+            ? (int) $explicit
+            : $chatFridgeId;
+    }
+
+    /**
+     * Create one item in the given fridge from a loose spec (name required). Returns the
+     * created Item with its `section` relation set, or an error string.
+     */
+    private function createItem(Fridge $fridge, array $spec): Item|string
+    {
+        $name = trim((string) ($spec['name'] ?? ''));
+        if ($name === '') {
+            return 'a name is required';
+        }
+
+        $location = in_array($spec['location'] ?? null, ['fridge', 'freezer', 'pantry'], true)
+            ? $spec['location'] : 'fridge';
+
+        $expiry = null;
+        if (isset($spec['expiry_date'])) {
+            try {
+                $expiry = Carbon::parse($spec['expiry_date'])->toDateString();
+            } catch (\Throwable) {
+                return 'bad expiry_date';
+            }
+        } elseif (isset($spec['shelf_life_days']) && (int) $spec['shelf_life_days'] >= 1) {
+            $expiry = Carbon::now()->addDays((int) $spec['shelf_life_days'])->toDateString();
+        }
+
+        $section = $this->sectionFor($fridge, $spec['section'] ?? null, $location);
         $icon = $this->guessIcon($name) ?? 'leftovers';
 
         $item = $section->items()->create([
@@ -607,14 +734,13 @@ class AgentToolbox
             'icon' => $icon,
             'nutrition_category' => self::ICON_NUTRITION[$icon] ?? null,
             'location' => $location,
-            'quantity' => isset($args['quantity']) ? max(1, (int) $args['quantity']) : 1,
+            'quantity' => isset($spec['quantity']) ? max(1, (int) $spec['quantity']) : 1,
             'expiry_date' => $expiry,
             'source' => 'manual',
         ]);
         $this->mutated = true;
 
-        return "Added \"{$item->name}\" ({$item->quantity}x) to {$section->name} in {$fridge->name}".
-            ($expiry ? " · expires {$expiry}" : '').'.';
+        return $item->setRelation('section', $section);
     }
 
     private function moveItem(User $user, array $args): string
@@ -720,6 +846,46 @@ class AgentToolbox
         return "Got it - I'll remember: \"{$fact}\".";
     }
 
+    private function listFacts(User $user): string
+    {
+        $facts = $user->userMemory?->facts ?? [];
+        if ($facts === []) {
+            return "I don't have any remembered facts about you yet.";
+        }
+
+        return collect($facts)->map(fn ($f, $i) => "#{$i} {$f}")->implode("\n");
+    }
+
+    private function forgetFact(User $user, array $args): string
+    {
+        $memory = $user->userMemory()->firstOrCreate([], ['facts' => []]);
+        $facts = $memory->facts ?? [];
+        if ($facts === []) {
+            return "There's nothing remembered to forget.";
+        }
+
+        if (isset($args['index']) && array_key_exists((int) $args['index'], $facts)) {
+            $removed = $facts[(int) $args['index']];
+            unset($facts[(int) $args['index']]);
+        } else {
+            $fragment = Str::lower(trim((string) ($args['text'] ?? '')));
+            if ($fragment === '') {
+                return 'Error: pass index (from list_facts) or a text fragment.';
+            }
+            $idx = collect($facts)->search(fn ($f) => str_contains(Str::lower((string) $f), $fragment));
+            if ($idx === false) {
+                return "No remembered fact matches \"{$args['text']}\".";
+            }
+            $removed = $facts[$idx];
+            unset($facts[$idx]);
+        }
+
+        $memory->update(['facts' => array_values($facts)]);
+        $this->mutated = true;
+
+        return "Forgot: \"{$removed}\".";
+    }
+
     /**
      * Saved without the meal_type/vibes/food_focus "what to eat" tags - those come from an
      * extra model call (RecipeController::store) that would make AgentToolbox depend on
@@ -769,6 +935,26 @@ class AgentToolbox
 
         return "Logged that you made \"{$recipe->name}\" ({$recipe->made_count}x now). ".
             "I didn't touch your inventory - tell me which ingredients you used up if you want those logged.";
+    }
+
+    private function deleteRecipe(User $user, array $args): string
+    {
+        // Only the user's own recipes - recipesFor() also includes curated ones.
+        $recipe = $user->recipes()->find($args['recipe_id'] ?? null);
+        if (! $recipe) {
+            return 'Error: no recipe of yours with that id. You can only delete recipes you saved - call list_recipes for ids.';
+        }
+
+        if (empty($args['confirm'])) {
+            return "Not deleted yet. This permanently deletes your recipe \"{$recipe->name}\". ".
+                'Confirm with the user, then call delete_recipe again with confirm:true.';
+        }
+
+        $name = $recipe->name;
+        $recipe->delete();
+        $this->mutated = true;
+
+        return "Deleted the recipe \"{$name}\".";
     }
 
     private function importRecipeFromLink(array $args): string
