@@ -17,6 +17,7 @@ import {
   ICON_LABELS,
   describeError,
   type GeneratedIcon,
+  type SharedIcon,
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { stashRecipeIconPick } from "@/lib/recipes";
@@ -50,9 +51,11 @@ export default function RecipeIconPicker() {
   const [prompt, setPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [library, setLibrary] = useState<GeneratedIcon[]>([]);
+  const [shared, setShared] = useState<SharedIcon[]>([]);
 
   useEffect(() => {
     api.listGeneratedIcons().then(setLibrary).catch(() => {});
+    api.listSharedIcons().then(setShared).catch(() => {});
   }, []);
 
   function pick(icon: string | null, iconUrl: string | null) {
@@ -179,6 +182,34 @@ export default function RecipeIconPicker() {
               ))}
             </View>
             <Text style={{ fontSize: 10.5, color: FAINT, marginTop: 6 }}>Long-press to remove.</Text>
+          </View>
+        )}
+
+        {shared.length > 0 && (
+          <View>
+            <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
+              MORE ICONS
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {shared.map((s) => (
+                <Pressable
+                  key={s.id}
+                  onPress={() => pick(null, s.image_url)}
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 8,
+                    backgroundColor: SURFACE2,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: currentIconUrl === s.image_url ? 1.5 : 0,
+                    borderColor: ACCENT,
+                  }}
+                >
+                  <FoodIcon iconUrl={s.image_url} name={s.label ?? recipeName} size={44} />
+                </Pressable>
+              ))}
+            </View>
           </View>
         )}
 

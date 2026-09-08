@@ -246,6 +246,16 @@ export interface GeneratedIcon {
   image_url: string;
 }
 
+/**
+ * One icon in the app-wide shared pack (`/icons/shared`) — curated from users' generations,
+ * de-identified, shown in the picker for everyone alongside the bundled pixel-art set.
+ */
+export interface SharedIcon {
+  id: string;
+  label: string | null;
+  image_url: string;
+}
+
 /** Result of `/items/expiry-scan` — the printed best-before date read off a package photo. */
 export interface ExpiryScanResult {
   found: boolean;
@@ -537,6 +547,10 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   /** The current user's saved AI-generated icons, newest first. */
   function listGeneratedIcons(): Promise<GeneratedIcon[]> {
     return http.get<GeneratedIcon[]>("/icons/generated");
+  }
+  /** The app-wide shared icon pack — curated from users' generations, same for everyone. */
+  function listSharedIcons(): Promise<SharedIcon[]> {
+    return http.get<SharedIcon[]>("/icons/shared");
   }
   function deleteGeneratedIcon(id: string): Promise<void> {
     return http.del(`/icons/generated/${id}`).then(() => undefined);
@@ -952,6 +966,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     scanExpiryPhoto,
     generateIcon,
     listGeneratedIcons,
+    listSharedIcons,
     deleteGeneratedIcon,
     suggestItemDetails,
     listNotificationEvents,

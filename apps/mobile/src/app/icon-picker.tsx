@@ -4,7 +4,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { FOOD_ICON_KEYS, ICON_LABELS, describeError, type GeneratedIcon } from "@thatfridge/core";
+import {
+  FOOD_ICON_KEYS,
+  ICON_LABELS,
+  describeError,
+  type GeneratedIcon,
+  type SharedIcon,
+} from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { FoodIcon } from "@/components/food-icon";
@@ -34,10 +40,12 @@ export default function IconPicker() {
   const [prompt, setPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [library, setLibrary] = useState<GeneratedIcon[]>([]);
+  const [shared, setShared] = useState<SharedIcon[]>([]);
   const [applying, setApplying] = useState(false);
 
   useEffect(() => {
     api.listGeneratedIcons().then(setLibrary).catch(() => {});
+    api.listSharedIcons().then(setShared).catch(() => {});
   }, []);
 
   async function apply(icon: string, iconUrl: string | null) {
@@ -146,6 +154,25 @@ export default function IconPicker() {
               ))}
             </View>
             <Text style={{ fontSize: 10.5, color: FAINT, marginTop: 6 }}>Long-press to remove.</Text>
+          </View>
+        )}
+
+        {shared.length > 0 && (
+          <View>
+            <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
+              MORE ICONS
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {shared.map((s) => (
+                <Pressable
+                  key={s.id}
+                  onPress={() => apply("generic", s.image_url)}
+                  style={{ width: 52, height: 52, borderRadius: 8, backgroundColor: SURFACE2, alignItems: "center", justifyContent: "center" }}
+                >
+                  <FoodIcon iconUrl={s.image_url} name={s.label ?? item.name} size={44} />
+                </Pressable>
+              ))}
+            </View>
           </View>
         )}
 

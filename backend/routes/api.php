@@ -94,6 +94,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('throttle:20,1')->post('/items/suggest-details', [AgentController::class, 'suggestItemDetails']);
 
     Route::get('/icons/generated', [IconController::class, 'index']);
+    Route::get('/icons/shared', [IconController::class, 'shared']);
     Route::delete('/icons/generated/{generatedIcon}', [IconController::class, 'destroy']);
     // Icon generation calls fal.ai per request, so it's throttled tighter than the other
     // (free/local) rate-limited endpoint - each hit is a real, billable API call.

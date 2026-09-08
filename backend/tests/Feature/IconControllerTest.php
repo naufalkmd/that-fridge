@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\GeneratedIcon;
+use App\Models\SharedIcon;
 use App\Models\User;
 use App\Services\FalClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -127,5 +128,56 @@ class IconControllerTest extends TestCase
 
         $this->actingAs($user)->postJson('/api/icons/generate', ['prompt' => 'x', 'kind' => 'sticker'])
             ->assertStatus(422);
+    }
+
+    public function test_shared_pack_returns_the_curated_icons_to_any_signed_in_user(): void
+    {
+        SharedIcon::create(['label' => 'Tomato', 'image_path' => 'shared-icons/a.png', 'image_url' => 'https://cdn.test/a.png']);
+        SharedIcon::create(['label' => 'Ramen', 'image_path' => 'shared-icons/b.png', 'image_url' => 'https://cdn.test/b.png']);
+
+        $response = $this->actingAs(User::factory()->create())->getJson('/api/icons/shared');
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(2, 'data');
+        $response->assertJsonStructure(['data' => [['id', 'label', 'image_url']]]);
+    }
+
+    public function test_promote_icon_command_copies_the_image_and_adds_it_to_the_shared_pack(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('icons/src.png', 'PNGBYTES');
+        $gen = GeneratedIcon::create([
+            'user_id' => User::factory()->create()->id,
+            'kind' => 'icon', 'credits' => 1, 'prompt' => 'a ripe tomato',
+            'image_path' => 'icons/src.png', 'image_url' => 'https://cdn.test/src.png',
+        ]);
+
+        $this->artisan('app:promote-icon', ['id' => $gen->id, '--label' => 'Tomato'])->assertSuccessful();
+
+        $shared = SharedIcon::first();
+        $this->assertSame('Tomato', $shared->label);
+        $this->assertSame($gen->id, $shared->source_generated_icon_id);
+        Storage::disk('public')->assertExists($shared->image_path);
+        $this->assertNotSame('icons/src.png', $shared->image_path); // it's a copy
+
+        // Deleting the original generation leaves the shared copy intact.
+        $this->actingAs(User::find($gen->user_id))->deleteJson("/api/icons/generated/{$gen->id}")->assertNoContent();
+        Storage::disk('public')->assertExists($shared->fresh()->image_path);
+    }
+
+    public function test_promote_icon_command_is_idempotent(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('icons/src.png', 'x');
+        $gen = GeneratedIcon::create([
+            'user_id' => User::factory()->create()->id,
+            'kind' => 'icon', 'credits' => 1, 'prompt' => 'x',
+            'image_path' => 'icons/src.png', 'image_url' => 'https://cdn.test/src.png',
+        ]);
+
+        $this->artisan('app:promote-icon', ['id' => $gen->id])->assertSuccessful();
+        $this->artisan('app:promote-icon', ['id' => $gen->id])->assertSuccessful();
+
+        $this->assertDatabaseCount('shared_icons', 1);
     }
 }

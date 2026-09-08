@@ -198,6 +198,18 @@ protection against direct API hammering. As of this pass, **no AI endpoint is un
 budget is spent (shared logic in `App\Support\ChatQuota`); `/items/suggest-details` gained a
 lenient 40/week cache cap.
 
+### Shared icon pack (curated from user generations)
+
+Generated icons can be hand-picked into an app-wide pack shown in both icon pickers
+("MORE ICONS" section). Workflow, all on the prod box as `deploy`:
+`php artisan app:generated-icons --html=/tmp/icons.html` (scp it down / open in a browser to
+actually see them) → `php artisan app:promote-icon <id> --label="Tomato"` → it's live for
+everyone. `app:demote-icon <shared_id>` to pull one. Promotion **copies** the image to
+`shared-icons/` with no user_id, so it survives the generator deleting their icon or account.
+Legal cover: `apps/legal/terms` §4 (licence to include generated images in the shared set,
+no attribution) + `privacy` §3/§5 (review + retention). Only promote generic, non-personal
+food icons.
+
 ### Data retention
 
 `app:prune-stale-data` runs daily (04:00, `routes/console.php`) and bounds the few unbounded

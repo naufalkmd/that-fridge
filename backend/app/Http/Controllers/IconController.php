@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\GeneratedIcon;
+use App\Models\SharedIcon;
 use App\Services\IconGenerationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -39,6 +40,24 @@ class IconController extends Controller
                 'id' => (string) $icon->id,
                 'kind' => $icon->kind,
                 'prompt' => $icon->prompt,
+                'image_url' => $icon->image_url,
+            ]);
+
+        return response()->json(['data' => $icons]);
+    }
+
+    /**
+     * The app-wide shared pack - icons hand-picked from users' generations (app:promote-icon)
+     * and de-identified. Shown in the picker for everyone, alongside the bundled pixel-art set.
+     */
+    public function shared()
+    {
+        $icons = SharedIcon::latest()
+            ->limit(120)
+            ->get(['id', 'label', 'image_url'])
+            ->map(fn ($icon) => [
+                'id' => (string) $icon->id,
+                'label' => $icon->label,
                 'image_url' => $icon->image_url,
             ]);
 
