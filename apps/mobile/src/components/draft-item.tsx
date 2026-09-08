@@ -24,12 +24,15 @@ import {
   ICON_LABELS,
   NUTRITION_CATEGORIES,
   STORAGE_LOCATIONS,
+  ApiError,
   describeError,
   guessFoodIcon,
   type GeneratedIcon,
   type NutritionCategory,
   type StorageLocation,
 } from "@thatfridge/core";
+import { router } from "expo-router";
+
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { FoodIcon } from "@/components/food-icon";
@@ -45,6 +48,18 @@ const MUTED = "rgba(234,234,236,0.58)";
 const FAINT = "rgba(234,234,236,0.34)";
 const BLUE = "#5b8dee";
 const AUTOFILL = "#7a5cc9";
+
+/** Auto-fill hit a 402 — nudge the user to top up instead of silently doing nothing. */
+function notifyOutOfCredits(): void {
+  Alert.alert(
+    "Out of AI credits",
+    "Auto-fill needs an AI credit. Top up to keep using it.",
+    [
+      { text: "Not now", style: "cancel" },
+      { text: "Get credits", onPress: () => router.push("/credits") },
+    ],
+  );
+}
 
 // ---- date helpers ----------------------------------------------------------
 
@@ -161,8 +176,9 @@ export function useDraftItems(initial: () => Draft[]) {
       setFillingId(d.id);
       try {
         set(d.id, await suggest(d));
-      } catch {
-        /* best effort */
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 402) notifyOutOfCredits();
+        /* else best effort */
       } finally {
         setFillingId(null);
       }
@@ -175,15 +191,20 @@ export function useDraftItems(initial: () => Draft[]) {
     const todo = items.filter((i) => i.checked && i.name.trim());
     if (!todo.length) return;
     setFillingAll(true);
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       todo.map(async (d) => {
-        try {
-          set(d.id, await suggest(d));
-        } catch {
-          /* skip */
-        }
+        set(d.id, await suggest(d));
       }),
     );
+    if (
+      results.some(
+        (r) =>
+          r.status === "rejected" &&
+          r.reason instanceof ApiError &&
+          r.reason.status === 402,
+      )
+    )
+      notifyOutOfCredits();
     setFillingAll(false);
   }, [items, fillingAll, fillingId, set, suggest]);
 

@@ -21,6 +21,7 @@ import * as ImagePicker from "expo-image-picker";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import {
+  ApiError,
   daysLabel,
   describeError,
   guessFoodIcon,
@@ -31,12 +32,7 @@ import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { useScope } from "@/lib/scope";
 import { useOnboarding } from "@/lib/onboarding";
-import { usePro } from "@/lib/pro";
-import {
-  FREE_CHATS_PER_WEEK,
-  bumpChatUsed,
-  getChatUsed,
-} from "@/lib/chatQuota";
+import { useCredits } from "@/lib/credits";
 import { stashRecipeSuggestion, useRecipes } from "@/lib/recipes";
 import { useVoiceDictation } from "@/lib/voice";
 import { MarkdownText } from "@/components/markdown-text";
@@ -45,6 +41,7 @@ import { RecipeSuggestionCard } from "@/components/recipe-suggestion-card";
 const WALLPAPER = require("../../../assets/images/thatfridge/chat-wallpaper.png");
 
 const AMBER = "#26c6da";
+const BAD = "#ff5567";
 const SURFACE = "#131316";
 const SURFACE2 = "#1a1a1f";
 const HAIRLINE = "rgba(255,255,255,0.09)";
@@ -72,13 +69,12 @@ export default function Chat() {
   const { items, refresh: refreshInventory } = useInventory();
   const { scope } = useScope();
   const { markChecklistVisited } = useOnboarding();
-  const { isPro, presentPaywallIfNeeded } = usePro();
+  const { balance: credits, setBalance: setCredits, refresh: refreshCredits } = useCredits();
   const [messages, setMessages] = useState<Msg[]>([GREETING]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [used, setUsed] = useState(0);
   const [attachment, setAttachment] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -96,8 +92,6 @@ export default function Chat() {
       voice.start();
     }
   }
-
-  const remaining = Math.max(0, FREE_CHATS_PER_WEEK - used);
 
   const inventorySummary = useMemo(
     () =>
@@ -135,8 +129,8 @@ export default function Chat() {
         setLoading(false);
       }
     })();
-    getChatUsed().then(setUsed);
-  }, [session]);
+    void refreshCredits();
+  }, [session, refreshCredits]);
 
   async function pickImage() {
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -150,12 +144,9 @@ export default function Chat() {
     if (voice.listening) voice.stop();
     const msg = (preset ?? text).trim();
     if ((!msg && !attachment) || sending) return;
-    if (!isPro && remaining <= 0) {
-      const nowPro = await presentPaywallIfNeeded();
-      if (!nowPro) {
-        router.push("/paywall");
-        return;
-      }
+    if (credits !== null && credits < 1) {
+      router.push("/credits");
+      return;
     }
     const img = attachment;
     if (!preset) setText("");
@@ -192,16 +183,18 @@ export default function Chat() {
           mocked: res.mocked,
         },
       ]);
+      if (typeof res.credits === "number") setCredits(res.credits);
       // Fire-and-forget: let the crew update what it remembers from this exchange.
       api.extractMemory(messageForApi, res.agent_response).catch(() => {});
       // Completes the "Ask the crew" step on the Home checklist — a sent message, not
       // just opening this screen.
       void markChecklistVisited("crew");
-      if (!isPro) {
-        await bumpChatUsed();
-        setUsed((u) => u + 1);
-      }
     } catch (e) {
+      if (e instanceof ApiError && e.status === 402) {
+        void refreshCredits();
+        router.push("/credits");
+        return;
+      }
       setMessages((m) => [
         ...m,
         {
@@ -261,9 +254,9 @@ export default function Chat() {
             />
           </View>
 
-          {!isPro && (
+          {credits !== null && (
             <Pressable
-              onPress={() => router.push("/paywall")}
+              onPress={() => router.push("/credits")}
               style={{
                 marginHorizontal: 16,
                 marginBottom: 4,
@@ -278,13 +271,12 @@ export default function Chat() {
                 paddingVertical: 8,
               }}
             >
-              <Text style={{ fontSize: 12, color: MUTED }}>
-                {remaining > 0
-                  ? `${remaining} free message${remaining === 1 ? "" : "s"} left this week`
-                  : "Weekly free messages used up"}
+              <Text style={{ fontSize: 12, color: credits < 3 ? BAD : MUTED }}>
+                {credits} AI credit{credits === 1 ? "" : "s"}
+                {credits < 3 ? " — running low" : ""}
               </Text>
               <Text style={{ fontSize: 12, fontWeight: "700", color: AMBER }}>
-                Go Pro
+                Get more
               </Text>
             </Pressable>
           )}

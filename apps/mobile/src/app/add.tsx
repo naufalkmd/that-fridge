@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -7,7 +7,6 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import Constants from "expo-constants";
@@ -18,6 +17,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import {
+  ApiError,
   describeError,
   guessFoodIcon,
   normalizeItemName,
@@ -26,7 +26,6 @@ import {
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
-import { usePro } from "@/lib/pro";
 import { SheetHeader } from "@/components/sheet";
 import {
   AutoFillButton,
@@ -57,14 +56,15 @@ const METHODS: {
   title: string;
   desc: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  pro?: boolean;
+  /** Costs AI credits (vs. barcode/manual which are free). */
+  credits?: number;
 }[] = [
   {
     key: "receipt",
     title: "Scan receipt",
     desc: "Snap your grocery receipt",
     icon: "receipt",
-    pro: true,
+    credits: 3,
   },
   {
     key: "barcode",
@@ -77,7 +77,7 @@ const METHODS: {
     title: "Photo of fridge",
     desc: "Let AI spot what changed",
     icon: "camera-outline",
-    pro: true,
+    credits: 3,
   },
   {
     key: "manual",
@@ -92,7 +92,6 @@ const METHODS: {
 export default function Add() {
   const router = useRouter();
   const { addItem, addManyItems, items } = useInventory();
-  const { isPro } = usePro();
   const params = useLocalSearchParams<{
     name?: string;
     location?: string;
@@ -194,10 +193,6 @@ export default function Add() {
       }
       return;
     }
-    if ((m === "receipt" || m === "photo") && !isPro) {
-      router.push("/paywall");
-      return;
-    }
     setMethod(m);
   }
 
@@ -259,7 +254,7 @@ export default function Add() {
                   >
                     {m.title}
                   </Text>
-                  {m.pro && !isPro && (
+                  {m.credits && (
                     <View
                       style={{
                         backgroundColor: `${AMBER}1a`,
@@ -276,7 +271,7 @@ export default function Add() {
                           color: AMBER,
                         }}
                       >
-                        PRO
+                        {m.credits} CREDITS
                       </Text>
                     </View>
                   )}
@@ -321,6 +316,7 @@ function ScanFlow({
   mode: "receipt" | "photo";
   onDone: () => void;
 }) {
+  const router = useRouter();
   const { ensureSectionId, addManyItems } = useInventory();
   const [status, setStatus] = useState<"idle" | "scanning" | "review">("idle");
   const [saving, setSaving] = useState(false);
@@ -350,6 +346,10 @@ function ScanFlow({
       setStatus("review");
     } catch (e) {
       setStatus("idle");
+      if (e instanceof ApiError && e.status === 402) {
+        router.push("/credits");
+        return;
+      }
       Alert.alert(
         "Scan failed",
         describeError(e, "Couldn't read that photo. Try a clearer shot."),

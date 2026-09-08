@@ -164,6 +164,19 @@ export interface RecipeSuggestionBlock {
   steps: string[];
 }
 
+/** One AI-credit movement in the user's ledger. */
+export interface CreditLedgerEntry {
+  delta: number;
+  balance_after: number;
+  reason: string;
+  at: string | null;
+}
+
+export interface CreditsResult {
+  balance: number;
+  ledger: CreditLedgerEntry[];
+}
+
 export interface SendChatResult {
   agent: ChatAgentName;
   user_message: string;
@@ -171,6 +184,8 @@ export interface SendChatResult {
   recipe_suggestion: RecipeSuggestionBlock | null;
   session_id: string | null;
   mocked: boolean;
+  /** The user's AI-credit balance after this message was charged. */
+  credits?: number;
   /** True when a tool call in this turn changed the user's data (items / notes / shopping) —
    *  the client should refresh those. Absent on compact / photo replies. */
   mutated?: boolean;
@@ -399,6 +414,11 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   async function updateProfile(fields: ProfileFields): Promise<CurrentUser> {
     const res = await http.patch<{ user: CurrentUser }>("/me/profile", fields);
     return res.user;
+  }
+
+  /** The user's AI-credit balance + recent ledger movements (`/me/credits`). */
+  function getCredits(): Promise<CreditsResult> {
+    return http.get<CreditsResult>("/me/credits");
   }
 
   /** Merge the coarse onboarding answer tags into the user's preferences. */
@@ -959,6 +979,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     logout,
     me,
     updateProfile,
+    getCredits,
     deleteAccount,
     getChatHistory,
     sendChat,

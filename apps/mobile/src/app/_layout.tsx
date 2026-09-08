@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { OnboardingProvider } from "@/lib/onboarding";
 import { ProProvider } from "@/lib/pro";
+import { CreditsProvider } from "@/lib/credits";
 import { InventoryProvider } from "@/lib/inventory";
 import { ScopeProvider } from "@/lib/scope";
 import { NotificationsProvider } from "@/lib/notifications";
@@ -55,6 +56,7 @@ export default function RootLayout() {
                     changes, so a new sign-in can't inherit the previous user's
                     fridge / notes / recipes if a stale session lingered. */}
                 <AccountBoundary>
+                  <CreditsProvider>
                   <InventoryProvider>
                   <ScopeProvider>
                     <SocialProvider>
@@ -122,6 +124,13 @@ export default function RootLayout() {
                                     />
                                     <Stack.Screen
                                       name="recipe-icon-picker"
+                                      options={{
+                                        headerShown: false,
+                                        presentation: "modal",
+                                      }}
+                                    />
+                                    <Stack.Screen
+                                      name="credits"
                                       options={{
                                         headerShown: false,
                                         presentation: "modal",
@@ -272,6 +281,7 @@ export default function RootLayout() {
                     </SocialProvider>
                   </ScopeProvider>
                 </InventoryProvider>
+                  </CreditsProvider>
                 </AccountBoundary>
               </ProProvider>
             </OnboardingProvider>

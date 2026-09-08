@@ -11,6 +11,7 @@ import { useInventory } from "@/lib/inventory";
 import { useOnboarding } from "@/lib/onboarding";
 import { useScope } from "@/lib/scope";
 import { usePro } from "@/lib/pro";
+import { useCredits } from "@/lib/credits";
 import { PixelText } from "@/components/brand";
 import { Eyebrow, SectionHeader } from "@/components/ui";
 
@@ -18,6 +19,7 @@ export default function Profile() {
   const router = useRouter();
   const { user, signOut, deleteAccount } = useAuth();
   const { isPro, available, restore, openCustomerCenter } = usePro();
+  const { balance: credits } = useCredits();
   const { fridges } = useInventory();
   const { replayOnboarding } = useOnboarding();
   const { scope, setScope } = useScope();
@@ -99,6 +101,19 @@ export default function Profile() {
           <Text className="text-[12px] text-faint">{user?.email}</Text>
         </View>
         <Ionicons name="pencil-outline" size={16} color="rgba(234,234,236,0.34)" />
+      </Pressable>
+
+      <Pressable
+        onPress={() => router.push("/credits")}
+        className="flex-row items-center justify-between rounded-[10px] border border-hairline bg-surface p-4 active:opacity-70"
+      >
+        <View>
+          <Eyebrow color="rgba(234,234,236,0.34)">AI credits</Eyebrow>
+          <Text className="mt-1.5 text-[15px] font-semibold text-ink">
+            {credits ?? "—"} left
+          </Text>
+        </View>
+        <Text className="text-[12.5px] font-semibold text-accent">Get more</Text>
       </Pressable>
 
       <View className="rounded-[10px] border border-hairline bg-surface p-4">
