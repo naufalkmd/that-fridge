@@ -289,6 +289,11 @@ class RecipeController extends Controller
             'name' => $wrap(['required', 'string', 'max:255']),
             'minutes' => $wrap(['required', 'integer', 'min:1', 'max:1440']),
             'category' => ['sometimes', 'nullable', 'string', Rule::in(self::CATEGORIES)],
+            // The recipe's own thumbnail: `icon` a curated pixel-pack key, `icon_url` a
+            // generated image. Both optional; both null = client falls back to the first
+            // ingredient's icon.
+            'icon' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'icon_url' => ['sometimes', 'nullable', 'string', 'max:2048'],
             'ingredients' => $wrap(['required', 'array', 'min:1']),
             'ingredients.*.name' => ['required', 'string', 'max:255'],
             'ingredients.*.icon' => ['required', 'string', 'max:255'],

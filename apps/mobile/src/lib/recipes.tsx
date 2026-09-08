@@ -26,6 +26,21 @@ export function takeRecipeSuggestion(): RecipeSuggestionBlock | null {
   return out;
 }
 
+// Same hand-off pattern, the other direction: /recipe-icon-picker stashes the chosen icon
+// here and pops; the recipe form drains it on focus. `null`/`null` means "cleared".
+export type RecipeIconPick = { icon: string | null; iconUrl: string | null };
+let iconPick: RecipeIconPick | null = null;
+
+export function stashRecipeIconPick(pick: RecipeIconPick): void {
+  iconPick = pick;
+}
+
+export function takeRecipeIconPick(): RecipeIconPick | null {
+  const out = iconPick;
+  iconPick = null;
+  return out;
+}
+
 interface RecipesContextValue {
   recipes: Recipe[];
   loading: boolean;

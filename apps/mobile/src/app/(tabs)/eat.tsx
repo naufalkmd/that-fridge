@@ -852,7 +852,8 @@ function RecipesPanel() {
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <FoodIcon
-              icon={tonight.r.ingredients[0]?.icon ?? "leftovers"}
+              icon={tonight.r.icon ?? tonight.r.ingredients[0]?.icon ?? "leftovers"}
+              iconUrl={tonight.r.iconUrl}
               name={tonight.r.name}
               size={46}
             />
@@ -977,7 +978,8 @@ function RecipesPanel() {
               }}
             >
               <FoodIcon
-                icon={r.ingredients[0]?.icon ?? "leftovers"}
+                icon={r.icon ?? r.ingredients[0]?.icon ?? "leftovers"}
+                iconUrl={r.iconUrl}
                 name={r.name}
                 size={38}
               />

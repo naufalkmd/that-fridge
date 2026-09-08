@@ -8,12 +8,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'user_id',
+    'kind',
+    'credits',
     'prompt',
     'image_path',
     'image_url',
 ])]
 class GeneratedIcon extends Model
 {
+    protected function casts(): array
+    {
+        return [
+            'credits' => 'integer',
+        ];
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

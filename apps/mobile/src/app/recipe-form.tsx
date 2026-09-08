@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import {
@@ -22,7 +22,8 @@ import {
   type RecipeCategory,
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
-import { takeRecipeSuggestion, useRecipes } from "@/lib/recipes";
+import { takeRecipeIconPick, takeRecipeSuggestion, useRecipes } from "@/lib/recipes";
+import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
 
 const AMBER = "#26c6da";
@@ -62,7 +63,20 @@ export default function RecipeForm() {
     existing?.steps ?? seed?.steps ?? [""],
   );
   const [attachments, setAttachments] = useState<RecipeAttachment[]>(existing?.attachments ?? []);
+  const [icon, setIcon] = useState<string | null>(existing?.icon ?? null);
+  const [iconUrl, setIconUrl] = useState<string | null>(existing?.iconUrl ?? null);
   const [link, setLink] = useState("");
+
+  // Drain a choice made on /recipe-icon-picker when it pops back here.
+  useFocusEffect(
+    useCallback(() => {
+      const picked = takeRecipeIconPick();
+      if (picked) {
+        setIcon(picked.icon);
+        setIconUrl(picked.iconUrl);
+      }
+    }, []),
+  );
   const [importing, setImporting] = useState(false);
   const [uploadingAtt, setUploadingAtt] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -123,6 +137,8 @@ export default function RecipeForm() {
       name: name.trim(),
       minutes: Number(minutes) || 20,
       category,
+      icon,
+      icon_url: iconUrl,
       // Guess a food icon from each name so the recipe-book thumbnail (ingredients[0].icon)
       // is meaningful; the form only collects names.
       ingredients: cleanIngredients.map((n) => ({ name: n, icon: guessFoodIcon(n) ?? "leftovers" })),
@@ -184,6 +200,42 @@ export default function RecipeForm() {
 
         <Field label="NAME">
           <TextInput value={name} onChangeText={setName} placeholder="Weeknight pasta" placeholderTextColor={FAINT} style={input} />
+        </Field>
+
+        <Field label="ICON">
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: "/recipe-icon-picker",
+                params: {
+                  name: ingredients.find((s) => s.trim()) || name || "Recipe",
+                  icon: icon ?? "",
+                  iconUrl: iconUrl ?? "",
+                },
+              })
+            }
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              borderWidth: 1,
+              borderColor: HAIRLINE,
+              backgroundColor: SURFACE2,
+              borderRadius: 6,
+              padding: 10,
+            }}
+          >
+            <FoodIcon
+              icon={icon ?? guessFoodIcon(ingredients.find((s) => s.trim()) ?? "") ?? "leftovers"}
+              iconUrl={iconUrl}
+              name={name || "Recipe"}
+              size={40}
+            />
+            <Text style={{ flex: 1, fontSize: 13, color: INK }}>
+              {iconUrl ? "Generated image" : icon ? "Pixel-pack icon" : "Auto (from ingredients)"}
+            </Text>
+            <MaterialCommunityIcons name="chevron-right" size={18} color={FAINT} />
+          </Pressable>
         </Field>
 
         <View style={{ flexDirection: "row", gap: 12 }}>

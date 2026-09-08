@@ -263,7 +263,12 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
   return (
     <View style={{ borderRadius: 8, backgroundColor: SURFACE2, overflow: "hidden" }}>
       <Pressable onPress={() => setOpen((v) => !v)} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12 }}>
-        <FoodIcon icon={recipe.ingredients[0]?.icon ?? "leftovers"} name={recipe.name} size={32} />
+        <FoodIcon
+          icon={recipe.icon ?? recipe.ingredients[0]?.icon ?? "leftovers"}
+          iconUrl={recipe.iconUrl}
+          name={recipe.name}
+          size={32}
+        />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ fontSize: 13.5, fontWeight: "700", color: INK }} numberOfLines={1}>
             {recipe.name}

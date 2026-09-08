@@ -140,7 +140,12 @@ export default function RecipeDetail() {
               justifyContent: "center",
             }}
           >
-            <FoodIcon icon={recipe.ingredients[0]?.icon ?? "leftovers"} name={recipe.name} size={44} />
+            <FoodIcon
+              icon={recipe.icon ?? recipe.ingredients[0]?.icon ?? "leftovers"}
+              iconUrl={recipe.iconUrl}
+              name={recipe.name}
+              size={44}
+            />
           </View>
           <View style={{ position: "absolute", top: 0, right: "50%", marginRight: -58, flexDirection: "row", gap: 6 }}>
             <IconBtn

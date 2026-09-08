@@ -28,6 +28,50 @@ class RecipeControllerTest extends TestCase
         $response->assertJson(['data' => ['mealType' => 'dinner', 'vibes' => [], 'foodFocus' => ['balanced'], 'madeCount' => 0]]);
     }
 
+    public function test_store_accepts_a_recipe_icon_and_generated_image_url(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->postJson('/api/recipes', [
+            'name' => 'Weeknight Pasta',
+            'minutes' => 20,
+            'icon' => 'pasta',
+            'icon_url' => 'https://cdn.test/recipe-abc.png',
+            'ingredients' => [['name' => 'Pasta', 'icon' => 'leftovers']],
+            'steps' => ['Boil it'],
+        ]);
+
+        $response->assertStatus(201);
+        $response->assertJson(['data' => ['icon' => 'pasta', 'iconUrl' => 'https://cdn.test/recipe-abc.png']]);
+        $this->assertDatabaseHas('recipes', ['name' => 'Weeknight Pasta', 'icon' => 'pasta', 'icon_url' => 'https://cdn.test/recipe-abc.png']);
+    }
+
+    public function test_update_can_change_and_clear_the_recipe_icon(): void
+    {
+        $user = User::factory()->create();
+        $recipe = $this->recipeFor($user, ['icon' => 'pasta']);
+
+        $this->actingAs($user)->patchJson("/api/recipes/{$recipe->id}", ['icon_url' => 'https://cdn.test/new.png'])
+            ->assertStatus(200)
+            ->assertJson(['data' => ['iconUrl' => 'https://cdn.test/new.png']]);
+
+        $this->actingAs($user)->patchJson("/api/recipes/{$recipe->id}", ['icon' => null, 'icon_url' => null])
+            ->assertStatus(200)
+            ->assertJson(['data' => ['icon' => null, 'iconUrl' => null]]);
+
+        $this->assertDatabaseHas('recipes', ['id' => $recipe->id, 'icon' => null, 'icon_url' => null]);
+    }
+
+    public function test_recipe_resource_defaults_the_icon_fields_to_null(): void
+    {
+        $user = User::factory()->create();
+        $recipe = $this->recipeFor($user);
+
+        $this->actingAs($user)->getJson("/api/recipes/{$recipe->id}")
+            ->assertStatus(200)
+            ->assertJson(['data' => ['icon' => null, 'iconUrl' => null]]);
+    }
+
     private function recipeFor(?User $user, array $overrides = []): Recipe
     {
         return Recipe::create(array_merge([

@@ -226,7 +226,12 @@ function Row({
         backgroundColor: highlight ? SURFACE : "transparent",
       }}
     >
-      <FoodIcon icon={r.ingredients[0]?.icon ?? "leftovers"} name={r.name} size={34} />
+      <FoodIcon
+        icon={r.icon ?? r.ingredients[0]?.icon ?? "leftovers"}
+        iconUrl={r.iconUrl}
+        name={r.name}
+        size={34}
+      />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={{ fontSize: 14, fontWeight: "700", color: INK }} numberOfLines={1}>
           {r.name}

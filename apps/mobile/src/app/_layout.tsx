@@ -121,6 +121,13 @@ export default function RootLayout() {
                                       }}
                                     />
                                     <Stack.Screen
+                                      name="recipe-icon-picker"
+                                      options={{
+                                        headerShown: false,
+                                        presentation: "modal",
+                                      }}
+                                    />
+                                    <Stack.Screen
                                       name="scan"
                                       options={{
                                         headerShown: false,

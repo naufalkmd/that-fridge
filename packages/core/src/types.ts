@@ -101,6 +101,10 @@ export interface Recipe {
   name: string;
   minutes: number;
   category: RecipeCategory | null;
+  /** The recipe's own thumbnail: curated pixel-pack key. Null → fall back to ingredients[0]. */
+  icon: string | null;
+  /** The recipe's own thumbnail: generated-image URL. Null → use `icon`. Wins when set. */
+  iconUrl: string | null;
   ingredients: RecipeIngredient[];
   steps: string[];
   attachments: RecipeAttachment[];

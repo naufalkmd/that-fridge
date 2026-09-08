@@ -282,6 +282,13 @@ cd apps/mobile && pnpm exec expo start --clear
 Restructures (moving screens into route groups, changing `app.config.ts`) always want `--clear`.
 Adding a **new route file** may also need a full app relaunch before its deep link resolves.
 
+### `tsc` fails on a brand-new screen: `Type '"/my-new-screen"' is not assignable to ...`
+
+Expo Router's typed routes live in the generated `apps/mobile/.expo/types/router.d.ts`, which
+is git-ignored and only rewritten while a dev server runs. After adding a screen file under
+`src/app/`, start Metro once (`pnpm exec expo start`, wait ~30s, then quit) to regenerate it,
+then `tsc --noEmit` passes. CI doesn't typecheck the mobile app, so this only bites locally.
+
 ### App icon / splash / a permission string / a native package change isn't showing
 
 Those are **native** — baked into the binary at `eas build` time. A Metro reload or `eas update`

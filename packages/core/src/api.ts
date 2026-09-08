@@ -198,6 +198,10 @@ export interface RecipeInput {
   name: string;
   minutes: number;
   category?: RecipeCategory | null;
+  /** Curated pixel-pack key for the recipe's own thumbnail; null clears it. */
+  icon?: string | null;
+  /** Generated-image URL for the recipe's thumbnail; null clears it. Wins over `icon`. */
+  icon_url?: string | null;
   ingredients: RecipeIngredient[];
   steps: string[];
   attachments?: RecipeAttachment[];
@@ -231,9 +235,13 @@ export interface ScanResult {
   message: string;
 }
 
-/** One saved AI-generated icon in the user's library (`/icons/generated`). */
+/** What a generated image is for. All kinds share one weekly free budget (see generateIcon). */
+export type GeneratedImageKind = "icon" | "recipe";
+
+/** One saved AI-generated image in the user's library (`/icons/generated`). */
 export interface GeneratedIcon {
   id: string;
+  kind: GeneratedImageKind;
   prompt: string;
   image_url: string;
 }
@@ -514,11 +522,17 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     );
   }
 
-  /** AI icon generation (fal.ai, throttled 10/min) — the result is auto-saved to the library. */
+  /**
+   * AI image generation (fal.ai, throttled 10/min) — the result is auto-saved to the
+   * library. `kind` picks what it's for; every kind draws on the same weekly free budget
+   * (5 credits, 1 per generation), so a recipe image and an item icon compete for the
+   * same allowance. Over budget comes back as a 402.
+   */
   function generateIcon(
     prompt: string,
+    kind: GeneratedImageKind = "icon",
   ): Promise<{ icon_url: string; generated_icon_id: string }> {
-    return http.post("/icons/generate", { prompt });
+    return http.post("/icons/generate", { prompt, kind });
   }
   /** The current user's saved AI-generated icons, newest first. */
   function listGeneratedIcons(): Promise<GeneratedIcon[]> {

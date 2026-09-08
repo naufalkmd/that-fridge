@@ -38,6 +38,17 @@ class IconGenerationService
      */
     private const OUTLINE_COLOR = [40, 30, 25];
 
+    /**
+     * What one generation of each kind costs against the shared weekly free budget
+     * (IconController::FREE_GENERATION_CREDITS_PER_WEEK). Both go through the same
+     * flux/schnell + pixel-art pipeline today, so both cost 1; bump 'recipe' only if it
+     * ever moves to a pricier model.
+     */
+    public const CREDIT_COST = [
+        'icon' => 1,
+        'recipe' => 1,
+    ];
+
     public function __construct(protected FalClient $client) {}
 
     public function available(): bool
@@ -52,7 +63,7 @@ class IconGenerationService
      * (unlike PhotoService's mock text data), so a missing/failed key surfaces as a real
      * failure the frontend can show a message for.
      */
-    public function generateIcon(string $prompt, int $userId): array
+    public function generateIcon(string $prompt, int $userId, string $kind = 'icon'): array
     {
         $result = $this->client->generate($prompt.self::STYLE_SUFFIX);
 
@@ -79,6 +90,8 @@ class IconGenerationService
 
         $icon = GeneratedIcon::create([
             'user_id' => $userId,
+            'kind' => $kind,
+            'credits' => self::CREDIT_COST[$kind] ?? 1,
             'prompt' => $prompt,
             'image_path' => $path,
             'image_url' => Storage::disk('public')->url($path),

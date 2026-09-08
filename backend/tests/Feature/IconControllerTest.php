@@ -15,11 +15,13 @@ class IconControllerTest extends TestCase
     use RefreshDatabase;
 
     /** No GeneratedIcon factory exists - plain inserts for the quota tests below. */
-    private function seedGeneratedIcons(User $user, int $count): void
+    private function seedGeneratedIcons(User $user, int $count, string $kind = 'icon', int $credits = 1): void
     {
         for ($i = 0; $i < $count; $i++) {
             GeneratedIcon::create([
                 'user_id' => $user->id,
+                'kind' => $kind,
+                'credits' => $credits,
                 'prompt' => "icon {$i}",
                 'image_path' => "icons/fake-{$i}.png",
                 'image_url' => "https://cdn.test/fake-{$i}.png",
@@ -89,5 +91,41 @@ class IconControllerTest extends TestCase
         $response = $this->actingAs($user)->postJson('/api/icons/generate', ['prompt' => 'a ripe tomato']);
 
         $response->assertStatus(200);
+    }
+
+    public function test_recipe_image_generation_draws_on_the_same_weekly_budget_as_icons(): void
+    {
+        $user = User::factory()->create();
+        $this->seedGeneratedIcons($user, 5); // budget spent on item icons
+
+        $response = $this->actingAs($user)->postJson('/api/icons/generate', [
+            'prompt' => 'a bowl of ramen', 'kind' => 'recipe',
+        ]);
+
+        $response->assertStatus(402);
+        $this->assertDatabaseCount('generated_icons', 5);
+    }
+
+    public function test_a_recipe_image_generation_is_stored_with_its_kind(): void
+    {
+        $user = User::factory()->create();
+        $this->fakeSuccessfulGeneration();
+
+        $response = $this->actingAs($user)->postJson('/api/icons/generate', [
+            'prompt' => 'a bowl of ramen', 'kind' => 'recipe',
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('generated_icons', [
+            'user_id' => $user->id, 'kind' => 'recipe', 'credits' => 1, 'prompt' => 'a bowl of ramen',
+        ]);
+    }
+
+    public function test_icon_generation_rejects_an_unknown_kind(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/icons/generate', ['prompt' => 'x', 'kind' => 'sticker'])
+            ->assertStatus(422);
     }
 }
