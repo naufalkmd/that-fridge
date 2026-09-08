@@ -87,13 +87,14 @@ class AgentToolbox
                 'search' => ['type' => 'string', 'description' => 'Case-insensitive name substring.'],
             ]),
             $fn('list_notes', 'List the sticky notes on the fridge(s) - free-text reminders household members leave for each other.', []),
-            $fn('list_shopping', 'List what is currently on the shopping list.', []),
+            $fn('list_shopping', 'List what is currently on the shopping list, with any buy links.', []),
             $fn('list_recipes', "List the user's saved recipes (name, minutes, ingredient names). Use it to answer \"what can I make\" from real recipes rather than inventing one.", [
                 'search' => ['type' => 'string', 'description' => 'Case-insensitive name substring.'],
             ]),
             $fn('add_to_shopping', 'Add one item to the shopping list.', [
                 'name' => ['type' => 'string'],
                 'section' => ['type' => 'string', 'description' => 'Aisle/section label, e.g. "produce", "dairy". Defaults to "other".'],
+                'shop_url' => ['type' => 'string', 'description' => 'Optional http(s) link to buy it - e.g. a product page you found while browsing.'],
             ], ['name']),
             $fn('add_note', 'Leave a sticky note on the fridge for household members.', [
                 'text' => ['type' => 'string'],
@@ -103,12 +104,13 @@ class AgentToolbox
                 'note_id' => ['type' => 'integer'],
                 'text' => ['type' => 'string', 'description' => 'Case-insensitive fragment of the note text. Only used when note_id is omitted.'],
             ]),
-            $fn('update_item', 'Change one field on an item: quantity, whether it is opened, its expiry date, or its storage location. Get the item_id from list_items first.', [
+            $fn('update_item', 'Change one field on an item: quantity, whether it is opened, its expiry date, its storage location, or a buy-again link. Get the item_id from list_items first.', [
                 'item_id' => ['type' => 'integer'],
                 'quantity' => ['type' => 'integer', 'description' => 'New quantity (>= 1). To use an item up entirely, call mark_item_used instead.'],
                 'opened' => ['type' => 'boolean'],
                 'expiry_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD.'],
                 'location' => ['type' => 'string', 'enum' => ['fridge', 'freezer', 'pantry']],
+                'shop_url' => ['type' => 'string', 'description' => 'An http(s) link to buy this item again. Empty string clears it.'],
             ], ['item_id']),
             $fn('mark_item_used', 'Record that the user used up an item (or some of it) while it was still good. This removes it (or lowers the quantity) AND logs it to their usage history, which feeds their Kitchen Score and the Shopkeeper. Use this for "I used the last of the milk", NOT for throwing something away - that is remove_item.', [
                 'item_id' => ['type' => 'integer'],
@@ -241,6 +243,7 @@ class AgentToolbox
                 'category' => $i->nutrition_category,
                 'opened' => (bool) $i->opened,
                 'days_to_expiry' => $days,
+                'shop_url' => $i->shop_url,
             ];
         });
 
@@ -267,7 +270,8 @@ class AgentToolbox
             return "#{$i['id']} {$i['name']} · {$i['quantity']}x · ".
                 ($i['location'] ?? '?')." · {$i['section']} · {$exp}".
                 ($i['opened'] ? ' · opened' : '').
-                ($i['category'] ? " · {$i['category']}" : '');
+                ($i['category'] ? " · {$i['category']}" : '').
+                ($i['shop_url'] ? " · buy: {$i['shop_url']}" : '');
         });
 
         return $lines->implode("\n");
@@ -297,7 +301,9 @@ class AgentToolbox
             return 'The shopping list is empty.';
         }
 
-        return $items->map(fn ($s) => '#'.$s->id.' '.$s->name.' ('.$s->section.')'.($s->checked ? ' — checked off' : ''))->implode("\n");
+        return $items->map(fn ($s) => '#'.$s->id.' '.$s->name.' ('.$s->section.')'
+            .($s->checked ? ' — checked off' : '')
+            .($s->shop_url ? ' — buy: '.$s->shop_url : ''))->implode("\n");
     }
 
     private function listRecipes(User $user, array $args): string
@@ -328,14 +334,32 @@ class AgentToolbox
             return 'Error: a name is required.';
         }
 
+        $url = $this->cleanUrl($args['shop_url'] ?? null);
+
         $fridge->shoppingItems()->create([
             'name' => Str::limit($name, 255, ''),
             'section' => Str::limit(trim((string) ($args['section'] ?? 'other')) ?: 'other', 255, ''),
             'checked' => false,
+            'shop_url' => $url,
         ]);
         $this->mutated = true;
 
-        return "Added \"{$name}\" to the shopping list on {$fridge->name}.";
+        return "Added \"{$name}\" to the shopping list on {$fridge->name}".($url ? ' with a buy link' : '').'.';
+    }
+
+    /** Accept only a plain http(s) URL for storage (these are opened in the user's browser,
+     *  never fetched by the server) - reject javascript:, data:, garbage, or anything overlong. */
+    private function cleanUrl(mixed $url): ?string
+    {
+        $url = trim((string) ($url ?? ''));
+
+        if ($url === '' || strlen($url) > 2048
+            || ! preg_match('#^https?://#i', $url)
+            || ! filter_var($url, FILTER_VALIDATE_URL)) {
+            return null;
+        }
+
+        return $url;
     }
 
     private function addNote(User $user, ?int $fridgeId, array $args): string
@@ -402,6 +426,12 @@ class AgentToolbox
         }
         if (isset($args['location']) && in_array($args['location'], ['fridge', 'freezer', 'pantry'], true)) {
             $data['location'] = $args['location'];
+        }
+        if (array_key_exists('shop_url', $args)) {
+            $data['shop_url'] = trim((string) $args['shop_url']) === '' ? null : $this->cleanUrl($args['shop_url']);
+            if ($data['shop_url'] === null && trim((string) $args['shop_url']) !== '') {
+                return 'Error: shop_url must be a plain http(s) link.';
+            }
         }
         if (isset($args['expiry_date'])) {
             try {
@@ -535,8 +565,10 @@ class AgentToolbox
         $ings = collect($recipe->ingredients ?? [])->map(fn ($i) => '- '.($i['name'] ?? ''))->implode("\n");
         $steps = collect($recipe->steps ?? [])->values()
             ->map(fn ($s, $n) => ($n + 1).'. '.$s)->implode("\n");
+        $links = collect($recipe->attachments ?? [])->pluck('url')->filter()->implode("\n");
 
-        return "{$recipe->name} ({$recipe->minutes}m)\n\nIngredients:\n{$ings}\n\nSteps:\n{$steps}";
+        return "{$recipe->name} ({$recipe->minutes}m)\n\nIngredients:\n{$ings}\n\nSteps:\n{$steps}"
+            .($links !== '' ? "\n\nAttachments / links:\n{$links}" : '');
     }
 
     // ---- inventory / shopping / memory / recipe writes ----------------------

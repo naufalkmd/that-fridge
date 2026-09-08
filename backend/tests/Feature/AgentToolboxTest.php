@@ -123,6 +123,30 @@ class AgentToolboxTest extends TestCase
         $this->assertSame(2, $item->fresh()->quantity);
     }
 
+    public function test_shop_urls_are_stored_listed_and_cleaned(): void
+    {
+        // add_to_shopping keeps a valid link, drops a bad one.
+        $this->toolbox->run('add_to_shopping', ['name' => 'Oat milk', 'shop_url' => 'https://shop.test/oatmilk'], $this->user, $this->fridge->id);
+        $this->toolbox->run('add_to_shopping', ['name' => 'Bread', 'shop_url' => 'javascript:alert(1)'], $this->user, $this->fridge->id);
+
+        $this->assertDatabaseHas('shopping_items', ['name' => 'Oat milk', 'shop_url' => 'https://shop.test/oatmilk']);
+        $this->assertDatabaseHas('shopping_items', ['name' => 'Bread', 'shop_url' => null]);
+
+        $list = $this->toolbox->run('list_shopping', [], $this->user, $this->fridge->id);
+        $this->assertStringContainsString('buy: https://shop.test/oatmilk', $list['content']);
+
+        // update_item sets then clears an item's buy link.
+        $item = $this->item();
+        $this->toolbox->run('update_item', ['item_id' => $item->id, 'shop_url' => 'https://shop.test/milk'], $this->user, $this->fridge->id);
+        $this->assertSame('https://shop.test/milk', $item->fresh()->shop_url);
+
+        $listed = $this->toolbox->run('list_items', [], $this->user, $this->fridge->id);
+        $this->assertStringContainsString('buy: https://shop.test/milk', $listed['content']);
+
+        $this->toolbox->run('update_item', ['item_id' => $item->id, 'shop_url' => ''], $this->user, $this->fridge->id);
+        $this->assertNull($item->fresh()->shop_url);
+    }
+
     public function test_mark_item_used_deletes_the_item_and_logs_usage(): void
     {
         $item = $this->item(['name' => 'Butter', 'quantity' => 1, 'expiry_date' => now()->addDays(3)]);

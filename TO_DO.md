@@ -343,6 +343,10 @@ costs the 1-credit message + a best-effort `+2` surcharge (`chat_tools`, `spendU
 never hard-fails mid-reply). All agents get all tools; model stays Haiku 4.5.
 
 Notes / still open:
+- Buy links: `list_shopping` / `list_items` surface a stored `shop_url`; `add_to_shopping` +
+  `update_item` accept one (`cleanUrl` allows only plain http(s), not `javascript:`/`data:`);
+  `get_recipe` lists attachment URLs. These are displayed / opened in the user's browser,
+  never fetched server-side.
 - `add_item` / `save_recipe` guess icons from a **curated-10 keyword map** only (the full pack's
   keywords live in a generated TS file); unknowns get `leftovers`. Post-launch: port the full
   `guessFoodIcon` (copy `food-icon-manifest.json` + keyword data into the backend).
