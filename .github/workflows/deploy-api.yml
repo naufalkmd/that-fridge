@@ -40,6 +40,13 @@ jobs:
       - run: cp .env.example .env && php artisan key:generate
       - run: php artisan test
 
+      # Fail the build if any installed package has a known security advisory.
+      # composer's advisory DB is high-signal and Laravel deps are almost always fixable;
+      # if this ever blocks on an unfixable transitive advisory, add `|| true` here and
+      # track it manually rather than leaving the check off.
+      - name: Security audit
+        run: composer audit --no-interaction
+
   deploy:
     needs: test
     runs-on: ubuntu-latest
