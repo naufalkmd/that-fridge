@@ -148,11 +148,16 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
     await refresh();
   }, [refresh]);
 
+  // Demo / App Review accounts are Pro server-side (User::isPro) regardless of any purchase,
+  // so the app's Pro state must agree - otherwise the paywall / "Go Pro" shows to a reviewer
+  // who already has full access.
+  const effectiveIsPro = isPro || user?.isDemo === true;
+
   const value = useMemo(
     () => ({
       available: AVAILABLE,
       ready,
-      isPro,
+      isPro: effectiveIsPro,
       packages,
       presentPaywallIfNeeded,
       purchase,
@@ -160,7 +165,7 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
       openCustomerCenter,
       refresh,
     }),
-    [ready, isPro, packages, presentPaywallIfNeeded, purchase, restore, openCustomerCenter, refresh],
+    [ready, effectiveIsPro, packages, presentPaywallIfNeeded, purchase, restore, openCustomerCenter, refresh],
   );
 
   return <ProContext.Provider value={value}>{children}</ProContext.Provider>;

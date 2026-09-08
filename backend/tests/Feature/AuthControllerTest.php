@@ -277,6 +277,20 @@ class AuthControllerTest extends TestCase
         $this->patchJson('/api/me/profile', ['name' => 'X'])->assertStatus(401);
     }
 
+    public function test_a_demo_account_is_pro_and_flagged_in_the_payload(): void
+    {
+        $demo = User::factory()->create(['is_demo' => true]);
+        $this->assertTrue($demo->isPro());
+
+        $this->actingAs($demo)->getJson('/api/me')
+            ->assertOk()
+            ->assertJson(['user' => ['isDemo' => true]]);
+
+        $regular = User::factory()->create();
+        $this->assertFalse($regular->isPro());
+        $this->actingAs($regular)->getJson('/api/me')->assertJson(['user' => ['isDemo' => false]]);
+    }
+
     public function test_delete_me_removes_the_user_their_tokens_and_owned_fridges(): void
     {
         $user = User::factory()->create();

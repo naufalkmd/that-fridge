@@ -163,10 +163,12 @@ class User extends Authenticatable
     /**
      * Synced from RevenueCat webhooks (RevenueCatWebhookController) - never set directly from
      * a user-facing request, so `pro_expires_at` is deliberately not in #[Fillable] above.
+     * Demo / App Review accounts are always Pro so the reviewer can exercise every gated
+     * path (sharing a fridge, etc.) without a sandbox purchase.
      */
     public function isPro(): bool
     {
-        return $this->pro_expires_at !== null && $this->pro_expires_at->isFuture();
+        return $this->is_demo || ($this->pro_expires_at !== null && $this->pro_expires_at->isFuture());
     }
 
     /**

@@ -320,6 +320,8 @@ export interface CurrentUser {
   /** Current AI-credit balance. Every AI action spends credits; Pro grants a monthly
    *  bundle, free users get a smaller monthly allowance, top up with packs. */
   credits?: number;
+  /** Managed demo / App Review account — always treated as Pro, name/username locked. */
+  isDemo?: boolean;
   /**
    * Per-field budget for name / username edits on a rolling 30-day window. Lets the
    * edit-profile screen show "1 change left" and, once spent, when the field unlocks.

@@ -359,6 +359,7 @@ class AuthController extends Controller
             'email' => $user->email,
             'preferences' => $user->preferences ?? null,
             'credits' => (int) $user->ai_credits,
+            'isDemo' => (bool) $user->is_demo,
             'profileChanges' => $user->is_demo ? null : collect(User::PROFILE_CHANGE_LIMITS)
                 ->mapWithKeys(fn ($limit, $field) => [$field => [
                     'limit' => $limit,
