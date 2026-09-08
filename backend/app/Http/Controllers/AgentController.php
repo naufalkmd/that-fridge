@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\AgentService;
+use App\Support\ChatQuota;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -21,13 +22,13 @@ class AgentController extends Controller
 
     private const SESSION_LIST_LIMIT = 50;
 
-    // Mirrors apps/mobile/src/lib/chatQuota.ts's FREE_CHATS_PER_WEEK - that copy is a
-    // client-side pre-check for UX (disable the button before even trying), this one is the
-    // real enforcement. A free user calling the API directly, bypassing the app entirely,
-    // previously had no limit at all - the backend had no way to tell Pro from free.
-    private const FREE_CHATS_PER_WEEK = 5;
-
     private const CHAT_CONTEXT_TURNS = 8;
+
+    // Add-item "Auto-fill" is a cheap text call (~$0.0007) that previously had no per-user cap
+    // at all - only the route throttle. This lenient weekly ceiling (cache-tracked, same shape
+    // as ExpiryScanController) is well above any real session; it just stops a script racking
+    // up thousands. Pro is uncapped. The weekly free chat allowance lives in ChatQuota.
+    private const FREE_AUTOFILL_PER_WEEK = 40;
 
     /**
      * Get the authenticated user's most recent chat session, oldest message first.
@@ -187,20 +188,12 @@ class AgentController extends Controller
         // real Quick Chat messages for a non-Pro user - previously they were fully exempt, which
         // meant a free user could get unlimited AI replies just by never using Quick Chat
         // directly. They're still not persisted to chat_history (see below), so they can't be
-        // counted from a DB row the way real messages are - tracked in cache instead, keyed per
-        // user per ISO week, and added to the chat_history count for the combined total.
-        $weekStart = Carbon::now()->startOfWeek(Carbon::MONDAY);
-        $compactQuotaKey = 'compact_chat_quota:'.$request->user()->id.':'.$weekStart->format('oW');
-
-        if (! $request->user()->isPro()) {
-            $used = $request->user()->chatHistory()->where('created_at', '>=', $weekStart)->count()
-                + (int) Cache::get($compactQuotaKey, 0);
-
-            if ($used >= self::FREE_CHATS_PER_WEEK) {
-                return response()->json([
-                    'message' => "You've used your ".self::FREE_CHATS_PER_WEEK." free AI replies this week. Upgrade to Pro for unlimited AI chat.",
-                ], 402);
-            }
+        // counted from a DB row the way real messages are - tracked in cache instead (see
+        // ChatQuota), and added to the chat_history count for the combined total.
+        if (ChatQuota::isExhaustedFor($request->user())) {
+            return response()->json([
+                'message' => "You've used your ".ChatQuota::FREE_PER_WEEK.' free AI replies this week. Upgrade to Pro for unlimited AI chat.',
+            ], 402);
         }
 
         // Read directly from the DB rather than having the client fetch-and-forward these
@@ -231,9 +224,7 @@ class AgentController extends Controller
         // history() and clutter the Chat History session list with entries that just come
         // back on the next page load.
         if ($request->boolean('compact')) {
-            if (! $request->user()->isPro()) {
-                Cache::put($compactQuotaKey, (int) Cache::get($compactQuotaKey, 0) + 1, now()->addWeek());
-            }
+            ChatQuota::recordCompactCall($request->user());
 
             return response()->json([
                 'session_id' => $request->input('session_id'),
@@ -279,6 +270,19 @@ class AgentController extends Controller
             'name' => 'required|string|max:255',
             'icon' => 'nullable|string|max:255',
         ]);
+
+        if (! $request->user()->isPro()) {
+            $weekKey = 'autofill_quota:'.$request->user()->id.':'.Carbon::now()->format('oW');
+            $used = (int) Cache::get($weekKey, 0);
+
+            if ($used >= self::FREE_AUTOFILL_PER_WEEK) {
+                return response()->json([
+                    'message' => "You've used your ".self::FREE_AUTOFILL_PER_WEEK.' free auto-fills this week. Upgrade to Pro for unlimited, or fill the fields in yourself.',
+                ], 402);
+            }
+
+            Cache::put($weekKey, $used + 1, now()->addWeek());
+        }
 
         $suggestion = $this->agentService->suggestItemDetails($data['name'], $data['icon'] ?? null);
 

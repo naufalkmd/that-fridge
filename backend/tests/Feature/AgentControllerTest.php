@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserMemory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -356,6 +357,25 @@ class AgentControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson(['location' => 'freezer', 'nutrition_category' => 'vegetables']);
         $response->assertJsonStructure(['shelf_life_days', 'location', 'nutrition_category']);
+    }
+
+    public function test_suggest_item_details_is_rejected_after_the_free_weekly_autofill_limit(): void
+    {
+        $user = User::factory()->create();
+        Cache::put('autofill_quota:'.$user->id.':'.now()->format('oW'), 40, now()->addWeek());
+
+        $this->actingAs($user)->postJson('/api/items/suggest-details', ['name' => 'Milk'])
+            ->assertStatus(402);
+    }
+
+    public function test_suggest_item_details_has_no_autofill_limit_for_a_pro_user(): void
+    {
+        $user = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
+        Cache::put('autofill_quota:'.$user->id.':'.now()->format('oW'), 999, now()->addWeek());
+        config(['services.openrouter.key' => null]);
+
+        $this->actingAs($user)->postJson('/api/items/suggest-details', ['name' => 'Milk'])
+            ->assertStatus(200);
     }
 
     public function test_delete_session_removes_only_that_session(): void

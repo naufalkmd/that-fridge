@@ -180,7 +180,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/usage-history/{usageHistory}', [UsageHistoryController::class, 'destroy']);
 
     Route::get('/memory', [MemoryController::class, 'show']);
-    Route::post('/memory/extract', [MemoryController::class, 'extract']);
+    // Hits an LLM per call - throttled like /chat and /items/suggest-details.
+    Route::middleware('throttle:15,1')->post('/memory/extract', [MemoryController::class, 'extract']);
     Route::delete('/memory', [MemoryController::class, 'destroy']);
     Route::delete('/memory/facts/{index}', [MemoryController::class, 'destroyFact']);
 

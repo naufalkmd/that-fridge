@@ -176,6 +176,8 @@ verified 2026-09-06. ASC API key + vendor number `94767188` set in RevenueCat.
 | Feature                                                  | Free tier      | Pro       |
 | -------------------------------------------------------- | -------------- | --------- |
 | AI chat (Quick Chat + "Activate {agent}", shared budget) | 5/week         | Unlimited |
+| AI memory extraction (fires after a chat)                | tied to chat budget | Unlimited |
+| Add-item "Auto-fill"                                     | 40/week        | Unlimited |
 | AI image generation (item + recipe icons, shared budget) | 5/week         | Unlimited |
 | Expiry-date photo scan                                   | 10/week        | Unlimited |
 | Receipt / fridge-photo scan                              | Not available  | Unlimited |
@@ -191,7 +193,10 @@ Mobile: `fridge/[id]` shows a Pro-upsell card instead of the invite UI; `find-fr
 "Not shared" instead of a Request button (`FriendFridgeSummary.shareable`).
 
 Every AI-calling route also has a floor-level `throttle` regardless of Pro status, as abuse
-protection against direct API hammering.
+protection against direct API hammering. As of this pass, **no AI endpoint is unguarded**:
+`/memory/extract` gained `throttle:15,1` + skips extraction once a non-Pro user's weekly chat
+budget is spent (shared logic in `App\Support\ChatQuota`); `/items/suggest-details` gained a
+lenient 40/week cache cap.
 
 ### Data retention
 

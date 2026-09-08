@@ -65,6 +65,42 @@ class MemoryControllerTest extends TestCase
         $this->actingAs($user)->postJson('/api/memory/extract', [])->assertStatus(422);
     }
 
+    public function test_extract_is_skipped_when_a_non_pro_user_has_spent_their_weekly_chat_budget(): void
+    {
+        $user = User::factory()->create();
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response(['choices' => [['message' => ['content' => '["Vegetarian"]']]]], 200)]);
+        UserMemory::create(['user_id' => $user->id, 'facts' => ['Existing fact']]);
+        // 5 chat messages this week = free budget spent
+        for ($i = 0; $i < 5; $i++) {
+            $user->chatHistory()->create(['agent' => 'Chef', 'user_message' => "m{$i}", 'agent_response' => 'r']);
+        }
+
+        $response = $this->actingAs($user)->postJson('/api/memory/extract', [
+            'user_message' => "I'm vegetarian",
+            'agent_response' => 'Got it!',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['facts' => ['Existing fact']]); // unchanged — no LLM call
+        Http::assertNothingSent();
+    }
+
+    public function test_extract_still_runs_for_a_pro_user_over_the_chat_budget(): void
+    {
+        $user = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response(['choices' => [['message' => ['content' => '["Vegetarian"]']]]], 200)]);
+        for ($i = 0; $i < 10; $i++) {
+            $user->chatHistory()->create(['agent' => 'Chef', 'user_message' => "m{$i}", 'agent_response' => 'r']);
+        }
+
+        $this->actingAs($user)->postJson('/api/memory/extract', [
+            'user_message' => "I'm vegetarian",
+            'agent_response' => 'Got it!',
+        ])->assertStatus(200)->assertJson(['facts' => ['Vegetarian']]);
+    }
+
     public function test_destroy_fact_removes_one_fact_by_index(): void
     {
         $user = User::factory()->create();
