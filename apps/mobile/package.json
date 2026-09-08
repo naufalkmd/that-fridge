@@ -46,7 +46,7 @@
     "@types/react": "~19.2.2",
     "eas-cli": "^22.6.0",
     "prettier-plugin-tailwindcss": "^0.8.1",
-    "tailwindcss": "^3.4.19",
+    "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3"
   },
   "scripts": {
