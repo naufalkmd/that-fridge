@@ -175,7 +175,7 @@ export function FridgeNotes({ variant = "editor" }: { variant?: "grid" | "editor
                   }}
                 >
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ fontSize: 13, lineHeight: 18, color: INK }}>{note.text}</Text>
+                    <Text selectable style={{ fontSize: 13, lineHeight: 18, color: INK }}>{note.text}</Text>
                     <Text style={{ fontSize: 10.5, color: FAINT, marginTop: 4 }}>
                       {note.authorUsername ? `by @${note.authorUsername}` : "by a former member"} ·{" "}
                       {timeAgo(note.createdAt)}

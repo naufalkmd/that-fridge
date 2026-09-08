@@ -618,6 +618,7 @@ function Bubble({ msg }: { msg: Msg }) {
         {isUser ? (
           !!msg.text && (
             <Text
+              selectable
               style={{
                 fontSize: 13.5,
                 lineHeight: 20,
@@ -645,7 +646,7 @@ function Bubble({ msg }: { msg: Msg }) {
                 Demo reply — no AI key configured
               </Text>
             )}
-            <MarkdownText text={msg.text} />
+            <MarkdownText text={msg.text} selectable />
           </>
         )}
       </View>

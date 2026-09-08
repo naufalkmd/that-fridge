@@ -5,10 +5,10 @@ import { Text, View, type TextStyle } from "react-native";
 
 const BOLD = /(\*\*[^*]+\*\*)/g;
 
-function inline(text: string, key: string, color: string) {
+function inline(text: string, key: string, color: string, selectable: boolean) {
   const parts = text.split(BOLD);
   return (
-    <Text key={key} style={{ color }}>
+    <Text key={key} selectable={selectable} style={{ color }}>
       {parts.map((p, i) =>
         p.startsWith("**") && p.endsWith("**") ? (
           <Text key={i} style={{ fontWeight: "800" }}>
@@ -26,10 +26,13 @@ export function MarkdownText({
   text,
   color = "#eaeaec",
   size = 13.5,
+  selectable = false,
 }: {
   text: string;
   color?: string;
   size?: number;
+  /** Long-press to select / copy. Off by default to match the rest of the app. */
+  selectable?: boolean;
 }) {
   const base: TextStyle = { fontSize: size, lineHeight: size * 1.5, color };
   const lines = text.split("\n");
@@ -43,7 +46,11 @@ export function MarkdownText({
         const heading = line.match(/^(#{1,3})\s+(.*)$/);
         if (heading) {
           return (
-            <Text key={i} style={{ ...base, fontWeight: "800", marginBottom: 4 }}>
+            <Text
+              key={i}
+              selectable={selectable}
+              style={{ ...base, fontWeight: "800", marginBottom: 4 }}
+            >
               {heading[2]}
             </Text>
           );
@@ -54,7 +61,9 @@ export function MarkdownText({
           return (
             <View key={i} style={{ flexDirection: "row", marginVertical: 1 }}>
               <Text style={{ ...base }}>{"•  "}</Text>
-              <View style={{ flex: 1 }}>{inline(bullet[1], `${i}`, color)}</View>
+              <View style={{ flex: 1 }}>
+                {inline(bullet[1], `${i}`, color, selectable)}
+              </View>
             </View>
           );
         }
@@ -64,14 +73,16 @@ export function MarkdownText({
           return (
             <View key={i} style={{ flexDirection: "row", marginVertical: 1 }}>
               <Text style={{ ...base }}>{`${numbered[1]}.  `}</Text>
-              <View style={{ flex: 1 }}>{inline(numbered[2], `${i}`, color)}</View>
+              <View style={{ flex: 1 }}>
+                {inline(numbered[2], `${i}`, color, selectable)}
+              </View>
             </View>
           );
         }
 
         return (
-          <Text key={i} style={base}>
-            {inline(line, `${i}`, color)}
+          <Text key={i} selectable={selectable} style={base}>
+            {inline(line, `${i}`, color, selectable)}
           </Text>
         );
       })}

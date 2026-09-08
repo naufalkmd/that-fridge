@@ -213,7 +213,7 @@ export default function RecipeDetail() {
                 >
                   <MaterialCommunityIcons name={done ? "check" : "plus"} size={12} color={done ? "#0a0a0c" : tint} />
                 </View>
-                <Text style={{ flex: 1, fontSize: 13.5, fontWeight: "600", color: INK }}>{ing.name}</Text>
+                <Text selectable style={{ flex: 1, fontSize: 13.5, fontWeight: "600", color: INK }}>{ing.name}</Text>
                 <Text style={{ fontSize: 11.5, fontWeight: "700", color: tint }}>
                   {ing.have ? "Have it" : ing.onList ? "On list" : "Need it"}
                 </Text>
@@ -231,7 +231,7 @@ export default function RecipeDetail() {
               <View style={{ width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: SURFACE2 }}>
                 <Text style={{ fontSize: 11.5, fontWeight: "800", color: BLUE }}>{i + 1}</Text>
               </View>
-              <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 20, color: INK }}>{step}</Text>
+              <Text selectable style={{ flex: 1, fontSize: 13.5, lineHeight: 20, color: INK }}>{step}</Text>
             </View>
           ))}
         </View>
