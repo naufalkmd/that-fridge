@@ -102,12 +102,13 @@ fast-follow.
   Pro is capped at 400 credits/month (+800 rollover); every model call is metered per action,
   so per-user model spend is now bounded by construction. Pack buyers can spend more, but they
   paid for it. What's left is only wallet hygiene:
-  - Pre-load a fixed ~$20–30 on **both** the OpenRouter and fal.ai wallets and
-    turn on their low-balance email alerts. **Leave auto top-up / auto-recharge OFF on both**
-    — a drained balance is a degraded app, but auto top-up removes the only hard ceiling and
-    lets a scripted trial-abuser or a bug bill your card with no cap. Top up manually as real
-    usage grows. Now that per-user spend is capped by credits, auto top-up is defensible once
-    real paying volume makes manual refills annoying.
+  - [x] Pre-loaded **$10 on OpenRouter + $10 on fal.ai** (2026-09-09). Auto-recharge stays
+    **OFF** on both — a drained balance is a degraded app, but auto top-up removes the only
+    hard ceiling and lets a scripted abuser or a bug bill the card with no cap. Refill
+    manually as real usage grows.
+  - [ ] Turn on the low-balance email alerts on both dashboards so a refill isn't missed.
+  - Once real paying volume makes manual refills annoying, auto top-up is defensible (per-user
+    spend is already capped by credits).
 - [ ] Photographic recipe hero image. Recipes now carry `icon` + `icon_url` (curated pixel key
   or a generated pixel icon, picked in `recipe-form` → `recipe-icon-picker`; generation costs
   3 AI credits, curated picks are free). Still open: an optional full-bleed
