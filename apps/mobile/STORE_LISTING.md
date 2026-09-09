@@ -95,7 +95,10 @@ Every AI action - asking the crew, scanning a receipt or your fridge, generating
 - ThatFridge Pro Monthly: auto-renews monthly after the free trial.
 - ThatFridge Pro Yearly: auto-renews yearly after the free trial, save vs. monthly.
 
-Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your Apple ID account settings. See our Terms and Privacy Policy at thatfridge.com.
+Payment is charged to your Apple ID account at confirmation of purchase. Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your Apple ID account settings.
+
+Terms of Use (EULA): https://thatfridge.com/terms/
+Privacy Policy: https://thatfridge.com/privacy/
 
 Less guessing. Less waste. Just open the app before you open the door.
 ```
