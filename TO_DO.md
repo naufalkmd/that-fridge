@@ -31,18 +31,24 @@ between here and launch.
      version — genuinely invisible to the reviewer independent of the client bug (see Resubmit).
   3. Account deletion already existed but sat as an unlabeled button — now under a clear
      "Account" section header.
-- [ ] **New build** — pure JS fix, same `version` 1.3.0 (no native change, no version bump).
-  Trigger `testflight.yml` manually from the Actions tab (`workflow_dispatch`), not a tag push,
-  since the marketing version isn't changing.
-  - Smoke-test after: sign in as `keira@thatfridge.test`, Profile → Subscription → View plans
-    opens the real paywall with all 5 products priced correctly.
+- [x] **New build** — triggered 2026-09-15 via `workflow_dispatch` (run `34945809803`),
+  succeeded in 12m11s, auto-submitted to TestFlight. Same `version` 1.3.0 (pure JS fix, no
+  native change, no version bump).
+  - [ ] Smoke-test once Apple finishes processing (~15-30 min after submit): sign in as
+    `keira@thatfridge.test`, Profile → Subscription → View plans opens the real paywall with
+    all 5 products priced correctly.
 - [x] Screenshots uploaded (2026-09-08).
+- [ ] **Paid Apps Agreement** — confirm it's genuinely **Active** in ASC → Business. The
+  rejection calls this out explicitly: paid IAPs don't function at all without it, regardless
+  of any code fix. Can't be checked from the repo — verify in ASC before resubmitting.
+- [ ] **Screen recording (physical device, required by the rejection itself)** — record: sign in
+  with the demo account (or create a new one) → Profile → Account → Delete account → confirm
+  twice through to completion. Can't be done from here — needs an actual device in hand.
 - [ ] **Resubmit** — in ASC pick the new build, **attach all 5 IAPs (2 subscriptions + 3 credit
   packs) to this version and submit them for review together with it** — this is the step that
   was actually missing and caused the 2.1(b) rejection. Reply to the review thread (Resolution
-  Center) with the draft below; for 5.1.1(v), attach a screen recording of the full
-  delete-account flow (sign in as demo → Profile → Account → Delete account → confirm twice) in
-  the Notes field.
+  Center) with the draft below, attach the screen recording above in App Review Information →
+  Notes (not in the reply text itself).
 
   <details>
   <summary>Draft reply — Resolution Center (submission 60752a52-3b30-446c-b4ec-0d2a54df3d34, v1.3.0/18)</summary>
