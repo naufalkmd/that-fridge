@@ -38,9 +38,7 @@ between here and launch.
     `keira@thatfridge.test`, Profile → Subscription → View plans opens the real paywall with
     all 5 products priced correctly.
 - [x] Screenshots uploaded (2026-09-08).
-- [ ] **Paid Apps Agreement** — confirm it's genuinely **Active** in ASC → Business. The
-  rejection calls this out explicitly: paid IAPs don't function at all without it, regardless
-  of any code fix. Can't be checked from the repo — verify in ASC before resubmitting.
+- [x] **Paid Apps Agreement** — confirmed Active in ASC → Business (2026-09-15).
 - [x] **Screen recording** — done: https://youtube.com/shorts/-mr_eJnX5xE (Unlisted/Shorts,
   demo-account delete-account flow). Paste into ASC → App Review Information → Notes.
 - [ ] **Resubmit** — in ASC pick the new build, **attach all 5 IAPs (2 subscriptions + 3 credit
