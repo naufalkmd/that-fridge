@@ -1,26 +1,18 @@
 # ThatFridge — TO DO (iOS launch + RevenueCat Shipaton 2026)
 
 **Goal:** ship ThatFridge to the **Apple App Store**, live and approved. iOS only. Native Expo /
-React Native — no Capacitor, no WebView. This launch is also our **RevenueCat Shipaton 2026**
-entry.
+React Native — no Capacitor, no WebView. Also our **RevenueCat Shipaton 2026** entry.
 
-**Target markets:** Malaysia at launch (plus ~140 other storefronts); South Korea is a
-post-approval fast-follow (see Deferred). API hosted in Singapore; v1 app UI English-only.
+**Target markets:** Malaysia at launch (+~140 storefronts); South Korea is a post-approval
+fast-follow (see Deferred). API hosted in Singapore; v1 app UI is English-only.
 
-**Hard deadline: Sep 30, 2026, 11:45 pm PDT.** The app must be **fully published and live**
-(Apple review passed), not just submitted — review takes days, so submit ~2 weeks early.
+**Hard deadline: Sep 30, 2026, 11:45pm PDT.** The app must be **fully published and live**
+(review passed), not just submitted — review takes days, so submit ~2 weeks early.
 
-**Where we are (2026-09-08):** backend, RevenueCat, and the mobile app are functionally complete
-and live. Onboarding built + OTA'd; Google Sign-In in the native build. AI usage moved from
-weekly Pro caps to a **credit model** (see "AI credits") — backend deployed, mobile in the
-1.3.0 build. Paywall reworded to the credit model and **published (rev 36)**. RevenueCat AICR
-virtual currency + the 3 consumable products + `credits` offering are wired via API; the ASC
-consumable IAPs + price sync still need finishing (checklist in "AI credits"). Screenshots
-uploaded; App Privacy / review notes / `app-review.pdf` updated for the credit model.
-**`v1.3.0` submission binary** tagged 2026-09-08 → EAS built + auto-submitted to TestFlight.
-What's left: smoke-test the 1.3.0 binary, verify on-device prices, attach the IAPs to the
-version and submit for review. **v1 ships an English-only listing;** Korea is a post-approval
-fast-follow.
+**Where we are (2026-09-15):** app is feature-complete — backend, RevenueCat, mobile all live.
+`v1.3.0 (18)` was reviewed 2026-09-11 and **rejected** (Guideline 2.1(b) + 5.1.1(v)); both root
+causes are fixed in code. What's left is a new build + resubmit (below) — that's the only thing
+between here and launch.
 
 ---
 
@@ -30,31 +22,27 @@ fast-follow.
 
 **App Store**
 
-- [x] **`v1.3.0` (18) submitted** — reviewed 2026-09-11, **Rejected**: Guideline 2.1(b)
-  (couldn't locate the IAPs) + Guideline 5.1.1(v) (no account deletion found). Root causes:
-  1. Client bug — the demo/review account (`keira@thatfridge.test`) was hardcoded Pro on the
-     client, which suppressed every paywall entry point. **Fixed** (commit `7e775ed`):
-     Profile → Subscription now shows "View plans" for demo accounts, force-opening the real
-     paywall via `/paywall?force=1` regardless of entitlement.
-  2. **All 5 App Store IAPs are stuck at "Ready to Submit" in ASC** — confirmed via RevenueCat
-     API, `store_status: READY_TO_SUBMIT` on `thatfridge_pro_monthly`, `thatfridge_pro_yearly`,
-     `credits_100`, `credits_500`, `credits_1500`. They were never attached to a submitted
-     version, so Apple genuinely could not see them — independent of the client bug. This is
-     the step below that was already unfinished before the rejection.
-  3. Account deletion already existed (`DELETE /api/me`, shipped since `0fe49e6`) — reviewer
-     likely missed it because it sat as an unlabeled button below Settings. **Fixed**: now
-     under an explicit "Account" section header.
-- [ ] **New build** — pure JS fix, same `version` 1.3.0 (no native change, no version bump per
-  `RELEASE.md`). Trigger `testflight.yml` manually from the Actions tab (`workflow_dispatch`)
-  rather than a tag push, since the marketing version isn't changing.
-  - After it processes: smoke-test — sign in as `keira@thatfridge.test`, Profile → Subscription
-    → View plans opens the real paywall with all 5 products priced correctly.
-- [x] **Screenshots** — uploaded to App Store Connect (2026-09-08).
+- [x] `v1.3.0 (18)` rejected 2026-09-11 — Guideline 2.1(b) (couldn't locate the IAPs) +
+  5.1.1(v) (no account deletion found). Both fixed (`7e775ed`, `d639fd1`):
+  1. The demo/review account (`keira@thatfridge.test`) was hardcoded Pro on the client, which
+     hid every paywall entry point — Profile → Subscription now has a "View plans" button that
+     force-opens the real paywall regardless of entitlement.
+  2. All 5 App Store IAPs were stuck at "Ready to Submit" in ASC, never attached to a submitted
+     version — genuinely invisible to the reviewer independent of the client bug (see Resubmit).
+  3. Account deletion already existed but sat as an unlabeled button — now under a clear
+     "Account" section header.
+- [ ] **New build** — pure JS fix, same `version` 1.3.0 (no native change, no version bump).
+  Trigger `testflight.yml` manually from the Actions tab (`workflow_dispatch`), not a tag push,
+  since the marketing version isn't changing.
+  - Smoke-test after: sign in as `keira@thatfridge.test`, Profile → Subscription → View plans
+    opens the real paywall with all 5 products priced correctly.
+- [x] Screenshots uploaded (2026-09-08).
 - [ ] **Resubmit** — in ASC pick the new build, **attach all 5 IAPs (2 subscriptions + 3 credit
   packs) to this version and submit them for review together with it** — this is the step that
-  was missing and caused the 2.1(b) rejection. Reply to the review thread (Resolution Center)
-  with the draft below; for 5.1.1(v), attach a screen recording of the full delete-account flow
-  (sign in as demo → Profile → Account → Delete account → confirm twice) in the Notes field.
+  was actually missing and caused the 2.1(b) rejection. Reply to the review thread (Resolution
+  Center) with the draft below; for 5.1.1(v), attach a screen recording of the full
+  delete-account flow (sign in as demo → Profile → Account → Delete account → confirm twice) in
+  the Notes field.
 
   <details>
   <summary>Draft reply — Resolution Center (submission 60752a52-3b30-446c-b4ec-0d2a54df3d34, v1.3.0/18)</summary>
@@ -112,78 +100,54 @@ fast-follow.
 
 ### Deferred to post-launch (don't work on these before Sep 30)
 
-- [ ] **Korea launch** — metadata-only fast-follow, no binary re-review. There is no PIPA
-  "pass/fail" or pre-approval to clear; the real gates are Apple review wanting a proper
-  localized policy, and your own exposure to Korean users. A disclaimer is not a substitute for
-  compliance. To turn KR back on:
-  - **Korean privacy policy** at `/privacy/ko/` (currently 404) — the one genuine blocker, and
-    cheap: ~$200–350 for a KR legal translator, or ~$300–600 for a PIPA-compliance consultant
-    who *adapts* it to PIPA norms rather than translating literally (you get the compliance
-    check too). Keep an "English version prevails" clause.
-  - **Stricter KR consent** — a *separate, explicit, unticked* cross-border checkbox on **every**
-    sign-in path including Apple/Google, gated on KR locale. Today's mechanism (email checkbox +
-    a notice/affirmative-action before social, recorded as `data_transfer_consented_at`) covers
-    MY/UK/CH but isn't PIPA gold-standard.
-  - Per-storefront prices: KR `₩3,900` / `₩25,000`. (MY `RM12.90` / `RM89` can go in at the
-    main launch.)
-  - Korean listing metadata (subtitle, description, keywords) + `ko` screenshot re-render —
-    captions drafted in `SCREENSHOTS.md` §6.
-  - Re-check the KR storefront in ASC → Availability (unchecked 2026-09-07).
-
-- [ ] **Getting a real translation** (the KR policy above; later the KR/MS app UI):
-  - Short legal docs: AI draft → *paid native review*, not translate-from-scratch.
-    Fiverr / Upwork $30–80 for a review pass; ProZ.com for actual professional legal
-    translators. Always keep "English version prevails".
-  - The operator is Malaysian — the `/privacy/pdpa/` Malay notice may just need your own
-    careful read.
-  - App UI strings (`react-i18next` JSON): a localization platform — Crowdin / Lokalise
-    (vetted translator marketplaces) or Weblate (self-host). ~$150–300 for a full KO set.
-  - Malaysia's PDP dept (pdp.gov.my) and Korea's PIPC (pipc.go.kr) publish model privacy
-    notices in the local language — adapting their structure often beats translating ours.
-
-- [ ] Onboarding polish — personalized payoff copy from the stored `preferences` tags + a
-  peak-end "you're all set" beat, and contextual one-shot coach-marks (crew tabs in `/eat`,
-  drag-to-reorder in Inventory, the Kitchen Score). Both wait on `app:onboarding-funnel` data.
-  See `apps/mobile/ONBOARDING.md` → "Still open". The rest of onboarding is shipped.
-- [ ] Personal-goal feature, done right (the old Goal screen was removed for v1 — orphan,
-  confusing metrics, dishonest weekly/monthly period). If rebuilt: one intuitive metric
-  ("items rescued" = used before it spoiled), a live card on Home, an honest timeframe, maybe a
-  badge. Backend `user_goals` table + `UserGoalController` + core `progress.ts` goal code are
-  still there, unused by the client.
-- [x] Pro AI spend ceiling — **done via the credit system** (`50f4034` / `c5640bf`, 2026-09-08).
-  Pro is capped at 400 credits/month (+800 rollover); every model call is metered per action,
-  so per-user model spend is now bounded by construction. Pack buyers can spend more, but they
-  paid for it. What's left is only wallet hygiene:
-  - [x] Pre-loaded **$10 on OpenRouter + $10 on fal.ai** (2026-09-09). Auto-recharge stays
-    **OFF** on both — a drained balance is a degraded app, but auto top-up removes the only
-    hard ceiling and lets a scripted abuser or a bug bill the card with no cap. Refill
-    manually as real usage grows.
-  - [ ] Turn on the low-balance email alerts on both dashboards so a refill isn't missed.
-  - Once real paying volume makes manual refills annoying, auto top-up is defensible (per-user
-    spend is already capped by credits).
-- [ ] Photographic recipe hero image. Recipes now carry `icon` + `icon_url` (curated pixel key
-  or a generated pixel icon, picked in `recipe-form` → `recipe-icon-picker`; generation costs
-  3 AI credits, curated picks are free). Still open: an optional full-bleed
-  photo (`image_url` on `recipes`, `flux/schnell` no-rembg ~$0.003) rendered large on the card +
-  detail. Web parity for the icon picker is also unbuilt
-  (legacy `apps/web` — fold into the web retirement below).
-- [ ] **Flip media storage to Cloudflare R2** when `df -h` on the VPS shows the droplet disk
-  past ~50%, or before ~500 active users. All uploads already route through
-  `config('filesystems.media_disk')` (default `public`); the switch is env vars + a one-off
-  file copy + URL rewrite. Full runbook: `backend/DEPLOY.md` §13a. Cost: ~$0 under R2's 10 GB
-  free tier, then ~$2–5/mo.
-- [ ] Sentry DSN (crash monitoring is scaffolded, currently a no-op).
+- [ ] **Korea launch** — metadata-only fast-follow, no binary re-review. Real blocker: a
+  **Korean privacy policy** at `/privacy/ko/` (currently 404) — ~$200–350 for a KR legal
+  translator, or ~$300–600 for a PIPA-compliance consultant who adapts rather than translates
+  (keep an "English version prevails" clause). Also needs a *separate, unticked* cross-border
+  consent checkbox on every sign-in path gated on KR locale (today's mechanism covers MY/UK/CH
+  but isn't PIPA gold-standard), KR pricing (₩3,900/₩25,000), KR listing metadata + screenshots
+  (captions in `SCREENSHOTS.md` §6), and re-checking the KR storefront in ASC → Availability.
+- [ ] **Translation sourcing** (KR policy above, later a KR/MS app UI): paid native review beats
+  translate-from-scratch — Fiverr/Upwork $30–80 for a review pass, ProZ.com for real legal
+  translators. App UI strings (once i18n is wired) via Crowdin/Lokalise/Weblate, ~$150–300 for a
+  full KO set. Malaysia's pdp.gov.my / Korea's pipc.go.kr publish model privacy notices worth
+  adapting rather than translating from ours.
+- [ ] Onboarding polish — personalized payoff copy from stored `preferences` tags + a peak-end
+  "you're all set" beat, and contextual coach-marks (crew tabs in `/eat`, drag-to-reorder in
+  Inventory, Kitchen Score). Waits on `app:onboarding-funnel` data. See
+  `apps/mobile/ONBOARDING.md` → "Still open" — rest of onboarding is shipped.
+- [ ] Personal-goal feature, done right (old Goal screen removed for v1 — confusing metrics,
+  dishonest weekly/monthly period). If rebuilt: one intuitive metric ("items rescued"), a live
+  Home card, an honest timeframe. Backend `user_goals`/`UserGoalController`/`progress.ts` still
+  exist, unused by the client.
+- [x] Pro AI spend ceiling — done via the credit system (2026-09-08): every model call is
+  metered per action, so per-user spend is bounded by construction. $10 pre-loaded on
+  OpenRouter + fal.ai each, auto-recharge **OFF** (caps total exposure at the pre-loaded
+  balance — refill manually as usage grows). Open: turn on low-balance email alerts on both
+  dashboards so a refill isn't missed.
+- [ ] Photographic recipe hero image. Recipes carry `icon`/`icon_url` (curated or generated);
+  still open is an optional full-bleed photo (`image_url`, `flux/schnell` no-rembg ~$0.003/img)
+  on the card + detail. Web parity for the icon picker also unbuilt.
+- [ ] **Flip media storage to Cloudflare R2** when the VPS disk hits ~50% or before ~500 active
+  users. Uploads already route through `config('filesystems.media_disk')` (default `public`) —
+  the switch is env vars + a one-off file copy + URL rewrite. Runbook: `backend/DEPLOY.md` §13a.
+  ~$0 under R2's 10GB free tier, then ~$2–5/mo.
+- [ ] Sentry DSN (crash monitoring scaffolded, currently a no-op).
 - [ ] `apps/web/lib/thatfridge` → `packages/core` extraction (most already moved).
-- [ ] `react-i18next` + `expo-localization` — the i18n plumbing so a Korean (or Malay) UI ships
-  as an OTA, no rebuild. Getting the actual strings translated is the "real translation" item above.
+- [ ] `react-i18next` + `expo-localization` — i18n plumbing so a Korean/Malay UI ships as an
+  OTA, no rebuild. Getting strings translated is the sourcing item above.
 - [ ] Android: `eas build -p android`, Play Console, Data Safety form, screenshots, submit.
   Decide personal vs. organization account type first.
 - [ ] Web deployment: `expo export -p web`, wide-viewport (≥900px) layouts, retire legacy
   `apps/web`.
 - [ ] PixelMix font: get written confirmation the desktop EULA covers app/web embedding (email
-  font@andrewtyler.net), and drop the unused unofficial `PixelMix-Bold.ttf`.
+  font@andrewtyler.net), drop the unused unofficial `PixelMix-Bold.ttf`.
 - [ ] Privacy Policy §11 promises material changes get "surfaced in the app" — nothing does
   that yet.
+- [ ] **Recipe attachments still on the public media disk** (unlike receipts/photos — see
+  Security below — these are actively displayed, so privatizing needs a real data-model change:
+  store a disk path instead of a baked URL, regenerate the signed URL fresh on every read. No
+  mobile change needed. Worth doing carefully, not last-minute.
 
 ---
 
@@ -203,50 +167,34 @@ fast-follow.
 
 **Fixed recurring cost: ≈$30.72/mo ($368.66/yr)**, regardless of user count. Apple's commission
 is 15% once the Small Business Program application (submitted 2026-09-05) is approved, 30%
-until then. **US withholding:** 30% on US-storefront sales only (Malaysian individual, no US
-tax treaty, W-8BEN filed) — shouldn't bite much given MY/KR are the target markets, but stacks
-with Apple's cut on whatever US sales do happen.
+until then. US withholding is 30% on US-storefront sales only (Malaysian individual, W-8BEN
+filed) — shouldn't bite much given MY/KR are the target markets.
 
 ### Business model — bottom line
 
-Break-even is **≈20 paying subscribers** at 15% commission, **≈25** at 30% — a low, genuinely
-achievable bar at this infra scale. Blended contribution margin per subscriber is
-**≈$1.24-1.56/mo** (65/35 annual/monthly mix assumption) after Apple's cut and AI cost. AI cost
-itself is trivial (~$0.15-0.40/mo per active Pro subscriber, ~$0.10/mo per free user) — the
-real risk was ever unbounded AI usage, now closed by per-action credit metering (see "AI credits").
-Full reasoning, psychology notes, and benchmark-vs-confirmed figure tagging: see git history
-(`3a. Business & pricing analysis`, commit history 2026-09-05) if this needs revisiting with
-real post-launch data.
-
-**Not captured in this model:** paid user acquisition (growth is organic/#BuildInPublic, so
-acquisition cost is ≈$0 but also caps growth speed), your own time, refunds.
+Break-even is **≈20 paying subscribers** at 15% commission, **≈25** at 30%. Blended contribution
+margin per subscriber is **≈$1.24–1.56/mo** (65/35 annual/monthly mix) after Apple's cut and AI
+cost (~$0.15–0.40/mo per active Pro subscriber, ~$0.10/mo per free user — bounded by the credit
+system, see below). Not captured: paid acquisition (growth is organic/#BuildInPublic), own time,
+refunds. Full reasoning: git history (`3a. Business & pricing analysis`, 2026-09-05).
 
 ### RevenueCat / subscriptions
 
 Two products, **permanent IDs — never reusable, don't typo**: `thatfridge_pro_monthly`
-($2.99/mo) and `thatfridge_pro_yearly` ($19.99/yr, "1 Year Upfront"), both with a Free / 1-week
-intro offer, both "Ready to Submit" and attached to the version. Pro grants a **400-credit
-monthly bundle** (vs 50 free), rolls over up to 800, and unlocks **hosting** shared fridges
-(see "AI credits" below — metering replaced the old weekly caps 2026-09-08).
-Paywall = the RevenueCat dashboard paywall (`RevenueCatUI.Paywall`). Sandbox purchase + restore
-verified 2026-09-06. ASC API key + vendor number `94767188` set in RevenueCat.
+($2.99/mo) and `thatfridge_pro_yearly` ($19.99/yr), both with a 1-week free intro offer, both
+attached to the version. Pro grants a **400-credit monthly bundle** (vs 50 free), rolls over up
+to 800, and unlocks hosting shared fridges (see AI credits below). Paywall = the RevenueCat
+dashboard paywall (`RevenueCatUI.Paywall`) — editor at
+`app.revenuecat.com/projects/c6c4cdf4/paywalls/pwec1165df9a414243/builder`, published revision
+36 (credit-model copy, live in the app). ASC API key + vendor number `94767188` set in
+RevenueCat.
 
-**Paywall editor** — project `projc6c4cdf4`, paywall `pwec1165df9a414243`, offering
-`ofrngb7a8453e53`. Editor: `app.revenuecat.com/projects/c6c4cdf4/paywalls/pwec1165df9a414243/builder`.
-Edited 2026-09-08 to the **credit model** (rows = canonical content below; "50 / 400 monthly
-AI credits", rollover, top-up, own/host a fridge). **Published 2026-09-08, revision 36** —
-live in the app. Still to verify / tidy: (1) on-device the price should read $2.99 / $19.99
-via StoreKit (the RC dashboard preview still shows Test Store $9.99/$79.99 until the ASC
-products sync post-submission); (2) confirm the 7-day intro offer shows on-device; (3) after
-the ASC products sync, detach the RC **Test Store** products (`monthly`, `yearly`) from the
-Monthly/Yearly packages so the dashboard matches; (4) minor: Terms/Privacy/Restore spacing +
-placeholder feature icons in the visual builder.
-
-#### Canonical paywall content (rebuild reference)
+<details>
+<summary>Canonical paywall content (rebuild reference)</summary>
 
 - Headline: **Get more out of your fridge** (turquoise `#26c6da`, ~22pt bold, centered)
 - Subtitle: *Know before you open the door.*
-- Comparison card — header row `· / Free / Pro` (Pro header in accent), then:
+- Comparison card — header row `· / Free / Pro`, then:
 
   | Feature | Free | Pro |
   | --- | --- | --- |
@@ -257,15 +205,14 @@ placeholder feature icons in the visual builder.
   | Own more than one fridge | – | ✓ |
   | Host a shared fridge for your household | – | ✓ |
 
-- Footer line under the table: *Every AI action spends credits. Free gives you 50 a month; Pro
-  gives you 400, rolls the unused ones over, and unlocks hosting shared fridges.*
+- Footer: *Every AI action spends credits. Free gives you 50 a month; Pro gives you 400, rolls
+  the unused ones over, and unlocks hosting shared fridges.*
 - Rules: sentence case, **never the word "unlimited"**, lead with the credit number not a
   weekly cap.
 - Trial line: *7-day free trial, then {{ product.price_per_period }}. Renews automatically until
   you cancel.* CTA: **Get Pro access**.
 
-#### `app_context` used with the RC Paywall AI editor (`edit-paywall-ai`)
-
+`app_context` for the RC Paywall AI editor (`edit-paywall-ai`):
 ```
 app_identity: name "ThatFridge", category "Food & Drink / kitchen inventory",
   desc "Track what's in your fridge and pantry, get pinged before food goes bad, see what you
@@ -282,15 +229,13 @@ premium highlights: 400 AI credits a month vs 50 (credits pay for crew chat, rec
   fridge for the household.
 visual: primary #26c6da, dark charcoal bg + cyan accent, bold sans headline / regular sans body.
 ```
+</details>
 
 ### AI credits (metered, server-authoritative)
 
-Shipped 2026-09-08 (`50f4034` backend + deploy, `c5640bf` mobile). Every AI action spends
-credits from `users.ai_credits`; `App\Support\ChatQuota` and the client `chatQuota.ts` are
-**deleted**. The backend ledger (`ai_credit_ledger`, unique on `reason`+`ref`) is authoritative
-for spend; RevenueCat Virtual Currency (`AICR`) is a best-effort mirror for display / Shipaton
-showcase (`RevenueCatVirtualCurrency::adjust`, no-op without `REVENUECAT_SECRET_API_KEY` +
-`REVENUECAT_PROJECT_ID`).
+Every AI action spends credits from `users.ai_credits`; `ChatQuota` is deleted. The backend
+ledger (`ai_credit_ledger`, unique on `reason`+`ref`) is authoritative; RevenueCat Virtual
+Currency (`AICR`) is a best-effort display mirror.
 
 | Action | Cost | Notes (`App\Support\CreditCost`) |
 | --- | --- | --- |
@@ -300,246 +245,135 @@ showcase (`RevenueCatVirtualCurrency::adjust`, no-op without `REVENUECAT_SECRET_
 | Receipt scan | 3 | refunded on hard failure |
 | Fridge-photo scan | 3 | refunded on hard failure |
 | Add-item auto-fill | 1 | 402 → top-up prompt on the draft card |
-| Memory extraction | 0 | tiny call right after a chat that already paid; route-throttled |
-| Home crew tip cards (`compact`) | 0 | not charged; cached per user+agent per day (`compact_insight:` cache key) |
-| Quick Chat with a photo | 3 | `CHAT_IMAGE` — vision is ~3-5× a text chat; refund matches on failure |
+| Memory extraction | 0 | tiny call right after a chat that already paid |
+| Home crew tip cards | 0 | cached per user+agent per day |
+| Quick Chat with a photo | 3 | vision is ~3-5× a text chat; refund matches on failure |
 
-Grants: free accounts `CREDITS_FREE_MONTHLY` (50) topped up to that floor monthly; Pro
-`credits.pro_monthly` (400) added each month, rolling over up to `pro_rollover_cap` (800).
+Grants: free accounts topped up to 50/month; Pro gets 400/month, rolling over up to 800.
 `app:grant-monthly-credits` runs `monthlyOn(1, 00:15)`; the RevenueCat webhook also grants the
-Pro bundle on a paid `INITIAL_PURCHASE` / `RENEWAL` and pack credits on a consumable
-`NON_RENEWING_PURCHASE` (`credits.packs`: `credits_100/500/1500`). Idempotent via the ledger's
-`reason`+`ref` unique key (event id / `monthly:YYYY-MM`). Demo account: 9999.
+Pro bundle on a paid `INITIAL_PURCHASE`/`RENEWAL` and pack credits on a consumable
+`NON_RENEWING_PURCHASE` (`credits.packs`: `credits_100/500/1500`) — idempotent via the ledger's
+`reason`+`ref` key.
 
-**Trial farming guard** (`2026_09_08_000008`): a `period_type: TRIAL` `INITIAL_PURCHASE` grants
-**nothing** — the trial user keeps their free 50 — and sets `users.pro_trial_until`. The 400
-bundle lands only when it converts to a paid `RENEWAL` (`period_type: NORMAL`), which clears
-the flag. `app:grant-monthly-credits` also treats a user with a future `pro_trial_until` as
-free. Without this, start trial → 400 credits → cancel day 6 → $0, repeatable per Apple ID.
+**Trial-farming guard**: a `period_type: TRIAL` `INITIAL_PURCHASE` grants **nothing** (trial
+user keeps their free 50) and sets `pro_trial_until`; the 400 bundle lands only on a paid
+`RENEWAL`. Without this: start trial → 400 credits → cancel day 6 → $0, repeatable per Apple ID.
 
-**Tool-loop cost guard**: `import_recipe_from_link` draws on the same `MAX_FETCHES = 2` budget
-as `fetch_url` (it makes its own web fetch + model call), so one 3-credit chat turn can't
-trigger ~8 uncapped fetches.
-
-**Signup cap** (`AppServiceProvider` `register` limiter): 6/min + **20/day per IP** on
-`/register`, since each account carries free credits. Rotating IPs still get around it —
-full **email verification** on signup is the real fix but it needs a mobile verify screen,
-so it's a post-launch fast-follow, not a pre-Sep-30 change to the release-critical signup path.
-
-Still open (see the analysis): email verification (above); dropping the rollover cap /
-monthly grant once real usage data exists. The hard backstop is the prepaid OpenRouter +
-fal.ai wallets with **auto-recharge OFF** — total loss is capped at the pre-loaded balance.
-
-Barcode scan and manual add never touch credits. Every AI route keeps its floor-level
-`throttle` as hammering protection. `InsufficientCreditsException` renders a 402
-`{error: "insufficient_credits", balance, needed}`; the client routes every 402 to `/credits`.
+**Signup cap**: 6/min + 20/day per IP on `/register` (each account carries free credits) — full
+email verification is the real fix, deferred (needs a mobile verify screen).
 
 **Host a shared fridge** stays a hard Pro gate (not credits) — `FridgeJoinRequestController`
-`invite()` / request-to-join / `attachMember()` all require `$fridge->user->isPro()`. Being
-*invited* is free (the acquisition loop); already-joined members keep access if the owner drops
-to free. Mobile: `fridge/[id]` upsell card; `find-friend` "Not shared" (`FriendFridgeSummary.shareable`).
+requires `$fridge->user->isPro()`. Being invited is free; already-joined members keep access if
+the owner drops to free.
 
-**Manual setup still owed** (code is deployed and degrades gracefully until these are done —
-credits work off the backend ledger; only the RC mirror + real pack purchases wait on this):
-
-- [x] RevenueCat → Virtual Currency `AICR` created (via API 2026-09-08 — not shown in the
-      dashboard nav yet, but live: `list-virtual-currencies` returns it).
-- [x] RevenueCat → 3 consumable products (`credits_100/500/1500`) + a **`credits`** offering
-      (`ofrngd3a38a3ab9`, not current) with one custom package per pack, created via API. The
-      mobile `/credits` screen reads `getOfferings().all["credits"]`.
-- [ ] prod → `2026_09_08_000008_add_pro_trial_until_to_users` deploys with the trial-guard
-      commit; `deploy.sh` runs `migrate`, just confirm.
-- [x] prod → migration `2026_09_08_000007` confirmed run; all 7 users backfilled; demo
-      accounts set to 9999; `config:cache` done.
-- [ ] App Store Connect → 3 consumable IAPs `credits_100` / `credits_500` / `credits_1500`
-      priced + "Ready to Submit" (done), then **submitted with a build** — until then RC shows
-      "Could not check" and no `indicative_price` (ASC only exposes IAP metadata post-submission).
-- [ ] RevenueCat webhook → confirm it's not filtering out `NON_RENEWING_PURCHASE` (the
-      consumable-purchase event the credit grant keys off).
-- [ ] prod `.env` → `REVENUECAT_SECRET_API_KEY=…` for the credit→VC mirror (project id defaults
-      to `projc6c4cdf4`). Optional; the ledger is authoritative without it. Then `config:cache`.
-- [ ] After submission: detach the two Test Store products (`monthly`, `yearly`) from the
-      Monthly/Yearly packages so the paywall serves only `thatfridge_pro_*`, then publish the
-      paywall draft (already reworded for credits — see below).
+**Manual setup still owed:**
+- [x] RevenueCat Virtual Currency `AICR`, 3 consumable products, `credits` offering — all
+  created via API.
+- [x] Trial-guard migration + webhook consumable-purchase handling — confirmed via passing
+  tests (`RevenueCatWebhookControllerTest`), and every deploy runs `migrate --force`.
+- [ ] App Store Connect: the 3 consumable IAPs are "Ready to Submit" but not yet submitted with
+  a build — tracked as the same item as the App Store "Resubmit" step above (all 5 IAPs go
+  together).
+- [ ] prod `.env` → `REVENUECAT_SECRET_API_KEY=…` for the credit→VC display mirror. Optional —
+  the ledger is authoritative without it.
+- [ ] After submission: detach the two RC Test Store products (`monthly`, `yearly`) from the
+  Monthly/Yearly packages so the paywall serves only the real `thatfridge_pro_*` products.
 
 ### Shared icon pack (curated from user generations)
 
-Generated icons can be hand-picked into an app-wide pack shown in both icon pickers
-("MORE ICONS" section). Workflow, all on the prod box as `deploy`:
-`php artisan app:generated-icons --html=/tmp/icons.html` (scp it down / open in a browser to
-actually see them) → `php artisan app:promote-icon <id> --label="Tomato"` → it's live for
-everyone. `app:demote-icon <shared_id>` to pull one. Promotion **copies** the image to
-`shared-icons/` with no user_id, so it survives the generator deleting their icon or account.
-Legal cover: `apps/legal/terms` §4 (licence to include generated images in the shared set,
-no attribution) + `privacy` §3/§5 (review + retention). Only promote generic, non-personal
-food icons.
+Generated icons can be hand-picked into an app-wide pack shown in both icon pickers. On the prod
+box: `php artisan app:generated-icons --html=/tmp/icons.html` (review) →
+`php artisan app:promote-icon <id> --label="Tomato"` (live for everyone) →
+`app:demote-icon <shared_id>` to pull one. Promotion **copies** the image to `shared-icons/`
+with no `user_id`, so it survives the generator deleting their icon or account. Legal cover:
+`apps/legal/terms` §4 + `privacy` §3/§5. Only promote generic, non-personal food icons.
 
 ### Quick Chat tools (`AgentToolbox`)
 
-Agents can call kitchen tools on top of `fetch_url` browsing. 27 tools (Tier 1 in `f0fcc7b`,
-Tier 2/3 + editing/batch/memory batch added 2026-09-08):
+27 tools on top of `fetch_url` browsing:
 
 - **Reads:** `list_items`, `list_notes`, `list_shopping`, `list_recipes`, `list_fridges`,
   `get_recipe`, `get_kitchen_score`, `list_facts`
-- **Writes (direct, reversible):** `add_item`, `bulk_add_items`, `update_item` (name / qty /
-  opened / location / category / expiry / shop_url), `move_item`, `mark_item_used`,
-  `add_to_shopping`, `check_off_shopping`, `remove_from_shopping`, `add_note`, `update_note`,
-  `remove_note`, `remember_fact`, `forget_fact`, `save_recipe`, `mark_recipe_made`,
-  `import_recipe_from_link`
-- **Deletes (confirm-first — `confirm:false` preview, prompt forbids self-confirming):**
-  `remove_item`, `clear_expired_items`, `delete_recipe` (own recipes only)
+- **Writes (direct, reversible):** `add_item`, `bulk_add_items`, `update_item`, `move_item`,
+  `mark_item_used`, `add_to_shopping`, `check_off_shopping`, `remove_from_shopping`, `add_note`,
+  `update_note`, `remove_note`, `remember_fact`, `forget_fact`, `save_recipe`,
+  `mark_recipe_made`, `import_recipe_from_link`
+- **Deletes (confirm-first):** `remove_item`, `clear_expired_items`, `delete_recipe` (own only)
 
-Loop bounded by `MAX_TOOL_ROUNDS = 5` + `MAX_TOOL_CALLS = 10` (fetch_url keeps its own
-`MAX_FETCHES = 2`). Client passes `fridge_id` (active scope); a `mutated: true` reply now
-refreshes inventory + notes + shopping (the flag doesn't say which changed). A tool exchange
-costs the 1-credit message + a best-effort `+2` surcharge (`chat_tools`, `spendUpTo` so it
-never hard-fails mid-reply). All agents get all tools; model stays Haiku 4.5.
+Loop bounded by `MAX_TOOL_ROUNDS = 5` + `MAX_TOOL_CALLS = 10` (`fetch_url` keeps its own
+`MAX_FETCHES = 2`). A tool exchange costs the 1-credit message + a best-effort `+2` surcharge
+(never hard-fails mid-reply). All agents get all tools; model stays Haiku 4.5.
 
-Notes / still open:
-- Buy links: `list_shopping` / `list_items` surface a stored `shop_url`; `add_to_shopping` +
-  `update_item` accept one (`cleanUrl` allows only plain http(s), not `javascript:`/`data:`);
-  `get_recipe` lists attachment URLs. These are displayed / opened in the user's browser,
-  never fetched server-side.
-- `add_item` / `save_recipe` guess icons from a **curated-10 keyword map** only (the full pack's
-  keywords live in a generated TS file); unknowns get `leftovers`. Post-launch: port the full
-  `guessFoodIcon` (copy `food-icon-manifest.json` + keyword data into the backend).
-- `save_recipe` skips the `meal_type`/`vibes`/`food_focus` "what to eat" tags (that needs an
-  extra model call that would make `AgentToolbox` depend on `AgentService` circularly). Tags
-  are advisory; re-saving from the app fills them in.
-- A confirm *card* in the UI (vs the text round-trip) is still deferred.
-- Still no tools for: recipe favourite/unfavourite, `suggest_recipes` (the real expiry-aware
-  ranker), user-defined categories, or a shopping→fridge "I bought everything" handoff. All
-  nice-to-have, none hit in week one.
-- Sonnet-on-tool-turns: 1-line change at `AgentService.php`'s `runWithTools`. Only do it if
-  Haiku fumbles the larger toolset in practice — the `+2` surcharge already makes the user pay.
+**Still open:** `add_item`/`save_recipe` icon-guessing only covers a curated-10 keyword map
+(port the full `guessFoodIcon` post-launch); `save_recipe` skips `meal_type`/`vibes`/
+`food_focus` tags (advisory, filled in if re-saved from the app); a confirm *card* in the UI
+(vs. text round-trip) is deferred; no tools yet for recipe favourite/unfavourite,
+`suggest_recipes`, user categories, or shopping→fridge handoff — nice-to-have, none hit in week
+one. Buy links (`shop_url`) are opened in-browser only, never fetched server-side.
 
 ### Data retention
 
-`app:prune-stale-data` runs daily (04:00, `routes/console.php`) and bounds the few unbounded
-tables + orphaned upload files: `analytics_events` >180d, `notification_events` (done >60d /
-any >180d), terminal `fridge_join_requests` >90d, and `photos/` + `receipts/` scan images +
-orphaned `icons/` files >7d. Not pruned: `chat_history` (user-visible — needs a "kept 12
-months" UI message first), and the user's real data (items, recipes, usage history, memory).
-`--dry-run` reports without deleting. Note: `photo_scans` / `receipts` / `receipt_line_items`
-tables are dead schema — the vision services store the file and return it inline, never
-writing a row.
+`app:prune-stale-data` runs daily (04:00): `analytics_events` >180d, `notification_events`
+(done >60d / any >180d), terminal `fridge_join_requests` >90d, `photos/`+`receipts/` scan images
++ orphaned `icons/`/`recipe-attachments/` files >7d. Not pruned: `chat_history` (needs a "kept
+12 months" UI message first), and real user data (items, recipes, usage history, memory).
+`--dry-run` reports without deleting. `photo_scans`/`receipts`/`receipt_line_items` tables are
+dead schema — the vision services store the file and return it inline, never writing a row.
 
-### Security review (2026-09-08)
+### Security
 
-Full backend pass. **Fixed this session:**
-- Password-reset code brute-force — 6-digit code now burns after 5 wrong attempts per email
-  (`RateLimiter` keyed on email), on top of the per-IP throttle.
-- SSRF via DNS rebinding in `WebContentService` — was validating the resolved IP once then
-  letting Guzzle re-resolve. Now resolves all A/AAAA records, rejects the URL if *any* is
-  private/reserved (incl. IPv6 loopback/ULA/link-local and IPv4-mapped `::ffff:`), pins the
-  connection to the validated IP (`CURLOPT_RESOLVE`), and walks redirects by hand re-validating
-  + re-pinning each hop.
-- Sanctum tokens were non-expiring → now 90 days (`SANCTUM_TOKEN_EXPIRATION_MINUTES`). App
-  relaunch handles a 401 by clearing the token and routing to sign-in; a mid-session expiry
-  (90-day continuous session) shows an error until relaunch — acceptable, rare.
-- Push-token hijack — `/push-tokens` now requires the `ExponentPushToken[...]` format (stops
-  claiming an arbitrary string; a leaked *real* token can still be re-homed — inherent to
-  Expo's model, `destroy` on sign-out is the mitigation).
-- `CreditCost::CHAT_IMAGE` + `/register` 20/day-per-IP cap (see "AI credits").
+Full passes done 2026-09-08 and 2026-09-15 (backend + mobile) — no unresolved High/Medium
+findings. Solid: OAuth verification (fails closed), policy-based authz with no IDOR outside the
+intentional recipe/profile openness (below), no SQLi, mass-assignment locked, no account
+enumeration, webhook `hash_equals` + event-id idempotency + stale-event ordering guard, credit
+ledger race-safe (`lockForUpdate`), Keychain-only token storage, server-side enforcement behind
+every client paywall/entitlement gate, a global mobile `AuthGuard` covering any future
+unauthenticated screen.
 
-**Verify on prod:** `APP_DEBUG=false`, `APP_ENV=production` (`.env.example` ships `true`/`local`
-— if prod inherited that, every 500 leaks a stack trace + env).
-
-**Also fixed (second pass):**
-- `POST /events` — anonymous callers can now only write the pre-sign-in funnel events
-  (`ANON_EVENT_PREFIXES`); batch cap 50→25, throttle 20→12/min.
-- `/recipes/attachments` — `throttle:20,1` added; `app:prune-stale-data` now sweeps
-  `recipe-attachments/` orphans (>7d, not referenced by any recipe).
-- Per-account login lockout — 5 wrong passwords per email → ~15 min lock (`RateLimiter`).
-- A user who blocked you now 404s their profile to you (you can still see people *you* blocked).
-- `DEPLOY.md` nginx block hardened: no PHP under `/storage/`, `server_tokens off`, HSTS +
-  nosniff, hide `X-Powered-By`; SSH root/password-auth off + `.env` chmod 600.
-
-**Open, lower priority (post-launch):**
-- Recipe / profile data is world-readable to any authed user (`RecipePolicy::view` = true;
-  `GET /recipes/{id}` IDOR-enumerable; `/users/{username}/profile` exposes owned-fridge names +
-  every custom recipe). Deliberate "no privacy toggle" design — consider a private flag.
+**Open, deliberately deferred (post-launch):**
+- Recipe/profile data is world-readable to any authed user (`RecipePolicy::view` = true;
+  `/users/{username}/profile` exposes owned-fridge names + custom recipes) — deliberate
+  "no privacy toggle" design; consider a private flag.
+- Recipe attachments still on the public media disk (see Deferred to post-launch above).
 - Image-gen (`/icons/generate`) has no content moderation on the prompt.
-- Account hygiene (not code): 2FA on GitHub / DigitalOcean / App Store Connect / RevenueCat /
-  registrar / recovery email; `gitleaks` scan of history; turn on Sentry DSN so attacks are
-  visible; verify DB backups are copied off-box.
-
-**Solid:** OAuth verification (sig/iss/aud/exp, fails closed); consistent policy-based authz
-(no IDOR found outside the intentional recipe/profile openness); no SQLi (Eloquent + bound
-`whereRaw`); mass-assignment locked (`#[Fillable]`, sensitive fields excluded); no account
-enumeration on login/forgot; Bearer auth (no CSRF); webhook `hash_equals` + event-id idempotency.
-
-### Security review (2026-09-15)
-
-Full backend + mobile pass (commit `d639fd1`). No High/Medium findings — credit ledger
-(`lockForUpdate` + transaction), RevenueCat webhook secret check, IDOR-scoped policies, token
-storage (Keychain-only, never logged), and server-side enforcement behind every client paywall
-gate all confirmed solid. **Fixed this session:**
-- Receipts/fridge-photo scans were on the public media disk (obscurity-only protection) despite
-  the client never even using their `file_url`. Moved to a new private disk
-  (`filesystems.private_media_disk`, signed URLs via Laravel's `local` disk `serve` support).
-- RevenueCat webhook trusted `expiration_at_ms` regardless of delivery order (not guaranteed) —
-  now tracks `revenuecat_last_event_ms` per user and ignores stale/out-of-order redeliveries.
-- Deleted `ReceiptController::confirm` / `PhotoController::confirm` — dead mock routes that never
-  wrote to the DB; real client flow bypasses them via `addManyItems`.
-- Mobile: added a global `AuthGuard` in the root layout (redirects to `/sign-in` whenever
-  status is `signedOut` outside the public-route allowlist) — every screen already degraded
-  gracefully with no guard of its own; this closes the gap for any future one that won't.
-
-**Open, deliberately deferred:**
-- **Recipe attachments** (`RecipeController::uploadAttachment`) are still on the public media
-  disk. Unlike receipts/photos, these *are* actively displayed (`recipe/[id].tsx`,
-  `recipe/attachment`), so privatizing them isn't a same-risk swap — it needs the recipe's
-  `attachments` JSON to store a disk path instead of a baked URL, with the signed URL
-  regenerated fresh on every read (`RecipeResource` or equivalent), so links don't expire on an
-  old recipe. No mobile change needed (still just a plain URL the client renders), but it's a
-  real data-model change worth doing carefully, not days before the deadline. Still filename-
-  obscurity protected in the meantime, same as before this pass.
+- Account hygiene (not code): 2FA on GitHub/DigitalOcean/ASC/RevenueCat/registrar/recovery
+  email; `gitleaks` scan of history; turn on the Sentry DSN; verify DB backups are off-box.
 
 ### Demo / reviewer account
 
 `keira@thatfridge.test` — pre-seeded shared fridge ("Home Fridge") with items across all zones +
-11 recipes (no alcohol references). Password is now an env var (`DEMO_USER_PASSWORD`) — rotated
-2026-09-06, live value in the shared password manager, and pasted into ASC's Sign-In fields.
+11 recipes (no alcohol references). Password is an env var (`DEMO_USER_PASSWORD`), live value in
+the shared password manager, pasted into ASC's Sign-In fields.
 
 ### Privacy & compliance posture (2026-09-07)
 
-**App Store availability — set 2026-09-07:** unavailable in the EU-27 + Iceland + Norway (GDPR +
-the DSA trader declaration), the non-EU Balkans + Moldova + Ukraine, China (PIPL + ICP filing),
-Russia + Belarus, and **South Korea** (temporary — re-enable as a metadata-only fast-follow once
-the KR-rollout items ship). Available everywhere else (~140 territories incl. MY, US, UK,
-Switzerland) — those laws don't block the storefront and the policy + consent + account
-deletion is a defensible baseline there.
+**App Store availability:** unavailable in the EU-27 + Iceland + Norway (GDPR + DSA trader
+declaration), the non-EU Balkans + Moldova + Ukraine, China (PIPL + ICP filing), Russia +
+Belarus, and **South Korea** (temporary — re-enable per the Korea fast-follow above). Available
+everywhere else (~140 territories incl. MY, US, UK, Switzerland).
 
-Privacy policy + terms reworded 2026-09-08 for the credit model: the AI crew now reads *and
-acts on* your kitchen data (adds items, edits shopping/notes) and fetches links you paste — so
-the OpenRouter "data shared" row now lists notes/shopping/recipes/usage + fetched page text;
-consumable AI-credit packs + the RevenueCat credit-balance mirror are disclosed; terms §3 covers
-credits (consumable, non-refundable once bought, no cash value); first-party product-analytics
-events disclosed (were not before). `app-review.pdf` updated to match.
-
-What's covered for the markets we sell in:
+Privacy policy + terms cover the credit model: the AI crew reads *and acts on* kitchen data,
+fetches pasted links; consumable AI-credit packs + the RC credit-balance mirror are disclosed;
+terms §3 covers credits (consumable, non-refundable, no cash value).
 
 - One English privacy policy (`/privacy/`) + Apple App Privacy labels + in-app account deletion
-  — the disclosure floor for ~everywhere we sell.
-- **Cross-border-transfer consent on every sign-up path** — email checkbox; a notice +
-  affirmative action before Apple / Google; recorded as `users.data_transfer_consented_at`.
-  Satisfies MY (PDPA) / UK / Switzerland.
+  — the disclosure floor for ~everywhere sold.
+- **Cross-border-transfer consent on every sign-up path** (email checkbox; notice + affirmative
+  action before Apple/Google; recorded as `users.data_transfer_consented_at`) — satisfies
+  MY (PDPA) / UK / Switzerland.
 - **Malaysia:** bilingual Section 7 notice at `/privacy/pdpa/`; breach process in
   `INCIDENT_RESPONSE.md`.
-- **UK / Switzerland:** policy has region sections + lawful bases. Art. 27 UK representative /
-  Swiss rep are *technically* applicable for a non-established operator but low-enforcement at
-  this scale — revisit only with real traction there.
-- **Korea:** storefront **unchecked for launch**. Re-enable only after the Korean-language
-  policy (`/privacy/ko/`) and the stricter unticked-checkbox consent on every path ship (see
-  Deferred → "Korea launch").
+- **UK/Switzerland:** policy has region sections + lawful bases; Art. 27 UK rep / Swiss rep
+  technically applicable but low-enforcement at this scale.
+- **Korea:** storefront unchecked for launch — re-enable only once the Korean policy + stricter
+  consent ship (see Deferred).
 - Adding the EU later is a much bigger lift (DSA trader info, GDPR lawful basis, tracking
-  consent, EU representative) — treat as its own project.
+  consent, EU rep) — its own project.
 
 ### Locked decisions — no re-litigation
 
 NativeWind · Expo Router · pnpm workspaces + turborepo · bundle id `test.thatfridge.app` · iOS
-target 15.1 · Apple enrollment Individual · v1 notifications local/on-device (server push is
+target 15.1 · Apple enrollment Individual · v1 notifications local/on-device (server push
 already built too, for social events) · Android deferred entirely · one universal UI codebase
 (`react-native-web` renders `apps/mobile` in a browser; legacy `apps/web` retired once web
 output ships) · signing keys + Apple assets in a shared password manager · **v1 app UI is
@@ -548,7 +382,8 @@ English-only**, localized store listings only.
 ### Infra & CD
 
 - API: `https://api.thatfridge.com` (DigitalOcean SGP1, `167.172.88.75`, PHP 8.5/Nginx/
-  Postgres/Redis). CD: `.github/workflows/deploy-api.yml`, push to `main` → test → deploy.
+  Postgres/Redis). CD: `.github/workflows/deploy-api.yml`, push to `main` → test → deploy
+  (runs migrations automatically).
 - Legal site: `https://thatfridge.com` (Cloudflare Workers). CD:
   `.github/workflows/deploy-legal.yml`.
 - Mobile OTA: `.github/workflows/eas-update.yml`, push to `main` touching `apps/mobile`/
@@ -572,8 +407,7 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
 1. **Guideline 3.1.2 (subscription scrutiny).** Restore button, clear pricing, terms, no dark
    patterns — the published paywall is already built to spec.
 2. **Guideline 4.2 (thin-wrapper rejection).** Low risk for a real RN app with substantial
-   native feature use; a written rebuttal is on hand in `STORE_LISTING.md` §3 if needed — don't
-   submit it pre-emptively.
+   native feature use; a written rebuttal is on hand in `STORE_LISTING.md` §3 if needed.
 3. **Shipaton "first public release" timing.** No public TestFlight link/press before the store
    listing is live.
 4. **The deadline is a wall.** Sep 30, no extensions. Submit ~2 weeks early; be ready for
