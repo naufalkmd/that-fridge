@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import RevenueCatUI from "react-native-purchases-ui";
 import type { PurchasesPackage } from "react-native-purchases";
@@ -27,6 +27,12 @@ function packageLabel(pkg: PurchasesPackage): string {
 
 export default function Paywall() {
   const router = useRouter();
+  const { force } = useLocalSearchParams<{ force?: string }>();
+  // Demo / App Review accounts are always entitled (see pro.tsx), so the normal `!isPro`
+  // gate below would hide the actual purchase UI from an App Review tester. `force=1`
+  // (used by the "View plans" row on Profile for demo accounts) bypasses that gate so the
+  // real paywall — the thing App Review needs to locate — is reachable on demand.
+  const forcePaywall = force === "1";
   const { available, ready, isPro, packages, purchase, restore, refresh, openCustomerCenter } =
     usePro();
   const [busy, setBusy] = useState(false);
@@ -37,7 +43,7 @@ export default function Paywall() {
   // Paywall component (docs-recommended embedded pattern for a dedicated screen — uses the
   // paywall designed in the dashboard, or a default template). The custom UI below is the
   // fallback for pre-dashboard-config and Expo Go.
-  if (available && ready && !isPro && packages.length > 0) {
+  if (available && ready && (forcePaywall || !isPro) && packages.length > 0) {
     return (
       <RevenueCatUI.Paywall
         options={{ displayCloseButton: true }}
@@ -94,7 +100,7 @@ export default function Paywall() {
           ))}
         </View>
 
-        {isPro ? (
+        {isPro && !forcePaywall ? (
           <View className="gap-3">
             <View className="rounded-2xl border border-good bg-surface p-4">
               <Text className="font-semibold text-good">You’re on Pro. Thanks!</Text>

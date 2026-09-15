@@ -125,7 +125,14 @@ export default function Profile() {
               ? "ThatFridge Pro — active"
               : "Free plan"}
         </Text>
-        {user?.isDemo ? null : isPro && available ? (
+        {user?.isDemo ? (
+          <Pressable
+            onPress={() => router.push({ pathname: "/paywall", params: { force: "1" } })}
+            className="mt-3 items-center rounded-lg border border-hairline py-2.5 active:opacity-70"
+          >
+            <Text className="font-semibold text-ink">View plans</Text>
+          </Pressable>
+        ) : isPro && available ? (
           <Pressable
             onPress={openCustomerCenter}
             className="mt-3 items-center rounded-lg border border-hairline py-2.5 active:opacity-70"
@@ -224,24 +231,27 @@ export default function Profile() {
         </Text>
       </View>
 
-      {working ? (
-        <ActivityIndicator color="#26c6da" />
-      ) : (
-        <View className="gap-3">
-          <Pressable
-            onPress={doSignOut}
-            className="items-center rounded-lg border border-hairline py-3 active:opacity-70"
-          >
-            <Text className="font-semibold text-ink">Sign out</Text>
-          </Pressable>
-          <Pressable
-            onPress={confirmDelete}
-            className="items-center rounded-lg border border-bad py-3 active:opacity-70"
-          >
-            <Text className="font-semibold text-bad">Delete account</Text>
-          </Pressable>
-        </View>
-      )}
+      <View>
+        <SectionHeader>Account</SectionHeader>
+        {working ? (
+          <ActivityIndicator color="#26c6da" />
+        ) : (
+          <View className="gap-3">
+            <Pressable
+              onPress={doSignOut}
+              className="items-center rounded-lg border border-hairline py-3 active:opacity-70"
+            >
+              <Text className="font-semibold text-ink">Sign out</Text>
+            </Pressable>
+            <Pressable
+              onPress={confirmDelete}
+              className="items-center rounded-lg border border-bad py-3 active:opacity-70"
+            >
+              <Text className="font-semibold text-bad">Delete account</Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
