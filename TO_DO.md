@@ -420,14 +420,15 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
 **Full-guideline pass (2026-09-15):** checked 4.8 (Sign in with Apple parity), 3.1.1 (restore),
 5.1.1 (privacy manifest, permission strings, data minimization, account deletion), 5.1.2/ATT (no
 tracking), 1.2 (UGC — report via `support@thatfridge.com` + working block, per `find-friend.tsx`)
-— all compliant. Two items are judgment calls, not bugs, left open on purpose:
-- Quick Chat's `fetch_url` tool has no content-category filtering (SSRF-safe, but no adult/
-  violence blocklist) — double-check the ASC age-rating questionnaire answers this honestly;
-  likely fine as a narrow tool (recipe-link import + citations, capped at 2 fetches/turn), not
-  "unrestricted web access."
-- Report/block exists per-user (find-friend) but not per-note/per-message inside a shared
-  fridge. Low exposure (private invite-only fridges, not a public feed) — revisit if abuse
-  reports ever come in.
+— all compliant.
+- [x] Report/block was per-user only (find-friend), not per-note — fixed: `FridgeNotes.tsx` now
+  has a "Report" action (mailto, same pattern as the existing user report) on other members'
+  notes, both the Home grid and Organizer editor views.
+- [ ] Quick Chat's `fetch_url` tool has no content-category filtering (SSRF-safe, but no adult/
+  violence blocklist) — **double-check the ASC age-rating questionnaire** ("Unrestricted Web
+  Access" or similarly named question) answers **No** honestly; this is a narrow tool
+  (recipe-link import + citations, capped at 2 fetches/turn), not an in-app browser, so that's
+  the accurate answer — just needs verifying in App Store Connect → age rating, not code.
 
 ### QA matrix
 
