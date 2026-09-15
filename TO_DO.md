@@ -41,9 +41,8 @@ between here and launch.
 - [ ] **Paid Apps Agreement** — confirm it's genuinely **Active** in ASC → Business. The
   rejection calls this out explicitly: paid IAPs don't function at all without it, regardless
   of any code fix. Can't be checked from the repo — verify in ASC before resubmitting.
-- [ ] **Screen recording (physical device, required by the rejection itself)** — record: sign in
-  with the demo account (or create a new one) → Profile → Account → Delete account → confirm
-  twice through to completion. Can't be done from here — needs an actual device in hand.
+- [x] **Screen recording** — done: https://youtube.com/shorts/-mr_eJnX5xE (Unlisted/Shorts,
+  demo-account delete-account flow). Paste into ASC → App Review Information → Notes.
 - [ ] **Resubmit** — in ASC pick the new build, **attach all 5 IAPs (2 subscriptions + 3 credit
   packs) to this version and submit them for review together with it** — this is the step that
   was actually missing and caused the 2.1(b) rejection. Reply to the review thread (Resolution
@@ -89,9 +88,13 @@ between here and launch.
   in the Notes field of the App Review Information section.
 
   *Before pasting: fill in the actual build number once known; confirm the Paid Apps
-  Agreement is genuinely Active in ASC → Business before claiming it; record and attach the
-  account-deletion video in App Review Information → Notes, not in this reply.*
+  Agreement is genuinely Active in ASC → Business before claiming it.*
   </details>
+
+  **Notes field text (App Review Information → Notes, separate from the reply above):**
+  ```
+  Account deletion screen recording: https://youtube.com/shorts/-mr_eJnX5xE
+  ```
 
 **Shipaton / Devpost** (same Sep 30, 11:45pm PDT)
 
