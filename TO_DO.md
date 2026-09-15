@@ -30,22 +30,74 @@ fast-follow.
 
 **App Store**
 
-- [ ] **`v1.3.0` submission binary** — `app.config.ts` bumped to 1.3.0 (2026-09-08); tag
-  `v1.3.0` triggers `testflight.yml` (EAS build + auto-submit). This is the binary Apple
-  reviews: it must bundle the credit system, 27-tool Quick Chat, swipe nav, selectable text,
-  demo-is-Pro and the dev-button cleanup natively — NOT rely on OTA (the reviewer might not
-  get the update, and the credit-pack IAPs are attached to this version). Everything since
-  `1.2.2 (17)` is JS-only, so no other native changes. `runtimeVersion` follows `version`,
-  so 1.3.0 gets its own OTA channel; 1.2.2 testers must update via TestFlight.
-  - After it processes: smoke-test the actual binary — paywall price, buy a credit pack,
-    chat spends credits, swipe between tabs, long-press to copy text.
-  - **Do not push mobile OTAs during Apple review** (behaviour change on the reviewed
-    channel trips 2.3 / 3.1.x). Hotfixes only.
+- [x] **`v1.3.0` (18) submitted** — reviewed 2026-09-11, **Rejected**: Guideline 2.1(b)
+  (couldn't locate the IAPs) + Guideline 5.1.1(v) (no account deletion found). Root causes:
+  1. Client bug — the demo/review account (`keira@thatfridge.test`) was hardcoded Pro on the
+     client, which suppressed every paywall entry point. **Fixed** (commit `7e775ed`):
+     Profile → Subscription now shows "View plans" for demo accounts, force-opening the real
+     paywall via `/paywall?force=1` regardless of entitlement.
+  2. **All 5 App Store IAPs are stuck at "Ready to Submit" in ASC** — confirmed via RevenueCat
+     API, `store_status: READY_TO_SUBMIT` on `thatfridge_pro_monthly`, `thatfridge_pro_yearly`,
+     `credits_100`, `credits_500`, `credits_1500`. They were never attached to a submitted
+     version, so Apple genuinely could not see them — independent of the client bug. This is
+     the step below that was already unfinished before the rejection.
+  3. Account deletion already existed (`DELETE /api/me`, shipped since `0fe49e6`) — reviewer
+     likely missed it because it sat as an unlabeled button below Settings. **Fixed**: now
+     under an explicit "Account" section header.
+- [ ] **New build** — pure JS fix, same `version` 1.3.0 (no native change, no version bump per
+  `RELEASE.md`). Trigger `testflight.yml` manually from the Actions tab (`workflow_dispatch`)
+  rather than a tag push, since the marketing version isn't changing.
+  - After it processes: smoke-test — sign in as `keira@thatfridge.test`, Profile → Subscription
+    → View plans opens the real paywall with all 5 products priced correctly.
 - [x] **Screenshots** — uploaded to App Store Connect (2026-09-08).
-- [ ] **Submit** — once `v1.3.0` is on TestFlight and smoke-tested: in ASC pick build 1.3.0,
-  attach the 2 subscriptions + 3 credit IAPs to the version, paste the credit-model review
-  notes + attach `app-review.pdf` (v1.3.0), set release to **manual**, submit. Then publish
-  the RevenueCat paywall draft once the on-device price reads $2.99 / $19.99.
+- [ ] **Resubmit** — in ASC pick the new build, **attach all 5 IAPs (2 subscriptions + 3 credit
+  packs) to this version and submit them for review together with it** — this is the step that
+  was missing and caused the 2.1(b) rejection. Reply to the review thread (Resolution Center)
+  with the draft below; for 5.1.1(v), attach a screen recording of the full delete-account flow
+  (sign in as demo → Profile → Account → Delete account → confirm twice) in the Notes field.
+
+  <details>
+  <summary>Draft reply — Resolution Center (submission 60752a52-3b30-446c-b4ec-0d2a54df3d34, v1.3.0/18)</summary>
+
+  **Guideline 2.1(b) — In-App Purchases**
+
+  Thank you for flagging this. We found the cause: our review account was configured to
+  always display as fully subscribed on the client, which suppressed every entry point to
+  the paywall — there was no way to reach the In-App Purchase screen from that account in
+  the build you reviewed.
+
+  We've fixed this in a new build. To locate the In-App Purchases:
+
+  1. Sign in with the review account (credentials in App Review Information).
+  2. Go to the **Profile** tab (bottom right).
+  3. Under **Subscription**, tap **View plans**.
+
+  This opens our paywall showing all products: `thatfridge_pro_monthly`,
+  `thatfridge_pro_yearly`, and three consumable credit packs (`credits_100`, `credits_500`,
+  `credits_1500`). We've also attached all 5 products to this submission for review and
+  confirmed the Paid Apps Agreement is active in the Business section of App Store Connect.
+
+  We are not restricting IAP access by storefront or device configuration.
+
+  **Guideline 5.1.1(v) — Account deletion**
+
+  Account deletion has been present in the app since before this submission; we believe it
+  was simply hard to find. We've now placed it under a clearly labeled "Account" section.
+  To locate it:
+
+  1. Sign in with the review account (or create a new account).
+  2. Go to the **Profile** tab.
+  3. Scroll to **Account** → tap **Delete account**.
+  4. Confirm twice ("Delete account", then "Delete forever").
+
+  This permanently deletes the account server-side (no deactivation/soft-delete) with no
+  further customer-service steps required. A screen recording of the full flow is attached
+  in the Notes field of the App Review Information section.
+
+  *Before pasting: fill in the actual build number once known; confirm the Paid Apps
+  Agreement is genuinely Active in ASC → Business before claiming it; record and attach the
+  account-deletion video in App Review Information → Notes, not in this reply.*
+  </details>
 
 **Shipaton / Devpost** (same Sep 30, 11:45pm PDT)
 
@@ -416,6 +468,33 @@ Full backend pass. **Fixed this session:**
 (no IDOR found outside the intentional recipe/profile openness); no SQLi (Eloquent + bound
 `whereRaw`); mass-assignment locked (`#[Fillable]`, sensitive fields excluded); no account
 enumeration on login/forgot; Bearer auth (no CSRF); webhook `hash_equals` + event-id idempotency.
+
+### Security review (2026-09-15)
+
+Full backend + mobile pass (commit `d639fd1`). No High/Medium findings — credit ledger
+(`lockForUpdate` + transaction), RevenueCat webhook secret check, IDOR-scoped policies, token
+storage (Keychain-only, never logged), and server-side enforcement behind every client paywall
+gate all confirmed solid. **Fixed this session:**
+- Receipts/fridge-photo scans were on the public media disk (obscurity-only protection) despite
+  the client never even using their `file_url`. Moved to a new private disk
+  (`filesystems.private_media_disk`, signed URLs via Laravel's `local` disk `serve` support).
+- RevenueCat webhook trusted `expiration_at_ms` regardless of delivery order (not guaranteed) —
+  now tracks `revenuecat_last_event_ms` per user and ignores stale/out-of-order redeliveries.
+- Deleted `ReceiptController::confirm` / `PhotoController::confirm` — dead mock routes that never
+  wrote to the DB; real client flow bypasses them via `addManyItems`.
+- Mobile: added a global `AuthGuard` in the root layout (redirects to `/sign-in` whenever
+  status is `signedOut` outside the public-route allowlist) — every screen already degraded
+  gracefully with no guard of its own; this closes the gap for any future one that won't.
+
+**Open, deliberately deferred:**
+- **Recipe attachments** (`RecipeController::uploadAttachment`) are still on the public media
+  disk. Unlike receipts/photos, these *are* actively displayed (`recipe/[id].tsx`,
+  `recipe/attachment`), so privatizing them isn't a same-risk swap — it needs the recipe's
+  `attachments` JSON to store a disk path instead of a baked URL, with the signed URL
+  regenerated fresh on every read (`RecipeResource` or equivalent), so links don't expire on an
+  old recipe. No mobile change needed (still just a plain URL the client renders), but it's a
+  real data-model change worth doing carefully, not days before the deadline. Still filename-
+  obscurity protected in the meantime, same as before this pass.
 
 ### Demo / reviewer account
 
