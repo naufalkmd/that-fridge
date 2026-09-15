@@ -62,6 +62,71 @@ TestFlight. Trigger it by **pushing a tag** (`git tag v1.1.0 && git push --tags`
   version (~1–2 days). Don't use a *public* TestFlight link before the store listing is live
   (Shipaton "brand-new app" rule — see `TO_DO.md` §1).
 
+## Google Play (Android, automated)
+
+`.github/workflows/google-play.yml` builds a production Android binary on EAS and pushes it to
+Google Play's **internal test track as a draft release** (`eas.json` →
+`submit.production.android`). **Manual dispatch only for now** (Actions tab → Google Play
+(Android) → Run workflow) — it does *not* trigger on a `v*` tag like TestFlight does, so a
+routine iOS-only version bump can't also fire an Android submit before Android is actually
+ready. Add a matching tag trigger once the one-time setup below is done and you're ready for
+simultaneous releases.
+
+Android itself is still deferred (see `TO_DO.md` → "Android") — this sets up the pipe, not the
+Play Store presence. Nothing here runs until the one-time setup is complete; until then, running
+the workflow will fail at the submit step for lack of credentials, which is expected.
+
+### One-time setup
+
+1. **Google Play Console account** — $25 one-time, developer.android.com/console. Decide
+   personal vs. organization account type first (can't be changed later without a new account).
+
+2. **Create the app record** in Play Console — package name `app.thatfridge` (must match
+   `apps/mobile/app.config.ts` → `android.package`, already set). Fill in the store listing,
+   content rating questionnaire, and **Data Safety form** (Google's equivalent of Apple's App
+   Privacy labels — same underlying data-collection facts as `STORE_LISTING.md`/App Privacy, just
+   Google's own question format).
+
+3. **First upload must be manual** — Play Console requires the *first* APK/AAB for a new app to
+   be uploaded through the console UI once (Testing → Internal testing → create a release),
+   before the Play Developer API can submit to it. Build one locally first:
+   ```
+   cd apps/mobile
+   eas build --platform android --profile production
+   ```
+   Download the `.aab` from the EAS build page and upload it by hand for this first release only.
+
+4. **Android signing** — the build in step 3 also makes EAS generate + store the upload keystore
+   (interactive, first time only). After that, `--non-interactive` CI builds reuse it — same
+   pattern as iOS's distribution cert.
+
+5. **Google Cloud service account** (for the Play Developer API):
+   - Google Cloud Console → a project (can be new or existing) → **IAM & Admin → Service
+     Accounts** → create one → **Keys** → add key → JSON (downloads once, keep it safe).
+   - Play Console → **Setup → API access** → link the same Google Cloud project → grant the
+     service account **Release manager** permission (or Admin, but Release manager is enough)
+     for this app.
+
+6. **Give the key to EAS** (so CI never sees it):
+   ```
+   cd apps/mobile
+   eas credentials        # → Android → production → Google Service Account → set up
+   ```
+   Paste the path to the downloaded JSON key. EAS stores it and uses it for submission; `eas.json`
+   only needs `track`/`releaseStatus`, no key path or secret in the repo.
+
+7. **GitHub secret** — none needed beyond the existing `EXPO_TOKEN` (already set up for
+   TestFlight, shared across both workflows).
+
+### After a build lands
+
+- Draft release on the **internal test track** — add testers by email in Play Console
+  (Testing → Internal testing → Testers) before anything is visible to them.
+- Promote to production manually in Play Console once verified; that's a deliberate manual gate,
+  not automated by this workflow.
+- Don't make it publicly testable before the store listing is live (same Shipaton "brand-new
+  app" concern as iOS — see `TO_DO.md` §1).
+
 ## OTA updates (no rebuild)
 
 JS-only changes ship over the air:

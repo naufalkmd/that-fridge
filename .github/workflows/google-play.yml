@@ -1,0 +1,54 @@
+name: Google Play (Android)
+
+# Build a production Android binary on EAS and push it to Google Play (internal test track,
+# draft release - see eas.json submit.production.android). Manual dispatch only for now, not a
+# tag trigger like TestFlight (iOS) - Android release isn't set up yet (no Play Console app
+# record, no service account key), so a routine iOS-only `v*` tag must not also try an Android
+# submit and fail. Once Android is ready (see RELEASE.md "Google Play"), add a
+# `push: tags: ["v*"]` trigger here to match testflight.yml.
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "What's in this build (shows in EAS)"
+        required: false
+        default: "Manual Google Play build"
+
+concurrency:
+  group: google-play
+  cancel-in-progress: false
+
+jobs:
+  build-and-submit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm version comes from package.json "packageManager"
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: pnpm
+
+      # Build on EAS, then submit the resulting artifact to Google Play. Android signing
+      # (keystore) and the Play Console service account key both come from EAS-stored
+      # credentials (set up once with `eas credentials`), so the only secret CI needs is
+      # EXPO_TOKEN - same pattern as testflight.yml.
+      - name: Build + submit
+        run: eas build --platform android --profile production --non-interactive --auto-submit --message "${{ github.event.inputs.message || 'Manual Google Play build' }}"

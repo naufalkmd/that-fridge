@@ -136,8 +136,12 @@ between here and launch.
 - [ ] `apps/web/lib/thatfridge` → `packages/core` extraction (most already moved).
 - [ ] `react-i18next` + `expo-localization` — i18n plumbing so a Korean/Malay UI ships as an
   OTA, no rebuild. Getting strings translated is the sourcing item above.
-- [ ] Android: `eas build -p android`, Play Console, Data Safety form, screenshots, submit.
-  Decide personal vs. organization account type first.
+- [ ] Android: CI pipeline is ready (`.github/workflows/google-play.yml`, manual dispatch only —
+  see `RELEASE.md` "Google Play"). Still open: create the Play Console account (personal vs.
+  organization — can't change later), the app record + Data Safety form + screenshots, the
+  one-time manual first upload, and the Google Cloud service account key handoff to EAS. Also
+  needs its own Android Google Sign-In OAuth client (separate from iOS's) if that button should
+  work there.
 - [ ] Web deployment: `expo export -p web`, wide-viewport (≥900px) layouts, retire legacy
   `apps/web`.
 - [ ] PixelMix font: get written confirmation the desktop EULA covers app/web embedding (email
