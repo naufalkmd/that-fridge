@@ -424,11 +424,10 @@ tracking), 1.2 (UGC — report via `support@thatfridge.com` + working block, per
 - [x] Report/block was per-user only (find-friend), not per-note — fixed: `FridgeNotes.tsx` now
   has a "Report" action (mailto, same pattern as the existing user report) on other members'
   notes, both the Home grid and Organizer editor views.
-- [ ] Quick Chat's `fetch_url` tool has no content-category filtering (SSRF-safe, but no adult/
-  violence blocklist) — **double-check the ASC age-rating questionnaire** ("Unrestricted Web
-  Access" or similarly named question) answers **No** honestly; this is a narrow tool
-  (recipe-link import + citations, capped at 2 fetches/turn), not an in-app browser, so that's
-  the accurate answer — just needs verifying in App Store Connect → age rating, not code.
+- [x] Quick Chat's `fetch_url` tool has no content-category filtering (SSRF-safe, but no adult/
+  violence blocklist) — verified the ASC age-rating questionnaire's "Unrestricted Web Access"
+  question is answered **No** (2026-09-15), accurate since it's a narrow tool (recipe-link
+  import + citations, capped at 2 fetches/turn), not an in-app browser.
 
 ### QA matrix
 
