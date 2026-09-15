@@ -35,6 +35,7 @@ class User extends Authenticatable
             'data_transfer_consented_at' => 'datetime',
             'pro_expires_at' => 'datetime',
             'pro_trial_until' => 'datetime',
+            'revenuecat_last_event_ms' => 'integer',
             'ai_credits' => 'integer',
             'is_demo' => 'boolean',
             'preferences' => 'array',

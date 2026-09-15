@@ -108,6 +108,22 @@ class RevenueCatWebhookController extends Controller
             return response()->json(['ok' => true], 200);
         }
 
+        // RevenueCat doesn't guarantee webhook delivery order. Without this, a stale/
+        // out-of-order redelivery of an older event could overwrite pro_expires_at with
+        // older data than what's already applied.
+        $eventTimestampMs = $event['event_timestamp_ms'] ?? null;
+        if ($eventTimestampMs !== null && $user->revenuecat_last_event_ms !== null
+            && $eventTimestampMs <= $user->revenuecat_last_event_ms) {
+            Log::info('RevenueCat webhook: ignored stale/out-of-order event', [
+                'app_user_id' => $appUserId,
+                'event_id' => $eventId,
+                'event_timestamp_ms' => $eventTimestampMs,
+                'last_applied_ms' => $user->revenuecat_last_event_ms,
+            ]);
+
+            return response()->json(['ignored' => 'stale_event'], 200);
+        }
+
         $expirationMs = $event['expiration_at_ms'] ?? null;
 
         if ($expirationMs !== null) {
@@ -117,6 +133,10 @@ class RevenueCatWebhookController extends Controller
         } else {
             // A lifetime / non-expiring grant or non-consumable purchase.
             $user->pro_expires_at = Carbon::parse(self::NON_EXPIRING);
+        }
+
+        if ($eventTimestampMs !== null) {
+            $user->revenuecat_last_event_ms = $eventTimestampMs;
         }
 
         $user->save();

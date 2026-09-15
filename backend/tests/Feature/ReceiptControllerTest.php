@@ -7,6 +7,7 @@ use App\Models\Section;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ReceiptControllerTest extends TestCase
@@ -44,5 +45,21 @@ class ReceiptControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonStructure(['receipt_id', 'status', 'file_url', 'detected_items']);
         $this->assertSame(7, $user->fresh()->ai_credits);
+    }
+
+    public function test_the_scan_image_is_written_to_the_configured_private_media_disk(): void
+    {
+        // Receipts can carry location/home context - must never land on the public disk.
+        Storage::fake('s3');
+        config(['filesystems.private_media_disk' => 's3', 'services.openrouter.key' => null]);
+
+        $user = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
+        $section = $this->sectionFor($user);
+
+        $this->actingAs($user)->post("/api/sections/{$section->id}/items/receipt/scan", [
+            'image' => UploadedFile::fake()->image('receipt.jpg'),
+        ])->assertStatus(200);
+
+        $this->assertNotEmpty(Storage::disk('s3')->files('receipts'));
     }
 }

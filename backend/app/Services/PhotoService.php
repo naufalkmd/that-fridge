@@ -15,8 +15,9 @@ class PhotoService
     public function processPhoto($file)
     {
         try {
-            // Save file to storage (config('filesystems.media_disk') - "public" locally, R2 in prod once flipped)
-            $disk = config('filesystems.media_disk');
+            // Fridge photos can reveal home/location context, so unlike recipe icons/
+            // attachments this goes on the private disk - signed URL only, never public.
+            $disk = config('filesystems.private_media_disk');
             $path = $file->store('photos', $disk);
 
             if (! $this->vision->available()) {
@@ -34,7 +35,7 @@ class PhotoService
             return [
                 'photo_scan_id' => rand(1, 100000),
                 'file_path' => $path,
-                'file_url' => Storage::disk($disk)->url($path),
+                'file_url' => Storage::disk($disk)->temporaryUrl($path, now()->addMinutes(30)),
                 'status' => 'processed',
                 'detected_items' => $detectedItems,
             ];
@@ -150,26 +151,5 @@ PROMPT;
                 'condition' => 'wilting',
             ],
         ];
-    }
-
-    /**
-     * Confirm and prepare detected items for import
-     */
-    public function confirmItems($items)
-    {
-        return collect($items)
-            ->filter(fn ($item) => $item['confirmed'] ?? false)
-            ->map(function ($item) {
-                return [
-                    'name' => $item['name'] ?? $item['parsed_name'],
-                    'icon' => $item['icon'] ?? 'item',
-                    'location' => $item['location'] ?? 'fridge',
-                    'quantity' => $item['quantity'] ?? 1,
-                    'expiry_date' => $item['expiry_date'] ?? now()->addDays(14)->toDateString(),
-                    'shelf_life_days' => $item['shelf_life_days'] ?? 14,
-                    'source' => 'photo',
-                ];
-            })
-            ->toArray();
     }
 }

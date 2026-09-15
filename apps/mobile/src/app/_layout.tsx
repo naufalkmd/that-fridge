@@ -1,7 +1,7 @@
 import "../global.css";
 
 import { Fragment, useEffect } from "react";
-import { Stack } from "expo-router";
+import { Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
@@ -67,6 +67,7 @@ export default function RootLayout() {
                               <RecipesProvider>
                                 <NotesProvider>
                                   <ExpiryReminderSync />
+                                  <AuthGuard />
                                   <StatusBar style="light" />
                                   <Stack
                                     screenOptions={{
@@ -300,4 +301,28 @@ export default function RootLayout() {
 function AccountBoundary({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   return <Fragment key={user?.id ?? "signed-out"}>{children}</Fragment>;
+}
+
+// Routes reachable while signed out. Every other route in this Stack renders account data
+// (directly, or via the provider tree above) with no auth check of its own — each screen
+// individually degrades gracefully today, but nothing stops a *future* screen from fetching
+// by route param with no fallback. This is the one place that actually enforces it: whenever
+// the session isn't signed in, bounce off anything outside this allowlist.
+const PUBLIC_ROUTES = ["/", "/welcome", "/sign-in", "/forgot-password", "/onboarding"];
+
+function isPublicRoute(pathname: string): boolean {
+  return PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+function AuthGuard() {
+  const { status } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status !== "signedOut") return; // "loading" and "signedIn" both pass through
+    if (!isPublicRoute(pathname)) router.replace("/sign-in");
+  }, [status, pathname, router]);
+
+  return null;
 }

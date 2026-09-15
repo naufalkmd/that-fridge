@@ -107,7 +107,8 @@ class PruneStaleData extends Command
 
     private function pruneScanFiles(string $dir, bool $dry): void
     {
-        $disk = Storage::disk(config('filesystems.media_disk'));
+        // receipts/ and photos/ live on the private disk (see ReceiptService/PhotoService).
+        $disk = Storage::disk(config('filesystems.private_media_disk'));
         $cutoff = Carbon::now()->subDays(self::SCAN_FILE_RETENTION_DAYS)->getTimestamp();
         $deleted = 0;
 

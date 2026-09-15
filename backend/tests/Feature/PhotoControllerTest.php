@@ -47,10 +47,10 @@ class PhotoControllerTest extends TestCase
         $this->assertSame(7, $user->fresh()->ai_credits);
     }
 
-    public function test_the_scan_image_is_written_to_the_configured_media_disk(): void
+    public function test_the_scan_image_is_written_to_the_configured_private_media_disk(): void
     {
         Storage::fake('s3');
-        config(['filesystems.media_disk' => 's3', 'services.openrouter.key' => null]);
+        config(['filesystems.private_media_disk' => 's3', 'services.openrouter.key' => null]);
 
         $user = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
         $section = $this->sectionFor($user);

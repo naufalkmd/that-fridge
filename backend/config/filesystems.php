@@ -31,6 +31,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Private Media Disk
+    |--------------------------------------------------------------------------
+    |
+    | For user uploads that are genuinely sensitive and never rendered back in
+    | the app (receipt scans, fridge photo scans - can carry location/home
+    | context) - unlike media_disk above (icons, recipe attachments), which are
+    | actually displayed and need a plain public URL. Uses the "local" disk:
+    | not web-accessible, no public URL.
+    |
+    */
+
+    'private_media_disk' => env('PRIVATE_MEDIA_DISK', 'local'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |

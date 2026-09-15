@@ -77,9 +77,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // receipt/photo/expiry-scan all hit OpenRouter Vision per call - throttled the same as
         // /chat, on top of the isPro()/weekly-cap gating inside each controller.
         Route::middleware('throttle:15,1')->post('items/receipt/scan', [ReceiptController::class, 'scan']);
-        Route::post('items/receipt/confirm', [ReceiptController::class, 'confirm']);
         Route::middleware('throttle:15,1')->post('items/photo/scan', [PhotoController::class, 'scan']);
-        Route::post('items/photo/confirm', [PhotoController::class, 'confirm']);
         Route::middleware('throttle:15,1')->post('items/expiry-scan', [ExpiryScanController::class, 'scan']);
     });
 

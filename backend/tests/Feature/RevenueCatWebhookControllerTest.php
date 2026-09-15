@@ -233,6 +233,37 @@ class RevenueCatWebhookControllerTest extends TestCase
         $this->assertNotNull($fresh->pro_trial_until);
     }
 
+    public function test_webhook_ignores_a_stale_out_of_order_event(): void
+    {
+        config(['services.revenuecat.webhook_secret' => 'the-real-secret']);
+        $user = User::factory()->create();
+        // Carbon's `datetime` cast round-trips through the DB at second precision, so keep
+        // these timestamps second-aligned to compare cleanly against what comes back.
+        $laterExpiry = now()->addMonths(2)->startOfSecond()->getTimestampMs();
+        $earlierExpiry = now()->addDays(3)->startOfSecond()->getTimestampMs();
+
+        // A newer event lands first (event_timestamp_ms = 2000).
+        $this->postJson('/api/webhooks/revenuecat', ['event' => [
+            'app_user_id' => (string) $user->id,
+            'entitlement_ids' => ['thatfridge_pro'],
+            'expiration_at_ms' => $laterExpiry,
+            'event_timestamp_ms' => 2000,
+        ]], ['Authorization' => 'the-real-secret'])->assertStatus(200);
+
+        $this->assertEquals($laterExpiry, $user->fresh()->pro_expires_at->getTimestampMs());
+
+        // An older event (event_timestamp_ms = 1000) is redelivered late - must not regress
+        // pro_expires_at to its (earlier, stale) value.
+        $this->postJson('/api/webhooks/revenuecat', ['event' => [
+            'app_user_id' => (string) $user->id,
+            'entitlement_ids' => ['thatfridge_pro'],
+            'expiration_at_ms' => $earlierExpiry,
+            'event_timestamp_ms' => 1000,
+        ]], ['Authorization' => 'the-real-secret'])->assertStatus(200);
+
+        $this->assertEquals($laterExpiry, $user->fresh()->pro_expires_at->getTimestampMs());
+    }
+
     public function test_webhook_grants_the_bundle_when_the_trial_converts_to_paid(): void
     {
         config(['services.revenuecat.webhook_secret' => 'the-real-secret']);

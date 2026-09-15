@@ -69,18 +69,19 @@ class PruneStaleDataTest extends TestCase
 
     public function test_it_deletes_stale_scan_files_but_keeps_recent_ones(): void
     {
-        Storage::fake('public');
-        Storage::disk('public')->put('photos/old.jpg', 'x');
-        Storage::disk('public')->put('receipts/old.jpg', 'x');
-        Storage::disk('public')->put('photos/new.jpg', 'x');
-        touch(Storage::disk('public')->path('photos/old.jpg'), now()->subDays(30)->getTimestamp());
-        touch(Storage::disk('public')->path('receipts/old.jpg'), now()->subDays(30)->getTimestamp());
+        // photos/ and receipts/ live on the private disk (local), not the public media disk.
+        Storage::fake('local');
+        Storage::disk('local')->put('photos/old.jpg', 'x');
+        Storage::disk('local')->put('receipts/old.jpg', 'x');
+        Storage::disk('local')->put('photos/new.jpg', 'x');
+        touch(Storage::disk('local')->path('photos/old.jpg'), now()->subDays(30)->getTimestamp());
+        touch(Storage::disk('local')->path('receipts/old.jpg'), now()->subDays(30)->getTimestamp());
 
         $this->artisan('app:prune-stale-data')->assertSuccessful();
 
-        Storage::disk('public')->assertMissing('photos/old.jpg');
-        Storage::disk('public')->assertMissing('receipts/old.jpg');
-        Storage::disk('public')->assertExists('photos/new.jpg');
+        Storage::disk('local')->assertMissing('photos/old.jpg');
+        Storage::disk('local')->assertMissing('receipts/old.jpg');
+        Storage::disk('local')->assertExists('photos/new.jpg');
     }
 
     public function test_it_deletes_orphaned_icon_files_but_keeps_referenced_ones(): void

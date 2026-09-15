@@ -15,8 +15,9 @@ class ReceiptService
     public function processReceipt($file, $storeName = null, $purchasedAt = null)
     {
         try {
-            // Save file to storage (config('filesystems.media_disk') - "public" locally, R2 in prod once flipped)
-            $disk = config('filesystems.media_disk');
+            // Receipts can carry location/home context, so unlike recipe icons/attachments
+            // this goes on the private disk - signed URL only, never a plain public one.
+            $disk = config('filesystems.private_media_disk');
             $path = $file->store('receipts', $disk);
 
             if (! $this->vision->available()) {
@@ -34,7 +35,7 @@ class ReceiptService
             return [
                 'receipt_id' => rand(1, 100000),
                 'file_path' => $path,
-                'file_url' => Storage::disk($disk)->url($path),
+                'file_url' => Storage::disk($disk)->temporaryUrl($path, now()->addMinutes(30)),
                 'store_name' => $storeName,
                 'purchased_at' => $purchasedAt ?? now()->toDateString(),
                 'status' => 'processed',
@@ -124,26 +125,5 @@ PROMPT;
                 'confirmed' => false,
             ],
         ];
-    }
-
-    /**
-     * Confirm and prepare items for import
-     */
-    public function confirmItems($items)
-    {
-        return collect($items)
-            ->filter(fn ($item) => $item['confirmed'] ?? false)
-            ->map(function ($item) {
-                return [
-                    'name' => $item['name'] ?? $item['parsed_name'],
-                    'icon' => $item['icon'] ?? 'item',
-                    'location' => $item['location'] ?? 'fridge',
-                    'quantity' => $item['quantity'] ?? $item['parsed_quantity'] ?? 1,
-                    'expiry_date' => $item['expiry_date'] ?? now()->addDays(14)->toDateString(),
-                    'shelf_life_days' => $item['shelf_life_days'] ?? 14,
-                    'source' => 'receipt',
-                ];
-            })
-            ->toArray();
     }
 }
