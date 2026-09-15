@@ -4,10 +4,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /**
  * Persistent "You're offline" bar, shown whenever the device has no usable connection.
- * Anchored to the top (not the bottom, where UpdateBanner/toasts live) so it can never
- * overlap them if both are showing at once. Unlike UpdateBanner this isn't dismissible - it
- * tracks real connectivity state, so it disappears on its own the moment the device reconnects
- * rather than needing a tap.
+ * Anchored to the top (not the bottom, where toasts live) so it can never overlap them if
+ * both are showing at once. Not dismissible - it tracks real connectivity state, so it
+ * disappears on its own the moment the device reconnects rather than needing a tap.
  *
  * `isConnected` is the transport layer (Wi-Fi/cellular radio up); `isInternetReachable` is
  * NetInfo's own reachability probe and can briefly be `null` while it's still checking, which
