@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Alert, Linking, Pressable, Text, TextInput, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { timeAgo, type FridgeNoteColor } from "@thatfridge/core";
+import { timeAgo, type FridgeNote, type FridgeNoteColor } from "@thatfridge/core";
+import { useAuth } from "@/lib/auth";
 import { useInventory } from "@/lib/inventory";
 import { useScope } from "@/lib/scope";
 import { useNotes } from "@/lib/notes";
@@ -22,11 +23,22 @@ const NOTE_COLOR: Record<FridgeNoteColor, string> = {
 };
 const SWATCHES: FridgeNoteColor[] = ["amber", "blue", "good", "warn", "bad"];
 
+function reportNote(note: FridgeNote) {
+  const subject = `Report a note in ${note.fridgeName}`;
+  const body = `I'd like to report this note${
+    note.authorUsername ? ` from @${note.authorUsername}` : ""
+  }:\n\n"${note.text}"\n\nReason: `;
+  Linking.openURL(
+    `mailto:support@thatfridge.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+  );
+}
+
 /**
  * `variant="grid"` (Home): read-only sticky-note squares.
  * `variant="editor"` (Organizer): compose / edit / delete.
  */
 export function FridgeNotes({ variant = "editor" }: { variant?: "grid" | "editor" }) {
+  const { user } = useAuth();
   const { fridges } = useInventory();
   const { scope } = useScope();
   const { notes, add, edit, remove } = useNotes();
@@ -70,28 +82,40 @@ export function FridgeNotes({ variant = "editor" }: { variant?: "grid" | "editor
 
       {variant === "grid" ? (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {visible.map((note) => (
-            <View
-              key={note.id}
-              style={{
-                width: "31.5%",
-                aspectRatio: 1,
-                backgroundColor: `${NOTE_COLOR[note.color]}1f`,
-                borderWidth: 1,
-                borderColor: `${NOTE_COLOR[note.color]}55`,
-                borderRadius: 8,
-                padding: 8,
-                justifyContent: "space-between",
-              }}
-            >
-              <Text style={{ fontSize: 11, lineHeight: 15, color: INK }} numberOfLines={4}>
-                {note.text}
-              </Text>
-              <Text style={{ fontSize: 8.5, color: FAINT }} numberOfLines={1}>
-                {note.authorUsername ? `@${note.authorUsername}` : "—"}
-              </Text>
-            </View>
-          ))}
+          {visible.map((note) => {
+            const reportable = note.authorUsername && note.authorUsername !== user?.username;
+            return (
+              <Pressable
+                key={note.id}
+                onLongPress={
+                  reportable
+                    ? () =>
+                        Alert.alert(`Note by @${note.authorUsername}`, undefined, [
+                          { text: "Report", style: "destructive", onPress: () => reportNote(note) },
+                          { text: "Cancel", style: "cancel" },
+                        ])
+                    : undefined
+                }
+                style={{
+                  width: "31.5%",
+                  aspectRatio: 1,
+                  backgroundColor: `${NOTE_COLOR[note.color]}1f`,
+                  borderWidth: 1,
+                  borderColor: `${NOTE_COLOR[note.color]}55`,
+                  borderRadius: 8,
+                  padding: 8,
+                  justifyContent: "space-between",
+                }}
+              >
+                <Text style={{ fontSize: 11, lineHeight: 15, color: INK }} numberOfLines={4}>
+                  {note.text}
+                </Text>
+                <Text style={{ fontSize: 8.5, color: FAINT }} numberOfLines={1}>
+                  {note.authorUsername ? `@${note.authorUsername}` : "—"}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       ) : (
         <>
@@ -182,6 +206,11 @@ export function FridgeNotes({ variant = "editor" }: { variant?: "grid" | "editor
                       {showFridge ? ` · ${note.fridgeName}` : ""}
                     </Text>
                   </View>
+                  {note.authorUsername && note.authorUsername !== user?.username && (
+                    <Pressable onPress={() => reportNote(note)} hitSlop={6} style={{ padding: 4 }}>
+                      <MaterialCommunityIcons name="flag-outline" size={13} color={FAINT} />
+                    </Pressable>
+                  )}
                   <Pressable
                     onPress={() => {
                       setEditingId(note.id);
