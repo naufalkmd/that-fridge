@@ -156,6 +156,13 @@ export default function Paywall() {
           </View>
         )}
 
+        {available && !isPro && packages.length > 0 && (
+          <Text className="text-center text-[11px] leading-4 text-faint">
+            Subscriptions renew automatically unless cancelled at least 24 hours before the end
+            of the current period. Manage or cancel anytime in your App Store account settings.
+          </Text>
+        )}
+
         {available && !isPro && (
           <Pressable onPress={doRestore} disabled={busy} className="items-center py-1">
             <Text className="text-[13px] font-semibold text-accent">Restore purchases</Text>
