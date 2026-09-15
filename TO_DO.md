@@ -22,8 +22,9 @@ between here and launch.
 
 **App Store**
 
-- [x] `v1.3.0 (18)` rejected 2026-09-11 — Guideline 2.1(b) (couldn't locate the IAPs) +
+- [X] `v1.3.0 (18)` rejected 2026-09-11 — Guideline 2.1(b) (couldn't locate the IAPs) +
   5.1.1(v) (no account deletion found). Both fixed (`7e775ed`, `d639fd1`):
+
   1. The demo/review account (`keira@thatfridge.test`) was hardcoded Pro on the client, which
      hid every paywall entry point — Profile → Subscription now has a "View plans" button that
      force-opens the real paywall regardless of entitlement.
@@ -31,17 +32,18 @@ between here and launch.
      version — genuinely invisible to the reviewer independent of the client bug (see Resubmit).
   3. Account deletion already existed but sat as an unlabeled button — now under a clear
      "Account" section header.
-- [x] **New build** — triggered 2026-09-15 via `workflow_dispatch` (run `34945809803`),
+- [X] **New build** — triggered 2026-09-15 via `workflow_dispatch` (run `34945809803`),
   succeeded in 12m11s, auto-submitted to TestFlight. Same `version` 1.3.0 (pure JS fix, no
   native change, no version bump).
+
   - [ ] Smoke-test once Apple finishes processing (~15-30 min after submit): sign in as
     `keira@thatfridge.test`, Profile → Subscription → View plans opens the real paywall with
     all 5 products priced correctly.
-- [x] Screenshots uploaded (2026-09-08).
-- [x] **Paid Apps Agreement** — confirmed Active in ASC → Business (2026-09-15).
-- [x] **Screen recording** — done: https://youtube.com/shorts/-mr_eJnX5xE (Unlisted/Shorts,
+- [X] Screenshots uploaded (2026-09-08).
+- [X] **Paid Apps Agreement** — confirmed Active in ASC → Business (2026-09-15).
+- [X] **Screen recording** — done: https://youtube.com/shorts/-mr_eJnX5xE (Unlisted/Shorts,
   demo-account delete-account flow). Paste into ASC → App Review Information → Notes.
-- [ ] **Resubmit** — in ASC pick the new build, **attach all 5 IAPs (2 subscriptions + 3 credit
+- [X] **Resubmit** — in ASC pick the new build, **attach all 5 IAPs (2 subscriptions + 3 credit
   packs) to this version and submit them for review together with it** — this is the step that
   was actually missing and caused the 2.1(b) rejection. Reply to the review thread (Resolution
   Center) with the draft below, attach the screen recording above in App Review Information →
@@ -87,9 +89,11 @@ between here and launch.
 
   *Before pasting: fill in the actual build number once known; confirm the Paid Apps
   Agreement is genuinely Active in ASC → Business before claiming it.*
+
   </details>
 
   **Notes field text (App Review Information → Notes, separate from the reply above):**
+
   ```
   Account deletion screen recording: https://youtube.com/shorts/-mr_eJnX5xE
   ```
@@ -102,6 +106,7 @@ between here and launch.
 - [ ] Peace Prize impact statement (household food-waste → savings + environmental).
 - [ ] App Store URL on the submission.
 - [ ] **Submit on Devpost before the deadline.**
+
 - **Don't** market as "launched" anywhere public (TestFlight link, ProductHunt, press) before
   the store listing is live — risks Shipaton's "brand-new app" disqualification.
 
@@ -127,7 +132,7 @@ between here and launch.
   dishonest weekly/monthly period). If rebuilt: one intuitive metric ("items rescued"), a live
   Home card, an honest timeframe. Backend `user_goals`/`UserGoalController`/`progress.ts` still
   exist, unused by the client.
-- [x] Pro AI spend ceiling — done via the credit system (2026-09-08): every model call is
+- [X] Pro AI spend ceiling — done via the credit system (2026-09-08): every model call is
   metered per action, so per-user spend is bounded by construction. $10 pre-loaded on
   OpenRouter + fal.ai each, auto-recharge **OFF** (caps total exposure at the pre-loaded
   balance — refill manually as usage grows). Open: turn on low-balance email alerts on both
@@ -154,11 +159,12 @@ between here and launch.
   policy text, cross-referenced with the same codebase already audited for Apple (permission
   strings, no tracking, subscription disclosure, account deletion, privacy policy — all already
   compliant, same code). Android/Google-specific items:
+
   - [ ] **Target API level 36 (Android 16) by Aug 31, 2026** for new apps, Billing Library v8+.
     No manual override in this project (`expo-build-properties` isn't used) — Expo SDK 57
     almost certainly ships a compliant default already, but this needs confirming on the actual
     first Android build (step 3 above), not assumed.
-  - [x] In-app subscription cancellation (Google's 2026 "easy-to-use, in-app cancel" policy) —
+  - [X] In-app subscription cancellation (Google's 2026 "easy-to-use, in-app cancel" policy) —
     already covered by `openCustomerCenter()` (RevenueCat Customer Center), which is
     cross-platform in the existing code, not iOS-gated. No change needed once Android IAP
     products exist in RevenueCat.
@@ -197,7 +203,9 @@ between here and launch.
 | VPS — DigitalOcean SGP1, 2 vCPU/2GB + backups         | $21.60/mo    | Live                                             |
 | Legal site hosting (Cloudflare Workers), email routing | $0           | Live                                             |
 | Sentry, RevenueCat, Expo EAS, Devpost                  | $0           | Free tiers                                       |
-| Google Play Console                                    | $25 one-time | Deferred (post-launch)                           |
+| Google Play Console                                    | $25 one-time | Paid                                             |
+| OpenRouter wallet (AI chat/vision, prepaid, no auto-recharge) | $10 one-time | Paid                                      |
+| fal.ai wallet (icon generation, prepaid, no auto-recharge)    | $10 one-time | Paid                                      |
 
 **Fixed recurring cost: ≈$30.72/mo ($368.66/yr)**, regardless of user count. Apple's commission
 is 15% once the Small Business Program application (submitted 2026-09-05) is approved, 30%
@@ -229,16 +237,14 @@ RevenueCat.
 - Headline: **Get more out of your fridge** (turquoise `#26c6da`, ~22pt bold, centered)
 - Subtitle: *Know before you open the door.*
 - Comparison card — header row `· / Free / Pro`, then:
-
-  | Feature | Free | Pro |
-  | --- | --- | --- |
-  | Fridge & pantry tracking, expiry alerts | ✓ | ✓ |
-  | Monthly AI credits (chat, scans, icons) | 50 | 400 |
+  | Feature                                 | Free         | Pro          |
+  | --------------------------------------- | ------------ | ------------ |
+  | Fridge & pantry tracking, expiry alerts | ✓           | ✓           |
+  | Monthly AI credits (chat, scans, icons) | 50           | 400          |
   | Bulk-add from a receipt or fridge photo | Uses credits | Uses credits |
-  | Buy more credits anytime | ✓ | ✓ |
-  | Own more than one fridge | – | ✓ |
-  | Host a shared fridge for your household | – | ✓ |
-
+  | Buy more credits anytime                | ✓           | ✓           |
+  | Own more than one fridge                | –           | ✓           |
+  | Host a shared fridge for your household | –           | ✓           |
 - Footer: *Every AI action spends credits. Free gives you 50 a month; Pro gives you 400, rolls
   the unused ones over, and unlocks hosting shared fridges.*
 - Rules: sentence case, **never the word "unlimited"**, lead with the credit number not a
@@ -247,6 +253,7 @@ RevenueCat.
   you cancel.* CTA: **Get Pro access**.
 
 `app_context` for the RC Paywall AI editor (`edit-paywall-ai`):
+
 ```
 app_identity: name "ThatFridge", category "Food & Drink / kitchen inventory",
   desc "Track what's in your fridge and pantry, get pinged before food goes bad, see what you
@@ -263,6 +270,7 @@ premium highlights: 400 AI credits a month vs 50 (credits pay for crew chat, rec
   fridge for the household.
 visual: primary #26c6da, dark charcoal bg + cyan accent, bold sans headline / regular sans body.
 ```
+
 </details>
 
 ### AI credits (metered, server-authoritative)
@@ -271,17 +279,17 @@ Every AI action spends credits from `users.ai_credits`; `ChatQuota` is deleted. 
 ledger (`ai_credit_ledger`, unique on `reason`+`ref`) is authoritative; RevenueCat Virtual
 Currency (`AICR`) is a best-effort display mirror.
 
-| Action | Cost | Notes (`App\Support\CreditCost`) |
-| --- | --- | --- |
-| Quick Chat message | 1 | `+2` surcharge (best-effort) when the crew used a tool |
-| AI icon generation (item + recipe) | 3 | curated pixel picks are free |
-| Expiry-date photo scan | 2 | no refund — the vision call runs even on "not found" |
-| Receipt scan | 3 | refunded on hard failure |
-| Fridge-photo scan | 3 | refunded on hard failure |
-| Add-item auto-fill | 1 | 402 → top-up prompt on the draft card |
-| Memory extraction | 0 | tiny call right after a chat that already paid |
-| Home crew tip cards | 0 | cached per user+agent per day |
-| Quick Chat with a photo | 3 | vision is ~3-5× a text chat; refund matches on failure |
+| Action                             | Cost | Notes (`App\Support\CreditCost`)                       |
+| ---------------------------------- | ---- | -------------------------------------------------------- |
+| Quick Chat message                 | 1    | `+2` surcharge (best-effort) when the crew used a tool |
+| AI icon generation (item + recipe) | 3    | curated pixel picks are free                             |
+| Expiry-date photo scan             | 2    | no refund — the vision call runs even on "not found"    |
+| Receipt scan                       | 3    | refunded on hard failure                                 |
+| Fridge-photo scan                  | 3    | refunded on hard failure                                 |
+| Add-item auto-fill                 | 1    | 402 → top-up prompt on the draft card                   |
+| Memory extraction                  | 0    | tiny call right after a chat that already paid           |
+| Home crew tip cards                | 0    | cached per user+agent per day                            |
+| Quick Chat with a photo            | 3    | vision is ~3-5× a text chat; refund matches on failure  |
 
 Grants: free accounts topped up to 50/month; Pro gets 400/month, rolling over up to 800.
 `app:grant-monthly-credits` runs `monthlyOn(1, 00:15)`; the RevenueCat webhook also grants the
@@ -301,9 +309,10 @@ requires `$fridge->user->isPro()`. Being invited is free; already-joined members
 the owner drops to free.
 
 **Manual setup still owed:**
-- [x] RevenueCat Virtual Currency `AICR`, 3 consumable products, `credits` offering — all
+
+- [X] RevenueCat Virtual Currency `AICR`, 3 consumable products, `credits` offering — all
   created via API.
-- [x] Trial-guard migration + webhook consumable-purchase handling — confirmed via passing
+- [X] Trial-guard migration + webhook consumable-purchase handling — confirmed via passing
   tests (`RevenueCatWebhookControllerTest`), and every deploy runs `migrate --force`.
 - [ ] App Store Connect: the 3 consumable IAPs are "Ready to Submit" but not yet submitted with
   a build — tracked as the same item as the App Store "Resubmit" step above (all 5 IAPs go
@@ -349,10 +358,11 @@ one. Buy links (`shop_url`) are opened in-browser only, never fetched server-sid
 
 `app:prune-stale-data` runs daily (04:00): `analytics_events` >180d, `notification_events`
 (done >60d / any >180d), terminal `fridge_join_requests` >90d, `photos/`+`receipts/` scan images
+
 + orphaned `icons/`/`recipe-attachments/` files >7d. Not pruned: `chat_history` (needs a "kept
-12 months" UI message first), and real user data (items, recipes, usage history, memory).
-`--dry-run` reports without deleting. `photo_scans`/`receipts`/`receipt_line_items` tables are
-dead schema — the vision services store the file and return it inline, never writing a row.
+  12 months" UI message first), and real user data (items, recipes, usage history, memory).
+  `--dry-run` reports without deleting. `photo_scans`/`receipts`/`receipt_line_items` tables are
+  dead schema — the vision services store the file and return it inline, never writing a row.
 
 ### Security
 
@@ -365,6 +375,7 @@ every client paywall/entitlement gate, a global mobile `AuthGuard` covering any 
 unauthenticated screen.
 
 **Open, deliberately deferred (post-launch):**
+
 - Recipe/profile data is world-readable to any authed user (`RecipePolicy::view` = true;
   `/users/{username}/profile` exposes owned-fridge names + custom recipes) — deliberate
   "no privacy toggle" design; consider a private flag.
@@ -455,25 +466,26 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
 5.1.1 (privacy manifest, permission strings, data minimization, account deletion), 5.1.2/ATT (no
 tracking), 1.2 (UGC — report via `support@thatfridge.com` + working block, per `find-friend.tsx`)
 — all compliant.
-- [x] Report/block was per-user only (find-friend), not per-note — fixed: `FridgeNotes.tsx` now
+
+- [X] Report/block was per-user only (find-friend), not per-note — fixed: `FridgeNotes.tsx` now
   has a "Report" action (mailto, same pattern as the existing user report) on other members'
   notes, both the Home grid and Organizer editor views.
-- [x] Quick Chat's `fetch_url` tool has no content-category filtering (SSRF-safe, but no adult/
+- [X] Quick Chat's `fetch_url` tool has no content-category filtering (SSRF-safe, but no adult/
   violence blocklist) — verified the ASC age-rating questionnaire's "Unrestricted Web Access"
   question is answered **No** (2026-09-15), accurate since it's a narrow tool (recipe-link
   import + citations, capped at 2 fetches/turn), not an in-app browser.
 
 ### QA matrix
 
-| Area          | Checks                                                                                                                |
-| ------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Devices       | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device                                                            |
-| Auth          | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session                     |
-| Core loop     | add item, barcode scan (camera allow/deny/deny-then-enable), inventory edit/delete, mark recipe made decrements stock |
-| Notifications | local alert fires at the right time, taps route to the item, permission denied handled                                |
-| Paywall       | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow                                        |
+| Area          | Checks                                                                                                                                   |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Devices       | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device                                                                               |
+| Auth          | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session                                        |
+| Core loop     | add item, barcode scan (camera allow/deny/deny-then-enable), inventory edit/delete, mark recipe made decrements stock                    |
+| Notifications | local alert fires at the right time, taps route to the item, permission denied handled                                                   |
+| Paywall       | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow                                                           |
 | AI credits    | balance shows on chat + profile, spend decrements it, 0 credits routes to /credits, pack purchase tops up, Pro renewal grants the bundle |
-| Native chrome | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe                                 |
-| Network       | airplane mode on every screen, slow 3G, API 500s, retry paths                                                         |
-| Lifecycle     | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly                               |
-| Compliance    | account deletion from a clean install, privacy-policy link opens, demo account works fresh                            |
+| Native chrome | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe                                                    |
+| Network       | airplane mode on every screen, slow 3G, API 500s, retry paths                                                                            |
+| Lifecycle     | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly                                                  |
+| Compliance    | account deletion from a clean install, privacy-policy link opens, demo account works fresh                                               |
