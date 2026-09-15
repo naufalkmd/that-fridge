@@ -142,6 +142,29 @@ between here and launch.
   one-time manual first upload, and the Google Cloud service account key handoff to EAS. Also
   needs its own Android Google Sign-In OAuth client (separate from iOS's) if that button should
   work there.
+
+  **Google Play Developer Program Policy pass (2026-09-15)** — checked against the current
+  policy text, cross-referenced with the same codebase already audited for Apple (permission
+  strings, no tracking, subscription disclosure, account deletion, privacy policy — all already
+  compliant, same code). Android/Google-specific items:
+  - [ ] **Target API level 36 (Android 16) by Aug 31, 2026** for new apps, Billing Library v8+.
+    No manual override in this project (`expo-build-properties` isn't used) — Expo SDK 57
+    almost certainly ships a compliant default already, but this needs confirming on the actual
+    first Android build (step 3 above), not assumed.
+  - [x] In-app subscription cancellation (Google's 2026 "easy-to-use, in-app cancel" policy) —
+    already covered by `openCustomerCenter()` (RevenueCat Customer Center), which is
+    cross-platform in the existing code, not iOS-gated. No change needed once Android IAP
+    products exist in RevenueCat.
+  - [ ] **UGC reporting is stricter in wording than Apple's.** Google's policy says apps with
+    user interaction must provide "in-app functionality for reporting" — the mailto-based report
+    added for the Apple pass (`FridgeNotes.tsx`, `find-friend.tsx`) commonly passes review in
+    practice since the action originates in-app, but is a literal gap vs. the policy text.
+    Deliberately left as-is for now (see 2026-09-15 discussion) — revisit with a true in-app
+    report flow (new backend endpoint + modal, no Mail hand-off) if Android review ever flags it,
+    or proactively before submitting if there's time to spare.
+  - [ ] Play Console "App content" declarations (all metadata tasks, blocked on having an
+    account): Data safety form, ads declaration (answer "No ads"), content rating (IARC)
+    questionnaire, target audience/age group. No code involved.
 - [ ] Web deployment: `expo export -p web`, wide-viewport (≥900px) layouts, retire legacy
   `apps/web`.
 - [ ] PixelMix font: get written confirmation the desktop EULA covers app/web embedding (email
