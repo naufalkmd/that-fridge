@@ -405,7 +405,9 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
 ### Top risks & mitigations
 
 1. **Guideline 3.1.2 (subscription scrutiny).** Restore button, clear pricing, terms, no dark
-   patterns — the published paywall is already built to spec.
+   patterns — the published paywall is already built to spec; the code fallback UI (used only
+   pre-dashboard-config / Expo Go) got an explicit auto-renewal disclosure line added too
+   (2026-09-15 guideline pass).
 2. **Guideline 4.2 (thin-wrapper rejection).** Low risk for a real RN app with substantial
    native feature use; a written rebuttal is on hand in `STORE_LISTING.md` §3 if needed.
 3. **Shipaton "first public release" timing.** No public TestFlight link/press before the store
@@ -414,6 +416,18 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
    same-day resubmits if rejected.
 5. **Scope creep.** Anything not already in the app is post-launch OTA. The paywall is
    mandatory — don't trade release-track time for a nice-to-have screen.
+
+**Full-guideline pass (2026-09-15):** checked 4.8 (Sign in with Apple parity), 3.1.1 (restore),
+5.1.1 (privacy manifest, permission strings, data minimization, account deletion), 5.1.2/ATT (no
+tracking), 1.2 (UGC — report via `support@thatfridge.com` + working block, per `find-friend.tsx`)
+— all compliant. Two items are judgment calls, not bugs, left open on purpose:
+- Quick Chat's `fetch_url` tool has no content-category filtering (SSRF-safe, but no adult/
+  violence blocklist) — double-check the ASC age-rating questionnaire answers this honestly;
+  likely fine as a narrow tool (recipe-link import + citations, capped at 2 fetches/turn), not
+  "unrestricted web access."
+- Report/block exists per-user (find-friend) but not per-note/per-message inside a shared
+  fridge. Low exposure (private invite-only fridges, not a public feed) — revisit if abuse
+  reports ever come in.
 
 ### QA matrix
 
