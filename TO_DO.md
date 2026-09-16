@@ -148,8 +148,9 @@ between here and launch.
 - [ ] `apps/web/lib/thatfridge` → `packages/core` extraction (most already moved).
 - [ ] `react-i18next` + `expo-localization` — i18n plumbing so a Korean/Malay UI ships as an
   OTA, no rebuild. Getting strings translated is the sourcing item above.
-- [ ] Android — in progress (2026-09-16). CI pipeline ready (`.github/workflows/google-play.yml`,
-  manual dispatch only — see `RELEASE.md` "Google Play"). Done: Play Console **Personal** account
+- [ ] Android — in progress (2026-09-16). CI pipeline ready and **fully automated**
+  (`.github/workflows/google-play.yml` now triggers on the same `v*` tag as `testflight.yml`, one
+  tag ships both stores — see `RELEASE.md` "Google Play"). Done: Play Console **Personal** account
   created (business name `Muhammad Naufal Kamaruddin`, website `https://thatfridge.com`, support
   email `support@thatfridge.com`, card statement name `THATFRIDGE`, "what you sell": mobile app
   subscriptions and in-app digital purchases); app record (`app.thatfridge`, Food & Drink, Free);
@@ -158,18 +159,18 @@ between here and launch.
   graphic (`apps/mobile/assets/images/playstore-icon-512.png` /
   `playstore-feature-graphic.png`) uploaded; `#delete-account` / `#delete-data` privacy-policy
   anchors added for the Data Safety deletion-URL fields; first production build (versionCode 2)
-  built via `eas build` and uploaded to Internal testing.
+  built via `eas build` and uploaded to Internal testing; the EAS→Play publishing service account
+  (Release manager role, separate from RevenueCat's) set up via `eas credentials`, so future
+  builds auto-submit with no manual upload; Closed testing track created and running (started
+  2026-09-16, minimum period TBD by what Play Console's requirement screen states).
   - [ ] **Google Sign-In on Android needs its own OAuth client** (separate from iOS's) — the
     button fails ("sign-in didn't go through") until this exists.
   - [x] **RevenueCat was using the iOS API key on every platform** — fixed (`a7fea71`):
     `Platform.OS`-based key selection, `EXPO_PUBLIC_RC_ANDROID_KEY` added. The key itself still
     needs to exist (below).
-  - [ ] **Closed testing must be completed before Play Console allows creating Android IAP
-    products** — discovered 2026-09-16, blocks the RevenueCat/Play Store product setup below.
-    Internal testing (already running) does **not** count toward this — needs a separate
-    **Closed testing** track with the minimum required opted-in testers for the minimum
-    continuous period Play Console states on the requirement screen (check the exact tester
-    count/day count shown there, it varies). Do this next.
+  - [ ] **Closed testing must clear before Play Console allows creating Android IAP products** —
+    discovered 2026-09-16, blocks the RevenueCat/Play Store product setup below. Internal testing
+    does not count toward this. In progress (see above) — check Play Console for days remaining.
   - [ ] **RevenueCat has no Android app yet** — only the iOS app + Test Store exist. Once closed
     testing unblocks product creation: create the 5 matching Android products in Play Console
     (`thatfridge_pro_monthly` $2.99/mo, `thatfridge_pro_yearly` $19.99/yr, `credits_100` $1.99,

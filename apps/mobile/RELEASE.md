@@ -66,15 +66,14 @@ TestFlight. Trigger it by **pushing a tag** (`git tag v1.1.0 && git push --tags`
 
 `.github/workflows/google-play.yml` builds a production Android binary on EAS and pushes it to
 Google Play's **internal test track as a draft release** (`eas.json` →
-`submit.production.android`). **Manual dispatch only for now** (Actions tab → Google Play
-(Android) → Run workflow) — it does *not* trigger on a `v*` tag like TestFlight does, so a
-routine iOS-only version bump can't also fire an Android submit before Android is actually
-ready. Add a matching tag trigger once the one-time setup below is done and you're ready for
-simultaneous releases.
+`submit.production.android`). Trigger it by **pushing a tag** (same `v1.1.0` tag as
+`testflight.yml` — one version tag ships to both stores) or from the **Actions tab → Google Play
+(Android) → Run workflow**.
 
-Android itself is still deferred (see `TO_DO.md` → "Android") — this sets up the pipe, not the
-Play Store presence. Nothing here runs until the one-time setup is complete; until then, running
-the workflow will fail at the submit step for lack of credentials, which is expected.
+The one-time setup below is done — the Google Play service account is stored in EAS
+(`eas credentials` → Android → production → Google Service Account), so builds auto-submit
+without any manual step. Android release itself is still in progress otherwise (see `TO_DO.md` →
+"Android" — closed testing, RevenueCat Android app, etc.), this just covers the build pipe.
 
 ### One-time setup
 
