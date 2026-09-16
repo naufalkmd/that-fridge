@@ -123,6 +123,35 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
   `apps/web`.
 - [ ] PixelMix font: get written confirmation the desktop EULA covers app/web embedding (email
   font@andrewtyler.net), drop the unused unofficial `PixelMix-Bold.ttf`.
+
+  <details>
+  <summary>Draft email — font@andrewtyler.net</summary>
+
+  ```
+  Subject: PixelMix licence — confirming app/web embedding coverage
+
+  Hi Andrew,
+
+  I purchased the commercial licence for PixelMix via Sellfy on August 28, 2026 (governed by
+  PixelMix-EULA.docx). I'm using it as the wordmark/logo font in a mobile app called ThatFridge
+  (iOS/Android, built with Expo/React Native) and on its companion website, thatfridge.com.
+
+  The EULA's "Embedding Restrictions" and "No Other Use" sections mention that embedding the
+  font into "application programs" and "web pages" needs an additional licence beyond the base
+  purchase. Could you confirm in writing whether my purchase already covers:
+
+  1. Embedding the font file in a distributed iOS/Android app (bundled into the app binary via
+     expo-font), and
+  2. Serving it via @font-face on a public website
+
+  — or whether an additional licence is needed for either, and if so, how to obtain it?
+
+  Happy to provide the Sellfy order confirmation if useful.
+
+  Thanks,
+  Muhammad Naufal Kamaruddin
+  ```
+  </details>
 - [ ] Privacy Policy §11 promises material changes get "surfaced in the app" — nothing does
   that yet.
 - [ ] **Recipe attachments still on the public media disk** (unlike receipts/photos — see
