@@ -53,10 +53,13 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 - [ ] **`credits_100` product still not created** in Play Console — blocked on the above. The
   other 4 products (`thatfridge_pro_monthly` $2.99/mo, `thatfridge_pro_yearly` $19.99/yr,
   `credits_500` $7.99, `credits_1500` $19.99) exist.
-- [ ] **Attach the Android products to RevenueCat** — the Android app is linked (credentials
-  validate reads of the product/subscription catalog; purchase-validation itself will likely
-  only go green after a real test purchase, not a config issue) but attaching the products to
-  the `thatfridge_pro` entitlement and the existing offering packages hasn't been confirmed done.
+- [x] **Attach the Android products to RevenueCat** — done via API 2026-09-17: all 4 synced
+  Android products (`thatfridge_pro_monthly:monthly`, `thatfridge_pro_yearly:yearly`,
+  `credits_500`, `credits_1500`) attached to the `thatfridge_pro` entitlement and their matching
+  offering packages, alongside the existing iOS/Test Store products. `credits_100` isn't in
+  RevenueCat yet since it doesn't exist in Play Console (blocked on the payments profile above)
+  — attach it the same way once it's created. Purchase-validation on the Android app's
+  credentials will likely only go green after a real test purchase, not a config issue.
 - [ ] **Closed testing must clear before Play Console allows creating the remaining IAP
   product** — track created and running (started 2026-09-16); check Play Console for the exact
   tester-count/day requirement and days remaining. Internal testing opt-ins do **not** count
