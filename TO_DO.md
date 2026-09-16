@@ -1,7 +1,8 @@
-# ThatFridge — TO DO (iOS launch + RevenueCat Shipaton 2026)
+# ThatFridge — TO DO (iOS + Android launch + RevenueCat Shipaton 2026)
 
-**Goal:** ship ThatFridge to the **Apple App Store**, live and approved. iOS only. Native Expo /
-React Native — no Capacitor, no WebView. Also our **RevenueCat Shipaton 2026** entry.
+**Goal:** ship ThatFridge to the **Apple App Store** and **Google Play**, live and approved.
+Native Expo / React Native — no Capacitor, no WebView. Also our **RevenueCat Shipaton 2026**
+entry.
 
 **Target markets:** Malaysia at launch (+~140 storefronts); South Korea is a post-approval
 fast-follow (see Deferred). API hosted in Singapore; v1 app UI is English-only.
@@ -9,104 +10,78 @@ fast-follow (see Deferred). API hosted in Singapore; v1 app UI is English-only.
 **Hard deadline: Sep 30, 2026, 11:45pm PDT.** The app must be **fully published and live**
 (review passed), not just submitted — review takes days, so submit ~2 weeks early.
 
-**Where we are (2026-09-15):** app is feature-complete — backend, RevenueCat, mobile all live.
-`v1.3.0 (18)` was reviewed 2026-09-11 and **rejected** (Guideline 2.1(b) + 5.1.1(v)); both root
-causes are fixed in code. What's left is a new build + resubmit (below) — that's the only thing
-between here and launch.
+**Where we are (2026-09-17):** iOS — `v1.3.0 (18)` was rejected 2026-09-11 (Guideline 2.1(b) +
+5.1.1(v)), both fixed and **resubmitted** 2026-09-16 with all 5 IAPs attached; awaiting Apple's
+re-review. Android — new this cycle, actively in progress (own section below): Play Console
+account, store listing, and 4 of 5 IAP products are live; blocked on a Closed Testing
+requirement + a Payments Profile issue before the last product and full RevenueCat wiring can
+finish.
 
 ---
 
 ## What's left to do
 
-### Ship by Sep 30 (App Store + Shipaton — one deadline)
+### iOS — App Store
 
-**App Store**
+- [x] `v1.3.0 (18)` rejected 2026-09-11 (2.1(b): couldn't locate IAPs; 5.1.1(v): no account
+  deletion found) — both root causes fixed (`7e775ed`, `d639fd1`: demo account had no path to
+  the paywall; account deletion existed but was unlabeled) and **resubmitted 2026-09-16** with
+  a new build, all 5 IAPs attached, Paid Apps Agreement confirmed Active, and a screen recording
+  of the delete-account flow linked in App Review Information → Notes. Full reply text is in git
+  history (`TO_DO.md` as of commit `37e21a7` or earlier) if it's ever needed again.
+- [ ] Awaiting Apple's decision on the resubmission.
 
-- [X] `v1.3.0 (18)` rejected 2026-09-11 — Guideline 2.1(b) (couldn't locate the IAPs) +
-  5.1.1(v) (no account deletion found). Both fixed (`7e775ed`, `d639fd1`):
+### Android — Play Store
 
-  1. The demo/review account (`keira@thatfridge.test`) was hardcoded Pro on the client, which
-     hid every paywall entry point — Profile → Subscription now has a "View plans" button that
-     force-opens the real paywall regardless of entitlement.
-  2. All 5 App Store IAPs were stuck at "Ready to Submit" in ASC, never attached to a submitted
-     version — genuinely invisible to the reviewer independent of the client bug (see Resubmit).
-  3. Account deletion already existed but sat as an unlabeled button — now under a clear
-     "Account" section header.
-- [X] **New build** — triggered 2026-09-15 via `workflow_dispatch` (run `34945809803`),
-  succeeded in 12m11s, auto-submitted to TestFlight. Same `version` 1.3.0 (pure JS fix, no
-  native change, no version bump).
+Play Console **Personal** account, app record (`app.thatfridge`, Food & Drink, Free), Data
+Safety / content rating / ads / financial / health declarations, advertising-ID declaration,
+app icon + feature graphic, and the `#delete-account`/`#delete-data` privacy-policy anchors are
+all done. First production build shipped to Internal testing; RevenueCat's Android API key
+(`EXPO_PUBLIC_RC_ANDROID_KEY`) is wired into EAS and the `Platform.OS`-based key-selection bug
+is fixed (`a7fea71`) — the paywall works for whichever products are attached (below).
 
-  - [ ] Smoke-test once Apple finishes processing (~15-30 min after submit): sign in as
-    `keira@thatfridge.test`, Profile → Subscription → View plans opens the real paywall with
-    all 5 products priced correctly.
-- [X] Screenshots uploaded (2026-09-08).
-- [X] **Paid Apps Agreement** — confirmed Active in ASC → Business (2026-09-15).
-- [X] **Screen recording** — done: https://youtube.com/shorts/-mr_eJnX5xE (Unlisted/Shorts,
-  demo-account delete-account flow). Paste into ASC → App Review Information → Notes.
-- [X] **Resubmit** — in ASC pick the new build, **attach all 5 IAPs (2 subscriptions + 3 credit
-  packs) to this version and submit them for review together with it** — this is the step that
-  was actually missing and caused the 2.1(b) rejection. Reply to the review thread (Resolution
-  Center) with the draft below, attach the screen recording above in App Review Information →
-  Notes (not in the reply text itself).
+- [ ] **EAS→Play publishing service account is NOT actually set up**, despite earlier appearing
+  configured — a real `eas build --auto-submit` attempt failed with "Google Service Account Keys
+  cannot be set up in --non-interactive mode." Needs running `eas credentials` (interactive,
+  can't be done from here) → Android → production → Google Service Account → set up, using the
+  **Release manager**-role service account JSON (separate from RevenueCat's). Until then, every
+  build needs a manual `.aab` upload to Play Console.
+- [ ] **Google Play Payments Profile is incomplete** (pay.google.com/business/console) — this is
+  the likely root cause of persistent, differently-coded "unexpected error" failures when
+  creating the `credits_100` product specifically. Needs the banking/payout + tax (W-8BEN) form
+  there completed before retrying.
+- [ ] **`credits_100` product still not created** in Play Console — blocked on the above. The
+  other 4 products (`thatfridge_pro_monthly` $2.99/mo, `thatfridge_pro_yearly` $19.99/yr,
+  `credits_500` $7.99, `credits_1500` $19.99) exist.
+- [ ] **Attach the Android products to RevenueCat** — the Android app is linked (credentials
+  validate reads of the product/subscription catalog; purchase-validation itself will likely
+  only go green after a real test purchase, not a config issue) but attaching the products to
+  the `thatfridge_pro` entitlement and the existing offering packages hasn't been confirmed done.
+- [ ] **Closed testing must clear before Play Console allows creating the remaining IAP
+  product** — track created and running (started 2026-09-16); check Play Console for the exact
+  tester-count/day requirement and days remaining. Internal testing opt-ins do **not** count
+  toward this — testers need the Closed-testing-specific opt-in link.
+- [ ] **Google Sign-In on Android needs its own OAuth client** (separate from iOS's) — the
+  button fails ("sign-in didn't go through") until this exists.
+- [ ] Once the above clears: enable the tag trigger is already done
+  (`.github/workflows/google-play.yml` fires on the same `v*` tag as `testflight.yml`) — just
+  needs the service account fixed for it to actually work end-to-end.
+- [ ] **Target API level 36 (Android 16) by Aug 31, 2026**, Billing Library v8+ — no manual
+  override in this project, Expo SDK 57 almost certainly ships compliant, but confirm on an
+  actual build rather than assume.
+- [ ] **UGC reporting is stricter in wording than Apple's** — Google's policy says "in-app
+  functionality for reporting"; the mailto-based report (`FridgeNotes.tsx`, `find-friend.tsx`)
+  commonly passes review in practice but is a literal gap vs. the text. Deliberately left as-is;
+  revisit with a true in-app report flow only if Android review actually flags it.
 
-  <details>
-  <summary>Draft reply — Resolution Center (submission 60752a52-3b30-446c-b4ec-0d2a54df3d34, v1.3.0/18)</summary>
-
-  **Guideline 2.1(b) — In-App Purchases**
-
-  Thank you for flagging this. We found the cause: our review account was configured to
-  always display as fully subscribed on the client, which suppressed every entry point to
-  the paywall — there was no way to reach the In-App Purchase screen from that account in
-  the build you reviewed.
-
-  We've fixed this in a new build. To locate the In-App Purchases:
-
-  1. Sign in with the review account (credentials in App Review Information).
-  2. Go to the **Profile** tab (bottom right).
-  3. Under **Subscription**, tap **View plans**.
-
-  This opens our paywall showing all products: `thatfridge_pro_monthly`,
-  `thatfridge_pro_yearly`, and three consumable credit packs (`credits_100`, `credits_500`,
-  `credits_1500`). We've also attached all 5 products to this submission for review and
-  confirmed the Paid Apps Agreement is active in the Business section of App Store Connect.
-
-  We are not restricting IAP access by storefront or device configuration.
-
-  **Guideline 5.1.1(v) — Account deletion**
-
-  Account deletion has been present in the app since before this submission; we believe it
-  was simply hard to find. We've now placed it under a clearly labeled "Account" section.
-  To locate it:
-
-  1. Sign in with the review account (or create a new account).
-  2. Go to the **Profile** tab.
-  3. Scroll to **Account** → tap **Delete account**.
-  4. Confirm twice ("Delete account", then "Delete forever").
-
-  This permanently deletes the account server-side (no deactivation/soft-delete) with no
-  further customer-service steps required. A screen recording of the full flow is attached
-  in the Notes field of the App Review Information section.
-
-  *Before pasting: fill in the actual build number once known; confirm the Paid Apps
-  Agreement is genuinely Active in ASC → Business before claiming it.*
-
-  </details>
-
-  **Notes field text (App Review Information → Notes, separate from the reply above):**
-
-  ```
-  Account deletion screen recording: https://youtube.com/shorts/-mr_eJnX5xE
-  ```
-
-**Shipaton / Devpost** (same Sep 30, 11:45pm PDT)
+### Shipaton / Devpost (same Sep 30, 11:45pm PDT)
 
 - [ ] Devpost project page + feature description.
 - [ ] Demo video ≤2:00, public on YouTube/Vimeo, no copyrighted music/footage.
-- [X] #BuildInPublic thread/dev log, updated 2-3×/week.
+- [x] #BuildInPublic thread/dev log, updated 2-3×/week.
 - [ ] Peace Prize impact statement (household food-waste → savings + environmental).
 - [ ] App Store URL on the submission.
 - [ ] **Submit on Devpost before the deadline.**
-
 - **Don't** market as "launched" anywhere public (TestFlight link, ProductHunt, press) before
   the store listing is live — risks Shipaton's "brand-new app" disqualification.
 
@@ -116,94 +91,31 @@ between here and launch.
   **Korean privacy policy** at `/privacy/ko/` (currently 404) — ~$200–350 for a KR legal
   translator, or ~$300–600 for a PIPA-compliance consultant who adapts rather than translates
   (keep an "English version prevails" clause). Also needs a *separate, unticked* cross-border
-  consent checkbox on every sign-in path gated on KR locale (today's mechanism covers MY/UK/CH
-  but isn't PIPA gold-standard), KR pricing (₩3,900/₩25,000), KR listing metadata + screenshots
-  (captions in `SCREENSHOTS.md` §6), and re-checking the KR storefront in ASC → Availability.
+  consent checkbox on every sign-in path gated on KR locale, KR pricing (₩3,900/₩25,000), KR
+  listing metadata + screenshots (captions in `SCREENSHOTS.md` §6), and re-checking the KR
+  storefront in ASC → Availability.
 - [ ] **Translation sourcing** (KR policy above, later a KR/MS app UI): paid native review beats
   translate-from-scratch — Fiverr/Upwork $30–80 for a review pass, ProZ.com for real legal
   translators. App UI strings (once i18n is wired) via Crowdin/Lokalise/Weblate, ~$150–300 for a
-  full KO set. Malaysia's pdp.gov.my / Korea's pipc.go.kr publish model privacy notices worth
-  adapting rather than translating from ours.
+  full KO set.
 - [ ] Onboarding polish — personalized payoff copy from stored `preferences` tags + a peak-end
   "you're all set" beat, and contextual coach-marks (crew tabs in `/eat`, drag-to-reorder in
   Inventory, Kitchen Score). Waits on `app:onboarding-funnel` data. See
-  `apps/mobile/ONBOARDING.md` → "Still open" — rest of onboarding is shipped.
-- [ ] Personal-goal feature, done right (old Goal screen removed for v1 — confusing metrics,
-  dishonest weekly/monthly period). If rebuilt: one intuitive metric ("items rescued"), a live
-  Home card, an honest timeframe. Backend `user_goals`/`UserGoalController`/`progress.ts` still
-  exist, unused by the client.
-- [X] Pro AI spend ceiling — done via the credit system (2026-09-08): every model call is
-  metered per action, so per-user spend is bounded by construction. $10 pre-loaded on
-  OpenRouter + fal.ai each, auto-recharge **OFF** (caps total exposure at the pre-loaded
-  balance — refill manually as usage grows). Open: turn on low-balance email alerts on both
-  dashboards so a refill isn't missed.
-- [ ] Photographic recipe hero image. Recipes carry `icon`/`icon_url` (curated or generated);
-  still open is an optional full-bleed photo (`image_url`, `flux/schnell` no-rembg ~$0.003/img)
-  on the card + detail. Web parity for the icon picker also unbuilt.
+  `apps/mobile/ONBOARDING.md` → "Still open."
+- [ ] Personal-goal feature, done right (old Goal screen removed for v1). If rebuilt: one
+  intuitive metric ("items rescued"), a live Home card, an honest timeframe. Backend
+  `user_goals`/`UserGoalController`/`progress.ts` still exist, unused by the client.
+- [ ] Turn on low-balance email alerts on the OpenRouter + fal.ai dashboards (the spend-ceiling
+  system itself is done — see AI credits below).
+- [ ] Photographic recipe hero image — an optional full-bleed photo (`image_url`, `flux/schnell`
+  no-rembg ~$0.003/img) on the card + detail, alongside the existing `icon`/`icon_url`. Web
+  parity for the icon picker also unbuilt.
 - [ ] **Flip media storage to Cloudflare R2** when the VPS disk hits ~50% or before ~500 active
-  users. Uploads already route through `config('filesystems.media_disk')` (default `public`) —
-  the switch is env vars + a one-off file copy + URL rewrite. Runbook: `backend/DEPLOY.md` §13a.
-  ~$0 under R2's 10GB free tier, then ~$2–5/mo.
+  users. Runbook: `backend/DEPLOY.md` §13a. ~$0 under R2's free tier, then ~$2–5/mo.
 - [ ] Sentry DSN (crash monitoring scaffolded, currently a no-op).
 - [ ] `apps/web/lib/thatfridge` → `packages/core` extraction (most already moved).
 - [ ] `react-i18next` + `expo-localization` — i18n plumbing so a Korean/Malay UI ships as an
-  OTA, no rebuild. Getting strings translated is the sourcing item above.
-- [ ] Android — in progress (2026-09-16). CI pipeline ready and **fully automated**
-  (`.github/workflows/google-play.yml` now triggers on the same `v*` tag as `testflight.yml`, one
-  tag ships both stores — see `RELEASE.md` "Google Play"). Done: Play Console **Personal** account
-  created (business name `Muhammad Naufal Kamaruddin`, website `https://thatfridge.com`, support
-  email `support@thatfridge.com`, card statement name `THATFRIDGE`, "what you sell": mobile app
-  subscriptions and in-app digital purchases); app record (`app.thatfridge`, Food & Drink, Free);
-  Data Safety, content rating (IARC), ads/financial/health declarations, AI-asset-use disclosure
-  (feature graphic only), advertising-ID declaration (No) all filled in; app icon + feature
-  graphic (`apps/mobile/assets/images/playstore-icon-512.png` /
-  `playstore-feature-graphic.png`) uploaded; `#delete-account` / `#delete-data` privacy-policy
-  anchors added for the Data Safety deletion-URL fields; first production build (versionCode 2)
-  built via `eas build` and uploaded to Internal testing; the EAS→Play publishing service account
-  (Release manager role, separate from RevenueCat's) set up via `eas credentials`, so future
-  builds auto-submit with no manual upload; Closed testing track created and running (started
-  2026-09-16, minimum period TBD by what Play Console's requirement screen states).
-  - [ ] **Google Sign-In on Android needs its own OAuth client** (separate from iOS's) — the
-    button fails ("sign-in didn't go through") until this exists.
-  - [x] **RevenueCat was using the iOS API key on every platform** — fixed (`a7fea71`):
-    `Platform.OS`-based key selection, `EXPO_PUBLIC_RC_ANDROID_KEY` added. The key itself still
-    needs to exist (below).
-  - [ ] **Closed testing must clear before Play Console allows creating Android IAP products** —
-    discovered 2026-09-16, blocks the RevenueCat/Play Store product setup below. Internal testing
-    does not count toward this. In progress (see above) — check Play Console for days remaining.
-  - [ ] **RevenueCat has no Android app yet** — only the iOS app + Test Store exist. Once closed
-    testing unblocks product creation: create the 5 matching Android products in Play Console
-    (`thatfridge_pro_monthly` $2.99/mo, `thatfridge_pro_yearly` $19.99/yr, `credits_100` $1.99,
-    `credits_500` $7.99, `credits_1500` $19.99 — same USD prices as iOS, activate all 5), add a
-    Google Play service account in RevenueCat (**different** service account/role than the EAS
-    one — needs "View financial data" + "Manage orders and subscriptions" in Play Console API
-    access, not "Release manager") to link a new RevenueCat Android app, attach the 5 products to
-    the existing `thatfridge_pro` entitlement + existing offering packages, then hand the new
-    Android SDK key to EAS (`eas env:create ... EXPO_PUBLIC_RC_ANDROID_KEY`).
-
-  **Google Play Developer Program Policy pass (2026-09-15)** — checked against the current
-  policy text, cross-referenced with the same codebase already audited for Apple (permission
-  strings, no tracking, subscription disclosure, account deletion, privacy policy — all already
-  compliant, same code). Android/Google-specific items:
-
-  - [ ] **Target API level 36 (Android 16) by Aug 31, 2026** for new apps, Billing Library v8+.
-    No manual override in this project (`expo-build-properties` isn't used) — Expo SDK 57
-    almost certainly ships a compliant default already, but this needs confirming on the actual
-    first Android build (step 3 above), not assumed.
-  - [X] In-app subscription cancellation (Google's 2026 "easy-to-use, in-app cancel" policy) —
-    already covered by `openCustomerCenter()` (RevenueCat Customer Center), which is
-    cross-platform in the existing code, not iOS-gated. No change needed once Android IAP
-    products exist in RevenueCat.
-  - [ ] **UGC reporting is stricter in wording than Apple's.** Google's policy says apps with
-    user interaction must provide "in-app functionality for reporting" — the mailto-based report
-    added for the Apple pass (`FridgeNotes.tsx`, `find-friend.tsx`) commonly passes review in
-    practice since the action originates in-app, but is a literal gap vs. the policy text.
-    Deliberately left as-is for now (see 2026-09-15 discussion) — revisit with a true in-app
-    report flow (new backend endpoint + modal, no Mail hand-off) if Android review ever flags it,
-    or proactively before submitting if there's time to spare.
-  - [ ] Play Console "App content" declarations (all metadata tasks, blocked on having an
-    account): Data safety form, ads declaration (answer "No ads"), content rating (IARC)
-    questionnaire, target audience/age group. No code involved.
+  OTA, no rebuild.
 - [ ] Web deployment: `expo export -p web`, wide-viewport (≥900px) layouts, retire legacy
   `apps/web`.
 - [ ] PixelMix font: get written confirmation the desktop EULA covers app/web embedding (email
@@ -212,8 +124,7 @@ between here and launch.
   that yet.
 - [ ] **Recipe attachments still on the public media disk** (unlike receipts/photos — see
   Security below — these are actively displayed, so privatizing needs a real data-model change:
-  store a disk path instead of a baked URL, regenerate the signed URL fresh on every read. No
-  mobile change needed. Worth doing carefully, not last-minute.
+  store a disk path instead of a baked URL, regenerate the signed URL fresh on every read).
 
 ---
 
@@ -222,16 +133,16 @@ between here and launch.
 ### Cost tracker (all USD, approximate)
 
 | Item                                                          | Cost         | Status                                           |
-| ------------------------------------------------------------- | ------------ | ------------------------------------------------ |
+| --------------------------------------------------------------| ------------ | ------------------------------------------------ |
 | Apple Developer Program                                       | $99/yr       | Paid                                             |
-| Domain —`thatfridge.com`                                   | ~$10.46/yr   | Paid                                             |
-| PixelMix commercial font licence                              | $25 one-time | Paid (embedding confirmation pending, see above) |
-| VPS — DigitalOcean SGP1, 2 vCPU/2GB + backups                | $21.60/mo    | Live                                             |
-| Legal site hosting (Cloudflare Workers), email routing        | $0           | Live                                             |
-| Sentry, RevenueCat, Expo EAS, Devpost                         | $0           | Free tiers                                       |
-| Google Play Console                                           | $25 one-time | Paid                                             |
-| OpenRouter wallet (AI chat/vision, prepaid, no auto-recharge) | $10 one-time | Paid                                             |
-| fal.ai wallet (icon generation, prepaid, no auto-recharge)    | $10 one-time | Paid                                             |
+| Domain —`thatfridge.com`                                    | ~$10.46/yr   | Paid                                             |
+| PixelMix commercial font licence                               | $25 one-time | Paid (embedding confirmation pending, see above) |
+| VPS — DigitalOcean SGP1, 2 vCPU/2GB + backups                 | $21.60/mo    | Live                                             |
+| Legal site hosting (Cloudflare Workers), email routing         | $0           | Live                                             |
+| Sentry, RevenueCat, Expo EAS, Devpost                          | $0           | Free tiers                                       |
+| Google Play Console                                            | $25 one-time | Paid                                             |
+| OpenRouter wallet (AI chat/vision, prepaid, no auto-recharge)  | $10 one-time | Paid                                             |
+| fal.ai wallet (icon generation, prepaid, no auto-recharge)     | $10 one-time | Paid                                             |
 
 **Fixed recurring cost: ≈$30.72/mo ($368.66/yr)**, regardless of user count. Apple's commission
 is 15% once the Small Business Program application (submitted 2026-09-05) is approved, 30%
@@ -249,27 +160,30 @@ refunds. Full reasoning: git history (`3a. Business & pricing analysis`, 2026-09
 ### RevenueCat / subscriptions
 
 Two products, **permanent IDs — never reusable, don't typo**: `thatfridge_pro_monthly`
-($2.99/mo) and `thatfridge_pro_yearly` ($19.99/yr), both with a 1-week free intro offer, both
-attached to the version. Pro grants a **400-credit monthly bundle** (vs 50 free), rolls over up
-to 800, and unlocks hosting shared fridges (see AI credits below). Paywall = the RevenueCat
-dashboard paywall (`RevenueCatUI.Paywall`) — editor at
+($2.99/mo) and `thatfridge_pro_yearly` ($19.99/yr), both with a 1-week free intro offer. Pro
+grants a **400-credit monthly bundle** (vs 50 free), rolls over up to 800, and unlocks hosting
+shared fridges (see AI credits below). iOS paywall = the RevenueCat dashboard paywall
+(`RevenueCatUI.Paywall`) — editor at
 `app.revenuecat.com/projects/c6c4cdf4/paywalls/pwec1165df9a414243/builder`, published revision
-36 (credit-model copy, live in the app). ASC API key + vendor number `94767188` set in
-RevenueCat.
+36 (credit-model copy, live in the app). Android app + products are being wired in now (see
+Android section above).
 
 <details>
 <summary>Canonical paywall content (rebuild reference)</summary>
 
 - Headline: **Get more out of your fridge** (turquoise `#26c6da`, ~22pt bold, centered)
 - Subtitle: *Know before you open the door.*
-- Comparison card — header row `· / Free / Pro`, then:| Feature                                 | Free         | Pro          |
-  | --------------------------------------- | ------------ | ------------ |
-  | Fridge & pantry tracking, expiry alerts | ✓           | ✓           |
-  | Monthly AI credits (chat, scans, icons) | 50           | 400          |
-  | Bulk-add from a receipt or fridge photo | Uses credits | Uses credits |
-  | Buy more credits anytime                | ✓           | ✓           |
-  | Own more than one fridge                | –           | ✓           |
-  | Host a shared fridge for your household | –           | ✓           |
+- Comparison card — header row `· / Free / Pro`, then:
+
+  | Feature                                 | Free         | Pro          |
+  | ---------------------------------------- | ------------ | ------------ |
+  | Fridge & pantry tracking, expiry alerts  | ✓            | ✓            |
+  | Monthly AI credits (chat, scans, icons)  | 50           | 400          |
+  | Bulk-add from a receipt or fridge photo  | Uses credits | Uses credits |
+  | Buy more credits anytime                 | ✓            | ✓            |
+  | Own more than one fridge                 | –            | ✓            |
+  | Host a shared fridge for your household  | –            | ✓            |
+
 - Footer: *Every AI action spends credits. Free gives you 50 a month; Pro gives you 400, rolls
   the unused ones over, and unlocks hosting shared fridges.*
 - Rules: sentence case, **never the word "unlimited"**, lead with the credit number not a
@@ -278,7 +192,6 @@ RevenueCat.
   you cancel.* CTA: **Get Pro access**.
 
 `app_context` for the RC Paywall AI editor (`edit-paywall-ai`):
-
 ```
 app_identity: name "ThatFridge", category "Food & Drink / kitchen inventory",
   desc "Track what's in your fridge and pantry, get pinged before food goes bad, see what you
@@ -295,57 +208,45 @@ premium highlights: 400 AI credits a month vs 50 (credits pay for crew chat, rec
   fridge for the household.
 visual: primary #26c6da, dark charcoal bg + cyan accent, bold sans headline / regular sans body.
 ```
-
 </details>
 
 ### AI credits (metered, server-authoritative)
 
-Every AI action spends credits from `users.ai_credits`; `ChatQuota` is deleted. The backend
-ledger (`ai_credit_ledger`, unique on `reason`+`ref`) is authoritative; RevenueCat Virtual
-Currency (`AICR`) is a best-effort display mirror.
+Every AI action spends credits from `users.ai_credits`. The backend ledger
+(`ai_credit_ledger`, unique on `reason`+`ref`) is authoritative; RevenueCat Virtual Currency
+(`AICR`) is a best-effort display mirror.
 
-| Action                             | Cost | Notes (`App\Support\CreditCost`)                       |
-| ---------------------------------- | ---- | -------------------------------------------------------- |
-| Quick Chat message                 | 1    | `+2` surcharge (best-effort) when the crew used a tool |
-| AI icon generation (item + recipe) | 3    | curated pixel picks are free                             |
-| Expiry-date photo scan             | 2    | no refund — the vision call runs even on "not found"    |
-| Receipt scan                       | 3    | refunded on hard failure                                 |
-| Fridge-photo scan                  | 3    | refunded on hard failure                                 |
-| Add-item auto-fill                 | 1    | 402 → top-up prompt on the draft card                   |
-| Memory extraction                  | 0    | tiny call right after a chat that already paid           |
-| Home crew tip cards                | 0    | cached per user+agent per day                            |
-| Quick Chat with a photo            | 3    | vision is ~3-5× a text chat; refund matches on failure  |
+| Action                             | Cost | Notes (`App\Support\CreditCost`)                        |
+| ----------------------------------- | ---- | -------------------------------------------------------- |
+| Quick Chat message                 | 1    | `+2` surcharge (best-effort) when the crew used a tool   |
+| AI icon generation (item + recipe) | 3    | curated pixel picks are free                              |
+| Expiry-date photo scan             | 2    | no refund — the vision call runs even on "not found"     |
+| Receipt scan                       | 3    | refunded on hard failure                                  |
+| Fridge-photo scan                  | 3    | refunded on hard failure                                  |
+| Add-item auto-fill                 | 1    | 402 → top-up prompt on the draft card                     |
+| Memory extraction                  | 0    | tiny call right after a chat that already paid            |
+| Home crew tip cards                | 0    | cached per user+agent per day                             |
+| Quick Chat with a photo            | 3    | vision is ~3-5× a text chat; refund matches on failure    |
 
 Grants: free accounts topped up to 50/month; Pro gets 400/month, rolling over up to 800.
 `app:grant-monthly-credits` runs `monthlyOn(1, 00:15)`; the RevenueCat webhook also grants the
 Pro bundle on a paid `INITIAL_PURCHASE`/`RENEWAL` and pack credits on a consumable
-`NON_RENEWING_PURCHASE` (`credits.packs`: `credits_100/500/1500`) — idempotent via the ledger's
-`reason`+`ref` key.
+`NON_RENEWING_PURCHASE` — idempotent via the ledger's `reason`+`ref` key.
 
 **Trial-farming guard**: a `period_type: TRIAL` `INITIAL_PURCHASE` grants **nothing** (trial
 user keeps their free 50) and sets `pro_trial_until`; the 400 bundle lands only on a paid
-`RENEWAL`. Without this: start trial → 400 credits → cancel day 6 → $0, repeatable per Apple ID.
+`RENEWAL`.
 
-**Signup cap**: 6/min + 20/day per IP on `/register` (each account carries free credits) — full
-email verification is the real fix, deferred (needs a mobile verify screen).
+**Signup cap**: 6/min + 20/day per IP on `/register` — full email verification is the real fix,
+deferred (needs a mobile verify screen).
 
 **Host a shared fridge** stays a hard Pro gate (not credits) — `FridgeJoinRequestController`
-requires `$fridge->user->isPro()`. Being invited is free; already-joined members keep access if
-the owner drops to free.
+requires `$fridge->user->isPro()`.
 
-**Manual setup still owed:**
-
-- [X] RevenueCat Virtual Currency `AICR`, 3 consumable products, `credits` offering — all
-  created via API.
-- [X] Trial-guard migration + webhook consumable-purchase handling — confirmed via passing
-  tests (`RevenueCatWebhookControllerTest`), and every deploy runs `migrate --force`.
-- [ ] App Store Connect: the 3 consumable IAPs are "Ready to Submit" but not yet submitted with
-  a build — tracked as the same item as the App Store "Resubmit" step above (all 5 IAPs go
-  together).
-- [ ] prod `.env` → `REVENUECAT_SECRET_API_KEY=…` for the credit→VC display mirror. Optional —
-  the ledger is authoritative without it.
-- [ ] After submission: detach the two RC Test Store products (`monthly`, `yearly`) from the
-  Monthly/Yearly packages so the paywall serves only the real `thatfridge_pro_*` products.
+Still owed: prod `.env` → `REVENUECAT_SECRET_API_KEY=…` for the credit→VC display mirror
+(optional, the ledger is authoritative without it); after both stores' IAPs are fully live,
+detach the RC Test Store products (`monthly`, `yearly`) from the packages so the paywall serves
+only the real store products.
 
 ### Shared icon pack (curated from user generations)
 
@@ -373,21 +274,19 @@ Loop bounded by `MAX_TOOL_ROUNDS = 5` + `MAX_TOOL_CALLS = 10` (`fetch_url` keeps
 (never hard-fails mid-reply). All agents get all tools; model stays Haiku 4.5.
 
 **Still open:** `add_item`/`save_recipe` icon-guessing only covers a curated-10 keyword map
-(port the full `guessFoodIcon` post-launch); `save_recipe` skips `meal_type`/`vibes`/
-`food_focus` tags (advisory, filled in if re-saved from the app); a confirm *card* in the UI
-(vs. text round-trip) is deferred; no tools yet for recipe favourite/unfavourite,
-`suggest_recipes`, user categories, or shopping→fridge handoff — nice-to-have, none hit in week
-one. Buy links (`shop_url`) are opened in-browser only, never fetched server-side.
+(port the full `guessFoodIcon` post-launch); a confirm *card* in the UI (vs. text round-trip) is
+deferred; no tools yet for recipe favourite/unfavourite, `suggest_recipes`, user categories, or
+shopping→fridge handoff. Buy links (`shop_url`) are opened in-browser only, never fetched
+server-side.
 
 ### Data retention
 
 `app:prune-stale-data` runs daily (04:00): `analytics_events` >180d, `notification_events`
-(done >60d / any >180d), terminal `fridge_join_requests` >90d, `photos/`+`receipts/` scan images
-
-+ orphaned `icons/`/`recipe-attachments/` files >7d. Not pruned: `chat_history` (needs a "kept
-  12 months" UI message first), and real user data (items, recipes, usage history, memory).
-  `--dry-run` reports without deleting. `photo_scans`/`receipts`/`receipt_line_items` tables are
-  dead schema — the vision services store the file and return it inline, never writing a row.
+(done >60d / any >180d), terminal `fridge_join_requests` >90d, `photos/`+`receipts/` scan
+images + orphaned `icons/`/`recipe-attachments/` files >7d. Not pruned: `chat_history` (needs a
+"kept 12 months" UI message first), and real user data (items, recipes, usage history, memory).
+`--dry-run` reports without deleting. `photo_scans`/`receipts`/`receipt_line_items` tables are
+dead schema — the vision services store the file and return it inline, never writing a row.
 
 ### Security
 
@@ -411,23 +310,27 @@ unauthenticated screen.
 
 ### Demo / reviewer account
 
-`keira@thatfridge.test` — pre-seeded shared fridge ("Home Fridge") with items across all zones +
-11 recipes (no alcohol references). Password is an env var (`DEMO_USER_PASSWORD`), live value in
-the shared password manager, pasted into ASC's Sign-In fields.
+`keira@thatfridge.test` — pre-seeded shared fridge ("Home Fridge") with items across all zones.
+Password is an env var (`DEMO_USER_PASSWORD`), live value in the shared password manager, pasted
+into ASC's Sign-In fields. If the demo account is ever deleted again (e.g. while recording an
+account-deletion demo), re-seed via `php artisan config:clear && php artisan db:seed --force` on
+the server — restores the login but not any hand-built fridge/recipe content, which would need
+rebuilding separately.
 
-### Privacy & compliance posture (2026-09-07)
+### Privacy & compliance posture
 
 **App Store availability:** unavailable in the EU-27 + Iceland + Norway (GDPR + DSA trader
 declaration), the non-EU Balkans + Moldova + Ukraine, China (PIPL + ICP filing), Russia +
 Belarus, and **South Korea** (temporary — re-enable per the Korea fast-follow above). Available
 everywhere else (~140 territories incl. MY, US, UK, Switzerland).
 
-Privacy policy + terms cover the credit model: the AI crew reads *and acts on* kitchen data,
-fetches pasted links; consumable AI-credit packs + the RC credit-balance mirror are disclosed;
-terms §3 covers credits (consumable, non-refundable, no cash value).
+Privacy policy + terms are cross-platform (both stores named as payment/push processors, not
+Apple-only) and cover the credit model: the AI crew reads *and acts on* kitchen data, fetches
+pasted links; consumable AI-credit packs + the RC credit-balance mirror are disclosed; terms §3
+covers credits (consumable, non-refundable, no cash value).
 
-- One English privacy policy (`/privacy/`) + Apple App Privacy labels + in-app account deletion
-  — the disclosure floor for ~everywhere sold.
+- One English privacy policy (`/privacy/`) + App Privacy labels (both stores) + in-app account
+  deletion — the disclosure floor for ~everywhere sold.
 - **Cross-border-transfer consent on every sign-up path** (email checkbox; notice + affirmative
   action before Apple/Google; recorded as `users.data_transfer_consented_at`) — satisfies
   MY (PDPA) / UK / Switzerland.
@@ -442,12 +345,12 @@ terms §3 covers credits (consumable, non-refundable, no cash value).
 
 ### Locked decisions — no re-litigation
 
-NativeWind · Expo Router · pnpm workspaces + turborepo · bundle id `test.thatfridge.app` · iOS
-target 15.1 · Apple enrollment Individual · v1 notifications local/on-device (server push
-already built too, for social events) · Android deferred entirely · one universal UI codebase
-(`react-native-web` renders `apps/mobile` in a browser; legacy `apps/web` retired once web
-output ships) · signing keys + Apple assets in a shared password manager · **v1 app UI is
-English-only**, localized store listings only.
+NativeWind · Expo Router · pnpm workspaces + turborepo · bundle id `test.thatfridge.app` (iOS) /
+`app.thatfridge` (Android) · iOS target 15.1 · Apple enrollment Individual, Google Play Personal
+· v1 notifications local/on-device (server push already built too, for social events) · one
+universal UI codebase (`react-native-web` renders `apps/mobile` in a browser; legacy `apps/web`
+retired once web output ships) · signing keys + store assets in a shared password manager ·
+**v1 app UI is English-only**, localized store listings only.
 
 ### Infra & CD
 
@@ -458,7 +361,9 @@ English-only**, localized store listings only.
   `.github/workflows/deploy-legal.yml`.
 - Mobile OTA: `.github/workflows/eas-update.yml`, push to `main` touching `apps/mobile`/
   `packages` → production channel.
-- Mobile native builds: `.github/workflows/testflight.yml`, `git tag v*` or manual dispatch.
+- Mobile native builds: `git tag v*` (or manual dispatch) fires both
+  `.github/workflows/testflight.yml` (iOS) and `.github/workflows/google-play.yml` (Android) —
+  Android auto-submit needs its service account fixed first (see Android section).
 - `main` is the only working branch.
 
 ### Architecture
@@ -476,41 +381,32 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
 
 1. **Guideline 3.1.2 (subscription scrutiny).** Restore button, clear pricing, terms, no dark
    patterns — the published paywall is already built to spec; the code fallback UI (used only
-   pre-dashboard-config / Expo Go) got an explicit auto-renewal disclosure line added too
-   (2026-09-15 guideline pass).
+   pre-dashboard-config / Expo Go) got an explicit auto-renewal disclosure line added too.
 2. **Guideline 4.2 (thin-wrapper rejection).** Low risk for a real RN app with substantial
    native feature use; a written rebuttal is on hand in `STORE_LISTING.md` §3 if needed.
-3. **Shipaton "first public release" timing.** No public TestFlight link/press before the store
-   listing is live.
+3. **Shipaton "first public release" timing.** No public TestFlight/Play link or press before
+   the store listing is live.
 4. **The deadline is a wall.** Sep 30, no extensions. Submit ~2 weeks early; be ready for
    same-day resubmits if rejected.
 5. **Scope creep.** Anything not already in the app is post-launch OTA. The paywall is
    mandatory — don't trade release-track time for a nice-to-have screen.
 
-**Full-guideline pass (2026-09-15):** checked 4.8 (Sign in with Apple parity), 3.1.1 (restore),
-5.1.1 (privacy manifest, permission strings, data minimization, account deletion), 5.1.2/ATT (no
-tracking), 1.2 (UGC — report via `support@thatfridge.com` + working block, per `find-friend.tsx`)
-— all compliant.
-
-- [X] Report/block was per-user only (find-friend), not per-note — fixed: `FridgeNotes.tsx` now
-  has a "Report" action (mailto, same pattern as the existing user report) on other members'
-  notes, both the Home grid and Organizer editor views.
-- [X] Quick Chat's `fetch_url` tool has no content-category filtering (SSRF-safe, but no adult/
-  violence blocklist) — verified the ASC age-rating questionnaire's "Unrestricted Web Access"
-  question is answered **No** (2026-09-15), accurate since it's a narrow tool (recipe-link
-  import + citations, capped at 2 fetches/turn), not an in-app browser.
+**Full guideline passes done:** Apple (2026-09-15 — 4.8 Sign in with Apple parity, 3.1.1
+restore, 5.1.1 privacy manifest/permission strings/data minimization/account deletion, 5.1.2/ATT
+no tracking, 1.2 UGC report+block) and Google Play (2026-09-15/16 — Data Safety, subscription
+disclosure, permissions, UGC reporting caveat noted above) — both compliant, same codebase.
 
 ### QA matrix
 
-| Area          | Checks                                                                                                                                   |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Devices       | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device                                                                               |
-| Auth          | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session                                        |
-| Core loop     | add item, barcode scan (camera allow/deny/deny-then-enable), inventory edit/delete, mark recipe made decrements stock                    |
-| Notifications | local alert fires at the right time, taps route to the item, permission denied handled                                                   |
-| Paywall       | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow                                                           |
-| AI credits    | balance shows on chat + profile, spend decrements it, 0 credits routes to /credits, pack purchase tops up, Pro renewal grants the bundle |
-| Native chrome | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe                                                    |
-| Network       | airplane mode on every screen, slow 3G, API 500s, retry paths                                                                            |
-| Lifecycle     | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly                                                  |
-| Compliance    | account deletion from a clean install, privacy-policy link opens, demo account works fresh                                               |
+| Area          | Checks                                                                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Devices        | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device; one Android device                                                            |
+| Auth           | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session                                         |
+| Core loop      | add item, barcode scan (camera allow/deny/deny-then-enable), inventory edit/delete, mark recipe made decrements stock                     |
+| Notifications  | local alert fires at the right time, taps route to the item, permission denied handled                                                    |
+| Paywall        | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow                                                             |
+| AI credits     | balance shows on chat + profile, spend decrements it, 0 credits routes to /credits, pack purchase tops up, Pro renewal grants the bundle |
+| Native chrome  | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe                                                      |
+| Network        | airplane mode on every screen, slow 3G, API 500s, retry paths                                                                              |
+| Lifecycle      | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly                                                   |
+| Compliance     | account deletion from a clean install, privacy-policy link opens, demo account works fresh                                                |
