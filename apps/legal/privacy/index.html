@@ -88,11 +88,12 @@
   <p>AI features are metered in "AI credits". We keep your current credit balance and a log of
   credit transactions (grants and what each was spent on) tied to your account.</p>
   <p><strong>ThatFridge Pro</strong> is an auto-renewing subscription, and you can also buy one-off
-  <strong>AI-credit packs</strong>. Both are sold through Apple — <strong>Apple processes your
-  payment</strong> and we never receive your card details. We use <strong>RevenueCat</strong> to
-  manage entitlements and purchases; RevenueCat receives a pseudonymous app-user ID (your account
-  ID), purchase and receipt data, device/platform information, and your AI-credit balance (mirrored
-  for display), so we can tell whether your Pro access is active and keep your balance in sync.</p>
+  <strong>AI-credit packs</strong>. Both are sold through the app store you installed from —
+  <strong>Apple (iOS) or Google (Android) processes your payment</strong> and we never receive
+  your card details. We use <strong>RevenueCat</strong> to manage entitlements and purchases;
+  RevenueCat receives a pseudonymous app-user ID (your account ID), purchase and receipt data,
+  device/platform information, and your AI-credit balance (mirrored for display), so we can tell
+  whether your Pro access is active and keep your balance in sync.</p>
 
   <h3>Notifications</h3>
   <p>Expiry and low-stock reminders are scheduled <strong>locally on your device</strong> and
@@ -101,7 +102,8 @@
   <strong>push notifications</strong>. This requires registering a <strong>push token</strong>
   (an identifier tied to your device, issued by Expo's push service) with our server; when a
   notification fires, we send that token plus the notification's title and body to Expo, which
-  relays it to Apple's push notification service. See &sect;4 for Expo as a data processor.</p>
+  relays it to Apple's push notification service (iOS) or Firebase Cloud Messaging (Android).
+  See &sect;4 for Expo as a data processor.</p>
 
   <h2>2. What we do NOT collect</h2>
   <ul>
@@ -136,8 +138,10 @@
     <tr><td>Downstream LLM providers (via OpenRouter)</td><td>Generate the AI responses</td><td>Same as above, per OpenRouter's routing</td></tr>
     <tr><td>fal.ai</td><td>Receipt / fridge-photo vision parsing and food-icon image generation</td><td>The image you submitted and short prompts</td></tr>
     <tr><td>RevenueCat</td><td>Subscription and in-app-purchase entitlement management</td><td>Account ID, purchase / receipt data, device info, AI-credit balance</td></tr>
+    <tr><td>Resend</td><td>Sends transactional email (password-reset codes and similar account emails)</td><td>Your email address and the email's content</td></tr>
     <tr><td>Expo (650 Industries, Inc.)</td><td>Delivers push notifications</td><td>Push token, notification title and body</td></tr>
-    <tr><td>Apple</td><td>App distribution, payments, in-app purchases, push delivery</td><td>Handled under Apple's privacy policy</td></tr>
+    <tr><td>Apple</td><td>App distribution, payments, in-app purchases, push delivery (iOS)</td><td>Handled under Apple's privacy policy</td></tr>
+    <tr><td>Google</td><td>App distribution, payments, in-app purchases (Android)</td><td>Handled under Google's privacy policy</td></tr>
   </table>
   <p>We may also disclose data if required by law, or to protect the rights, safety or property
   of ThatFridge or its users.</p>
