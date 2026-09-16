@@ -102,7 +102,7 @@ between here and launch.
 
 - [ ] Devpost project page + feature description.
 - [ ] Demo video ≤2:00, public on YouTube/Vimeo, no copyrighted music/footage.
-- [ ] #BuildInPublic thread/dev log, updated 2-3×/week.
+- [X] #BuildInPublic thread/dev log, updated 2-3×/week.
 - [ ] Peace Prize impact statement (household food-waste → savings + environmental).
 - [ ] App Store URL on the submission.
 - [ ] **Submit on Devpost before the deadline.**
@@ -148,12 +148,37 @@ between here and launch.
 - [ ] `apps/web/lib/thatfridge` → `packages/core` extraction (most already moved).
 - [ ] `react-i18next` + `expo-localization` — i18n plumbing so a Korean/Malay UI ships as an
   OTA, no rebuild. Getting strings translated is the sourcing item above.
-- [ ] Android: CI pipeline is ready (`.github/workflows/google-play.yml`, manual dispatch only —
-  see `RELEASE.md` "Google Play"). Still open: create the Play Console account (personal vs.
-  organization — can't change later), the app record + Data Safety form + screenshots, the
-  one-time manual first upload, and the Google Cloud service account key handoff to EAS. Also
-  needs its own Android Google Sign-In OAuth client (separate from iOS's) if that button should
-  work there.
+- [ ] Android — in progress (2026-09-16). CI pipeline ready (`.github/workflows/google-play.yml`,
+  manual dispatch only — see `RELEASE.md` "Google Play"). Done: Play Console **Personal** account
+  created (business name `Muhammad Naufal Kamaruddin`, website `https://thatfridge.com`, support
+  email `support@thatfridge.com`, card statement name `THATFRIDGE`, "what you sell": mobile app
+  subscriptions and in-app digital purchases); app record (`app.thatfridge`, Food & Drink, Free);
+  Data Safety, content rating (IARC), ads/financial/health declarations, AI-asset-use disclosure
+  (feature graphic only), advertising-ID declaration (No) all filled in; app icon + feature
+  graphic (`apps/mobile/assets/images/playstore-icon-512.png` /
+  `playstore-feature-graphic.png`) uploaded; `#delete-account` / `#delete-data` privacy-policy
+  anchors added for the Data Safety deletion-URL fields; first production build (versionCode 2)
+  built via `eas build` and uploaded to Internal testing.
+  - [ ] **Google Sign-In on Android needs its own OAuth client** (separate from iOS's) — the
+    button fails ("sign-in didn't go through") until this exists.
+  - [x] **RevenueCat was using the iOS API key on every platform** — fixed (`a7fea71`):
+    `Platform.OS`-based key selection, `EXPO_PUBLIC_RC_ANDROID_KEY` added. The key itself still
+    needs to exist (below).
+  - [ ] **Closed testing must be completed before Play Console allows creating Android IAP
+    products** — discovered 2026-09-16, blocks the RevenueCat/Play Store product setup below.
+    Internal testing (already running) does **not** count toward this — needs a separate
+    **Closed testing** track with the minimum required opted-in testers for the minimum
+    continuous period Play Console states on the requirement screen (check the exact tester
+    count/day count shown there, it varies). Do this next.
+  - [ ] **RevenueCat has no Android app yet** — only the iOS app + Test Store exist. Once closed
+    testing unblocks product creation: create the 5 matching Android products in Play Console
+    (`thatfridge_pro_monthly` $2.99/mo, `thatfridge_pro_yearly` $19.99/yr, `credits_100` $1.99,
+    `credits_500` $7.99, `credits_1500` $19.99 — same USD prices as iOS, activate all 5), add a
+    Google Play service account in RevenueCat (**different** service account/role than the EAS
+    one — needs "View financial data" + "Manage orders and subscriptions" in Play Console API
+    access, not "Release manager") to link a new RevenueCat Android app, attach the 5 products to
+    the existing `thatfridge_pro` entitlement + existing offering packages, then hand the new
+    Android SDK key to EAS (`eas env:create ... EXPO_PUBLIC_RC_ANDROID_KEY`).
 
   **Google Play Developer Program Policy pass (2026-09-15)** — checked against the current
   policy text, cross-referenced with the same codebase already audited for Apple (permission
@@ -195,17 +220,17 @@ between here and launch.
 
 ### Cost tracker (all USD, approximate)
 
-| Item                                                   | Cost         | Status                                           |
-| ------------------------------------------------------ | ------------ | ------------------------------------------------ |
-| Apple Developer Program                                | $99/yr       | Paid                                             |
-| Domain —`thatfridge.com`                            | ~$10.46/yr   | Paid                                             |
-| PixelMix commercial font licence                       | $25 one-time | Paid (embedding confirmation pending, see above) |
-| VPS — DigitalOcean SGP1, 2 vCPU/2GB + backups         | $21.60/mo    | Live                                             |
-| Legal site hosting (Cloudflare Workers), email routing | $0           | Live                                             |
-| Sentry, RevenueCat, Expo EAS, Devpost                  | $0           | Free tiers                                       |
-| Google Play Console                                    | $25 one-time | Paid                                             |
-| OpenRouter wallet (AI chat/vision, prepaid, no auto-recharge) | $10 one-time | Paid                                      |
-| fal.ai wallet (icon generation, prepaid, no auto-recharge)    | $10 one-time | Paid                                      |
+| Item                                                          | Cost         | Status                                           |
+| ------------------------------------------------------------- | ------------ | ------------------------------------------------ |
+| Apple Developer Program                                       | $99/yr       | Paid                                             |
+| Domain —`thatfridge.com`                                   | ~$10.46/yr   | Paid                                             |
+| PixelMix commercial font licence                              | $25 one-time | Paid (embedding confirmation pending, see above) |
+| VPS — DigitalOcean SGP1, 2 vCPU/2GB + backups                | $21.60/mo    | Live                                             |
+| Legal site hosting (Cloudflare Workers), email routing        | $0           | Live                                             |
+| Sentry, RevenueCat, Expo EAS, Devpost                         | $0           | Free tiers                                       |
+| Google Play Console                                           | $25 one-time | Paid                                             |
+| OpenRouter wallet (AI chat/vision, prepaid, no auto-recharge) | $10 one-time | Paid                                             |
+| fal.ai wallet (icon generation, prepaid, no auto-recharge)    | $10 one-time | Paid                                             |
 
 **Fixed recurring cost: ≈$30.72/mo ($368.66/yr)**, regardless of user count. Apple's commission
 is 15% once the Small Business Program application (submitted 2026-09-05) is approved, 30%
@@ -236,8 +261,7 @@ RevenueCat.
 
 - Headline: **Get more out of your fridge** (turquoise `#26c6da`, ~22pt bold, centered)
 - Subtitle: *Know before you open the door.*
-- Comparison card — header row `· / Free / Pro`, then:
-  | Feature                                 | Free         | Pro          |
+- Comparison card — header row `· / Free / Pro`, then:| Feature                                 | Free         | Pro          |
   | --------------------------------------- | ------------ | ------------ |
   | Fridge & pantry tracking, expiry alerts | ✓           | ✓           |
   | Monthly AI credits (chat, scans, icons) | 50           | 400          |
