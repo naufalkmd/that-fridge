@@ -23,12 +23,18 @@ import { useAuth } from "@/lib/auth";
 export const ENTITLEMENT_ID = "thatfridge_pro";
 
 const RC_IOS_KEY = process.env.EXPO_PUBLIC_RC_IOS_KEY;
+const RC_ANDROID_KEY = process.env.EXPO_PUBLIC_RC_ANDROID_KEY;
+// RevenueCat issues a separate SDK key per platform app (iOS vs Android are different
+// "apps" in the RevenueCat dashboard, even in the same project) - configuring with the
+// wrong one doesn't throw, it just fails to authenticate, so offerings/packages silently
+// stay empty and the paywall never has anything to show.
+const RC_KEY = Platform.OS === "ios" ? RC_IOS_KEY : RC_ANDROID_KEY;
 
 // react-native-purchases is a native module — it can't run in Expo Go or (for our
 // purposes) on web. There, or with no key configured, the whole thing no-ops:
 // `available` is false and `isPro` is false.
 const AVAILABLE =
-  Platform.OS !== "web" && Constants.appOwnership !== "expo" && !!RC_IOS_KEY;
+  Platform.OS !== "web" && Constants.appOwnership !== "expo" && !!RC_KEY;
 
 interface ProContextValue {
   /** IAPs are usable in this build (dev build + key present). */
@@ -91,7 +97,7 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       try {
         if (__DEV__) await Purchases.setLogLevel(LOG_LEVEL.WARN);
-        Purchases.configure({ apiKey: RC_IOS_KEY! });
+        Purchases.configure({ apiKey: RC_KEY! });
         listener = (info) => setIsPro(hasPro(info));
         Purchases.addCustomerInfoUpdateListener(listener);
         setIsPro(hasPro(await Purchases.getCustomerInfo()));
