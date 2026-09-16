@@ -69,9 +69,9 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 - [ ] Once the above clears: enable the tag trigger is already done
   (`.github/workflows/google-play.yml` fires on the same `v*` tag as `testflight.yml`) — just
   needs the service account fixed for it to actually work end-to-end.
-- [ ] **Target API level 36 (Android 16) by Aug 31, 2026**, Billing Library v8+ — no manual
-  override in this project, Expo SDK 57 almost certainly ships compliant, but confirm on an
-  actual build rather than assume.
+- [x] **Target API level 36 (Android 16) by Aug 31, 2026** — verified 2026-09-17 by dumping the
+  actual built `.aab`'s manifest (`bundletool dump manifest`): `targetSdkVersion="36"`,
+  `compileSdkVersion="36"`, confirmed compliant, not assumed.
 - [ ] **UGC reporting is stricter in wording than Apple's** — Google's policy says "in-app
   functionality for reporting"; the mailto-based report (`FridgeNotes.tsx`, `find-friend.tsx`)
   commonly passes review in practice but is a literal gap vs. the text. Deliberately left as-is;
