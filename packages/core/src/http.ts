@@ -54,15 +54,27 @@ export function createHttpClient({ baseUrl, tokens }: HttpClientConfig): HttpCli
       ...((opts.headers as Record<string, string>) ?? {}),
     };
 
+    // Large multipart uploads (receipt/fridge/expiry photo scans) also wait on server-side
+    // AI/OCR inference, so they need much more headroom than a plain JSON request before we
+    // give up and call it a network failure.
+    const timeoutMs = isFormData ? 45_000 : 15_000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
     let res: Response;
     try {
-      res = await fetch(`${base}${path}`, { ...opts, headers });
-    } catch {
-      // fetch() itself throws on no connectivity (not an HTTP response, so no status code) -
-      // wrap it as an ApiError so every existing `describeError(e, fallback)` call site across
-      // the app automatically shows this instead of its generic fallback, with no changes
-      // needed at each call site. status 0 is a sentinel, never a real HTTP status.
+      res = await fetch(`${base}${path}`, { ...opts, headers, signal: controller.signal });
+    } catch (err) {
+      // fetch() throws for several unrelated reasons (no HTTP response, so no status code):
+      // our own abort on timeout, a genuine connectivity loss, or a transient mid-request
+      // drop. Only the timeout case is distinguishable here, so at least don't call a slow
+      // AI response "offline". status 0 is a sentinel, never a real HTTP status.
+      if (err instanceof Error && err.name === "AbortError") {
+        throw new ApiError(0, "That's taking longer than expected — try again.");
+      }
       throw new ApiError(0, "You're offline — check your connection and try again.");
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     if (res.status === 204) return undefined as T;
