@@ -80,7 +80,10 @@ export function createHttpClient({ baseUrl, tokens }: HttpClientConfig): HttpCli
       if (err instanceof RequestTimeoutError) {
         throw new ApiError(0, "That's taking longer than expected — try again.");
       }
-      throw new ApiError(0, "You're offline — check your connection and try again.");
+      // Temporary diagnostic: surface the real underlying error so we can see why
+      // fetch() is rejecting before it ever reaches the server, instead of guessing.
+      const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      throw new ApiError(0, `You're offline — check your connection and try again. [${detail}]`);
     } finally {
       clearTimeout(timeoutId);
     }
