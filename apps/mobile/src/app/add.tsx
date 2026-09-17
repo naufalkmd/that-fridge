@@ -376,6 +376,11 @@ function ScanFlow({
       res = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         quality: 0.7,
+        // Without this, iOS hands back the original file untouched for HEIC/PNG sources
+        // (screenshots, camera-roll photos) — `quality` is silently ignored for those formats,
+        // so a picked photo can be far bigger than anything the camera path produces.
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
       });
     }
     if (res.canceled || !res.assets[0]) return;
