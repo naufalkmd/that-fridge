@@ -14,6 +14,8 @@ export interface TokenStore {
   clear(): void | Promise<void>;
 }
 
+class RequestTimeoutError extends Error {}
+
 export class ApiError extends Error {
   status: number;
   errors?: Record<string, string[]>;
@@ -56,20 +58,26 @@ export function createHttpClient({ baseUrl, tokens }: HttpClientConfig): HttpCli
 
     // Large multipart uploads (receipt/fridge/expiry photo scans) also wait on server-side
     // AI/OCR inference, so they need much more headroom than a plain JSON request before we
-    // give up and call it a network failure.
+    // give up and call it a network failure. We race a timer against fetch() instead of using
+    // AbortController: React Native has a known bug where attaching a signal to a fetch() call
+    // with a FormData body breaks the multipart upload outright, not just on abort.
     const timeoutMs = isFormData ? 45_000 : 15_000;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    let timeoutId!: ReturnType<typeof setTimeout>;
+    const timedOut = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new RequestTimeoutError()), timeoutMs);
+    });
 
     let res: Response;
     try {
-      res = await fetch(`${base}${path}`, { ...opts, headers, signal: controller.signal });
+      const fetchPromise = fetch(`${base}${path}`, { ...opts, headers });
+      fetchPromise.catch(() => {}); // avoid an unhandled rejection if the timeout wins the race
+      res = await Promise.race([fetchPromise, timedOut]);
     } catch (err) {
       // fetch() throws for several unrelated reasons (no HTTP response, so no status code):
-      // our own abort on timeout, a genuine connectivity loss, or a transient mid-request
-      // drop. Only the timeout case is distinguishable here, so at least don't call a slow
-      // AI response "offline". status 0 is a sentinel, never a real HTTP status.
-      if (err instanceof Error && err.name === "AbortError") {
+      // our own timeout, a genuine connectivity loss, or a transient mid-request drop. Only
+      // the timeout case is distinguishable here, so at least don't call a slow AI response
+      // "offline". status 0 is a sentinel, never a real HTTP status.
+      if (err instanceof RequestTimeoutError) {
         throw new ApiError(0, "That's taking longer than expected — try again.");
       }
       throw new ApiError(0, "You're offline — check your connection and try again.");
