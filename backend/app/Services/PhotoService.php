@@ -20,16 +20,23 @@ class PhotoService
             $disk = config('filesystems.private_media_disk');
             $path = $file->store('photos', $disk);
 
+            // null from detectItemsWithVision means the vision call itself failed (API
+            // error, exception, unparseable reply) - distinct from it succeeding with a
+            // legitimately empty array (nothing identifiable in the photo). Only the
+            // former should be refunded; the controller needs to tell them apart.
+            $aiFailed = false;
             if (! $this->vision->available()) {
                 // No API key configured at all - fall back to mock data so local dev/demoing
                 // still works without anyone needing to set one up.
                 $detectedItems = $this->mockDetection();
             } else {
-                // A key is configured, so a real call was attempted. If it failed or nothing
-                // identifiable was in the photo, return an empty result rather than fake data -
-                // the frontend already shows a proper "couldn't spot any items" message for
-                // this case, which is honest instead of silently wrong.
-                $detectedItems = $this->detectItemsWithVision($file->getRealPath(), $file->getMimeType()) ?? [];
+                $detected = $this->detectItemsWithVision($file->getRealPath(), $file->getMimeType());
+                if ($detected === null) {
+                    $aiFailed = true;
+                    $detectedItems = [];
+                } else {
+                    $detectedItems = $detected;
+                }
             }
 
             return [
@@ -38,6 +45,7 @@ class PhotoService
                 'file_url' => Storage::disk($disk)->temporaryUrl($path, now()->addMinutes(30)),
                 'status' => 'processed',
                 'detected_items' => $detectedItems,
+                'ai_failed' => $aiFailed,
             ];
         } catch (\Exception $e) {
             Log::error('Photo processing failed', ['error' => $e->getMessage()]);

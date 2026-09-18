@@ -43,6 +43,13 @@ class ReceiptController extends Controller
             return response()->json(['error' => 'Failed to process receipt'], 500);
         }
 
+        if ($result['ai_failed']) {
+            // The vision call itself failed (not just "no items on this receipt") - refund
+            // since the user got nothing for their credit, but still return normally: an
+            // empty detected_items list already reads as "couldn't find any items" to them.
+            $this->credits->grant($request->user(), CreditCost::RECEIPT_SCAN, 'receipt_scan_refund');
+        }
+
         return response()->json([
             'receipt_id' => $result['receipt_id'],
             'status' => $result['status'],

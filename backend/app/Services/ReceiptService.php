@@ -20,16 +20,23 @@ class ReceiptService
             $disk = config('filesystems.private_media_disk');
             $path = $file->store('receipts', $disk);
 
+            // null from extractItemsWithVision means the vision call itself failed (API
+            // error, exception, unparseable reply) - distinct from it succeeding with a
+            // legitimately empty array (not a receipt / no readable items). Only the
+            // former should be refunded; the controller needs to tell them apart.
+            $aiFailed = false;
             if (! $this->vision->available()) {
                 // No API key configured at all - fall back to mock data so local dev/demoing
                 // still works without anyone needing to set one up.
                 $detectedItems = $this->mockOCR();
             } else {
-                // A key is configured, so a real call was attempted. If it failed or the
-                // image genuinely isn't a receipt, return an empty result rather than fake
-                // data - the frontend already shows a proper "couldn't find any items" message
-                // for this case, which is honest instead of silently wrong.
-                $detectedItems = $this->extractItemsWithVision($file->getRealPath(), $file->getMimeType()) ?? [];
+                $extracted = $this->extractItemsWithVision($file->getRealPath(), $file->getMimeType());
+                if ($extracted === null) {
+                    $aiFailed = true;
+                    $detectedItems = [];
+                } else {
+                    $detectedItems = $extracted;
+                }
             }
 
             return [
@@ -40,6 +47,7 @@ class ReceiptService
                 'purchased_at' => $purchasedAt ?? now()->toDateString(),
                 'status' => 'processed',
                 'detected_items' => $detectedItems,
+                'ai_failed' => $aiFailed,
             ];
         } catch (\Exception $e) {
             Log::error('Receipt processing failed', ['error' => $e->getMessage()]);

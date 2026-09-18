@@ -36,6 +36,13 @@ class PhotoController extends Controller
             return response()->json(['error' => 'Failed to process photo'], 500);
         }
 
+        if ($result['ai_failed']) {
+            // The vision call itself failed (not just "nothing identifiable in this photo") -
+            // refund since the user got nothing for their credit, but still return normally:
+            // an empty detected_items list already reads as "couldn't spot any items" to them.
+            $this->credits->grant($request->user(), CreditCost::PHOTO_SCAN, 'photo_scan_refund');
+        }
+
         return response()->json([
             'photo_scan_id' => $result['photo_scan_id'],
             'status' => $result['status'],
