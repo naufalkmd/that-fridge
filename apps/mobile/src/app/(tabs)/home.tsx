@@ -12,6 +12,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { runOnJS } from "react-native-reanimated";
 import { Image } from "expo-image";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -88,6 +90,20 @@ export default function Home() {
   const [heroWidth, setHeroWidth] = useState(0);
   const [heroSlide, setHeroSlide] = useState(0);
   const heroRef = useRef<ScrollView>(null);
+
+  const openProfile = () => router.push("/profile");
+  // Swipe right anywhere on Home to jump to Profile — a shortcut alongside the header
+  // avatar button. Requires a clearly horizontal, rightward, fairly brisk drag so it
+  // doesn't fight the page's vertical scroll or the hero carousel's own horizontal swipe.
+  const swipeToProfile = Gesture.Pan()
+    .activeOffsetX([-1000000, 32])
+    .failOffsetY([-18, 18])
+    .onEnd((e) => {
+      "worklet";
+      if (e.translationX > 70 && e.velocityX > 200) {
+        runOnJS(openProfile)();
+      }
+    });
 
   useEffect(() => {
     let alive = true;
@@ -171,380 +187,382 @@ export default function Home() {
   const slideCount = heroViews.length + 1;
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-      <ScrollView
-        contentContainerClassName="px-6 pt-4 pb-36"
-        contentContainerStyle={{ gap: 22 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#8a8a90"
-          />
-        }
-      >
-        {/* header */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
+    <GestureDetector gesture={swipeToProfile}>
+      <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+        <ScrollView
+          contentContainerClassName="px-6 pt-4 pb-36"
+          contentContainerStyle={{ gap: 22 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#8a8a90"
+            />
+          }
         >
-          <Pressable onPress={() => router.push("/profile")} hitSlop={8}>
-            <View
-              style={{
-                height: 34,
-                width: 34,
-                borderRadius: 17,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: SURFACE2,
-                borderWidth: 1,
-                borderColor: HAIRLINE,
-              }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: "800", color: INK }}>
-                {user?.name?.slice(0, 1).toUpperCase() ?? "?"}
-              </Text>
-            </View>
-          </Pressable>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-            <PixelText style={{ fontSize: 20, letterSpacing: 0.5, color: INK }}>
-              ThatFridge
-            </PixelText>
-            {isPro && (
+          {/* header */}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <Pressable onPress={() => router.push("/profile")} hitSlop={8}>
               <View
                 style={{
-                  backgroundColor: `${PRO_PURPLE}1f`,
-                  borderRadius: 999,
-                  paddingHorizontal: 6,
-                  paddingVertical: 4,
+                  height: 34,
+                  width: 34,
+                  borderRadius: 17,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: SURFACE2,
+                  borderWidth: 1,
+                  borderColor: HAIRLINE,
                 }}
               >
-                <Ionicons name="star" size={11} color={PRO_PURPLE} />
+                <Text style={{ fontSize: 13, fontWeight: "800", color: INK }}>
+                  {user?.name?.slice(0, 1).toUpperCase() ?? "?"}
+                </Text>
               </View>
-            )}
+            </Pressable>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <PixelText style={{ fontSize: 20, letterSpacing: 0.5, color: INK }}>
+                ThatFridge
+              </PixelText>
+              {isPro && (
+                <View
+                  style={{
+                    backgroundColor: `${PRO_PURPLE}1f`,
+                    borderRadius: 999,
+                    paddingHorizontal: 6,
+                    paddingVertical: 4,
+                  }}
+                >
+                  <Ionicons name="star" size={11} color={PRO_PURPLE} />
+                </View>
+              )}
+            </View>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <HeaderIcon
+                icon="person-add-outline"
+                dot={pendingCount > 0}
+                onPress={() => router.push("/find-friend")}
+              />
+              <HeaderIcon
+                icon="notifications-outline"
+                dot={unread > 0}
+                onPress={() => router.navigate("/notifications")}
+              />
+            </View>
           </View>
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <HeaderIcon
-              icon="person-add-outline"
-              dot={pendingCount > 0}
-              onPress={() => router.push("/find-friend")}
-            />
-            <HeaderIcon
-              icon="notifications-outline"
-              dot={unread > 0}
-              onPress={() => router.navigate("/notifications")}
-            />
+
+          {/* fridge scope picker */}
+          <FridgeScopePicker />
+
+          {/* first-run checklist — hides itself once complete or dismissed */}
+          <GettingStarted />
+
+          {/* overview */}
+          <View>
+            <SectionHeader>Overview</SectionHeader>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <StatCard
+                icon="cube-outline"
+                tint={BLUE}
+                value={loading ? "…" : String(scoped.length)}
+                label="Items"
+                onPress={() => router.navigate("/inventory")}
+              />
+              <StatCard
+                icon="warning-outline"
+                tint={BAD}
+                value={loading ? "…" : String(expiringCount)}
+                label="Expiring soon"
+                onPress={() => router.navigate("/inventory")}
+              />
+              <StatCard
+                icon="sparkles-outline"
+                tint={GOOD}
+                value={suggestions ? String(suggestions.length) : "…"}
+                label="Suggestions"
+                onPress={() => router.navigate("/eat")}
+              />
+            </View>
           </View>
-        </View>
 
-        {/* fridge scope picker */}
-        <FridgeScopePicker />
-
-        {/* first-run checklist — hides itself once complete or dismissed */}
-        <GettingStarted />
-
-        {/* overview */}
-        <View>
-          <SectionHeader>Overview</SectionHeader>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <StatCard
-              icon="cube-outline"
-              tint={BLUE}
-              value={loading ? "…" : String(scoped.length)}
-              label="Items"
-              onPress={() => router.navigate("/inventory")}
-            />
-            <StatCard
-              icon="warning-outline"
-              tint={BAD}
-              value={loading ? "…" : String(expiringCount)}
-              label="Expiring soon"
-              onPress={() => router.navigate("/inventory")}
-            />
-            <StatCard
-              icon="sparkles-outline"
-              tint={GOOD}
-              value={suggestions ? String(suggestions.length) : "…"}
-              label="Suggestions"
-              onPress={() => router.navigate("/eat")}
-            />
-          </View>
-        </View>
-
-        {/* fridge hero carousel */}
-        <View>
-          <View
-            onLayout={(e: LayoutChangeEvent) =>
-              setHeroWidth(e.nativeEvent.layout.width)
-            }
-            style={{ borderRadius: 14, overflow: "hidden" }}
-          >
-            {heroWidth > 0 && (
-              <ScrollView
-                ref={heroRef}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={onHeroScroll}
-              >
-                {heroViews.map((fr) => (
-                  <Pressable
-                    key={fr.id}
-                    onPress={() => {
-                      setScope(fr.id);
-                      router.navigate("/inventory");
-                    }}
-                    style={{ width: heroWidth, height: 236 }}
-                  >
-                    <Image
-                      source={
-                        fr.isCustom && fr.photoUrl
-                          ? { uri: fr.photoUrl }
-                          : (FRIDGE_PHOTOS[
-                              (fr.style === "custom"
-                                ? "photo"
-                                : fr.style) as Exclude<FridgeStyleKey, "custom">
-                            ] ?? FRIDGE_PHOTOS.photo)
-                      }
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        backgroundColor: fr.bg,
+          {/* fridge hero carousel */}
+          <View>
+            <View
+              onLayout={(e: LayoutChangeEvent) =>
+                setHeroWidth(e.nativeEvent.layout.width)
+              }
+              style={{ borderRadius: 14, overflow: "hidden" }}
+            >
+              {heroWidth > 0 && (
+                <ScrollView
+                  ref={heroRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onMomentumScrollEnd={onHeroScroll}
+                >
+                  {heroViews.map((fr) => (
+                    <Pressable
+                      key={fr.id}
+                      onPress={() => {
+                        setScope(fr.id);
+                        router.navigate("/inventory");
                       }}
-                      contentFit="cover"
-                      contentPosition="center"
-                    />
-                    <View
-                      style={{
-                        position: "absolute",
-                        top: 14,
-                        left: 14,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
+                      style={{ width: heroWidth, height: 236 }}
                     >
-                      <View style={heroBadge(SURFACE)}>
+                      <Image
+                        source={
+                          fr.isCustom && fr.photoUrl
+                            ? { uri: fr.photoUrl }
+                            : (FRIDGE_PHOTOS[
+                                (fr.style === "custom"
+                                  ? "photo"
+                                  : fr.style) as Exclude<FridgeStyleKey, "custom">
+                              ] ?? FRIDGE_PHOTOS.photo)
+                        }
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          backgroundColor: fr.bg,
+                        }}
+                        contentFit="cover"
+                        contentPosition="center"
+                      />
+                      <View
+                        style={{
+                          position: "absolute",
+                          top: 14,
+                          left: 14,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <View style={heroBadge(SURFACE)}>
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              fontWeight: "800",
+                              color: INK,
+                            }}
+                          >
+                            {fr.name}
+                          </Text>
+                        </View>
+                        {fr.isShared && (
+                          <View style={[heroBadge(SURFACE), { paddingHorizontal: 7 }]}>
+                            <Ionicons name="people" size={13} color={INK} />
+                          </View>
+                        )}
+                      </View>
+                      <View
+                        style={[
+                          heroBadge(SURFACE),
+                          { position: "absolute", top: 14, right: 14 },
+                        ]}
+                      >
                         <Text
                           style={{
                             fontSize: 12,
                             fontWeight: "800",
-                            color: INK,
+                            color: fr.color,
                           }}
                         >
-                          {fr.name}
+                          {fr.freshness}% fresh
                         </Text>
                       </View>
-                      {fr.isShared && (
-                        <View style={[heroBadge(SURFACE), { paddingHorizontal: 7 }]}>
-                          <Ionicons name="people" size={13} color={INK} />
-                        </View>
-                      )}
-                    </View>
-                    <View
-                      style={[
-                        heroBadge(SURFACE),
-                        { position: "absolute", top: 14, right: 14 },
-                      ]}
-                    >
-                      <Text
+                      <View
                         style={{
-                          fontSize: 12,
-                          fontWeight: "800",
-                          color: fr.color,
+                          position: "absolute",
+                          bottom: 12,
+                          left: 14,
+                          backgroundColor: `${CANVAS}8c`,
+                          paddingVertical: 5,
+                          paddingHorizontal: 10,
+                          borderRadius: 20,
                         }}
                       >
-                        {fr.freshness}% fresh
-                      </Text>
-                    </View>
-                    <View
-                      style={{
-                        position: "absolute",
-                        bottom: 12,
-                        left: 14,
-                        backgroundColor: `${CANVAS}8c`,
-                        paddingVertical: 5,
-                        paddingHorizontal: 10,
-                        borderRadius: 20,
-                      }}
-                    >
-                      <Text
-                        style={{ fontSize: 11, fontWeight: "600", color: INK }}
+                        <Text
+                          style={{ fontSize: 11, fontWeight: "600", color: INK }}
+                        >
+                          {fr.itemCount} items tracked
+                        </Text>
+                      </View>
+                      <Pressable
+                        onPress={() => router.push(`/fridge/${fr.id}`)}
+                        style={{
+                          position: "absolute",
+                          bottom: 12,
+                          right: 14,
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: `${SURFACE}d9`,
+                        }}
                       >
-                        {fr.itemCount} items tracked
-                      </Text>
-                    </View>
-                    <Pressable
-                      onPress={() => router.push(`/fridge/${fr.id}`)}
-                      style={{
-                        position: "absolute",
-                        bottom: 12,
-                        right: 14,
-                        width: 32,
-                        height: 32,
-                        borderRadius: 16,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        backgroundColor: `${SURFACE}d9`,
-                      }}
-                    >
-                      <MaterialCommunityIcons
-                        name="palette-outline"
-                        size={16}
-                        color={INK}
-                      />
+                        <MaterialCommunityIcons
+                          name="palette-outline"
+                          size={16}
+                          color={INK}
+                        />
+                      </Pressable>
                     </Pressable>
-                  </Pressable>
-                ))}
+                  ))}
 
-                {/* add / manage fridges */}
-                <Pressable
-                  onPress={() => router.push("/fridges")}
-                  style={{ width: heroWidth, height: 236, padding: 4 }}
-                >
-                  <View
-                    style={{
-                      flex: 1,
-                      borderRadius: 14,
-                      borderWidth: 2,
-                      borderStyle: "dashed",
-                      borderColor: STRONG,
-                      backgroundColor: `${SURFACE}80`,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 12,
-                    }}
+                  {/* add / manage fridges */}
+                  <Pressable
+                    onPress={() => router.push("/fridges")}
+                    style={{ width: heroWidth, height: 236, padding: 4 }}
                   >
                     <View
                       style={{
-                        width: 46,
-                        height: 46,
-                        borderRadius: 23,
-                        backgroundColor: SURFACE2,
+                        flex: 1,
+                        borderRadius: 14,
+                        borderWidth: 2,
+                        borderStyle: "dashed",
+                        borderColor: STRONG,
+                        backgroundColor: `${SURFACE}80`,
                         alignItems: "center",
                         justifyContent: "center",
+                        gap: 12,
                       }}
                     >
-                      <Ionicons name="add" size={24} color={INK} />
+                      <View
+                        style={{
+                          width: 46,
+                          height: 46,
+                          borderRadius: 23,
+                          backgroundColor: SURFACE2,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Ionicons name="add" size={24} color={INK} />
+                      </View>
+                      <Text
+                        style={{ fontSize: 14, fontWeight: "700", color: INK }}
+                      >
+                        Add or manage fridges
+                      </Text>
                     </View>
-                    <Text
-                      style={{ fontSize: 14, fontWeight: "700", color: INK }}
-                    >
-                      Add or manage fridges
-                    </Text>
-                  </View>
-                </Pressable>
-              </ScrollView>
-            )}
+                  </Pressable>
+                </ScrollView>
+              )}
+            </View>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "center",
+                gap: 6,
+                marginTop: 10,
+              }}
+            >
+              {Array.from({ length: slideCount }).map((_, i) => (
+                <Pressable
+                  key={i}
+                  onPress={() =>
+                    heroRef.current?.scrollTo({
+                      x: i * heroWidth,
+                      animated: true,
+                    })
+                  }
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: 4,
+                    backgroundColor: i === heroSlide ? INK : STRONG,
+                  }}
+                />
+              ))}
+            </View>
           </View>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "center",
-              gap: 6,
-              marginTop: 10,
-            }}
-          >
-            {Array.from({ length: slideCount }).map((_, i) => (
-              <Pressable
-                key={i}
-                onPress={() =>
-                  heroRef.current?.scrollTo({
-                    x: i * heroWidth,
-                    animated: true,
-                  })
-                }
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: 4,
-                  backgroundColor: i === heroSlide ? INK : STRONG,
-                }}
-              />
-            ))}
+
+          {/* your kitchen this week */}
+          <KitchenScore input={scoreInput} snapshots={scoreSnapshots} />
+
+          {/* meet your crew */}
+          <View>
+            <SectionHeader>Your crew</SectionHeader>
+            <CrewScene pendingByKind={pendingByKind} scoreByKey={scoreByKey} />
           </View>
-        </View>
 
-        {/* your kitchen this week */}
-        <KitchenScore input={scoreInput} snapshots={scoreSnapshots} />
-
-        {/* meet your crew */}
-        <View>
-          <SectionHeader>Your crew</SectionHeader>
-          <CrewScene pendingByKind={pendingByKind} scoreByKey={scoreByKey} />
-        </View>
-
-        {/* crew tips — real one-shot agent insights, with a data fallback */}
-        {guardian && !dismissed.guardian && (
-          <CrewTip
-            eyebrow="Expiring soon"
-            agent="Guardian"
-            items={scoped}
-            onPress={() => router.push(`/item/${guardian.id}`)}
-            onDismiss={() => setDismissed((d) => ({ ...d, guardian: true }))}
-            fallback={
-              <Text style={{ fontSize: 13.5, color: INK }}>
-                <Text style={{ fontWeight: "700" }}>{guardian.name}</Text>
-                <Text style={{ color: MUTED }}>
-                  {" "}
-                  {daysLabel(guardian.days).toLowerCase()}
-                </Text>
-              </Text>
-            }
-          />
-        )}
-        {lowStock && !dismissed.lowStock && (
-          <CrewTip
-            eyebrow="Low stock"
-            agent="Shopkeeper"
-            items={scoped}
-            onPress={() => router.push("/shopping")}
-            onDismiss={() => setDismissed((d) => ({ ...d, lowStock: true }))}
-            fallback={
-              <Text style={{ fontSize: 13.5, color: INK }}>
-                <Text style={{ fontWeight: "700" }}>{lowStock.name}</Text>
-                <Text style={{ color: MUTED }}>
-                  {" "}
-                  is running low — add it to the list
-                </Text>
-              </Text>
-            }
-          />
-        )}
-        {!dismissed.chef && (
-          <CrewTip
-            eyebrow="Chef's pick"
-            agent="Chef"
-            items={scoped}
-            onPress={() => router.navigate("/eat")}
-            onDismiss={() => setDismissed((d) => ({ ...d, chef: true }))}
-            fallback={
-              <Text style={{ fontSize: 13.5, color: INK }}>
-                {chefPick ? (
-                  <>
-                    <Text style={{ fontWeight: "700" }}>{chefPick.name}</Text>
-                    <Text style={{ color: MUTED }}>
-                      {" "}
-                      — {chefPick.minutes} min with what you have
-                    </Text>
-                  </>
-                ) : (
+          {/* crew tips — real one-shot agent insights, with a data fallback */}
+          {guardian && !dismissed.guardian && (
+            <CrewTip
+              eyebrow="Expiring soon"
+              agent="Guardian"
+              items={scoped}
+              onPress={() => router.push(`/item/${guardian.id}`)}
+              onDismiss={() => setDismissed((d) => ({ ...d, guardian: true }))}
+              fallback={
+                <Text style={{ fontSize: 13.5, color: INK }}>
+                  <Text style={{ fontWeight: "700" }}>{guardian.name}</Text>
                   <Text style={{ color: MUTED }}>
-                    See what you can cook with what&apos;s fresh right now.
+                    {" "}
+                    {daysLabel(guardian.days).toLowerCase()}
                   </Text>
-                )}
-              </Text>
-            }
-          />
-        )}
+                </Text>
+              }
+            />
+          )}
+          {lowStock && !dismissed.lowStock && (
+            <CrewTip
+              eyebrow="Low stock"
+              agent="Shopkeeper"
+              items={scoped}
+              onPress={() => router.push("/shopping")}
+              onDismiss={() => setDismissed((d) => ({ ...d, lowStock: true }))}
+              fallback={
+                <Text style={{ fontSize: 13.5, color: INK }}>
+                  <Text style={{ fontWeight: "700" }}>{lowStock.name}</Text>
+                  <Text style={{ color: MUTED }}>
+                    {" "}
+                    is running low — add it to the list
+                  </Text>
+                </Text>
+              }
+            />
+          )}
+          {!dismissed.chef && (
+            <CrewTip
+              eyebrow="Chef's pick"
+              agent="Chef"
+              items={scoped}
+              onPress={() => router.navigate("/eat")}
+              onDismiss={() => setDismissed((d) => ({ ...d, chef: true }))}
+              fallback={
+                <Text style={{ fontSize: 13.5, color: INK }}>
+                  {chefPick ? (
+                    <>
+                      <Text style={{ fontWeight: "700" }}>{chefPick.name}</Text>
+                      <Text style={{ color: MUTED }}>
+                        {" "}
+                        — {chefPick.minutes} min with what you have
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={{ color: MUTED }}>
+                      See what you can cook with what&apos;s fresh right now.
+                    </Text>
+                  )}
+                </Text>
+              }
+            />
+          )}
 
-        {/* fridge notes — read-only squares; compose/edit lives on the Organizer tab */}
-        <FridgeNotes variant="grid" />
-      </ScrollView>
-    </SafeAreaView>
+          {/* fridge notes — read-only squares; compose/edit lives on the Organizer tab */}
+          <FridgeNotes variant="grid" />
+        </ScrollView>
+      </SafeAreaView>
+    </GestureDetector>
   );
 }
 

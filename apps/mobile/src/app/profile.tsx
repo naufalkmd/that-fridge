@@ -13,6 +13,7 @@ import { useOnboarding } from "@/lib/onboarding";
 import { useScope } from "@/lib/scope";
 import { usePro } from "@/lib/pro";
 import { useCredits } from "@/lib/credits";
+import { openStoreReviewPage } from "@/lib/rate";
 import { PixelText } from "@/components/brand";
 import { Eyebrow, SectionHeader } from "@/components/ui";
 
@@ -225,6 +226,11 @@ export default function Profile() {
             icon="refresh-outline"
             label="Replay intro & tips"
             onPress={replayIntro}
+          />
+          <LinkRow
+            icon="star-outline"
+            label="Rate ThatFridge"
+            onPress={openStoreReviewPage}
           />
           <LinkRow
             icon="information-circle-outline"

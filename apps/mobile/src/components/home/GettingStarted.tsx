@@ -9,6 +9,7 @@ import { useRecipes } from "@/lib/recipes";
 import { useShopping } from "@/lib/shopping";
 import { useOnboarding } from "@/lib/onboarding";
 import { useTheme } from "@/lib/theme";
+import { maybeRequestReview } from "@/lib/rate";
 
 const RAIL = "rgba(234,234,236,0.16)";
 
@@ -119,8 +120,13 @@ export function GettingStarted() {
 
   // Once every step is done, persist that so future opens never recompute (and briefly
   // flash the card) while inventory/recipes/shopping are still loading from the network.
+  // Graduating the checklist is also a genuine "this app is working for me" moment, so it
+  // doubles as one of the app's prompts to (maybe) ask for a store rating.
   useEffect(() => {
-    if (allDone && !checklistDismissed) void dismissChecklist();
+    if (allDone && !checklistDismissed) {
+      void dismissChecklist();
+      void maybeRequestReview();
+    }
   }, [allDone, checklistDismissed, dismissChecklist]);
 
   // Not for someone whose fridge is already established (e.g. a reinstall, or the demo

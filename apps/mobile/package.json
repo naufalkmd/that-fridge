@@ -26,6 +26,7 @@
     "expo-speech-recognition": "^57.0.0",
     "expo-splash-screen": "~57.0.8",
     "expo-status-bar": "~57.0.1",
+    "expo-store-review": "~57.0.3",
     "expo-system-ui": "~57.0.3",
     "expo-updates": "~57.0.18",
     "nativewind": "^4.2.6",

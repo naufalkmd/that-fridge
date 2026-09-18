@@ -12,6 +12,7 @@ import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
 import { useToast } from "@/lib/toast";
 import { useTheme } from "@/lib/theme";
+import { maybeRequestReview } from "@/lib/rate";
 
 type Row = { id: string; ingredientName: string; itemId: string; itemName: string; icon: string };
 type Status = "finished" | "remaining";
@@ -107,6 +108,9 @@ export default function MarkRecipeMade() {
       refreshScore();
       router.back();
       toast.show(`"${recipe!.name}" logged`);
+      // A cooked-something success moment — let the popup settle in behind the toast/nav
+      // transition rather than fighting them for the screen.
+      setTimeout(() => void maybeRequestReview(), 800);
     } catch (e) {
       setBusy(false);
       Alert.alert("Error", describeError(e, "Couldn't mark that made."));

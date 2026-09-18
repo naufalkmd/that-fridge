@@ -28,6 +28,9 @@ const config: ExpoConfig = {
     // Ignored: eas.json cli.appVersionSource is "remote", so EAS auto-increments the real
     // build number on every production build. Bump `version` above by hand instead — see RELEASE.md.
     buildNumber: "1",
+    // App Store Connect app id (eas.json submit.production.ios.ascAppId) — used by
+    // expo-store-review's storeUrl() and the Settings "Rate ThatFridge" row.
+    appStoreUrl: "https://apps.apple.com/app/id6806239306",
     infoPlist: {
       // No custom/proprietary encryption — lets App Store Connect skip the export-compliance prompt.
       ITSAppUsesNonExemptEncryption: false,
@@ -35,6 +38,7 @@ const config: ExpoConfig = {
   },
   android: {
     package: "app.thatfridge",
+    playStoreUrl: "https://play.google.com/store/apps/details?id=app.thatfridge",
     adaptiveIcon: {
       foregroundImage: "./assets/images/android-icon-foreground.png",
       backgroundColor: "#1aa9bd",
