@@ -37,11 +37,16 @@ type Step = {
  */
 export function GettingStarted() {
   const router = useRouter();
-  const { items, fridges } = useInventory();
-  const { recipes } = useRecipes();
-  const { items: shopping } = useShopping();
-  const { seen, checklistDismissed, dismissChecklist, checklistVisited } =
-    useOnboarding();
+  const { items, fridges, loading: inventoryLoading } = useInventory();
+  const { recipes, loading: recipesLoading } = useRecipes();
+  const { items: shopping, loading: shoppingLoading } = useShopping();
+  const {
+    ready: onboardingReady,
+    seen,
+    checklistDismissed,
+    dismissChecklist,
+    checklistVisited,
+  } = useOnboarding();
   const {
     hairline: HAIRLINE,
     surface: SURFACE,
@@ -110,14 +115,28 @@ export function GettingStarted() {
 
   const doneCount = steps.filter((s) => s.done).length;
   const currentIndex = steps.findIndex((s) => !s.done);
+  const allDone = doneCount === steps.length;
+
+  // Once every step is done, persist that so future opens never recompute (and briefly
+  // flash the card) while inventory/recipes/shopping are still loading from the network.
+  useEffect(() => {
+    if (allDone && !checklistDismissed) void dismissChecklist();
+  }, [allDone, checklistDismissed, dismissChecklist]);
 
   // Not for someone whose fridge is already established (e.g. a reinstall, or the demo
   // account) — the intro carousel can re-show there, but a beginner checklist shouldn't.
+  // Also wait for onboarding flags and the step-tracking data to load — otherwise this
+  // briefly renders against empty/default state on cold start, then disappears once the
+  // real data (or a persisted "hide"/"done") arrives, which reads as a glitch.
   if (
+    !onboardingReady ||
+    inventoryLoading ||
+    recipesLoading ||
+    shoppingLoading ||
     !seen ||
     checklistDismissed ||
     items.length >= 5 ||
-    doneCount === steps.length
+    allDone
   ) {
     return null;
   }
