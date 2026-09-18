@@ -7,6 +7,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { describeError } from "@thatfridge/core";
 import { useAuth } from "@/lib/auth";
+import { useTheme, type ThemeMode } from "@/lib/theme";
 import { useInventory } from "@/lib/inventory";
 import { useOnboarding } from "@/lib/onboarding";
 import { useScope } from "@/lib/scope";
@@ -18,6 +19,7 @@ import { Eyebrow, SectionHeader } from "@/components/ui";
 export default function Profile() {
   const router = useRouter();
   const { user, signOut, deleteAccount } = useAuth();
+  const { mode, setMode, colors } = useTheme();
   const { isPro, available, restore, openCustomerCenter } = usePro();
   const { balance: credits } = useCredits();
   const { fridges } = useInventory();
@@ -100,7 +102,7 @@ export default function Profile() {
           <Text className="text-[13px] text-muted">@{user?.username}</Text>
           <Text className="text-[12px] text-faint">{user?.email}</Text>
         </View>
-        <Ionicons name="pencil-outline" size={16} color="rgba(234,234,236,0.34)" />
+        <Ionicons name="pencil-outline" size={16} color={colors.faint} />
       </Pressable>
 
       <Pressable
@@ -108,7 +110,7 @@ export default function Profile() {
         className="flex-row items-center justify-between rounded-[10px] border border-hairline bg-surface p-4 active:opacity-70"
       >
         <View>
-          <Eyebrow color="rgba(234,234,236,0.34)">AI credits</Eyebrow>
+          <Eyebrow color={colors.faint}>AI credits</Eyebrow>
           <Text className="mt-1.5 text-[15px] font-semibold text-ink">
             {credits ?? "—"} left
           </Text>
@@ -117,7 +119,7 @@ export default function Profile() {
       </Pressable>
 
       <View className="rounded-[10px] border border-hairline bg-surface p-4">
-        <Eyebrow color="rgba(234,234,236,0.34)">Subscription</Eyebrow>
+        <Eyebrow color={colors.faint}>Subscription</Eyebrow>
         <Text className="mt-1.5 text-[15px] font-semibold text-ink">
           {user?.isDemo
             ? "ThatFridge Pro — demo account"
@@ -177,14 +179,14 @@ export default function Profile() {
                   >
                     <Text
                       className="text-[14px] font-semibold"
-                      style={{ color: active ? "#5b8dee" : "#eaeaec" }}
+                      style={{ color: active ? colors.blue : colors.ink }}
                     >
                       {f.name}
                     </Text>
                     <Text className="mr-3 text-[11.5px] text-faint">{count} items</Text>
                   </Pressable>
                   <Pressable onPress={() => router.push(`/fridge/${f.id}`)} hitSlop={8}>
-                    <Ionicons name="settings-outline" size={15} color="rgba(234,234,236,0.34)" />
+                    <Ionicons name="settings-outline" size={15} color={colors.faint} />
                   </Pressable>
                 </View>
               );
@@ -220,9 +222,38 @@ export default function Profile() {
         </View>
       </View>
 
+      <View>
+        <SectionHeader>Appearance</SectionHeader>
+        <View className="gap-2 rounded-xl border border-hairline bg-surface p-4">
+          <Text className="text-[14px] font-semibold text-ink">Theme</Text>
+          <View className="flex-row gap-2">
+            {THEME_MODES.map((t) => {
+              const active = mode === t.key;
+              return (
+                <Pressable
+                  key={t.key}
+                  onPress={() => setMode(t.key)}
+                  className="flex-1 items-center rounded-lg py-2.5"
+                  style={{
+                    backgroundColor: active ? colors.accent : colors.surface2,
+                  }}
+                >
+                  <Text
+                    className="text-[12.5px] font-bold"
+                    style={{ color: active ? colors.canvas : colors.ink }}
+                  >
+                    {t.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+
       <View className="rounded-[10px] border border-hairline bg-surface p-4">
         <View className="mb-1.5 flex-row items-center gap-2">
-          <PixelText style={{ fontSize: 12, color: "#eaeaec" }}>ThatFridge</PixelText>
+          <PixelText style={{ fontSize: 12, color: colors.ink }}>ThatFridge</PixelText>
         </View>
         <Text className="text-[12.5px] leading-5 text-muted">
           Know what&apos;s inside before you open the door. Track groceries and freshness,
@@ -234,7 +265,7 @@ export default function Profile() {
       <View>
         <SectionHeader>Account</SectionHeader>
         {working ? (
-          <ActivityIndicator color="#26c6da" />
+          <ActivityIndicator color={colors.accent} />
         ) : (
           <View className="gap-3">
             <Pressable
@@ -256,6 +287,12 @@ export default function Profile() {
   );
 }
 
+const THEME_MODES: { key: ThemeMode; label: string }[] = [
+  { key: "light", label: "Light" },
+  { key: "dark", label: "Dark" },
+  { key: "system", label: "System" },
+];
+
 function LinkRow({
   icon,
   label,
@@ -267,6 +304,7 @@ function LinkRow({
   onPress: () => void;
   last?: boolean;
 }) {
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -274,9 +312,9 @@ function LinkRow({
         last ? "" : "border-b border-hairline"
       }`}
     >
-      <Ionicons name={icon} size={18} color="rgba(234,234,236,0.58)" />
+      <Ionicons name={icon} size={18} color={colors.muted} />
       <Text className="flex-1 text-[14px] text-ink">{label}</Text>
-      <Ionicons name="chevron-forward" size={16} color="rgba(234,234,236,0.34)" />
+      <Ionicons name="chevron-forward" size={16} color={colors.faint} />
     </Pressable>
   );
 }

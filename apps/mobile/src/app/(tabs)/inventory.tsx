@@ -45,15 +45,7 @@ import { FridgeScopePicker } from "@/components/fridge-scope";
 import { CategoryTag, LocationTag } from "@/components/tags";
 import { FoodIcon } from "@/components/food-icon";
 import { SkeletonList } from "@/components/ui";
-
-const ACCENT = "#26c6da";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const BLUE = "#5b8dee";
-const FAINT = "rgba(234,234,236,0.34)";
-const MUTED = "rgba(234,234,236,0.58)";
+import { useTheme } from "@/lib/theme";
 
 const UNCATEGORIZED = "__uncat__";
 
@@ -70,6 +62,16 @@ export default function Inventory() {
   const { items, loading, error, refresh, removeManyItems } = useInventory();
   const { categories, assign } = useCategories();
   const { scope } = useScope();
+  const {
+    accent: ACCENT,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    blue: BLUE,
+    faint: FAINT,
+    muted: MUTED,
+  } = useTheme().colors;
 
   const [sort, setSort] = useState<Sort>("expiry");
   const [sortMenu, setSortMenu] = useState(false);
@@ -901,6 +903,13 @@ function MoveToSheet({
   onPick: (categoryId: string | null) => void;
   onManage: () => void;
 }) {
+  const {
+    accent: ACCENT,
+    hairline: HAIRLINE,
+    ink: INK,
+    faint: FAINT,
+    muted: MUTED,
+  } = useTheme().colors;
   return (
     <BottomSheet visible={visible} onClose={onClose}>
       <Text
@@ -974,6 +983,7 @@ function HeaderBtn({
   accent?: boolean;
   onPress: () => void;
 }) {
+  const { accent: ACCENT, surface: SURFACE, hairline: HAIRLINE, ink: INK } = useTheme().colors;
   return (
     <Pressable onPress={onPress} hitSlop={8}>
       <View
@@ -1032,6 +1042,14 @@ function ItemRow({
   onPress: () => void;
 }) {
   const { setItemQty } = useInventory();
+  const {
+    accent: ACCENT,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    blue: BLUE,
+    faint: FAINT,
+  } = useTheme().colors;
   const fresh = freshColor(item.freshness);
 
   const pan = useMemo(
@@ -1258,6 +1276,7 @@ function Stepper({
   icon: "minus" | "plus";
   onPress: () => void;
 }) {
+  const { surface2: SURFACE2, ink: INK } = useTheme().colors;
   return (
     <Pressable
       onPress={onPress}

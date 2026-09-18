@@ -1,6 +1,8 @@
 import { Text, type TextProps, View } from "react-native";
 import { Image } from "expo-image";
 
+import { useTheme } from "@/lib/theme";
+
 const logo = require("../../assets/brand/logo.svg");
 
 /**
@@ -29,10 +31,11 @@ export function Logo({ size = 44 }: { size?: number }) {
 
 /** Logo + wordmark lockup used on the auth screen and headers. */
 export function Wordmark({ logoSize = 40, textSize = 20 }: { logoSize?: number; textSize?: number }) {
+  const { colors } = useTheme();
   return (
     <View className="flex-row items-center gap-2.5">
       <Logo size={logoSize} />
-      <PixelText style={{ fontSize: textSize, color: "#eaeaec" }}>ThatFridge</PixelText>
+      <PixelText style={{ fontSize: textSize, color: colors.ink }}>ThatFridge</PixelText>
     </View>
   );
 }

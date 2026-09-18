@@ -1,30 +1,33 @@
 /** @type {import('tailwindcss').Config} */
-// Mirror of apps/web/lib/thatfridge/theme.ts — the "dark neon pixel tech" system.
-// Keep these values in exact sync with the web theme until packages/core owns them.
+// Light/dark values live as CSS variables in src/global.css (":root" = light, ".dark" = dark),
+// kept in exact sync with apps/mobile/src/lib/theme.tsx's darkColors/lightColors - that file is
+// the source of truth for the "dark neon pixel tech" system; this just points Tailwind's
+// classNames (bg-surface, text-ink, etc.) at the same variables so they follow the toggle too.
 module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
+  darkMode: "class",
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
       colors: {
-        canvas: "#0a0a0c",
-        surface: "#131316",
-        surface2: "#1a1a1f",
-        hairline: "rgba(255,255,255,0.09)",
-        "hairline-strong": "rgba(255,255,255,0.18)",
-        ink: "#eaeaec",
-        muted: "rgba(234,234,236,0.58)",
-        faint: "rgba(234,234,236,0.34)",
+        canvas: "var(--color-canvas)",
+        surface: "var(--color-surface)",
+        surface2: "var(--color-surface2)",
+        hairline: "var(--color-hairline)",
+        "hairline-strong": "var(--color-hairline-strong)",
+        ink: "var(--color-ink)",
+        muted: "var(--color-muted)",
+        faint: "var(--color-faint)",
         // brand accent — primary CTAs, active nav, brand moments (turquoise, not the amber)
-        accent: "#26c6da",
-        blue: "#5b8dee",
-        good: "#39e07f",
-        warn: "#f5a623",
-        bad: "#ff5567",
-        "agent-guardian": "#ff5f56",
-        "agent-organizer": "#3d6fe0",
-        "agent-chef": "#f5a623",
-        "agent-shopkeeper": "#39e07f",
+        accent: "var(--color-accent)",
+        blue: "var(--color-blue)",
+        good: "var(--color-good)",
+        warn: "var(--color-warn)",
+        bad: "var(--color-bad)",
+        "agent-guardian": "var(--color-agent-guardian)",
+        "agent-organizer": "var(--color-agent-organizer)",
+        "agent-chef": "var(--color-agent-chef)",
+        "agent-shopkeeper": "var(--color-agent-shopkeeper)",
       },
       borderRadius: {
         sm: "6px",

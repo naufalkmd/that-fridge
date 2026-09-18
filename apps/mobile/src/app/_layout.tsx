@@ -9,6 +9,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { ThemeProvider, useTheme } from "@/lib/theme";
 import { OnboardingProvider } from "@/lib/onboarding";
 import { ProProvider } from "@/lib/pro";
 import { CreditsProvider } from "@/lib/credits";
@@ -33,22 +34,43 @@ export default function RootLayout() {
     PixelMix: require("../../assets/fonts/PixelMix.ttf"),
   });
 
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        {/* Mounted unconditionally so its SecureStore read runs in parallel with font
+            loading - AppShell waits on both before hiding the splash screen. */}
+        <ThemeProvider>
+          <AppShell fontsLoaded={fontsLoaded} fontError={fontError} />
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+function AppShell({
+  fontsLoaded,
+  fontError,
+}: {
+  fontsLoaded: boolean;
+  fontError: Error | null;
+}) {
+  const { ready: themeReady, scheme, colors } = useTheme();
+  const appReady = (fontsLoaded || !!fontError) && themeReady;
+
   useEffect(() => {
-    if (fontsLoaded || fontError) SplashScreen.hideAsync().catch(() => {});
-  }, [fontsLoaded, fontError]);
+    if (appReady) SplashScreen.hideAsync().catch(() => {});
+  }, [appReady]);
 
   useEffect(() => {
     initAnalytics();
     track("app_open");
   }, []);
 
-  if (!fontsLoaded && !fontError) return null;
+  if (!appReady) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <ToastProvider>
-          <AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
             <OnboardingProvider>
               <ProProvider>
                 {/* Remount every data provider (and the screens) when the account
@@ -67,14 +89,14 @@ export default function RootLayout() {
                                 <NotesProvider>
                                   <ExpiryReminderSync />
                                   <AuthGuard />
-                                  <StatusBar style="light" />
+                                  <StatusBar style={scheme === "light" ? "dark" : "light"} />
                                   <Stack
                                     screenOptions={{
-                                      headerStyle: { backgroundColor: "#0a0a0c" },
-                                      headerTintColor: "#eaeaec",
+                                      headerStyle: { backgroundColor: colors.canvas },
+                                      headerTintColor: colors.ink,
                                       headerShadowVisible: false,
                                       contentStyle: {
-                                        backgroundColor: "#0a0a0c",
+                                        backgroundColor: colors.canvas,
                                       },
                                     }}
                                   >
@@ -286,8 +308,6 @@ export default function RootLayout() {
             </OnboardingProvider>
           </AuthProvider>
         </ToastProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
   );
 }
 

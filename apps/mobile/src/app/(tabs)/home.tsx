@@ -37,6 +37,7 @@ import { useKitchenScore } from "@/lib/kitchenScore";
 import { useSocial } from "@/lib/social";
 import { useAgentInsight } from "@/lib/agentInsight";
 import { usePro } from "@/lib/pro";
+import { useTheme } from "@/lib/theme";
 import { PixelText } from "@/components/brand";
 import { MarkdownText } from "@/components/markdown-text";
 import { SectionHeader } from "@/components/ui";
@@ -46,17 +47,7 @@ import { GettingStarted } from "@/components/home/GettingStarted";
 import { CrewScene } from "@/components/home/CrewScene";
 import { FridgeNotes } from "@/components/home/FridgeNotes";
 
-const BLUE = "#5b8dee";
 const PRO_PURPLE = "#a78bfa";
-const GOOD = "#39e07f";
-const BAD = "#ff5567";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const STRONG = "rgba(255,255,255,0.18)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
 
 const FRIDGE_PHOTOS: Record<Exclude<FridgeStyleKey, "custom">, number> = {
   photo: require("../../../assets/images/thatfridge/fridge-hero.png"),
@@ -66,11 +57,7 @@ const FRIDGE_PHOTOS: Record<Exclude<FridgeStyleKey, "custom">, number> = {
   mini: require("../../../assets/images/thatfridge/fridge-mini.png"),
 };
 
-const AGENT_COLOR = {
-  Guardian: "#ff5f56",
-  Shopkeeper: "#39e07f",
-  Chef: "#f5a623",
-} as const;
+type CrewAgent = "Guardian" | "Shopkeeper" | "Chef";
 
 export default function Home() {
   const router = useRouter();
@@ -82,6 +69,16 @@ export default function Home() {
   const { usageHistory, organizerTally, scoreSnapshots } = useKitchenScore();
   const { pendingCount } = useSocial();
   const { isPro } = usePro();
+  const {
+    blue: BLUE,
+    good: GOOD,
+    bad: BAD,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    hairlineStrong: STRONG,
+    ink: INK,
+    muted: MUTED,
+  } = useTheme().colors;
 
   const [refreshing, setRefreshing] = useState(false);
   const [suggestions, setSuggestions] = useState<Recipe[] | null>(null);
@@ -558,6 +555,7 @@ function HeaderIcon({
   dot: boolean;
   onPress: () => void;
 }) {
+  const { surface: SURFACE, hairline: HAIRLINE, ink: INK, bad: BAD } = useTheme().colors;
   return (
     <Pressable onPress={onPress} hitSlop={8}>
       <View
@@ -613,6 +611,7 @@ function StatCard({
   label: string;
   onPress: () => void;
 }) {
+  const { surface: SURFACE, hairline: HAIRLINE, ink: INK, faint: FAINT } = useTheme().colors;
   return (
     <Pressable
       onPress={onPress}
@@ -657,12 +656,13 @@ function CrewTip({
   fallback,
 }: {
   eyebrow: string;
-  agent: keyof typeof AGENT_COLOR;
+  agent: CrewAgent;
   items: import("@thatfridge/core").FlatItem[];
   onPress: () => void;
   onDismiss: () => void;
   fallback: React.ReactNode;
 }) {
+  const { faint: FAINT } = useTheme().colors;
   // enabled: false — Home never fires the AI call itself, only shows one if it's already
   // cached from the user tapping "Activate {agent}" on the Crew tab this session (agentInsight's
   // cache is a shared module-level singleton). Otherwise this always falls back to `fallback`
@@ -696,11 +696,21 @@ function TipCard({
   children,
 }: {
   eyebrow: string;
-  agent: keyof typeof AGENT_COLOR;
+  agent: CrewAgent;
   onPress: () => void;
   onDismiss: () => void;
   children: React.ReactNode;
 }) {
+  const { colors } = useTheme();
+  const SURFACE = colors.surface;
+  const HAIRLINE = colors.hairline;
+  const INK = colors.ink;
+  const FAINT = colors.faint;
+  const AGENT_COLOR: Record<CrewAgent, string> = {
+    Guardian: colors.agentGuardian,
+    Shopkeeper: colors.agentShopkeeper,
+    Chef: colors.agentChef,
+  };
   const color = AGENT_COLOR[agent];
   return (
     <Pressable

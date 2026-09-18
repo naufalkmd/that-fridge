@@ -1,3 +1,46 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Color values mirror apps/mobile/src/lib/theme.tsx's lightColors/darkColors exactly - keep
+   both in sync. :root is the default (light); .dark overrides when NativeWind's colorScheme
+   is set to "dark" (see lib/theme.tsx's ThemeProvider). */
+:root {
+  --color-canvas: #f5f6f7;
+  --color-surface: #ffffff;
+  --color-surface2: #eef0f2;
+  --color-hairline: rgba(10, 10, 12, 0.08);
+  --color-hairline-strong: rgba(10, 10, 12, 0.16);
+  --color-ink: #16171a;
+  --color-muted: rgba(22, 23, 26, 0.58);
+  --color-faint: rgba(22, 23, 26, 0.38);
+  --color-accent: #0f9fb0;
+  --color-blue: #3f68c9;
+  --color-good: #1fa863;
+  --color-warn: #c97c12;
+  --color-bad: #e02f45;
+  --color-agent-guardian: #e0433a;
+  --color-agent-organizer: #2f5bc9;
+  --color-agent-chef: #c97c12;
+  --color-agent-shopkeeper: #1fa863;
+}
+
+.dark {
+  --color-canvas: #0a0a0c;
+  --color-surface: #131316;
+  --color-surface2: #1a1a1f;
+  --color-hairline: rgba(255, 255, 255, 0.09);
+  --color-hairline-strong: rgba(255, 255, 255, 0.18);
+  --color-ink: #eaeaec;
+  --color-muted: rgba(234, 234, 236, 0.58);
+  --color-faint: rgba(234, 234, 236, 0.34);
+  --color-accent: #26c6da;
+  --color-blue: #5b8dee;
+  --color-good: #39e07f;
+  --color-warn: #f5a623;
+  --color-bad: #ff5567;
+  --color-agent-guardian: #ff5f56;
+  --color-agent-organizer: #3d6fe0;
+  --color-agent-chef: #f5a623;
+  --color-agent-shopkeeper: #39e07f;
+}

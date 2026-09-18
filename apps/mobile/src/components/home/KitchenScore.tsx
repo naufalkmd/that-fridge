@@ -23,6 +23,7 @@ import {
 } from "@thatfridge/core";
 
 import { PixelText } from "@/components/brand";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 if (
   Platform.OS === "android" &&
@@ -31,22 +32,15 @@ if (
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const ACCENT = "#26c6da";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const STRONG = "rgba(255,255,255,0.18)";
-const FAINT = "rgba(234,234,236,0.34)";
-const MUTED = "rgba(234,234,236,0.58)";
-
 // Order matches the arc segments below and CrewScene's zone order.
 const AGENT_META: Record<
   KitchenScoreResult["key"],
-  { name: string; segment: string }
+  { name: string; colorKey: keyof ThemeColors }
 > = {
-  waste: { name: "Guardian", segment: "#ff5f56" },
-  balance: { name: "Chef", segment: "#f5a623" },
-  organizer: { name: "Organizer", segment: "#3d6fe0" },
-  shopkeeper: { name: "Shopkeeper", segment: "#39e07f" },
+  waste: { name: "Guardian", colorKey: "agentGuardian" },
+  balance: { name: "Chef", colorKey: "agentChef" },
+  organizer: { name: "Organizer", colorKey: "agentOrganizer" },
+  shopkeeper: { name: "Shopkeeper", colorKey: "agentShopkeeper" },
 };
 const AGENT_ORDER: KitchenScoreResult["key"][] = [
   "waste",
@@ -61,17 +55,18 @@ const RING_R = 30;
 const RING_C = 2 * Math.PI * RING_R; // ~188.5
 const RING_SEG = RING_C / 4 - 5; // a quarter, less a small gap between segments
 
-function bandColor(score: number | null): string {
-  if (score === null) return FAINT;
-  if (score >= 80) return "#39e07f";
-  if (score >= 55) return "#f5a623";
-  return "#ff5567";
+function bandColor(score: number | null, colors: ThemeColors): string {
+  if (score === null) return colors.faint;
+  if (score >= 80) return colors.good;
+  if (score >= 55) return colors.warn;
+  return colors.bad;
 }
 
 /** Guardian's own tell — its score is fundamentally an overdue-items check. */
 function GuardianPill({ overdue }: { overdue: number }) {
+  const { colors } = useTheme();
   const clear = overdue === 0;
-  const color = clear ? "#39e07f" : "#ff5567";
+  const color = clear ? colors.good : colors.bad;
   return (
     <View
       style={{
@@ -118,6 +113,7 @@ const FOOD_GROUP_ICON: Record<string, string> = {
 
 /** Chef's tell — the 5 food-group icons, lit when that group's been used lately. */
 function ChefExtra({ input }: { input: KitchenScoreInput }) {
+  const { colors } = useTheme();
   const coverage = getFoodGroupCoverage(input.usageHistory ?? []);
   if (!coverage) return null;
   return (
@@ -131,15 +127,15 @@ function ChefExtra({ input }: { input: KitchenScoreInput }) {
             borderRadius: 9,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: c.used ? "rgba(57,224,127,0.13)" : "transparent",
+            backgroundColor: c.used ? `${colors.good}22` : "transparent",
             borderWidth: 1,
-            borderColor: c.used ? "#39e07f" : STRONG,
+            borderColor: c.used ? colors.good : colors.hairlineStrong,
           }}
         >
           <MaterialCommunityIcons
             name={FOOD_GROUP_ICON[c.key] as never}
             size={10}
-            color={c.used ? "#39e07f" : FAINT}
+            color={c.used ? colors.good : colors.faint}
           />
         </View>
       ))}
@@ -149,6 +145,7 @@ function ChefExtra({ input }: { input: KitchenScoreInput }) {
 
 /** Organizer's tell — its score IS a ratio, so a completion ring. */
 function OrganizerExtra({ input }: { input: KitchenScoreInput }) {
+  const { colors } = useTheme();
   const tally = input.organizerTally;
   if (!tally || tally.itemsCheckedTotal === 0) return null;
   const ratio = tally.itemsCorrectTotal / tally.itemsCheckedTotal;
@@ -169,7 +166,7 @@ function OrganizerExtra({ input }: { input: KitchenScoreInput }) {
           cy={13}
           r={r}
           fill="none"
-          stroke={STRONG}
+          stroke={colors.hairlineStrong}
           strokeWidth={3}
         />
         <G rotation={-90} origin="13, 13">
@@ -178,14 +175,14 @@ function OrganizerExtra({ input }: { input: KitchenScoreInput }) {
             cy={13}
             r={r}
             fill="none"
-            stroke="#3d6fe0"
+            stroke={colors.agentOrganizer}
             strokeWidth={3}
             strokeLinecap="round"
             strokeDasharray={`${(c * ratio).toFixed(1)}, ${c.toFixed(1)}`}
           />
         </G>
       </Svg>
-      <Text style={{ fontSize: 10, fontWeight: "700", color: FAINT }}>
+      <Text style={{ fontSize: 10, fontWeight: "700", color: colors.faint }}>
         {tally.itemsCorrectTotal}/{tally.itemsCheckedTotal} in the right spot
       </Text>
     </View>
@@ -194,6 +191,7 @@ function OrganizerExtra({ input }: { input: KitchenScoreInput }) {
 
 /** Shopkeeper's tell — its score IS the checked/total split, so a receipt-style bar. */
 function ShopkeeperExtra({ input }: { input: KitchenScoreInput }) {
+  const { colors } = useTheme();
   const list = input.shoppingList ?? [];
   if (list.length === 0) return null;
   const checked = list.filter((i) => i.checked).length;
@@ -203,7 +201,7 @@ function ShopkeeperExtra({ input }: { input: KitchenScoreInput }) {
         style={{
           height: 4,
           borderRadius: 2,
-          backgroundColor: STRONG,
+          backgroundColor: colors.hairlineStrong,
           overflow: "hidden",
         }}
       >
@@ -212,12 +210,12 @@ function ShopkeeperExtra({ input }: { input: KitchenScoreInput }) {
             height: "100%",
             borderRadius: 2,
             width: `${(checked / list.length) * 100}%`,
-            backgroundColor: "#39e07f",
+            backgroundColor: colors.good,
           }}
         />
       </View>
       <Text
-        style={{ marginTop: 4, fontSize: 10, fontWeight: "700", color: FAINT }}
+        style={{ marginTop: 4, fontSize: 10, fontWeight: "700", color: colors.faint }}
       >
         {checked}/{list.length} picked up
       </Text>
@@ -240,6 +238,7 @@ function AgentExtra({
 
 /** Small L-bracket in each corner — the web card's "corner brackets" brand moment. */
 function Corner({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
+  const { colors } = useTheme();
   const isTop = pos[0] === "t";
   const isLeft = pos[1] === "l";
   return (
@@ -252,7 +251,7 @@ function Corner({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
         [isLeft ? "left" : "right"]: -1,
         [isTop ? "borderTopWidth" : "borderBottomWidth"]: 1.5,
         [isLeft ? "borderLeftWidth" : "borderRightWidth"]: 1.5,
-        borderColor: ACCENT,
+        borderColor: colors.accent,
       }}
     />
   );
@@ -265,6 +264,7 @@ export function KitchenScore({
   input: KitchenScoreInput;
   snapshots?: ScoreSnapshot[];
 }) {
+  const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
 
   const ordered = useMemo(() => {
@@ -294,7 +294,7 @@ export function KitchenScore({
         style={{
           fontSize: 14,
           letterSpacing: 0.5,
-          color: MUTED,
+          color: colors.muted,
           marginBottom: 8,
         }}
       >
@@ -307,9 +307,9 @@ export function KitchenScore({
           borderRadius: 10,
           paddingHorizontal: 14,
           paddingVertical: 12,
-          backgroundColor: "#131316",
+          backgroundColor: colors.surface,
           borderWidth: 1,
-          borderColor: HAIRLINE,
+          borderColor: colors.hairline,
         }}
       >
         <Corner pos="tl" />
@@ -322,7 +322,7 @@ export function KitchenScore({
             fontSize: 9.5,
             letterSpacing: 2,
             textTransform: "uppercase",
-            color: FAINT,
+            color: colors.faint,
             marginBottom: 10,
             fontVariant: ["tabular-nums"],
           }}
@@ -352,7 +352,7 @@ export function KitchenScore({
                 cy={39}
                 r={RING_R}
                 fill="none"
-                stroke={STRONG}
+                stroke={colors.hairlineStrong}
                 strokeWidth={5}
                 opacity={0.4}
               />
@@ -364,7 +364,7 @@ export function KitchenScore({
                       cy={39}
                       r={RING_R}
                       fill="none"
-                      stroke={AGENT_META[key].segment}
+                      stroke={colors[AGENT_META[key].colorKey]}
                       strokeWidth={5}
                       strokeDasharray={`${RING_SEG}, ${RING_C - RING_SEG}`}
                     />
@@ -373,7 +373,7 @@ export function KitchenScore({
             </Svg>
             <View style={{ alignItems: "center" }}>
               <PixelText
-                style={{ fontSize: 22, color: "#eaeaec", lineHeight: 22 }}
+                style={{ fontSize: 22, color: colors.ink, lineHeight: 22 }}
               >
                 {overall !== null ? overall : "–"}
               </PixelText>
@@ -382,7 +382,7 @@ export function KitchenScore({
                   fontSize: 8,
                   fontWeight: "700",
                   letterSpacing: 0.5,
-                  color: FAINT,
+                  color: colors.faint,
                   marginTop: 1,
                 }}
               >
@@ -402,21 +402,21 @@ export function KitchenScore({
                 paddingVertical: 4,
                 paddingHorizontal: 10,
                 borderRadius: 20,
-                backgroundColor: streak > 0 ? "rgba(38,198,218,0.1)" : SURFACE2,
+                backgroundColor: streak > 0 ? `${colors.accent}1a` : colors.surface2,
                 borderWidth: 1,
-                borderColor: streak > 0 ? ACCENT : STRONG,
+                borderColor: streak > 0 ? colors.accent : colors.hairlineStrong,
               }}
             >
               <MaterialCommunityIcons
                 name="fire"
                 size={12}
-                color={streak > 0 ? ACCENT : FAINT}
+                color={streak > 0 ? colors.accent : colors.faint}
               />
               <Text
                 style={{
                   fontSize: 11,
                   fontWeight: "700",
-                  color: streak > 0 ? ACCENT : FAINT,
+                  color: streak > 0 ? colors.accent : colors.faint,
                 }}
               >
                 {streak > 0
@@ -432,21 +432,21 @@ export function KitchenScore({
                     style={{
                       fontSize: 10.5,
                       fontWeight: "700",
-                      color: wasteTrend.delta > 0 ? "#39e07f" : "#ff5567",
+                      color: wasteTrend.delta > 0 ? colors.good : colors.bad,
                     }}
                   >
                     {wasteTrend.delta > 0 ? "▲" : "▼"}{" "}
                     {Math.abs(wasteTrend.delta)} Waste Saver vs last week
                   </Text>
                 )}
-                <Text style={{ fontSize: 10, lineHeight: 14, color: FAINT }}>
+                <Text style={{ fontSize: 10, lineHeight: 14, color: colors.faint }}>
                   {scoredCount === 4
                     ? "Guardian, Chef, Organizer & Shopkeeper, averaged"
                     : `Averaged across ${scoredCount} of 4 agents`}
                 </Text>
               </>
             ) : (
-              <Text style={{ fontSize: 10.5, lineHeight: 15, color: MUTED }}>
+              <Text style={{ fontSize: 10.5, lineHeight: 15, color: colors.muted }}>
                 Building your score — add items and keep using ThatFridge.
               </Text>
             )}
@@ -461,9 +461,9 @@ export function KitchenScore({
                 style={{
                   padding: 12,
                   borderRadius: 8,
-                  backgroundColor: SURFACE2,
+                  backgroundColor: colors.surface2,
                   borderLeftWidth: 3,
-                  borderLeftColor: AGENT_META[r.key].segment,
+                  borderLeftColor: colors[AGENT_META[r.key].colorKey],
                 }}
               >
                 <View
@@ -478,11 +478,11 @@ export function KitchenScore({
                     style={{
                       fontSize: 12.5,
                       fontWeight: "800",
-                      color: "#eaeaec",
+                      color: colors.ink,
                     }}
                   >
                     {AGENT_META[r.key].name}
-                    <Text style={{ color: MUTED, fontWeight: "600" }}>
+                    <Text style={{ color: colors.muted, fontWeight: "600" }}>
                       {" "}
                       · {r.label}
                     </Text>
@@ -491,7 +491,7 @@ export function KitchenScore({
                     style={{
                       fontSize: 13,
                       fontWeight: "800",
-                      color: bandColor(r.score),
+                      color: bandColor(r.score, colors),
                     }}
                   >
                     {r.score !== null ? r.score : "—"}
@@ -501,13 +501,13 @@ export function KitchenScore({
                   style={{
                     fontSize: 11.5,
                     fontWeight: "600",
-                    color: "#eaeaec",
+                    color: colors.ink,
                     marginBottom: 2,
                   }}
                 >
                   {r.headline}
                 </Text>
-                <Text style={{ fontSize: 10.5, lineHeight: 15, color: MUTED }}>
+                <Text style={{ fontSize: 10.5, lineHeight: 15, color: colors.muted }}>
                   {r.detail}
                 </Text>
                 {r.key === "waste" ? (
