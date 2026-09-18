@@ -73,6 +73,7 @@ export default function Home() {
     blue: BLUE,
     good: GOOD,
     bad: BAD,
+    surface: SURFACE,
     surface2: SURFACE2,
     hairline: HAIRLINE,
     hairlineStrong: STRONG,
@@ -325,7 +326,7 @@ export default function Home() {
                         gap: 6,
                       }}
                     >
-                      <View style={heroBadge}>
+                      <View style={heroBadge(SURFACE)}>
                         <Text
                           style={{
                             fontSize: 12,
@@ -337,14 +338,14 @@ export default function Home() {
                         </Text>
                       </View>
                       {fr.isShared && (
-                        <View style={[heroBadge, { paddingHorizontal: 7 }]}>
+                        <View style={[heroBadge(SURFACE), { paddingHorizontal: 7 }]}>
                           <Ionicons name="people" size={13} color={INK} />
                         </View>
                       )}
                     </View>
                     <View
                       style={[
-                        heroBadge,
+                        heroBadge(SURFACE),
                         { position: "absolute", top: 14, right: 14 },
                       ]}
                     >
@@ -591,12 +592,15 @@ function HeaderIcon({
   );
 }
 
-const heroBadge = {
-  backgroundColor: "rgba(19,19,22,0.85)",
-  paddingVertical: 6,
-  paddingHorizontal: 11,
-  borderRadius: 14,
-} as const;
+// A translucent surface-tinted pill over the fridge hero photo - takes the current theme's
+// surface color so it reads as a light pill in light mode instead of a fixed dark one.
+const heroBadge = (surface: string) =>
+  ({
+    backgroundColor: `${surface}d9`,
+    paddingVertical: 6,
+    paddingHorizontal: 11,
+    borderRadius: 14,
+  }) as const;
 
 function StatCard({
   icon,

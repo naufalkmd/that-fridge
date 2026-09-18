@@ -79,6 +79,36 @@ export const lightColors: ThemeColors = {
   agentShopkeeper: "#1fa863",
 };
 
+/**
+ * Maps colors to the same "--color-x" CSS variable names tailwind.config.js's className
+ * tokens (bg-surface, text-ink, etc.) read from. Applied via NativeWind's `vars()` on the
+ * app root, driven directly by this same React state - relying on NativeWind's own
+ * class-based dark-mode toggle (":root"/".dark" in global.css) proved unreliable for
+ * already-mounted native views, so the CSS variables now come straight from `colors`
+ * instead of a separate class-toggle mechanism.
+ */
+export function themeCssVars(colors: ThemeColors): Record<string, string> {
+  return {
+    "--color-canvas": colors.canvas,
+    "--color-surface": colors.surface,
+    "--color-surface2": colors.surface2,
+    "--color-hairline": colors.hairline,
+    "--color-hairline-strong": colors.hairlineStrong,
+    "--color-ink": colors.ink,
+    "--color-muted": colors.muted,
+    "--color-faint": colors.faint,
+    "--color-accent": colors.accent,
+    "--color-blue": colors.blue,
+    "--color-good": colors.good,
+    "--color-warn": colors.warn,
+    "--color-bad": colors.bad,
+    "--color-agent-guardian": colors.agentGuardian,
+    "--color-agent-organizer": colors.agentOrganizer,
+    "--color-agent-chef": colors.agentChef,
+    "--color-agent-shopkeeper": colors.agentShopkeeper,
+  };
+}
+
 interface ThemeValue {
   /** SecureStore read has completed - avoid painting before this to prevent a flash. */
   ready: boolean;

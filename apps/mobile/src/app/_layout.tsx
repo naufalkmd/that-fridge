@@ -1,15 +1,17 @@
 import "../global.css";
 
 import { Fragment, useEffect } from "react";
+import { View } from "react-native";
 import { Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { vars } from "nativewind";
 
 import { AuthProvider, useAuth } from "@/lib/auth";
-import { ThemeProvider, useTheme } from "@/lib/theme";
+import { ThemeProvider, useTheme, themeCssVars } from "@/lib/theme";
 import { OnboardingProvider } from "@/lib/onboarding";
 import { ProProvider } from "@/lib/pro";
 import { CreditsProvider } from "@/lib/credits";
@@ -69,6 +71,7 @@ function AppShell({
   if (!appReady) return null;
 
   return (
+    <View style={[{ flex: 1 }, vars(themeCssVars(colors))]}>
     <ToastProvider>
       <AuthProvider>
             <OnboardingProvider>
@@ -308,6 +311,7 @@ function AppShell({
             </OnboardingProvider>
           </AuthProvider>
         </ToastProvider>
+    </View>
   );
 }
 
