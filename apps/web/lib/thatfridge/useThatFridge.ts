@@ -456,7 +456,7 @@ export interface ThatFridgeState {
   badges: BadgeProgress[];
   badgeUnlockToast: string | null;
   kitchenScope: "active" | "all";
-  inventorySortMode: "category" | "expiry" | "name";
+  inventorySortMode: "category" | "expiry" | "days" | "name";
   agentInsights: Partial<Record<ChatAgentName, string>>;
   // Per-agent, not a single value — Home can auto-activate Guardian/Chef/Shopkeeper
   // concurrently on load, not just one at a time like the FoodHub "Activate" button did.
@@ -871,7 +871,7 @@ export function useThatFridge() {
 
   const selectFridgeScope = (choice: number | "all") =>
     patch(choice === "all" ? { kitchenScope: "all" } : { kitchenScope: "active", activeFridge: choice, heroSlide: choice });
-  const setInventorySortMode = (mode: "category" | "expiry" | "name") => patch({ inventorySortMode: mode });
+  const setInventorySortMode = (mode: "category" | "expiry" | "days" | "name") => patch({ inventorySortMode: mode });
 
   const selectHero = (i: number) =>
     patch((s) => ({ heroSlide: i, activeFridge: i < s.fridges.length ? i : s.activeFridge }));

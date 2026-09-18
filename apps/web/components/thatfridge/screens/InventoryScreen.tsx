@@ -32,9 +32,10 @@ function LocationTag({ location }: { location: StorageLocation }) {
   );
 }
 
-const SORT_OPTIONS: { key: "category" | "expiry" | "name"; label: string }[] = [
+const SORT_OPTIONS: { key: "category" | "expiry" | "days" | "name"; label: string }[] = [
   { key: "category", label: "Category" },
   { key: "expiry", label: "Expiry" },
+  { key: "days", label: "Days Left" },
   { key: "name", label: "Name" },
 ];
 
@@ -91,9 +92,11 @@ export default function InventoryScreen() {
   const sortedItems =
     state.inventorySortMode === "expiry"
       ? filteredItems.slice().sort((a, b) => a.freshness - b.freshness)
-      : state.inventorySortMode === "name"
-        ? filteredItems.slice().sort((a, b) => a.name.localeCompare(b.name))
-        : filteredItems;
+      : state.inventorySortMode === "days"
+        ? filteredItems.slice().sort((a, b) => a.days - b.days)
+        : state.inventorySortMode === "name"
+          ? filteredItems.slice().sort((a, b) => a.name.localeCompare(b.name))
+          : filteredItems;
 
   return (
     <>

@@ -49,10 +49,11 @@ import { useTheme } from "@/lib/theme";
 
 const UNCATEGORIZED = "__uncat__";
 
-type Sort = "category" | "expiry" | "name";
+type Sort = "category" | "expiry" | "days" | "name";
 const SORT_OPTIONS: { key: Sort; label: string }[] = [
   { key: "category", label: "Category" },
   { key: "expiry", label: "Expiry" },
+  { key: "days", label: "Days Left" },
   { key: "name", label: "Name" },
 ];
 
@@ -209,6 +210,8 @@ export default function Inventory() {
   const sorted = useMemo(() => {
     if (sort === "expiry")
       return [...filtered].sort((a, b) => a.freshness - b.freshness);
+    if (sort === "days")
+      return [...filtered].sort((a, b) => a.days - b.days);
     if (sort === "name")
       return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
     return filtered;
