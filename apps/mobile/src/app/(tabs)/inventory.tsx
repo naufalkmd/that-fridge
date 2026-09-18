@@ -584,6 +584,7 @@ export default function Inventory() {
                 <Text
                   style={{
                     marginTop: 40,
+                    marginBottom: 20,
                     textAlign: "center",
                     fontSize: 13,
                     color: FAINT,
