@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 
 import type { KitchenScoreResult } from "@thatfridge/core";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 const SCENE = require("../../../assets/images/thatfridge/pixel-art-source.png");
 const GIFS = {
@@ -23,21 +24,24 @@ const MAX_STEP_S = 4.5;
 const MIN_PAUSE_MS = 700;
 const MAX_PAUSE_MS = 2600;
 
-// Paths lifted verbatim from apps/web CrewScene.tsx — each drawn against the scene.webp floor
-// plan so a character never clips furniture. chef→kitchen (TL), organizer→stock room (TR),
-// guardian→pharmacy (BL), shopkeeper→produce (BR).
-const ZONES: {
+type Zone = {
   id: CrewId;
   scoreKey: KitchenScoreResult["key"];
   color: string;
   notifKind: "expiring" | "lowStock" | "recipe" | null;
   route: string;
   path: PathPoint[];
-}[] = [
+};
+
+// Paths lifted verbatim from apps/web CrewScene.tsx — each drawn against the scene.webp floor
+// plan so a character never clips furniture. chef→kitchen (TL), organizer→stock room (TR),
+// guardian→pharmacy (BL), shopkeeper→produce (BR). A function of colors so each zone's
+// identity color follows the theme.
+const buildZones = (colors: ThemeColors): Zone[] => [
   {
     id: "chef",
     scoreKey: "balance",
-    color: "#f5a623",
+    color: colors.agentChef,
     notifKind: "recipe",
     route: "/eat?tab=recipes",
     path: [
@@ -50,7 +54,7 @@ const ZONES: {
   {
     id: "organizer",
     scoreKey: "organizer",
-    color: "#3d6fe0",
+    color: colors.agentOrganizer,
     notifKind: null,
     route: "/eat?tab=organizer",
     path: [
@@ -61,7 +65,7 @@ const ZONES: {
   {
     id: "guardian",
     scoreKey: "waste",
-    color: "#ff5f56",
+    color: colors.agentGuardian,
     notifKind: "expiring",
     route: "/eat?tab=guardian",
     path: [
@@ -72,7 +76,7 @@ const ZONES: {
   {
     id: "shopkeeper",
     scoreKey: "shopkeeper",
-    color: "#39e07f",
+    color: colors.agentShopkeeper,
     notifKind: "lowStock",
     route: "/eat?tab=shopping",
     path: [
@@ -143,7 +147,7 @@ function CrewCharacter({
   onPress,
   onOpenAlerts,
 }: {
-  zone: (typeof ZONES)[number];
+  zone: Zone;
   box: { w: number; h: number };
   count: number;
   score: number | null;
@@ -151,6 +155,7 @@ function CrewCharacter({
   onPress: () => void;
   onOpenAlerts: () => void;
 }) {
+  const { colors } = useTheme();
   const toPx = (p: PathPoint) => ({ x: (p.x / 100) * box.w, y: (p.y / 100) * box.h });
   const pos = useRef(new Animated.ValueXY(toPx(zone.path[0]))).current;
   const [facing, setFacing] = useState<1 | -1>(1);
@@ -234,7 +239,7 @@ function CrewCharacter({
           alignSelf: "center",
           maxWidth: 108,
           minWidth: 84,
-          backgroundColor: "#131316",
+          backgroundColor: colors.surface,
           borderWidth: 1.5,
           borderColor: zone.color,
           borderRadius: 6,
@@ -248,7 +253,7 @@ function CrewCharacter({
             lineHeight: 12,
             textAlign: "center",
             fontWeight: isAlert ? "800" : "600",
-            color: isAlert ? zone.color : "#eaeaec",
+            color: isAlert ? zone.color : colors.ink,
           }}
         >
           {message}
@@ -278,6 +283,8 @@ export function CrewScene({
   showcase?: boolean;
 }) {
   const router = useRouter();
+  const { colors } = useTheme();
+  const zones = buildZones(colors);
   const [box, setBox] = useState({ w: 0, h: 0 });
 
   const onLayout = (e: LayoutChangeEvent) => {
@@ -292,7 +299,7 @@ export function CrewScene({
     >
       <Image source={SCENE} style={{ position: "absolute", inset: 0 }} contentFit="contain" />
       {box.w > 0 &&
-        ZONES.map((zone) => (
+        zones.map((zone) => (
           <CrewCharacter
             key={zone.id}
             zone={zone}

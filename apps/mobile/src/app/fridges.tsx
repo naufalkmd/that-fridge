@@ -15,20 +15,23 @@ import { describeError } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { useScope } from "@/lib/scope";
+import { useTheme } from "@/lib/theme";
 import { SheetHeader } from "@/components/sheet";
-
-const ACCENT = "#26c6da";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const FAINT = "rgba(234,234,236,0.34)";
-const BLUE = "#5b8dee";
 
 export default function Fridges() {
   const router = useRouter();
   const { fridges, refresh } = useInventory();
   const { scope, setScope } = useScope();
+  const {
+    accent: ACCENT,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    faint: FAINT,
+    blue: BLUE,
+    canvas: CANVAS,
+  } = useTheme().colors;
   const [name, setName] = useState("");
   const [adding, setAdding] = useState(false);
 
@@ -167,9 +170,9 @@ export default function Fridges() {
               }}
             >
               {adding ? (
-                <ActivityIndicator color="#0a0a0c" />
+                <ActivityIndicator color={CANVAS} />
               ) : (
-                <Ionicons name="add" size={20} color="#0a0a0c" />
+                <Ionicons name="add" size={20} color={CANVAS} />
               )}
             </Pressable>
           </View>

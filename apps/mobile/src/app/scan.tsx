@@ -25,15 +25,12 @@ import {
   stashDrafts,
   useDraftItems,
 } from "@/components/draft-item";
+import { useTheme } from "@/lib/theme";
 
 const isExpoGo = Constants.appOwnership === "expo";
 // A barcode sits in frame for many consecutive callbacks — ignore repeats of the same
 // code within this window so one product isn't added a dozen times.
 const DEDUPE_MS = 2500;
-
-const SURFACE = "#131316";
-const HAIRLINE = "rgba(255,255,255,0.12)";
-const INK = "#eaeaec";
 
 type ScanResult =
   | { kind: "ok"; code: string; name: string }
@@ -52,6 +49,13 @@ export default function Scan() {
   const lastRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
   const codesRef = useRef<Set<string>>(new Set());
   const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const {
+    surface: SURFACE,
+    hairline: HAIRLINE,
+    ink: INK,
+    warn: WARN,
+    canvas: CANVAS,
+  } = useTheme().colors;
 
   useEffect(() => {
     drafts.refetchLibrary();
@@ -141,7 +145,7 @@ export default function Scan() {
           onPress={() => router.replace("/add")}
           className="rounded-lg bg-accent px-5 py-3 active:opacity-80"
         >
-          <Text className="font-bold uppercase text-[#0a0a0c]">Add manually</Text>
+          <Text className="font-bold uppercase text-canvas">Add manually</Text>
         </Pressable>
         <Pressable onPress={() => router.back()}>
           <Text className="text-muted">Cancel</Text>
@@ -164,7 +168,7 @@ export default function Scan() {
           onPress={requestPermission}
           className="rounded-lg bg-accent px-5 py-3 active:opacity-80"
         >
-          <Text className="font-bold uppercase text-[#0a0a0c]">Grant access</Text>
+          <Text className="font-bold uppercase text-canvas">Grant access</Text>
         </Pressable>
         <Pressable onPress={() => router.back()}>
           <Text className="text-muted">Not now</Text>
@@ -242,7 +246,7 @@ export default function Scan() {
                 onPress={() => setEditingId(null)}
                 className="mt-2 items-center rounded-lg bg-accent py-3 active:opacity-80"
               >
-                <Text className="font-bold uppercase tracking-wide text-[#0a0a0c]">
+                <Text className="font-bold uppercase tracking-wide text-canvas">
                   Done editing
                 </Text>
               </Pressable>
@@ -263,7 +267,7 @@ export default function Scan() {
                         flexDirection: "row",
                         alignItems: "center",
                         gap: 7,
-                        backgroundColor: "rgba(19,19,22,0.9)",
+                        backgroundColor: `${SURFACE}e6`,
                         borderWidth: 1,
                         borderColor: HAIRLINE,
                         borderRadius: 999,
@@ -282,7 +286,7 @@ export default function Scan() {
                         style={{
                           fontSize: 12.5,
                           fontWeight: "700",
-                          color: d.name ? INK : "#f5a623",
+                          color: d.name ? INK : WARN,
                         }}
                         numberOfLines={1}
                       >
@@ -306,8 +310,8 @@ export default function Scan() {
                   className="flex-row items-center gap-2 rounded-lg bg-accent px-6 py-3 active:opacity-80"
                   style={items.length === 0 ? { opacity: 0.45 } : undefined}
                 >
-                  <MaterialCommunityIcons name="check" size={16} color="#0a0a0c" />
-                  <Text className="font-bold uppercase tracking-wide text-[#0a0a0c]">
+                  <MaterialCommunityIcons name="check" size={16} color={CANVAS} />
+                  <Text className="font-bold uppercase tracking-wide text-canvas">
                     {items.length > 0 ? `Done (${items.length})` : "Done"}
                   </Text>
                 </Pressable>

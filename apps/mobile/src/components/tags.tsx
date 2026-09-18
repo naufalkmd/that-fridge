@@ -2,6 +2,7 @@ import { Pressable, Text, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { type NutritionCategory, type StorageLocation } from "@thatfridge/core";
+import { useTheme } from "@/lib/theme";
 
 // other_extras keeps its hand-picked purple (no theme token). Icons mirror the food-group
 // row on the Kitchen Score card.
@@ -61,6 +62,7 @@ export function ScopePill({
   onPress: () => void;
   small?: boolean;
 }) {
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -72,23 +74,23 @@ export function ScopePill({
         paddingVertical: small ? 5 : 7,
         paddingHorizontal: small ? 10 : 12,
         borderRadius: 6,
-        backgroundColor: small ? "#1a1a1f" : "#131316",
+        backgroundColor: small ? colors.surface2 : colors.surface,
         borderWidth: small ? 0 : 1,
-        borderColor: "rgba(255,255,255,0.09)",
+        borderColor: colors.hairline,
       }}
     >
-      <MaterialCommunityIcons name="fridge-outline" size={small ? 11 : 14} color={small ? "rgba(234,234,236,0.58)" : "#eaeaec"} />
+      <MaterialCommunityIcons name="fridge-outline" size={small ? 11 : 14} color={small ? colors.muted : colors.ink} />
       <Text
         style={{
           fontSize: small ? 11 : 12.5,
           fontWeight: "700",
-          color: small ? "rgba(234,234,236,0.58)" : "#eaeaec",
+          color: small ? colors.muted : colors.ink,
         }}
       >
         {label}
       </Text>
       {!small && (
-        <MaterialCommunityIcons name="chevron-down" size={14} color="#eaeaec" />
+        <MaterialCommunityIcons name="chevron-down" size={14} color={colors.ink} />
       )}
     </Pressable>
   );

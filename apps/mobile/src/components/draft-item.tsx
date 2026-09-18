@@ -37,16 +37,8 @@ import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { FoodIcon } from "@/components/food-icon";
 import { BottomSheet } from "@/components/bottom-sheet";
+import { useTheme } from "@/lib/theme";
 
-const AMBER = "#26c6da";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const STRONG_BORDER = "rgba(255,255,255,0.18)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const BLUE = "#5b8dee";
 const AUTOFILL = "#7a5cc9";
 
 /** Auto-fill hit a 402 — nudge the user to top up instead of silently doing nothing. */
@@ -306,6 +298,19 @@ export function ItemCard({
   const [catOpen, setCatOpen] = useState(false);
   const [genPrompt, setGenPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
+  const {
+    accent: AMBER,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    hairlineStrong: STRONG_BORDER,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+    blue: BLUE,
+    warn: WARN,
+    canvas: CANVAS,
+  } = useTheme().colors;
 
   async function generate() {
     if (generating || !genPrompt.trim()) return;
@@ -608,7 +613,7 @@ export function ItemCard({
                   style={{
                     fontSize: 11.5,
                     fontWeight: "700",
-                    color: on ? "#0a0a0c" : INK,
+                    color: on ? CANVAS : INK,
                   }}
                 >
                   {c.label}
@@ -699,7 +704,7 @@ export function ItemCard({
           style={{
             fontSize: 11,
             fontWeight: "700",
-            color: "#f5a623",
+            color: WARN,
             lineHeight: 15,
           }}
         >
@@ -760,6 +765,12 @@ export function DateField({
 }) {
   const [open, setOpen] = useState(false);
   const current = value ? new Date(`${value}T00:00:00`) : new Date();
+  const {
+    accent: AMBER,
+    surface2: SURFACE2,
+    ink: INK,
+    faint: FAINT,
+  } = useTheme().colors;
 
   const onAndroidChange = (e: DateTimePickerEvent, d?: Date) => {
     setOpen(false);

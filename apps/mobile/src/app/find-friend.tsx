@@ -14,21 +14,24 @@ import {
 import { api } from "@/lib/api";
 import { useSocial } from "@/lib/social";
 import { useRecipes } from "@/lib/recipes";
+import { useTheme } from "@/lib/theme";
 import { PixelText } from "@/components/brand";
-
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const BLUE = "#5b8dee";
-const GOOD = "#39e07f";
 
 export default function FindFriend() {
   const router = useRouter();
   const { myInvites, acceptInvite, declineInvite, refresh } = useSocial();
   const { setFavorite } = useRecipes();
+  const {
+    accent: ACCENT,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+    blue: BLUE,
+    good: GOOD,
+  } = useTheme().colors;
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserSearchResult[]>([]);
@@ -257,7 +260,7 @@ export default function FindFriend() {
                       <MaterialCommunityIcons
                         name={r.isFavorite ? "heart" : "heart-outline"}
                         size={18}
-                        color={r.isFavorite ? "#26c6da" : FAINT}
+                        color={r.isFavorite ? ACCENT : FAINT}
                       />
                     </Pressable>
                     <Ionicons name="chevron-forward" size={15} color={FAINT} />
@@ -328,7 +331,7 @@ export default function FindFriend() {
           )}
 
           {searching || loadingProfile ? (
-            <ActivityIndicator color="#26c6da" style={{ marginTop: 20 }} />
+            <ActivityIndicator color={ACCENT} style={{ marginTop: 20 }} />
           ) : results.length > 0 ? (
             <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden" }}>
               {results.map((u, i) => (
@@ -369,6 +372,7 @@ export default function FindFriend() {
 }
 
 function Label({ children }: { children: string }) {
+  const { faint: FAINT } = useTheme().colors;
   return (
     <Text style={{ fontSize: 12, fontWeight: "800", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
       {children}

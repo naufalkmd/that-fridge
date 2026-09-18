@@ -11,15 +11,7 @@ import { useRecipes } from "@/lib/recipes";
 import { PixelText } from "@/components/brand";
 import { FoodIcon } from "@/components/food-icon";
 import { SkeletonList } from "@/components/ui";
-
-const AMBER = "#26c6da";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const GOOD = "#39e07f";
+import { useTheme } from "@/lib/theme";
 
 const CATEGORIES: { key: RecipeCategory | "all" | "fav"; label: string }[] = [
   { key: "all", label: "All" },
@@ -38,6 +30,15 @@ export default function Recipes() {
   const { items } = useInventory();
   const [filter, setFilter] = useState<RecipeCategory | "all" | "fav">("all");
   const [refreshing, setRefreshing] = useState(false);
+  const {
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    faint: FAINT,
+    bad: BAD,
+    canvas: CANVAS,
+  } = useTheme().colors;
 
   const withReady = useMemo(
     () =>
@@ -127,7 +128,7 @@ export default function Recipes() {
                 borderColor: HAIRLINE,
               }}
             >
-              <Text style={{ fontSize: 12.5, fontWeight: "700", color: active ? "#0a0a0c" : INK }}>
+              <Text style={{ fontSize: 12.5, fontWeight: "700", color: active ? CANVAS : INK }}>
                 {c.label}
               </Text>
             </Pressable>
@@ -144,9 +145,9 @@ export default function Recipes() {
         {error && (
           <Pressable
             onPress={refresh}
-            style={{ marginBottom: 14, borderRadius: 12, borderWidth: 1, borderColor: "#ff5567", backgroundColor: SURFACE, padding: 12 }}
+            style={{ marginBottom: 14, borderRadius: 12, borderWidth: 1, borderColor: BAD, backgroundColor: SURFACE, padding: 12 }}
           >
-            <Text style={{ fontWeight: "600", color: "#ff5567" }}>{error}</Text>
+            <Text style={{ fontWeight: "600", color: BAD }}>{error}</Text>
           </Pressable>
         )}
 
@@ -209,6 +210,15 @@ function Row({
 }) {
   const { r, have, total } = entry;
   const ready = total > 0 && have === total;
+  const {
+    accent: AMBER,
+    surface: SURFACE,
+    hairline: HAIRLINE,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+    good: GOOD,
+  } = useTheme().colors;
   return (
     <Pressable
       onPress={onPress}

@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useOnboarding } from "@/lib/onboarding";
 import { FloatingTabBar } from "@/components/tab-bar";
 import { CoachSpotlight } from "@/components/home/CoachSpotlight";
+import { useTheme } from "@/lib/theme";
 
 // Same order the FloatingTabBar renders in (the [＋] FAB sits between inventory and chat but
 // isn't a swipe target). A left→right swipe goes to the previous tab, right→left to the next.
@@ -20,6 +21,7 @@ export default function TabsLayout() {
   const onboarding = useOnboarding();
   const router = useRouter();
   const pathname = usePathname();
+  const { colors } = useTheme();
 
   const go = useCallback(
     (route: SwipeRoute) => {
@@ -53,7 +55,7 @@ export default function TabsLayout() {
   if (status === "loading" || (status === "signedIn" && !onboarding.ready)) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
-        <ActivityIndicator color="#26c6da" />
+        <ActivityIndicator color={colors.accent} />
       </View>
     );
   }
@@ -68,7 +70,7 @@ export default function TabsLayout() {
             tabBar={(props) => <FloatingTabBar {...props} />}
             screenOptions={{
               headerShown: false,
-              sceneStyle: { backgroundColor: "#0a0a0c" },
+              sceneStyle: { backgroundColor: colors.canvas },
               // Snappy tab switches: instant swap (no transition to jank while a heavy screen
               // mounts) + don't re-render backgrounded tabs.
               freezeOnBlur: true,

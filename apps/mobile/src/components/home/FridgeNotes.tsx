@@ -7,20 +7,8 @@ import { useAuth } from "@/lib/auth";
 import { useInventory } from "@/lib/inventory";
 import { useScope } from "@/lib/scope";
 import { useNotes } from "@/lib/notes";
+import { useTheme } from "@/lib/theme";
 
-const SURFACE = "#131316";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const FAINT = "rgba(234,234,236,0.34)";
-const BLUE = "#5b8dee";
-
-const NOTE_COLOR: Record<FridgeNoteColor, string> = {
-  amber: "#26c6da",
-  blue: "#5b8dee",
-  good: "#39e07f",
-  warn: "#f5a623",
-  bad: "#ff5567",
-};
 const SWATCHES: FridgeNoteColor[] = ["amber", "blue", "good", "warn", "bad"];
 
 function reportNote(note: FridgeNote) {
@@ -47,6 +35,25 @@ export function FridgeNotes({ variant = "editor" }: { variant?: "grid" | "editor
   const [color, setColor] = useState<FridgeNoteColor>("amber");
   const [editingId, setEditingId] = useState<string | null>(null);
   const showFridge = scope === "all";
+  const {
+    surface: SURFACE,
+    hairline: HAIRLINE,
+    ink: INK,
+    faint: FAINT,
+    blue: BLUE,
+    accent,
+    good,
+    warn,
+    bad,
+    canvas: CANVAS,
+  } = useTheme().colors;
+  const NOTE_COLOR: Record<FridgeNoteColor, string> = {
+    amber: accent,
+    blue: BLUE,
+    good,
+    warn,
+    bad,
+  };
 
   const targetFridgeId = scope === "all" ? fridges[0]?.id : scope;
   const visible = useMemo(
@@ -141,7 +148,7 @@ export function FridgeNotes({ variant = "editor" }: { variant?: "grid" | "editor
               onPress={submit}
               style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: NOTE_COLOR[color], alignItems: "center", justifyContent: "center" }}
             >
-              <MaterialCommunityIcons name={editingId ? "check" : "send"} size={16} color="#0a0a0c" />
+              <MaterialCommunityIcons name={editingId ? "check" : "send"} size={16} color={CANVAS} />
             </Pressable>
           </View>
 

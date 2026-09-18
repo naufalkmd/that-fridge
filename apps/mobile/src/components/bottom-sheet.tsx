@@ -8,8 +8,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-const SURFACE = "#131316";
-const HAIRLINE = "rgba(255,255,255,0.09)";
+import { useTheme } from "@/lib/theme";
 
 // Drag the handle down past this far, or flick it fast enough, and it counts as a dismiss.
 const DISMISS_DISTANCE = 120;
@@ -36,6 +35,7 @@ export function BottomSheet({
   maxHeight?: number;
 }) {
   const translateY = useSharedValue(0);
+  const { surface: SURFACE, hairline: HAIRLINE } = useTheme().colors;
 
   useEffect(() => {
     if (visible) translateY.value = 0;

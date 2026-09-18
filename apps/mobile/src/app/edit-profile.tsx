@@ -15,6 +15,7 @@ import * as Haptics from "expo-haptics";
 
 import { ApiError, describeError, type ProfileFields } from "@thatfridge/core";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
 
 /** "in 12 days" / "on 3 Oct" style — enough for the user to know when the field frees up. */
 function whenFree(iso: string | null): string {
@@ -27,6 +28,7 @@ function whenFree(iso: string | null): string {
 export default function EditProfile() {
   const router = useRouter();
   const { user, updateProfile } = useAuth();
+  const { colors } = useTheme();
 
   const [name, setName] = useState(user?.name ?? "");
   const [username, setUsername] = useState(user?.username ?? "");
@@ -128,7 +130,7 @@ export default function EditProfile() {
         </Text>
 
         {working ? (
-          <ActivityIndicator color="#26c6da" />
+          <ActivityIndicator color={colors.accent} />
         ) : (
           <Pressable
             onPress={save}
@@ -154,17 +156,18 @@ type FieldProps = React.ComponentProps<typeof TextInput> & {
 };
 
 function Field({ label, hint, error, prefix, ...input }: FieldProps) {
+  const { colors } = useTheme();
   return (
     <View className="gap-1.5">
       <Text className="text-[12px] font-bold tracking-wide text-faint">{label}</Text>
       <View
         className="flex-row items-center rounded-lg border bg-surface px-4"
-        style={{ borderColor: error ? "#ff5f56" : "rgba(255,255,255,0.09)" }}
+        style={{ borderColor: error ? colors.bad : colors.hairline }}
       >
         {prefix ? <Text className="text-[14px] text-faint">{prefix}</Text> : null}
         <TextInput
           {...input}
-          placeholderTextColor="rgba(234,234,236,0.34)"
+          placeholderTextColor={colors.faint}
           className="flex-1 py-3 text-[14px] text-ink"
         />
       </View>

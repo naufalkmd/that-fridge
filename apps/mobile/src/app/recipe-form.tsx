@@ -25,14 +25,7 @@ import { api } from "@/lib/api";
 import { takeRecipeIconPick, takeRecipeSuggestion, useRecipes } from "@/lib/recipes";
 import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
-
-const AMBER = "#26c6da";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const BLUE = "#5b8dee";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 const CATEGORIES: RecipeCategory[] = ["breakfast", "lunch", "dinner", "dessert", "snack", "quick"];
 
@@ -41,6 +34,17 @@ export default function RecipeForm() {
   const { id, from } = useLocalSearchParams<{ id?: string; from?: string }>();
   const { byId, create, update } = useRecipes();
   const existing = id ? byId(id) : undefined;
+  const colors = useTheme().colors;
+  const {
+    accent: AMBER,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    faint: FAINT,
+    blue: BLUE,
+    canvas: CANVAS,
+  } = colors;
+  const input = inputStyle(colors);
 
   // One-shot: a Chef chat suggestion the user chose to tweak before saving. Read once
   // on mount so a re-render doesn't clear the buffer out from under a still-open form.
@@ -256,7 +260,7 @@ export default function RecipeForm() {
                   onPress={() => setCategory(active ? null : c)}
                   style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 6, backgroundColor: active ? AMBER : SURFACE2 }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: active ? "#0a0a0c" : INK, textTransform: "capitalize" }}>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: active ? CANVAS : INK, textTransform: "capitalize" }}>
                     {c}
                   </Text>
                 </Pressable>
@@ -336,9 +340,9 @@ export default function RecipeForm() {
           style={{ alignItems: "center", paddingVertical: 14, borderRadius: 8, backgroundColor: AMBER, marginTop: 4 }}
         >
           {saving ? (
-            <ActivityIndicator color="#0a0a0c" />
+            <ActivityIndicator color={CANVAS} />
           ) : (
-            <Text style={{ fontSize: 14, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
+            <Text style={{ fontSize: 14, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: CANVAS }}>
               {existing ? "Save changes" : "Add recipe"}
             </Text>
           )}
@@ -348,18 +352,21 @@ export default function RecipeForm() {
   );
 }
 
-const input = {
-  borderWidth: 1,
-  borderColor: HAIRLINE,
-  backgroundColor: SURFACE2,
-  borderRadius: 6,
-  paddingHorizontal: 14,
-  paddingVertical: 12,
-  fontSize: 13.5,
-  color: INK,
-} as const;
+function inputStyle(colors: ThemeColors) {
+  return {
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.surface2,
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 13.5,
+    color: colors.ink,
+  } as const;
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const { faint: FAINT } = useTheme().colors;
   return (
     <View>
       <Text style={{ marginBottom: 6, fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT }}>
@@ -383,6 +390,9 @@ function RowInput({
   onChangeText: (t: string) => void;
   onRemove: () => void;
 }) {
+  const colors = useTheme().colors;
+  const { faint: FAINT } = colors;
+  const input = inputStyle(colors);
   return (
     <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
       <TextInput
@@ -401,6 +411,7 @@ function RowInput({
 }
 
 function AddRow({ label, onPress }: { label: string; onPress: () => void }) {
+  const { muted: MUTED } = useTheme().colors;
   return (
     <Pressable onPress={onPress} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 4 }}>
       <MaterialCommunityIcons name="plus" size={14} color={MUTED} />

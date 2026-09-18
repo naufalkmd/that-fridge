@@ -71,6 +71,8 @@ export default function Inventory() {
     blue: BLUE,
     faint: FAINT,
     muted: MUTED,
+    canvas: CANVAS,
+    bad: BAD,
   } = useTheme().colors;
 
   const [sort, setSort] = useState<Sort>("expiry");
@@ -369,12 +371,12 @@ export default function Inventory() {
                 marginBottom: 14,
                 borderRadius: 12,
                 borderWidth: 1,
-                borderColor: "#ff5567",
+                borderColor: BAD,
                 backgroundColor: SURFACE,
                 padding: 12,
               }}
             >
-              <Text style={{ fontWeight: "600", color: "#ff5567" }}>
+              <Text style={{ fontWeight: "600", color: BAD }}>
                 {error}
               </Text>
               <Text style={{ marginTop: 2, fontSize: 12, color: MUTED }}>
@@ -547,7 +549,7 @@ export default function Inventory() {
                         style={{
                           fontSize: 12.5,
                           fontWeight: "700",
-                          color: active ? "#0a0a0c" : INK,
+                          color: active ? CANVAS : INK,
                         }}
                       >
                         {cat.name}
@@ -718,7 +720,7 @@ export default function Inventory() {
                 gap: 5,
                 backgroundColor: SURFACE2,
                 borderWidth: 1,
-                borderColor: "rgba(255,85,103,0.4)",
+                borderColor: `${BAD}66`,
                 paddingVertical: 9,
                 paddingHorizontal: 12,
                 borderRadius: 8,
@@ -727,10 +729,10 @@ export default function Inventory() {
               <MaterialCommunityIcons
                 name="trash-can-outline"
                 size={15}
-                color="#ff5567"
+                color={BAD}
               />
               <Text
-                style={{ fontSize: 12.5, fontWeight: "800", color: "#ff5567" }}
+                style={{ fontSize: 12.5, fontWeight: "800", color: BAD }}
               >
                 Delete
               </Text>
@@ -750,10 +752,10 @@ export default function Inventory() {
               <MaterialCommunityIcons
                 name="folder-move-outline"
                 size={15}
-                color="#0a0a0c"
+                color={CANVAS}
               />
               <Text
-                style={{ fontSize: 12.5, fontWeight: "800", color: "#0a0a0c" }}
+                style={{ fontSize: 12.5, fontWeight: "800", color: CANVAS }}
               >
                 Move to…
               </Text>
@@ -831,7 +833,7 @@ export default function Inventory() {
                         fontSize: 12.5,
                         fontWeight: "700",
                         color: active
-                          ? "#0a0a0c"
+                          ? CANVAS
                           : c.id === UNCATEGORIZED
                             ? MUTED
                             : INK,
@@ -983,7 +985,7 @@ function HeaderBtn({
   accent?: boolean;
   onPress: () => void;
 }) {
-  const { accent: ACCENT, surface: SURFACE, hairline: HAIRLINE, ink: INK } = useTheme().colors;
+  const { accent: ACCENT, surface: SURFACE, hairline: HAIRLINE, ink: INK, canvas: CANVAS } = useTheme().colors;
   return (
     <Pressable onPress={onPress} hitSlop={8}>
       <View
@@ -1001,7 +1003,7 @@ function HeaderBtn({
         <Ionicons
           name={icon}
           size={accent ? 20 : 16}
-          color={accent ? "#0a0a0c" : INK}
+          color={accent ? CANVAS : INK}
         />
       </View>
     </Pressable>
@@ -1046,9 +1048,12 @@ function ItemRow({
     accent: ACCENT,
     surface2: SURFACE2,
     hairline: HAIRLINE,
+    hairlineStrong: STRONG,
     ink: INK,
     blue: BLUE,
     faint: FAINT,
+    warn: WARN,
+    canvas: CANVAS,
   } = useTheme().colors;
   const fresh = freshColor(item.freshness);
 
@@ -1090,7 +1095,7 @@ function ItemRow({
           borderBottomWidth: last ? 0 : 1,
           borderBottomColor: HAIRLINE,
           opacity: dragging ? 0.3 : 1,
-          backgroundColor: selected ? "rgba(38,198,218,0.12)" : "transparent",
+          backgroundColor: selected ? `${ACCENT}1f` : "transparent",
         }}
       >
         {selecting ? (
@@ -1100,14 +1105,14 @@ function ItemRow({
               height: 22,
               borderRadius: 11,
               borderWidth: 1.5,
-              borderColor: selected ? ACCENT : "rgba(255,255,255,0.25)",
+              borderColor: selected ? ACCENT : STRONG,
               backgroundColor: selected ? ACCENT : "transparent",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
             {selected && (
-              <MaterialCommunityIcons name="check" size={13} color="#0a0a0c" />
+              <MaterialCommunityIcons name="check" size={13} color={CANVAS} />
             )}
           </View>
         ) : (
@@ -1160,7 +1165,7 @@ function ItemRow({
             {useFirst && (
               <View
                 style={{
-                  backgroundColor: "rgba(245,166,35,0.16)",
+                  backgroundColor: `${WARN}29`,
                   paddingHorizontal: 5,
                   paddingVertical: 1,
                   borderRadius: 4,
@@ -1171,7 +1176,7 @@ function ItemRow({
                     fontSize: 8.5,
                     fontWeight: "800",
                     letterSpacing: 0.4,
-                    color: "#f5a623",
+                    color: WARN,
                   }}
                 >
                   USE FIRST

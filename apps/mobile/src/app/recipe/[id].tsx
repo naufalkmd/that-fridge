@@ -20,17 +20,7 @@ import { useShopping } from "@/lib/shopping";
 import { useRecipes } from "@/lib/recipes";
 import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
-
-const AMBER = "#26c6da";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const BLUE = "#5b8dee";
-const GOOD = "#39e07f";
-const BAD = "#ff5567";
+import { useTheme } from "@/lib/theme";
 
 export default function RecipeDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -38,6 +28,17 @@ export default function RecipeDetail() {
   const { byId, ensureRecipe, setFavorite, remove } = useRecipes();
   const { items } = useInventory();
   const { items: shoppingItems, add: addToShopping } = useShopping();
+  const {
+    accent: AMBER,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    faint: FAINT,
+    blue: BLUE,
+    good: GOOD,
+    bad: BAD,
+    canvas: CANVAS,
+  } = useTheme().colors;
 
   const cached = byId(id);
   const [fetched, setFetched] = useState(cached);
@@ -73,7 +74,7 @@ export default function RecipeDetail() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
-        <ActivityIndicator color="#26c6da" />
+        <ActivityIndicator color={AMBER} />
       </View>
     );
   }
@@ -211,7 +212,7 @@ export default function RecipeDetail() {
                     backgroundColor: done ? tint : `${tint}1a`,
                   }}
                 >
-                  <MaterialCommunityIcons name={done ? "check" : "plus"} size={12} color={done ? "#0a0a0c" : tint} />
+                  <MaterialCommunityIcons name={done ? "check" : "plus"} size={12} color={done ? CANVAS : tint} />
                 </View>
                 <Text selectable style={{ flex: 1, fontSize: 13.5, fontWeight: "600", color: INK }}>{ing.name}</Text>
                 <Text style={{ fontSize: 11.5, fontWeight: "700", color: tint }}>
@@ -249,8 +250,8 @@ export default function RecipeDetail() {
             marginBottom: recipe.attachments.length ? 20 : 8,
           }}
         >
-          <MaterialCommunityIcons name="chef-hat" size={15} color="#0a0a0c" />
-          <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
+          <MaterialCommunityIcons name="chef-hat" size={15} color={CANVAS} />
+          <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: CANVAS }}>
             Mark as made
           </Text>
         </Pressable>
@@ -304,6 +305,7 @@ function IconBtn({
   tint: string;
   onPress: () => void;
 }) {
+  const { surface2: SURFACE2, hairline: HAIRLINE } = useTheme().colors;
   return (
     <Pressable
       onPress={onPress}

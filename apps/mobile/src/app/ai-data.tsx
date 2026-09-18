@@ -9,21 +9,23 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { timeAgo } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useKitchenScore } from "@/lib/kitchenScore";
+import { useTheme } from "@/lib/theme";
 import { PageHeader } from "@/components/ui";
 import { FoodIcon } from "@/components/food-icon";
-
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const BLUE = "#5b8dee";
-const BAD = "#ff5567";
 
 export default function AIData() {
   const router = useRouter();
   const { usageHistory, refresh } = useKitchenScore();
+  const {
+    accent: ACCENT,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    faint: FAINT,
+    blue: BLUE,
+    bad: BAD,
+  } = useTheme().colors;
   const [facts, setFacts] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -101,7 +103,7 @@ export default function AIData() {
           )}
         </View>
         {loading ? (
-          <ActivityIndicator color="#26c6da" style={{ marginVertical: 20 }} />
+          <ActivityIndicator color={ACCENT} style={{ marginVertical: 20 }} />
         ) : facts.length === 0 ? (
           <Text style={{ fontSize: 12, color: FAINT, marginBottom: 22 }}>
             Nothing remembered yet — the crew picks up preferences and habits from your chats.
@@ -170,6 +172,7 @@ export default function AIData() {
 }
 
 function Section({ label, inline }: { label: string; inline?: boolean }) {
+  const { faint: FAINT } = useTheme().colors;
   return (
     <Text
       style={{

@@ -1,5 +1,7 @@
 import { Text, View, type TextStyle } from "react-native";
 
+import { useTheme } from "@/lib/theme";
+
 // Lightweight stand-in for the web's react-markdown renderer — handles the small subset the
 // agents actually emit: **bold**, `#`/`##`/`###` headings, and `-`/`*`/`1.` list items.
 
@@ -24,7 +26,7 @@ function inline(text: string, key: string, color: string, selectable: boolean) {
 
 export function MarkdownText({
   text,
-  color = "#eaeaec",
+  color,
   size = 13.5,
   selectable = false,
 }: {
@@ -34,7 +36,9 @@ export function MarkdownText({
   /** Long-press to select / copy. Off by default to match the rest of the app. */
   selectable?: boolean;
 }) {
-  const base: TextStyle = { fontSize: size, lineHeight: size * 1.5, color };
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.ink;
+  const base: TextStyle = { fontSize: size, lineHeight: size * 1.5, color: resolvedColor };
   const lines = text.split("\n");
 
   return (
@@ -62,7 +66,7 @@ export function MarkdownText({
             <View key={i} style={{ flexDirection: "row", marginVertical: 1 }}>
               <Text style={{ ...base }}>{"•  "}</Text>
               <View style={{ flex: 1 }}>
-                {inline(bullet[1], `${i}`, color, selectable)}
+                {inline(bullet[1], `${i}`, resolvedColor, selectable)}
               </View>
             </View>
           );
@@ -74,7 +78,7 @@ export function MarkdownText({
             <View key={i} style={{ flexDirection: "row", marginVertical: 1 }}>
               <Text style={{ ...base }}>{`${numbered[1]}.  `}</Text>
               <View style={{ flex: 1 }}>
-                {inline(numbered[2], `${i}`, color, selectable)}
+                {inline(numbered[2], `${i}`, resolvedColor, selectable)}
               </View>
             </View>
           );
@@ -82,7 +86,7 @@ export function MarkdownText({
 
         return (
           <Text key={i} selectable={selectable} style={base}>
-            {inline(line, `${i}`, color, selectable)}
+            {inline(line, `${i}`, resolvedColor, selectable)}
           </Text>
         );
       })}

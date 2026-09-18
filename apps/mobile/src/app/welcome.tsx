@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { googleAuthAvailable } from "@/lib/google-auth";
 import { useOnboarding } from "@/lib/onboarding";
 import { patchOnboardingDraft } from "@/lib/onboardingDraft";
+import { useTheme } from "@/lib/theme";
 import { PixelText } from "@/components/brand";
 import {
   ACCENT,
@@ -431,36 +432,6 @@ function QuestionsStep({
 
 // ---- step: meet the crew ---------------------------------------------
 
-const CREW_BLUE = "#3d6fe0"; // Organizer's zone colour (matches Home's crew scene / Kitchen Score)
-
-// Order matches CREW in components/onboarding/shared: Chef, Guardian, Organizer, Shopkeeper.
-const CREW_INFO: { color: string; role: string; does: string; example: string }[] = [
-  {
-    color: WARN,
-    role: "Cooks from what you have",
-    does: "Turns whatever's about to go off into a plan for tonight — using what's already in your fridge, not a shopping trip.",
-    example: "Spinach and eggs are on their way out — a 10-minute frittata clears both.",
-  },
-  {
-    color: BAD,
-    role: "Watches the use-by dates",
-    does: "Flags food a few days before it turns, and tells you when something's already risky to keep.",
-    example: "That yogurt is 2 days past its date — give it a sniff before you trust it.",
-  },
-  {
-    color: CREW_BLUE,
-    role: "Knows where things belong",
-    does: "Says whether something keeps best in the fridge, freezer or pantry — and roughly how long it lasts there.",
-    example: "Bread lasts about 3× longer in the freezer. Want to move it?",
-  },
-  {
-    color: GOOD,
-    role: "Tracks what's running low",
-    does: "Builds your shopping list as things run out, so you catch it here instead of in an empty kitchen.",
-    example: "Down to your last 2 eggs — added them to the list.",
-  },
-];
-
 const GLYPHS = ["chef", "guardian", "organizer", "shopkeeper"] as const;
 
 /** Simple line-icon per crew member — used at small size in the switcher, where the
@@ -524,6 +495,36 @@ function CrewStep({
   onHaveAccount: () => void;
 }) {
   const [active, setActive] = useState(0);
+  const { agentOrganizer: CREW_BLUE } = useTheme().colors;
+
+  // Order matches CREW in components/onboarding/shared: Chef, Guardian, Organizer, Shopkeeper.
+  const CREW_INFO: { color: string; role: string; does: string; example: string }[] = [
+    {
+      color: WARN,
+      role: "Cooks from what you have",
+      does: "Turns whatever's about to go off into a plan for tonight — using what's already in your fridge, not a shopping trip.",
+      example: "Spinach and eggs are on their way out — a 10-minute frittata clears both.",
+    },
+    {
+      color: BAD,
+      role: "Watches the use-by dates",
+      does: "Flags food a few days before it turns, and tells you when something's already risky to keep.",
+      example: "That yogurt is 2 days past its date — give it a sniff before you trust it.",
+    },
+    {
+      color: CREW_BLUE,
+      role: "Knows where things belong",
+      does: "Says whether something keeps best in the fridge, freezer or pantry — and roughly how long it lasts there.",
+      example: "Bread lasts about 3× longer in the freezer. Want to move it?",
+    },
+    {
+      color: GOOD,
+      role: "Tracks what's running low",
+      does: "Builds your shopping list as things run out, so you catch it here instead of in an empty kitchen.",
+      example: "Down to your last 2 eggs — added them to the list.",
+    },
+  ];
+
   const member = CREW[active];
   const info = CREW_INFO[active];
 

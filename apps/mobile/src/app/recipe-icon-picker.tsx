@@ -23,13 +23,9 @@ import { api } from "@/lib/api";
 import { stashRecipeIconPick } from "@/lib/recipes";
 import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
+import { useTheme } from "@/lib/theme";
 
-const ACCENT = "#26c6da";
 const PURPLE = "#7a5cc9";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const FAINT = "rgba(234,234,236,0.34)";
 
 /**
  * Icon picker for a recipe's own thumbnail — curated pixel grid + AI generation (kind
@@ -47,6 +43,13 @@ export default function RecipeIconPicker() {
   const recipeName = params.name || "Recipe";
   const currentIcon = params.icon || null;
   const currentIconUrl = params.iconUrl || null;
+  const {
+    accent: ACCENT,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    faint: FAINT,
+  } = useTheme().colors;
 
   const [prompt, setPrompt] = useState("");
   const [generating, setGenerating] = useState(false);

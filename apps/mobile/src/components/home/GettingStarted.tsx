@@ -8,16 +8,9 @@ import { useInventory } from "@/lib/inventory";
 import { useRecipes } from "@/lib/recipes";
 import { useShopping } from "@/lib/shopping";
 import { useOnboarding } from "@/lib/onboarding";
+import { useTheme } from "@/lib/theme";
 
-const SURFACE = "#131316";
-const CANVAS = "#0a0a0c";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
 const RAIL = "rgba(234,234,236,0.16)";
-const GOOD = "#39e07f";
-const ACCENT = "#26c6da";
 
 const NODE_COL = 26;
 const LINE_X = NODE_COL / 2 - 1;
@@ -49,6 +42,13 @@ export function GettingStarted() {
   const { items: shopping } = useShopping();
   const { seen, checklistDismissed, dismissChecklist, checklistVisited } =
     useOnboarding();
+  const {
+    hairline: HAIRLINE,
+    surface: SURFACE,
+    ink: INK,
+    faint: FAINT,
+    muted: MUTED,
+  } = useTheme().colors;
 
   const steps = useMemo<Step[]>(() => {
     const shared = fridges.some((f) => (f.memberCount ?? 1) > 1);
@@ -194,6 +194,7 @@ function PathRow({
   isLast: boolean;
   onPress: () => void;
 }) {
+  const { good: GOOD, muted: MUTED, ink: INK, faint: FAINT, accent: ACCENT } = useTheme().colors;
   // The rail reads as "filled up to where you are": green through every done node and the
   // current one, faint below.
   const lineColor = state === "future" ? RAIL : GOOD;
@@ -259,6 +260,7 @@ function PathRow({
 
 function PathNode({ state }: { state: NodeState }) {
   const pulse = useRef(new Animated.Value(0)).current;
+  const { faint: FAINT, canvas: CANVAS, good: GOOD, accent: ACCENT, surface: SURFACE } = useTheme().colors;
 
   useEffect(() => {
     if (state !== "current") return;

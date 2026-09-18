@@ -21,11 +21,13 @@ import { useInventory } from "@/lib/inventory";
 import { useRecipes } from "@/lib/recipes";
 import { useKitchenScore } from "@/lib/kitchenScore";
 import { useToast } from "@/lib/toast";
+import { useTheme } from "@/lib/theme";
 import { SectionHeader } from "@/components/ui";
 
 export default function Shopping() {
   const { items, loading, error, refresh, add, toggle, remove, clearChecked } =
     useShopping();
+  const { colors } = useTheme();
   const { items: fridgeItems } = useInventory();
   const { recipes } = useRecipes();
   const { usageHistory } = useKitchenScore();
@@ -70,7 +72,7 @@ export default function Shopping() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
-        <ActivityIndicator color="#26c6da" />
+        <ActivityIndicator color={colors.accent} />
       </View>
     );
   }
@@ -102,7 +104,7 @@ export default function Shopping() {
             onSubmitEditing={submit}
             returnKeyType="done"
             placeholder="Add an item…"
-            placeholderTextColor="rgba(234,234,236,0.34)"
+            placeholderTextColor={colors.faint}
             className="flex-1 rounded-lg border border-hairline bg-surface px-4 py-3 text-[14px] text-ink"
           />
           <Pressable
@@ -214,6 +216,7 @@ function Row({
   onToggle: () => void;
   onRemove: () => void;
 }) {
+  const { colors } = useTheme();
   return (
     <View
       className={`flex-row items-center gap-3 px-4 py-3 ${
@@ -244,12 +247,12 @@ function Row({
         <Pressable
           onPress={() => Linking.openURL(shopUrl).catch(() => {})}
           hitSlop={8}
-          className="rounded-md bg-[#1a1a1f] p-1.5"
+          className="rounded-md bg-surface2 p-1.5"
         >
           <MaterialCommunityIcons
             name="open-in-new"
             size={14}
-            color="#5b8dee"
+            color={colors.blue}
           />
         </Pressable>
       )}

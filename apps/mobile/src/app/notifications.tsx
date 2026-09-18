@@ -17,35 +17,28 @@ import { timeAgo, type NotificationEvent, type NotificationKind } from "@thatfri
 import { useNotifications } from "@/lib/notifications";
 import { useSocial } from "@/lib/social";
 import { PixelText } from "@/components/brand";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const BLUE = "#5b8dee";
-const GOOD = "#39e07f";
-
-const KIND: Record<
-  NotificationKind,
-  { color: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }
-> = {
-  expiring: { color: "#ff5f56", icon: "timer-sand" },
-  lowStock: { color: "#39e07f", icon: "cart-outline" },
-  recipe: { color: "#f5a623", icon: "chef-hat" },
-  invite: { color: BLUE, icon: "email-outline" },
-  joinRequest: { color: BLUE, icon: "account-plus-outline" },
-  requestApproved: { color: GOOD, icon: "check-circle-outline" },
-  requestDeclined: { color: FAINT, icon: "close-circle-outline" },
-  inviteAccepted: { color: GOOD, icon: "account-check-outline" },
-  inviteDeclined: { color: FAINT, icon: "account-cancel-outline" },
-  memberLeft: { color: FAINT, icon: "account-arrow-right-outline" },
-  removed: { color: "#ff5f56", icon: "account-remove-outline" },
-  itemAdded: { color: "#3d6fe0", icon: "package-variant-closed" },
-  itemUsed: { color: "#3d6fe0", icon: "package-variant" },
-  note: { color: "#3d6fe0", icon: "note-text-outline" },
-};
+function kindMeta(
+  colors: ThemeColors,
+): Record<NotificationKind, { color: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }> {
+  return {
+    expiring: { color: colors.agentGuardian, icon: "timer-sand" },
+    lowStock: { color: colors.agentShopkeeper, icon: "cart-outline" },
+    recipe: { color: colors.agentChef, icon: "chef-hat" },
+    invite: { color: colors.blue, icon: "email-outline" },
+    joinRequest: { color: colors.blue, icon: "account-plus-outline" },
+    requestApproved: { color: colors.good, icon: "check-circle-outline" },
+    requestDeclined: { color: colors.faint, icon: "close-circle-outline" },
+    inviteAccepted: { color: colors.good, icon: "account-check-outline" },
+    inviteDeclined: { color: colors.faint, icon: "account-cancel-outline" },
+    memberLeft: { color: colors.faint, icon: "account-arrow-right-outline" },
+    removed: { color: colors.agentGuardian, icon: "account-remove-outline" },
+    itemAdded: { color: colors.agentOrganizer, icon: "package-variant-closed" },
+    itemUsed: { color: colors.agentOrganizer, icon: "package-variant" },
+    note: { color: colors.agentOrganizer, icon: "note-text-outline" },
+  };
+}
 
 export default function Notifications() {
   const router = useRouter();
@@ -54,6 +47,15 @@ export default function Notifications() {
     useSocial();
   const [refreshing, setRefreshing] = useState(false);
   const hasPending = myInvites.length + myJoinRequests.length > 0;
+  const {
+    accent: ACCENT,
+    surface: SURFACE,
+    hairline: HAIRLINE,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+    bad: BAD,
+  } = useTheme().colors;
 
   async function onRefresh() {
     setRefreshing(true);
@@ -98,7 +100,7 @@ export default function Notifications() {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           {events.length > 0 && (
             <Pressable onPress={confirmClearAll} hitSlop={8}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: "#ff5567" }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: BAD }}>
                 Clear all
               </Text>
             </Pressable>
@@ -131,9 +133,9 @@ export default function Notifications() {
         {error && (
           <Pressable
             onPress={refresh}
-            style={{ marginBottom: 14, borderRadius: 12, borderWidth: 1, borderColor: "#ff5567", backgroundColor: SURFACE, padding: 12 }}
+            style={{ marginBottom: 14, borderRadius: 12, borderWidth: 1, borderColor: BAD, backgroundColor: SURFACE, padding: 12 }}
           >
-            <Text style={{ fontWeight: "600", color: "#ff5567" }}>{error}</Text>
+            <Text style={{ fontWeight: "600", color: BAD }}>{error}</Text>
           </Pressable>
         )}
 
@@ -163,7 +165,7 @@ export default function Notifications() {
         )}
 
         {loading ? (
-          <ActivityIndicator color="#26c6da" style={{ marginTop: 40 }} />
+          <ActivityIndicator color={ACCENT} style={{ marginTop: 40 }} />
         ) : events.length === 0 && !hasPending ? (
           <Text style={{ textAlign: "center", paddingVertical: 60, color: FAINT, fontSize: 13 }}>
             You&apos;re all caught up — no notifications yet.
@@ -191,6 +193,14 @@ function PendingRow({
   onAccept: () => void;
   onDecline: () => void;
 }) {
+  const {
+    surface: SURFACE,
+    hairline: HAIRLINE,
+    ink: INK,
+    faint: FAINT,
+    blue: BLUE,
+    good: GOOD,
+  } = useTheme().colors;
   return (
     <View
       style={{
@@ -229,7 +239,15 @@ function Row({
   event: NotificationEvent;
   onClear: () => void;
 }) {
-  const meta = KIND[event.kind];
+  const colors = useTheme().colors;
+  const {
+    surface: SURFACE,
+    hairline: HAIRLINE,
+    ink: INK,
+    faint: FAINT,
+    blue: BLUE,
+  } = colors;
+  const meta = kindMeta(colors)[event.kind];
   return (
     <View
       style={{

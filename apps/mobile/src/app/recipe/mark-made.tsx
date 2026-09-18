@@ -11,16 +11,7 @@ import { useRecipes } from "@/lib/recipes";
 import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
 import { useToast } from "@/lib/toast";
-
-const AMBER = "#26c6da";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const STRONG = "rgba(255,255,255,0.18)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const GOOD = "#39e07f";
-const WARN = "#f5a623";
+import { useTheme } from "@/lib/theme";
 
 type Row = { id: string; ingredientName: string; itemId: string; itemName: string; icon: string };
 type Status = "finished" | "remaining";
@@ -40,6 +31,18 @@ export default function MarkRecipeMade() {
   const { items, removeItem, patchItem } = useInventory();
   const { refresh: refreshScore } = useKitchenScore();
   const [busy, setBusy] = useState(false);
+  const {
+    accent: AMBER,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    hairlineStrong: STRONG,
+    ink: INK,
+    muted: MUTED,
+    good: GOOD,
+    warn: WARN,
+    canvas: CANVAS,
+  } = useTheme().colors;
 
   const recipe = byId(id);
 
@@ -152,7 +155,7 @@ export default function MarkRecipeMade() {
                           backgroundColor: st === opt ? (opt === "finished" ? GOOD : WARN) : "transparent",
                         }}
                       >
-                        <Text style={{ fontSize: 11, fontWeight: "700", color: st === opt ? "#0a0a0c" : MUTED }}>
+                        <Text style={{ fontSize: 11, fontWeight: "700", color: st === opt ? CANVAS : MUTED }}>
                           {opt === "finished" ? "Finished" : "Remaining"}
                         </Text>
                       </Pressable>
@@ -185,9 +188,9 @@ export default function MarkRecipeMade() {
           style={{ flex: 1, alignItems: "center", paddingVertical: 13, borderRadius: 10, backgroundColor: AMBER }}
         >
           {busy ? (
-            <ActivityIndicator color="#0a0a0c" />
+            <ActivityIndicator color={CANVAS} />
           ) : (
-            <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#0a0a0c" }}>
+            <Text style={{ fontSize: 13.5, fontWeight: "700", color: CANVAS }}>
               {rows.length > 0 ? `Confirm (${rows.length})` : "Confirm"}
             </Text>
           )}

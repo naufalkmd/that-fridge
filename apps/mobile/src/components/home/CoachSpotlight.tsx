@@ -6,14 +6,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { useInventory } from "@/lib/inventory";
 import { type CoachTarget, useOnboarding } from "@/lib/onboarding";
-
-const CANVAS = "#0a0a0c";
-const SURFACE = "#131316";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const ACCENT = "#26c6da";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
+import { useTheme } from "@/lib/theme";
 
 const FAB_SIZE = 58;
 const RING = 96;
@@ -144,6 +137,15 @@ function Overlay({
   onSkip?: () => void;
 }) {
   const chip = big ? FAB_SIZE : 46;
+  const {
+    canvas: CANVAS,
+    surface: SURFACE,
+    hairline: HAIRLINE,
+    accent: ACCENT,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+  } = useTheme().colors;
   return (
     <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
       {/* opaque dim that blocks the app behind it — tapping it does NOT dismiss;

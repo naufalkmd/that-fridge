@@ -7,16 +7,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { describeError } from "@thatfridge/core";
 import { usePro } from "@/lib/pro";
 import { useCredits } from "@/lib/credits";
+import { useTheme } from "@/lib/theme";
 import { SheetHeader } from "@/components/sheet";
-
-const AMBER = "#26c6da";
-const SURFACE = "#131316";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const GOOD = "#39e07f";
-const BAD = "#ff5567";
 
 const REASON_LABEL: Record<string, string> = {
   chat: "Quick Chat",
@@ -38,6 +30,16 @@ export default function Credits() {
   const router = useRouter();
   const { available, isPro } = usePro();
   const { balance, ledger, refresh } = useCredits();
+  const {
+    accent: AMBER,
+    surface: SURFACE,
+    hairline: HAIRLINE,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+    good: GOOD,
+    bad: BAD,
+  } = useTheme().colors;
   const [packs, setPacks] = useState<PurchasesPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
@@ -195,6 +197,7 @@ export default function Credits() {
 }
 
 function Label({ children }: { children: string }) {
+  const { faint: FAINT } = useTheme().colors;
   return (
     <Text style={{ fontSize: 12, fontWeight: "800", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
       {children}

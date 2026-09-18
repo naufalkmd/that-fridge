@@ -12,18 +12,9 @@ import { useKitchenScore } from "@/lib/kitchenScore";
 import { useToast } from "@/lib/toast";
 import { PageHeader } from "@/components/ui";
 import { FoodIcon } from "@/components/food-icon";
+import { useTheme } from "@/lib/theme";
 
 const ORGANIZER_GIF = require("../../assets/images/thatfridge/organizer.gif");
-
-const AMBER = "#26c6da";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const BLUE = "#3d6fe0";
-const GOOD = "#39e07f";
 
 type Move = { id: string; name: string; icon: string; from: StorageLocation; to: StorageLocation };
 
@@ -34,6 +25,18 @@ export default function Organizer() {
   const { scope } = useScope();
   const { organizerTally, refresh: refreshScore } = useKitchenScore();
   const toast = useToast();
+  const {
+    accent: AMBER,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+    agentOrganizer: BLUE,
+    good: GOOD,
+    canvas: CANVAS,
+  } = useTheme().colors;
 
   const [status, setStatus] = useState<"idle" | "checking" | "done">("idle");
   const [moves, setMoves] = useState<Move[]>([]);
@@ -130,8 +133,8 @@ export default function Organizer() {
             </>
           ) : (
             <>
-              <MaterialCommunityIcons name="broom" size={15} color="#0a0a0c" />
-              <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>
+              <MaterialCommunityIcons name="broom" size={15} color={CANVAS} />
+              <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: CANVAS }}>
                 {status === "done" ? "Check again" : "Check my fridge"}
               </Text>
             </>

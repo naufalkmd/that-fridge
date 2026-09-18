@@ -9,32 +9,12 @@ import {
   type RecipeSuggestionBlock,
 } from "@thatfridge/core";
 import { FoodIcon } from "@/components/food-icon";
-
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const GOOD = "#39e07f";
-const STRONG_BORDER = "rgba(255,255,255,0.18)";
+import { useTheme } from "@/lib/theme";
 
 type Style = {
   color: string;
   label: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
-};
-
-const CATEGORY_STYLE: Record<RecipeCategory, Style> = {
-  breakfast: { color: "#f5a623", label: "Breakfast", icon: "food-croissant" },
-  lunch: { color: "#39e07f", label: "Lunch", icon: "hamburger" },
-  dinner: { color: "#3d6fe0", label: "Dinner", icon: "silverware-fork-knife" },
-  dessert: { color: "#ff5f56", label: "Dessert", icon: "cupcake" },
-  snack: { color: "#7a5cb0", label: "Snack", icon: "popcorn" },
-  quick: { color: "#b5702f", label: "Quick meal", icon: "lightning-bolt" },
-};
-const DEFAULT_STYLE: Style = {
-  color: "#5b8dee",
-  label: "Recipe",
-  icon: "silverware-variant",
 };
 
 const CARD_W = 264;
@@ -56,6 +36,32 @@ export function RecipeSuggestionCard({
 }) {
   const [dismissed, setDismissed] = useState(false);
   const [showSteps, setShowSteps] = useState(false);
+  const {
+    surface: SURFACE,
+    surface2: SURFACE2,
+    ink: INK,
+    muted: MUTED,
+    good: GOOD,
+    hairlineStrong: STRONG_BORDER,
+    warn,
+    blue,
+    agentOrganizer,
+    agentGuardian,
+    canvas: CANVAS,
+  } = useTheme().colors;
+  const CATEGORY_STYLE: Record<RecipeCategory, Style> = {
+    breakfast: { color: warn, label: "Breakfast", icon: "food-croissant" },
+    lunch: { color: GOOD, label: "Lunch", icon: "hamburger" },
+    dinner: { color: agentOrganizer, label: "Dinner", icon: "silverware-fork-knife" },
+    dessert: { color: agentGuardian, label: "Dessert", icon: "cupcake" },
+    snack: { color: "#7a5cb0", label: "Snack", icon: "popcorn" },
+    quick: { color: "#b5702f", label: "Quick meal", icon: "lightning-bolt" },
+  };
+  const DEFAULT_STYLE: Style = {
+    color: blue,
+    label: "Recipe",
+    icon: "silverware-variant",
+  };
   const style =
     (suggestion.category && CATEGORY_STYLE[suggestion.category]) ||
     DEFAULT_STYLE;
@@ -100,7 +106,7 @@ export function RecipeSuggestionCard({
                 flex: 1,
                 fontSize: 13,
                 fontWeight: "800",
-                color: "#0a0a0c",
+                color: CANVAS,
                 lineHeight: 16,
               }}
             >
@@ -115,7 +121,7 @@ export function RecipeSuggestionCard({
               }}
             >
               <Text
-                style={{ fontSize: 10.5, fontWeight: "800", color: "#0a0a0c" }}
+                style={{ fontSize: 10.5, fontWeight: "800", color: CANVAS }}
               >
                 {suggestion.minutes}m
               </Text>
@@ -153,14 +159,14 @@ export function RecipeSuggestionCard({
               <MaterialCommunityIcons
                 name={style.icon}
                 size={11}
-                color="#0a0a0c"
+                color={CANVAS}
               />
               <Text
                 style={{
                   fontSize: 9.5,
                   fontWeight: "800",
                   letterSpacing: 0.4,
-                  color: "#0a0a0c",
+                  color: CANVAS,
                 }}
               >
                 {style.label.toUpperCase()}
@@ -233,7 +239,7 @@ export function RecipeSuggestionCard({
                       style={{
                         fontSize: 9,
                         fontWeight: "800",
-                        color: "#0a0a0c",
+                        color: CANVAS,
                       }}
                     >
                       {i + 1}
@@ -338,7 +344,7 @@ export function RecipeSuggestionCard({
               style={{
                 fontSize: 12,
                 fontWeight: "700",
-                color: adding ? MUTED : "#0a0a0c",
+                color: adding ? MUTED : CANVAS,
               }}
             >
               {adding ? "Adding…" : "Add to recipe book"}

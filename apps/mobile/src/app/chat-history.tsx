@@ -14,14 +14,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { ApiError, timeAgo, type ChatSessionSummary } from "@thatfridge/core";
 import { api } from "@/lib/api";
+import { useTheme } from "@/lib/theme";
 import { PageHeader } from "@/components/ui";
-
-const SURFACE = "#131316";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const FAINT = "rgba(234,234,236,0.34)";
-const BLUE = "#5b8dee";
-const BAD = "#ff5567";
 
 function title(msg: string) {
   const t = msg.trim().replace(/\s+/g, " ");
@@ -30,6 +24,15 @@ function title(msg: string) {
 
 export default function ChatHistory() {
   const router = useRouter();
+  const {
+    accent: ACCENT,
+    surface: SURFACE,
+    hairline: HAIRLINE,
+    ink: INK,
+    faint: FAINT,
+    blue: BLUE,
+    bad: BAD,
+  } = useTheme().colors;
   const [sessions, setSessions] = useState<ChatSessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -131,7 +134,7 @@ export default function ChatHistory() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color="#26c6da" style={{ marginTop: 40 }} />
+        <ActivityIndicator color={ACCENT} style={{ marginTop: 40 }} />
       ) : sessions.length === 0 ? (
         <Text
           style={{

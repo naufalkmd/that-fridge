@@ -16,6 +16,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { describeError } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
 import { PixelText } from "@/components/brand";
 
 type Step = "email" | "code";
@@ -23,6 +24,7 @@ type Step = "email" | "code";
 export default function ForgotPassword() {
   const router = useRouter();
   const { resetPassword } = useAuth();
+  const { colors } = useTheme();
 
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
@@ -86,9 +88,9 @@ export default function ForgotPassword() {
             onPress={() => (step === "code" ? setStep("email") : router.back())}
             hitSlop={8}
           >
-            <Ionicons name="chevron-back" size={22} color="#eaeaec" />
+            <Ionicons name="chevron-back" size={22} color={colors.ink} />
           </Pressable>
-          <PixelText style={{ fontSize: 14, color: "#eaeaec" }}>
+          <PixelText style={{ fontSize: 14, color: colors.ink }}>
             Reset password
           </PixelText>
         </View>
@@ -193,6 +195,7 @@ function Submit({
   busy: boolean;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -201,9 +204,9 @@ function Submit({
       style={busy ? { opacity: 0.7 } : undefined}
     >
       {busy ? (
-        <ActivityIndicator color="#0a0a0c" />
+        <ActivityIndicator color={colors.canvas} />
       ) : (
-        <Text className="text-[14px] font-bold uppercase tracking-wide text-[#0a0a0c]">
+        <Text className="text-[14px] font-bold uppercase tracking-wide text-canvas">
           {label}
         </Text>
       )}
@@ -214,6 +217,7 @@ function Submit({
 type FieldProps = React.ComponentProps<typeof TextInput> & { label: string };
 
 function Field({ label, ...input }: FieldProps) {
+  const { colors } = useTheme();
   return (
     <View>
       <Text className="mb-1.5 text-[12px] font-bold tracking-wide text-faint">
@@ -221,7 +225,7 @@ function Field({ label, ...input }: FieldProps) {
       </Text>
       <TextInput
         {...input}
-        placeholderTextColor="rgba(234,234,236,0.34)"
+        placeholderTextColor={colors.faint}
         className="rounded-lg bg-canvas px-4 py-3 text-[14px] text-ink"
       />
     </View>

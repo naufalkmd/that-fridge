@@ -17,19 +17,9 @@ import { useInventory } from "@/lib/inventory";
 import { useShopping } from "@/lib/shopping";
 import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
+import { useTheme } from "@/lib/theme";
 
 const CHEF = require("../../assets/images/thatfridge/chef.gif");
-
-const AMBER = "#26c6da";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const STRONG = "rgba(255,255,255,0.18)";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const GOOD = "#39e07f";
-const BLUE = "#5b8dee";
 
 const MEAL_TYPES: { key: MealType; label: string }[] = [
   { key: "breakfast", label: "Breakfast" },
@@ -54,6 +44,16 @@ const FOOD_FOCUS: { key: FoodFocus; label: string }[] = [
 export default function WhatToEat() {
   const router = useRouter();
   const { refresh: refreshInventory } = useInventory();
+  const {
+    accent: AMBER,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+    bad: BAD,
+    canvas: CANVAS,
+  } = useTheme().colors;
 
   const [meal, setMeal] = useState<MealType | null>(null);
   const [vibes, setVibes] = useState<Vibe[]>([]);
@@ -131,14 +131,14 @@ export default function WhatToEat() {
           onPress={loading ? undefined : run}
           style={{ alignItems: "center", paddingVertical: 13, borderRadius: 8, backgroundColor: loading ? SURFACE2 : AMBER }}
         >
-          <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: loading ? FAINT : "#0a0a0c" }}>
+          <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: loading ? FAINT : CANVAS }}>
             {loading ? "Finding meals…" : "Find meals"}
           </Text>
         </Pressable>
 
         {error && (
-          <Pressable onPress={run} style={{ borderRadius: 12, borderWidth: 1, borderColor: "#ff5567", backgroundColor: SURFACE, padding: 12 }}>
-            <Text style={{ fontWeight: "600", color: "#ff5567" }}>{error}</Text>
+          <Pressable onPress={run} style={{ borderRadius: 12, borderWidth: 1, borderColor: BAD, backgroundColor: SURFACE, padding: 12 }}>
+            <Text style={{ fontWeight: "600", color: BAD }}>{error}</Text>
           </Pressable>
         )}
 
@@ -175,6 +175,7 @@ export default function WhatToEat() {
 }
 
 function AskChef({ onPress, primary }: { onPress: () => void; primary?: boolean }) {
+  const { accent: AMBER, hairlineStrong: STRONG, ink: INK, canvas: CANVAS } = useTheme().colors;
   return (
     <Pressable
       onPress={onPress}
@@ -187,7 +188,7 @@ function AskChef({ onPress, primary }: { onPress: () => void; primary?: boolean 
         borderColor: STRONG,
       }}
     >
-      <Text style={{ fontSize: primary ? 13 : 12.5, fontWeight: "700", textTransform: primary ? "uppercase" : "none", letterSpacing: primary ? 0.5 : 0, color: primary ? "#0a0a0c" : INK }}>
+      <Text style={{ fontSize: primary ? 13 : 12.5, fontWeight: "700", textTransform: primary ? "uppercase" : "none", letterSpacing: primary ? 0.5 : 0, color: primary ? CANVAS : INK }}>
         Ask Chef instead
       </Text>
     </Pressable>
@@ -207,6 +208,7 @@ function ResultsTier({
   onShuffle: () => void;
   onMade: () => void;
 }) {
+  const { faint: FAINT, hairlineStrong: STRONG, ink: INK } = useTheme().colors;
   const visible = useMemo(() => {
     if (results.length <= 3) return results;
     const start = (page * 3) % results.length;
@@ -239,6 +241,17 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
   const { items: shoppingItems, add: addToShopping } = useShopping();
   const [open, setOpen] = useState(false);
   const [marking, setMarking] = useState(false);
+  const {
+    accent: AMBER,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    faint: FAINT,
+    good: GOOD,
+    blue: BLUE,
+    canvas: CANVAS,
+  } = useTheme().colors;
 
   const ingredients = recipe.ingredients.map((ing) => ({
     ...ing,
@@ -294,7 +307,7 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
                     style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 14, borderBottomWidth: i === ingredients.length - 1 ? 0 : 1, borderBottomColor: HAIRLINE }}
                   >
                     <View style={{ width: 20, height: 20, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: `${tint}${done ? "" : "1a"}` }}>
-                      <MaterialCommunityIcons name={done ? "check" : "plus"} size={12} color={done ? "#0a0a0c" : tint} />
+                      <MaterialCommunityIcons name={done ? "check" : "plus"} size={12} color={done ? CANVAS : tint} />
                     </View>
                     <Text style={{ flex: 1, fontSize: 13.5, fontWeight: "600", color: INK }}>{ing.name}</Text>
                     <Text style={{ fontSize: 11.5, fontWeight: "700", color: tint }}>
@@ -324,11 +337,11 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
             style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 8, backgroundColor: AMBER }}
           >
             {marking ? (
-              <ActivityIndicator color="#0a0a0c" />
+              <ActivityIndicator color={CANVAS} />
             ) : (
               <>
-                <MaterialCommunityIcons name="chef-hat" size={15} color="#0a0a0c" />
-                <Text style={{ fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: "#0a0a0c" }}>Mark as made</Text>
+                <MaterialCommunityIcons name="chef-hat" size={15} color={CANVAS} />
+                <Text style={{ fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: CANVAS }}>Mark as made</Text>
               </>
             )}
           </Pressable>
@@ -339,6 +352,7 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
 }
 
 function ChipGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  const { faint: FAINT } = useTheme().colors;
   return (
     <View style={{ gap: 8 }}>
       <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.3, color: FAINT }}>{label}</Text>
@@ -348,9 +362,10 @@ function ChipGroup({ label, children }: { label: string; children: React.ReactNo
 }
 
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const { accent: AMBER, surface2: SURFACE2, ink: INK, canvas: CANVAS } = useTheme().colors;
   return (
     <Pressable onPress={onPress} style={{ paddingVertical: 7, paddingHorizontal: 14, borderRadius: 6, backgroundColor: active ? AMBER : SURFACE2 }}>
-      <Text style={{ fontSize: 12.5, fontWeight: "700", color: active ? "#0a0a0c" : INK }}>{label}</Text>
+      <Text style={{ fontSize: 12.5, fontWeight: "700", color: active ? CANVAS : INK }}>{label}</Text>
     </Pressable>
   );
 }

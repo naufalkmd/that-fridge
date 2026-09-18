@@ -14,19 +14,22 @@ import * as Haptics from "expo-haptics";
 
 import { describeError } from "@thatfridge/core";
 import { useCategories } from "@/lib/categories";
+import { useTheme } from "@/lib/theme";
 import { SheetHeader } from "@/components/sheet";
-
-const ACCENT = "#26c6da";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const BAD = "#ff5567";
 
 export default function Categories() {
   const { categories, loading, create, rename, remove } = useCategories();
+  const {
+    accent: ACCENT,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+    bad: BAD,
+    canvas: CANVAS,
+  } = useTheme().colors;
   const [newName, setNewName] = useState("");
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(
@@ -230,9 +233,9 @@ export default function Categories() {
             }}
           >
             {busy ? (
-              <ActivityIndicator color="#0a0a0c" />
+              <ActivityIndicator color={CANVAS} />
             ) : (
-              <Ionicons name="add" size={20} color="#0a0a0c" />
+              <Ionicons name="add" size={20} color={CANVAS} />
             )}
           </Pressable>
         </View>

@@ -9,6 +9,7 @@ import {
   type ReminderCadence,
   setFridgeReminder,
 } from "@/lib/fridgeReminder";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 
 const GIF = {
   guardian: require("../../assets/images/thatfridge/guardian.gif"),
@@ -27,65 +28,67 @@ type Row = {
 
 // Grouped + agent-badged, mirroring apps/web's NotificationsScreen. The SHARED FRIDGES
 // group covers activity/invite notifications (see Notifier on the backend).
-const GROUPS: { title: string; rows: Row[] }[] = [
-  {
-    title: "FRESHNESS & STOCK",
-    rows: [
-      {
-        key: "expiryAlerts",
-        label: "Expiry alerts",
-        desc: "Guardian pings you before items go bad. Also drives the on-device reminders.",
-        gif: "guardian",
-        accent: "#ff5f56",
-      },
-      {
-        key: "lowStock",
-        label: "Low stock reminders",
-        desc: "Shopkeeper flags essentials you're running low on.",
-        gif: "shopkeeper",
-        accent: "#39e07f",
-      },
-    ],
-  },
-  {
-    title: "MEALS & SUMMARIES",
-    rows: [
-      {
-        key: "recipeTips",
-        label: "Recipe suggestions",
-        desc: "Chef's picks based on what's fresh right now.",
-        gif: "chef",
-        accent: "#f5a623",
-      },
-      {
-        key: "weeklyDigest",
-        label: "Weekly digest",
-        desc: "A Sunday summary of your fridge health.",
-        gif: "organizer",
-        accent: "#3d6fe0",
-      },
-    ],
-  },
-  {
-    title: "SHARED FRIDGES",
-    rows: [
-      {
-        key: "social",
-        label: "Invites & members",
-        desc: "Invitations, join requests, approvals, and people joining or leaving.",
-        gif: "organizer",
-        accent: "#3d6fe0",
-      },
-      {
-        key: "crewActionsEnabled",
-        label: "Crew activity",
-        desc: "When someone in a shared fridge adds or uses an item, or leaves a note.",
-        gif: "organizer",
-        accent: "#3d6fe0",
-      },
-    ],
-  },
-];
+function buildGroups(colors: ThemeColors): { title: string; rows: Row[] }[] {
+  return [
+    {
+      title: "FRESHNESS & STOCK",
+      rows: [
+        {
+          key: "expiryAlerts",
+          label: "Expiry alerts",
+          desc: "Guardian pings you before items go bad. Also drives the on-device reminders.",
+          gif: "guardian",
+          accent: colors.agentGuardian,
+        },
+        {
+          key: "lowStock",
+          label: "Low stock reminders",
+          desc: "Shopkeeper flags essentials you're running low on.",
+          gif: "shopkeeper",
+          accent: colors.agentShopkeeper,
+        },
+      ],
+    },
+    {
+      title: "MEALS & SUMMARIES",
+      rows: [
+        {
+          key: "recipeTips",
+          label: "Recipe suggestions",
+          desc: "Chef's picks based on what's fresh right now.",
+          gif: "chef",
+          accent: colors.agentChef,
+        },
+        {
+          key: "weeklyDigest",
+          label: "Weekly digest",
+          desc: "A Sunday summary of your fridge health.",
+          gif: "organizer",
+          accent: colors.agentOrganizer,
+        },
+      ],
+    },
+    {
+      title: "SHARED FRIDGES",
+      rows: [
+        {
+          key: "social",
+          label: "Invites & members",
+          desc: "Invitations, join requests, approvals, and people joining or leaving.",
+          gif: "organizer",
+          accent: colors.agentOrganizer,
+        },
+        {
+          key: "crewActionsEnabled",
+          label: "Crew activity",
+          desc: "When someone in a shared fridge adds or uses an item, or leaves a note.",
+          gif: "organizer",
+          accent: colors.agentOrganizer,
+        },
+      ],
+    },
+  ];
+}
 
 const CADENCES: { key: ReminderCadence; label: string }[] = [
   { key: "off", label: "Off" },
@@ -94,6 +97,7 @@ const CADENCES: { key: ReminderCadence; label: string }[] = [
 ];
 
 function CheckInReminderRow() {
+  const { colors } = useTheme();
   const [cadence, setCadence] = useState<ReminderCadence | null>(null);
 
   useEffect(() => {
@@ -124,12 +128,12 @@ function CheckInReminderRow() {
                 onPress={() => pick(c.key)}
                 className="flex-1 items-center rounded-lg py-2.5"
                 style={{
-                  backgroundColor: active ? "#26c6da" : "#1a1a1f",
+                  backgroundColor: active ? colors.accent : colors.surface2,
                 }}
               >
                 <Text
                   className="text-[12.5px] font-bold"
-                  style={{ color: active ? "#0a0a0c" : "#eaeaec" }}
+                  style={{ color: active ? colors.canvas : colors.ink }}
                 >
                   {c.label}
                 </Text>
@@ -144,11 +148,12 @@ function CheckInReminderRow() {
 
 export default function NotificationSettings() {
   const { prefs, togglePref } = useNotifications();
+  const { colors } = useTheme();
 
   if (!prefs) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
-        <ActivityIndicator color="#26c6da" />
+        <ActivityIndicator color={colors.accent} />
       </View>
     );
   }
@@ -156,7 +161,7 @@ export default function NotificationSettings() {
   return (
     <View className="flex-1 bg-canvas px-5 pt-4">
       <CheckInReminderRow />
-      {GROUPS.map((group) => (
+      {buildGroups(colors).map((group) => (
         <View key={group.title} className="mb-5">
           <Text className="mb-2 text-[12px] font-extrabold tracking-wide text-faint">
             {group.title}
@@ -182,8 +187,8 @@ export default function NotificationSettings() {
                 <Switch
                   value={prefs[row.key]}
                   onValueChange={() => togglePref(row.key)}
-                  trackColor={{ true: "#26c6da", false: "rgba(255,255,255,0.09)" }}
-                  thumbColor="#eaeaec"
+                  trackColor={{ true: colors.accent, false: colors.hairline }}
+                  thumbColor={colors.ink}
                 />
               </View>
             ))}

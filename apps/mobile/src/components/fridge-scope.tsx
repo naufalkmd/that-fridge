@@ -4,12 +4,7 @@ import { Dimensions, Modal, Pressable, Text, View } from "react-native";
 import { useInventory } from "@/lib/inventory";
 import { useScope } from "@/lib/scope";
 import { ScopePill } from "@/components/tags";
-
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const BLUE = "#5b8dee";
-const INK = "#eaeaec";
+import { useTheme } from "@/lib/theme";
 
 const MENU_WIDTH = 200;
 
@@ -29,6 +24,13 @@ export function FridgeScopePicker({ small }: { small?: boolean }) {
     h: number;
   } | null>(null);
   const pillRef = useRef<View>(null);
+  const {
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    blue: BLUE,
+    ink: INK,
+  } = useTheme().colors;
 
   const label =
     scope === "all"

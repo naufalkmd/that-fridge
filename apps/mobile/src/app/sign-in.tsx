@@ -18,6 +18,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { describeError } from "@thatfridge/core";
 import { useAuth } from "@/lib/auth";
 import { googleAuthAvailable } from "@/lib/google-auth";
+import { useTheme } from "@/lib/theme";
 import { Logo, PixelText } from "@/components/brand";
 
 type Mode = "login" | "signup";
@@ -28,6 +29,7 @@ export default function SignIn() {
   const router = useRouter();
   const params = useLocalSearchParams<{ mode?: string }>();
   const { signIn, signUp, signInWithApple, signInWithGoogle } = useAuth();
+  const { colors } = useTheme();
 
   const [appleAvailable, setAppleAvailable] = useState(false);
   useEffect(() => {
@@ -127,7 +129,7 @@ export default function SignIn() {
         >
           <View className="mb-8 items-center gap-3">
             <Logo size={52} />
-            <PixelText style={{ fontSize: 20, color: "#eaeaec" }}>ThatFridge</PixelText>
+            <PixelText style={{ fontSize: 20, color: colors.ink }}>ThatFridge</PixelText>
             <Text className="text-center text-[13px] text-muted">
               Know what&apos;s inside before you open the door.
             </Text>
@@ -232,7 +234,7 @@ export default function SignIn() {
                     <Ionicons
                       name={dataTransferConsent ? "checkbox" : "square-outline"}
                       size={18}
-                      color={dataTransferConsent ? "#26c6da" : "rgba(234,234,236,0.58)"}
+                      color={dataTransferConsent ? colors.accent : colors.muted}
                       style={{ marginTop: 1 }}
                     />
                     <Text className="flex-1 text-[11.5px] leading-4 text-faint">
@@ -258,9 +260,9 @@ export default function SignIn() {
                 style={busy ? { opacity: 0.7 } : undefined}
               >
                 {busy ? (
-                  <ActivityIndicator color="#0a0a0c" />
+                  <ActivityIndicator color={colors.canvas} />
                 ) : (
-                  <Text className="text-[14px] font-bold uppercase tracking-wide text-[#0a0a0c]">
+                  <Text className="text-[14px] font-bold uppercase tracking-wide text-canvas">
                     {isLogin ? "Log in" : "Create account"}
                   </Text>
                 )}
@@ -344,7 +346,7 @@ export default function SignIn() {
             className="mt-3 flex-row items-center justify-center gap-1.5"
             onPress={() => router.push("/welcome")}
           >
-            <Ionicons name="sparkles-outline" size={13} color="rgba(234,234,236,0.58)" />
+            <Ionicons name="sparkles-outline" size={13} color={colors.muted} />
             <Text className="text-[12.5px] font-semibold text-muted">
               See how ThatFridge works
             </Text>
@@ -358,12 +360,13 @@ export default function SignIn() {
 type FieldProps = React.ComponentProps<typeof TextInput> & { label: string };
 
 function Field({ label, ...input }: FieldProps) {
+  const { colors } = useTheme();
   return (
     <View>
       <Text className="mb-1.5 text-[12px] font-bold tracking-wide text-faint">{label}</Text>
       <TextInput
         {...input}
-        placeholderTextColor="rgba(234,234,236,0.34)"
+        placeholderTextColor={colors.faint}
         className="rounded-lg bg-canvas px-4 py-3 text-[14px] text-ink"
       />
     </View>

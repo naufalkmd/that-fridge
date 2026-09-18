@@ -34,17 +34,7 @@ import { useToast } from "@/lib/toast";
 import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
 import { CategoryTag } from "@/components/tags";
-
-const AMBER = "#26c6da";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const BLUE = "#5b8dee";
-const GOOD = "#39e07f";
-const BAD = "#ff5567";
+import { useTheme } from "@/lib/theme";
 
 const BEST_BEFORE_PRESETS = [
   { label: "2 days", days: 2 },
@@ -63,6 +53,30 @@ export default function ItemDetail() {
   const { refresh: refreshScore } = useKitchenScore();
   const toast = useToast();
   const item = itemById(id);
+  const {
+    accent: AMBER,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+    blue: BLUE,
+    good: GOOD,
+    bad: BAD,
+    canvas: CANVAS,
+  } = useTheme().colors;
+
+  const inputStyle = {
+    borderWidth: 1,
+    borderColor: HAIRLINE,
+    backgroundColor: SURFACE2,
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 13.5,
+    color: INK,
+  } as const;
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
@@ -384,14 +398,14 @@ export default function ItemDetail() {
               }}
             >
               {saving ? (
-                <ActivityIndicator color="#0a0a0c" />
+                <ActivityIndicator color={CANVAS} />
               ) : (
                 <Text
                   style={{
                     fontWeight: "700",
                     textTransform: "uppercase",
                     letterSpacing: 0.5,
-                    color: "#0a0a0c",
+                    color: CANVAS,
                   }}
                 >
                   Save
@@ -448,7 +462,7 @@ export default function ItemDetail() {
               justifyContent: "center",
             }}
           >
-            <MaterialCommunityIcons name="pencil" size={14} color="#0a0a0c" />
+            <MaterialCommunityIcons name="pencil" size={14} color={CANVAS} />
           </Pressable>
         </View>
 
@@ -673,7 +687,7 @@ export default function ItemDetail() {
                 fontWeight: "700",
                 textTransform: "uppercase",
                 letterSpacing: 0.5,
-                color: "#0a0a0c",
+                color: CANVAS,
               }}
             >
               Used it up
@@ -702,17 +716,6 @@ export default function ItemDetail() {
   );
 }
 
-const inputStyle = {
-  borderWidth: 1,
-  borderColor: HAIRLINE,
-  backgroundColor: SURFACE2,
-  borderRadius: 6,
-  paddingHorizontal: 14,
-  paddingVertical: 12,
-  fontSize: 13.5,
-  color: INK,
-} as const;
-
 function Field({
   label,
   children,
@@ -720,6 +723,7 @@ function Field({
   label: string;
   children: React.ReactNode;
 }) {
+  const { faint: FAINT } = useTheme().colors;
   return (
     <View>
       <Text
@@ -747,6 +751,12 @@ function ChipRow({
   value: string | null;
   onChange: (key: string) => void;
 }) {
+  const {
+    accent: AMBER,
+    surface2: SURFACE2,
+    ink: INK,
+    canvas: CANVAS,
+  } = useTheme().colors;
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
       {options.map((o) => {
@@ -766,7 +776,7 @@ function ChipRow({
               style={{
                 fontSize: 12,
                 fontWeight: "700",
-                color: active ? "#0a0a0c" : INK,
+                color: active ? CANVAS : INK,
               }}
             >
               {o.label}
@@ -785,6 +795,7 @@ function Step({
   icon: "minus" | "plus";
   onPress: () => void;
 }) {
+  const { surface: SURFACE, ink: INK } = useTheme().colors;
   return (
     <Pressable
       onPress={onPress}

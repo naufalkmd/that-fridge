@@ -5,23 +5,28 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { BADGE_CATALOG, type BadgeKey, type BadgeProgress } from "@thatfridge/core";
 import { api } from "@/lib/api";
+import { useTheme } from "@/lib/theme";
 import { PageHeader } from "@/components/ui";
 
-const SURFACE = "#131316";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const STRONG = "rgba(255,255,255,0.18)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-
-const STYLE: Record<BadgeKey, { icon: keyof typeof MaterialCommunityIcons.glyphMap; color: string }> = {
-  rescued_10: { icon: "lifebuoy", color: "#5b8dee" },
-  first_link_recipe: { icon: "link-variant", color: "#7a5cb0" },
-  full_week_variety: { icon: "food-apple-outline", color: "#39e07f" },
-  zero_waste_week: { icon: "star-outline", color: "#f5a623" },
-};
-
 export default function Badges() {
+  const {
+    accent: ACCENT,
+    surface: SURFACE,
+    hairline: HAIRLINE,
+    hairlineStrong: STRONG,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+    blue: BLUE,
+    good: GOOD,
+    warn: WARN,
+  } = useTheme().colors;
+  const STYLE: Record<BadgeKey, { icon: keyof typeof MaterialCommunityIcons.glyphMap; color: string }> = {
+    rescued_10: { icon: "lifebuoy", color: BLUE },
+    first_link_recipe: { icon: "link-variant", color: "#7a5cb0" },
+    full_week_variety: { icon: "food-apple-outline", color: GOOD },
+    zero_waste_week: { icon: "star-outline", color: WARN },
+  };
   const [badges, setBadges] = useState<BadgeProgress[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -37,7 +42,7 @@ export default function Badges() {
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
       <PageHeader title="Badges" subtitle="One-time unlocks for real anti-waste habits" />
       {loading ? (
-        <ActivityIndicator color="#26c6da" style={{ marginTop: 40 }} />
+        <ActivityIndicator color={ACCENT} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 60, gap: 10 }}>
           {BADGE_CATALOG.map((badge) => {

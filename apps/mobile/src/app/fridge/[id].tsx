@@ -19,18 +19,8 @@ import { useInventory } from "@/lib/inventory";
 import { usePro } from "@/lib/pro";
 import { useScope } from "@/lib/scope";
 import { useSocial } from "@/lib/social";
+import { useTheme } from "@/lib/theme";
 import { SheetHeader } from "@/components/sheet";
-
-const AMBER = "#26c6da";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const BLUE = "#5b8dee";
-const GOOD = "#39e07f";
-const BAD = "#ff5567";
 
 const STYLES: { key: Exclude<FridgeStyleKey, "custom">; label: string; photo: number }[] = [
   { key: "photo", label: "Original", photo: require("../../../assets/images/thatfridge/fridge-hero.png") },
@@ -48,6 +38,19 @@ export default function ManageFridge() {
   const { fridges, refresh } = useInventory();
   const { scope, setScope } = useScope();
   const { refresh: refreshSocial } = useSocial();
+  const {
+    accent: AMBER,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    hairlineStrong: STRONG,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+    blue: BLUE,
+    good: GOOD,
+    bad: BAD,
+  } = useTheme().colors;
 
   const fridge = fridges.find((f) => f.id === id);
   const isOwner = fridge?.role === "owner";
@@ -233,7 +236,7 @@ export default function ManageFridge() {
                 borderRadius: 8,
                 overflow: "hidden",
                 borderWidth: 2,
-                borderColor: style === "custom" ? AMBER : "rgba(255,255,255,0.18)",
+                borderColor: style === "custom" ? AMBER : STRONG,
                 borderStyle: style === "custom" ? "solid" : "dashed",
                 alignItems: "center",
                 justifyContent: "center",
@@ -410,6 +413,7 @@ export default function ManageFridge() {
 }
 
 function Label({ children }: { children: React.ReactNode }) {
+  const { faint: FAINT } = useTheme().colors;
   return (
     <Text style={{ fontSize: 12, fontWeight: "800", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
       {children}

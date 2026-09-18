@@ -26,6 +26,7 @@ import {
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
+import { useTheme } from "@/lib/theme";
 import { SheetHeader } from "@/components/sheet";
 import {
   AutoFillButton,
@@ -37,16 +38,6 @@ import {
   useDraftItems,
   type DraftStore,
 } from "@/components/draft-item";
-
-const AMBER = "#26c6da";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const STRONG_BORDER = "rgba(255,255,255,0.18)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const BLUE = "#5b8dee";
 
 const isExpoGo = Constants.appOwnership === "expo";
 
@@ -92,6 +83,16 @@ const METHODS: {
 export default function Add() {
   const router = useRouter();
   const { addItem, addManyItems, items } = useInventory();
+  const {
+    accent: AMBER,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+    blue: BLUE,
+  } = useTheme().colors;
   const params = useLocalSearchParams<{
     name?: string;
     location?: string;
@@ -318,6 +319,8 @@ function ScanFlow({
 }) {
   const router = useRouter();
   const { ensureSectionId, addManyItems } = useInventory();
+  const { accent: AMBER, muted: MUTED, faint: FAINT, canvas: CANVAS } =
+    useTheme().colors;
   const [status, setStatus] = useState<"idle" | "scanning" | "review">("idle");
   const [saving, setSaving] = useState(false);
   const drafts = useDraftItems(() => []);
@@ -461,14 +464,14 @@ function ScanFlow({
             borderRadius: 8,
           }}
         >
-          <MaterialCommunityIcons name="camera" size={16} color="#0a0a0c" />
+          <MaterialCommunityIcons name="camera" size={16} color={CANVAS} />
           <Text
             style={{
               fontSize: 13.5,
               fontWeight: "700",
               textTransform: "uppercase",
               letterSpacing: 0.5,
-              color: "#0a0a0c",
+              color: CANVAS,
             }}
           >
             Take a photo
@@ -544,6 +547,15 @@ function DraftList({
   submitting: boolean;
   onSubmit: () => void;
 }) {
+  const {
+    accent: AMBER,
+    surface: SURFACE,
+    hairline: HAIRLINE,
+    hairlineStrong: STRONG_BORDER,
+    faint: FAINT,
+    blue: BLUE,
+    canvas: CANVAS,
+  } = useTheme().colors;
   const count = scanMode
     ? drafts.items.filter((d) => d.checked && d.name.trim()).length
     : drafts.items.filter((d) => d.name.trim()).length;
@@ -661,7 +673,7 @@ function DraftList({
           }}
         >
           {submitting ? (
-            <ActivityIndicator color="#0a0a0c" />
+            <ActivityIndicator color={CANVAS} />
           ) : (
             <Text
               style={{
@@ -669,7 +681,7 @@ function DraftList({
                 fontWeight: "700",
                 textTransform: "uppercase",
                 letterSpacing: 0.5,
-                color: "#0a0a0c",
+                color: CANVAS,
               }}
             >
               {submitLabel(count)}
@@ -684,6 +696,14 @@ function DraftList({
 // Shown when a draft's name is already in the fridge: adding makes a separate
 // batch, and Inventory will label the older one so it gets used first.
 function DuplicateNotice({ names }: { names: string[] }) {
+  const {
+    accent: AMBER,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    muted: MUTED,
+    warn: WARN,
+  } = useTheme().colors;
   const list =
     names.length === 1
       ? names[0]
@@ -713,7 +733,7 @@ function DuplicateNotice({ names }: { names: string[] }) {
       <Text style={{ flex: 1, fontSize: 12, color: MUTED, lineHeight: 17 }}>
         <Text style={{ color: INK, fontWeight: "700" }}>{list}</Text> already in
         your fridge. This adds a separate batch — Inventory tags the older one{" "}
-        <Text style={{ color: "#f5a623", fontWeight: "700" }}>Use first</Text>.
+        <Text style={{ color: WARN, fontWeight: "700" }}>Use first</Text>.
       </Text>
     </View>
   );

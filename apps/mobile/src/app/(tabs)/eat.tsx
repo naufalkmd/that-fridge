@@ -46,6 +46,7 @@ import { useKitchenScore } from "@/lib/kitchenScore";
 import { useNotifications } from "@/lib/notifications";
 import { useToast } from "@/lib/toast";
 import { useAgentInsight } from "@/lib/agentInsight";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 import { PixelText } from "@/components/brand";
 import { FridgeScopePicker } from "@/components/fridge-scope";
 import { FoodIcon } from "@/components/food-icon";
@@ -59,53 +60,49 @@ const GIFS = {
   shopkeeper: require("../../../assets/images/thatfridge/shopkeeper.gif"),
 };
 
-const AMBER = "#26c6da";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
-const GOOD = "#39e07f";
-const BLUE = "#5b8dee";
-
 type Tab = "recipes" | "shopping" | "guardian" | "organizer";
 const TABS: {
   key: Tab;
   label: string;
   agent: ChatAgentName;
   gif: number;
-  color: string;
 }[] = [
   {
     key: "recipes",
     label: "Recipes",
     agent: "Chef",
     gif: GIFS.chef,
-    color: "#f5a623",
   },
   {
     key: "shopping",
     label: "Shopping",
     agent: "Shopkeeper",
     gif: GIFS.shopkeeper,
-    color: "#39e07f",
   },
   {
     key: "guardian",
     label: "Guardian",
     agent: "Guardian",
     gif: GIFS.guardian,
-    color: "#ff5f56",
   },
   {
     key: "organizer",
     label: "Organizer",
     agent: "Organizer",
     gif: GIFS.organizer,
-    color: "#3d6fe0",
   },
 ];
+
+// Agent-identity colors for each crew tab, keyed the same as TABS - built from theme
+// colors wherever a component has access to useTheme().
+function tabColors(colors: ThemeColors): Record<Tab, string> {
+  return {
+    recipes: colors.agentChef,
+    shopping: colors.agentShopkeeper,
+    guardian: colors.agentGuardian,
+    organizer: colors.agentOrganizer,
+  };
+}
 
 const insightOverride = new Map<ChatAgentName, string>();
 
@@ -121,11 +118,11 @@ const SCORE_BY_TAB: Record<
   organizer: computeOrganizerScore,
 };
 
-function bandColor(score: number | null): string {
-  if (score === null) return FAINT;
-  if (score >= 80) return GOOD;
-  if (score >= 55) return "#f5a623";
-  return "#ff5567";
+function bandColor(score: number | null, colors: ThemeColors): string {
+  if (score === null) return colors.faint;
+  if (score >= 80) return colors.good;
+  if (score >= 55) return colors.warn;
+  return colors.bad;
 }
 
 // Inline 5-pip meter — the non-floating variant of Home's ScoreMeter.
@@ -169,6 +166,9 @@ function CrewSelector({
   tab: Tab;
   onChange: (t: Tab) => void;
 }) {
+  const { colors } = useTheme();
+  const { surface2: SURFACE2, muted: MUTED, canvas: CANVAS } = colors;
+  const TAB_COLOR = tabColors(colors);
   const [width, setWidth] = useState(0);
   const seg = width > 0 ? (width - 8) / TABS.length : 0; // 4px inner padding each side
   const idx = Math.max(
@@ -182,7 +182,7 @@ function CrewSelector({
   const indicator = useAnimatedStyle(() => ({
     transform: [{ translateX: tx.value }],
     width: seg,
-    backgroundColor: TABS[idx].color,
+    backgroundColor: TAB_COLOR[TABS[idx].key],
   }));
 
   return (
@@ -233,7 +233,7 @@ function CrewSelector({
               style={{
                 fontSize: 12,
                 fontWeight: "700",
-                color: active ? "#0a0a0c" : MUTED,
+                color: active ? CANVAS : MUTED,
               }}
             >
               {t.label}
@@ -258,12 +258,29 @@ export default function Crew() {
   } = useKitchenScore();
   const { events, prefs, togglePref } = useNotifications();
   const toast = useToast();
+  const { colors } = useTheme();
+  const {
+    accent: AMBER,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    hairlineStrong: STRONG,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+    good: GOOD,
+    bad: BAD,
+    warn: WARN,
+    canvas: CANVAS,
+  } = colors;
+  const TAB_COLOR = tabColors(colors);
   const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState<Tab>("recipes");
   useEffect(() => {
     if (TABS.some((t) => t.key === tabParam)) setTab(tabParam as Tab);
   }, [tabParam]);
   const meta = TABS.find((t) => t.key === tab)!;
+  const tabColor = TAB_COLOR[meta.key];
 
   const scoped = useMemo(() => scopeItems(items, scope), [items, scope]);
   const showFridgeTags = scope === "all";
@@ -489,7 +506,7 @@ export default function Crew() {
             }}
           >
             <Text
-              style={{ fontSize: 15, fontWeight: "800", color: meta.color }}
+              style={{ fontSize: 15, fontWeight: "800", color: tabColor }}
             >
               {meta.agent}
             </Text>
@@ -509,13 +526,13 @@ export default function Crew() {
                 <View
                   style={{
                     flex: Math.max(0.0001, riskCount / barTotal),
-                    backgroundColor: "#ff5567",
+                    backgroundColor: BAD,
                   }}
                 />
                 <View
                   style={{
                     flex: Math.max(0.0001, watchCount / barTotal),
-                    backgroundColor: "#f5a623",
+                    backgroundColor: WARN,
                   }}
                 />
                 <View
@@ -536,7 +553,7 @@ export default function Crew() {
                 backgroundColor:
                   score.score === null
                     ? "rgba(255,255,255,0.04)"
-                    : `${bandColor(score.score)}14`,
+                    : `${bandColor(score.score, colors)}14`,
                 borderRadius: 6,
                 paddingVertical: 8,
                 paddingHorizontal: 10,
@@ -554,12 +571,12 @@ export default function Crew() {
                   style={{
                     fontSize: 13,
                     fontWeight: "800",
-                    color: bandColor(score.score),
+                    color: bandColor(score.score, colors),
                   }}
                 >
                   {score.score !== null ? score.score : "–"}
                 </Text>
-                <ScoreMeter score={score.score} color={meta.color} />
+                <ScoreMeter score={score.score} color={tabColor} />
               </View>
             </View>
 
@@ -572,20 +589,20 @@ export default function Crew() {
                 gap: 6,
                 paddingVertical: 8,
                 borderRadius: 6,
-                backgroundColor: shownInsight ? `${meta.color}22` : meta.color,
+                backgroundColor: shownInsight ? `${tabColor}22` : tabColor,
                 opacity: activating ? 0.6 : 1,
               }}
             >
               <MaterialCommunityIcons
                 name={shownInsight ? "refresh" : "auto-fix"}
                 size={13}
-                color={shownInsight ? meta.color : "#0a0a0c"}
+                color={shownInsight ? tabColor : CANVAS}
               />
               <Text
                 style={{
                   fontSize: 12,
                   fontWeight: "700",
-                  color: shownInsight ? meta.color : "#0a0a0c",
+                  color: shownInsight ? tabColor : CANVAS,
                 }}
               >
                 {activating
@@ -622,8 +639,8 @@ export default function Crew() {
                 <Switch
                   value={!!prefs?.crewActionsEnabled}
                   onValueChange={() => togglePref("crewActionsEnabled")}
-                  trackColor={{ true: meta.color, false: HAIRLINE }}
-                  thumbColor="#eaeaec"
+                  trackColor={{ true: tabColor, false: HAIRLINE }}
+                  thumbColor={INK}
                 />
               </View>
             )}
@@ -646,7 +663,7 @@ export default function Crew() {
                       flexDirection: "row",
                       alignItems: "center",
                       gap: 8,
-                      backgroundColor: `${meta.color}0f`,
+                      backgroundColor: `${tabColor}0f`,
                       borderRadius: 6,
                       paddingVertical: 7,
                       paddingLeft: 10,
@@ -678,7 +695,7 @@ export default function Crew() {
                         style={{
                           fontSize: 11,
                           fontWeight: "700",
-                          color: meta.color,
+                          color: tabColor,
                         }}
                       >
                         Apply
@@ -707,7 +724,7 @@ export default function Crew() {
               borderWidth: 1,
               borderColor: HAIRLINE,
               borderLeftWidth: 3,
-              borderLeftColor: meta.color,
+              borderLeftColor: tabColor,
               borderRadius: 6,
               padding: 12,
               paddingRight: 30,
@@ -768,10 +785,10 @@ export default function Crew() {
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.18)",
+            borderColor: STRONG,
           }}
         >
-          <MaterialCommunityIcons name="chef-hat" size={22} color="#0a0a0c" />
+          <MaterialCommunityIcons name="chef-hat" size={22} color={CANVAS} />
         </Pressable>
       )}
     </SafeAreaView>
@@ -795,6 +812,19 @@ function RecipesPanel() {
   const router = useRouter();
   const { recipes } = useRecipes();
   const { items } = useInventory();
+  const {
+    accent: AMBER,
+    blue: BLUE,
+    bad: BAD,
+    faint: FAINT,
+    good: GOOD,
+    hairline: HAIRLINE,
+    ink: INK,
+    muted: MUTED,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    canvas: CANVAS,
+  } = useTheme().colors;
   const [filter, setFilter] = useState<(typeof RECIPE_FILTERS)[number]>("all");
 
   const view = useMemo(
@@ -931,7 +961,7 @@ function RecipesPanel() {
                 style={{
                   fontSize: 12.5,
                   fontWeight: "700",
-                  color: active ? "#0a0a0c" : INK,
+                  color: active ? CANVAS : INK,
                   textTransform: "capitalize",
                 }}
               >
@@ -997,7 +1027,7 @@ function RecipesPanel() {
                     <MaterialCommunityIcons
                       name="heart"
                       size={11}
-                      color="#ff5567"
+                      color={BAD}
                     />
                   )}
                 </View>
@@ -1068,11 +1098,6 @@ function RecipesPanel() {
 
 // ---- Shopping ---------------------------------------------------------------
 
-const REC_META = {
-  recipe: { label: "Recipe", color: "#26c6da" },
-  habit: { label: "Habit", color: "#5b8dee" },
-} as const;
-
 function ShoppingPanel({
   scoped,
   showFridgeTags,
@@ -1083,6 +1108,21 @@ function ShoppingPanel({
   const { items, add, toggle, remove } = useShopping();
   const { recipes } = useRecipes();
   const { usageHistory } = useKitchenScore();
+  const {
+    accent: AMBER,
+    blue: BLUE,
+    good: GOOD,
+    hairline: HAIRLINE,
+    ink: INK,
+    faint: FAINT,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    canvas: CANVAS,
+  } = useTheme().colors;
+  const REC_META = {
+    recipe: { label: "Recipe", color: AMBER },
+    habit: { label: "Habit", color: BLUE },
+  } as const;
   const [text, setText] = useState("");
 
   const unchecked = items.filter((i) => !i.checked);
@@ -1231,7 +1271,7 @@ function ShoppingPanel({
               backgroundColor: AMBER,
             }}
           >
-            <Text style={{ fontSize: 18, fontWeight: "700", color: "#0a0a0c" }}>
+            <Text style={{ fontSize: 18, fontWeight: "700", color: CANVAS }}>
               +
             </Text>
           </Pressable>
@@ -1408,7 +1448,7 @@ function ShoppingPanel({
                     <MaterialCommunityIcons
                       name="plus"
                       size={16}
-                      color="#0a0a0c"
+                      color={CANVAS}
                     />
                   </Pressable>
                 </View>
@@ -1450,6 +1490,7 @@ const RISK_BUCKETS: {
 ];
 
 function RingTimer({ freshness }: { freshness: number }) {
+  const { hairline: HAIRLINE } = useTheme().colors;
   const size = 40;
   const stroke = 4;
   const r = (size - stroke) / 2;
@@ -1500,6 +1541,14 @@ function GuardianPanel({
   showFridgeTags: boolean;
   onOpenItem: (id: string) => void;
 }) {
+  const {
+    faint: FAINT,
+    hairline: HAIRLINE,
+    ink: INK,
+    muted: MUTED,
+    surface: SURFACE,
+    surface2: SURFACE2,
+  } = useTheme().colors;
   const groups = useMemo(
     () =>
       RISK_BUCKETS.map((b) => ({
@@ -1663,6 +1712,13 @@ function OrganizerPanel({
   showFridgeTags: boolean;
 }) {
   const { patchItem } = useInventory();
+  const {
+    faint: FAINT,
+    hairline: HAIRLINE,
+    ink: INK,
+    surface: SURFACE,
+    surface2: SURFACE2,
+  } = useTheme().colors;
 
   return (
     <View>

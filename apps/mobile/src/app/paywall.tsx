@@ -6,6 +6,7 @@ import RevenueCatUI from "react-native-purchases-ui";
 import type { PurchasesPackage } from "react-native-purchases";
 
 import { usePro } from "@/lib/pro";
+import { useTheme } from "@/lib/theme";
 import { SheetHeader } from "@/components/sheet";
 
 const BENEFITS = [
@@ -35,6 +36,7 @@ export default function Paywall() {
   const forcePaywall = force === "1";
   const { available, ready, isPro, packages, purchase, restore, refresh, openCustomerCenter } =
     usePro();
+  const { colors } = useTheme();
   const [busy, setBusy] = useState(false);
 
   const close = () => router.back();
@@ -122,7 +124,7 @@ export default function Paywall() {
             </Text>
           </View>
         ) : !ready ? (
-          <ActivityIndicator color="#26c6da" />
+          <ActivityIndicator color={colors.accent} />
         ) : packages.length === 0 ? (
           <View className="rounded-2xl border border-hairline bg-surface p-4">
             <Text className="text-[13px] text-muted">
@@ -147,7 +149,7 @@ export default function Paywall() {
                   </Text>
                 </View>
                 {busy ? (
-                  <ActivityIndicator color="#26c6da" />
+                  <ActivityIndicator color={colors.accent} />
                 ) : (
                   <Text className="text-[13px] font-bold text-accent">Choose</Text>
                 )}

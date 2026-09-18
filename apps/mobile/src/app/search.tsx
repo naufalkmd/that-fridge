@@ -9,12 +9,7 @@ import { useInventory } from "@/lib/inventory";
 import { useScope, scopeItems } from "@/lib/scope";
 import { FridgeScopePicker } from "@/components/fridge-scope";
 import { FoodIcon } from "@/components/food-icon";
-
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const FAINT = "rgba(234,234,236,0.34)";
+import { useTheme } from "@/lib/theme";
 
 const SUGGESTIONS = ["Dairy", "Produce", "Leftovers", "Meat"];
 
@@ -23,6 +18,13 @@ export default function Search() {
   const { items } = useInventory();
   const { scope } = useScope();
   const [query, setQuery] = useState("");
+  const {
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    ink: INK,
+    faint: FAINT,
+  } = useTheme().colors;
 
   const showFridge = scope === "all";
   const q = query.trim().toLowerCase();
