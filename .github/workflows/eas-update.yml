@@ -59,12 +59,17 @@ jobs:
         env:
           # Full commit message can be multi-line — pass via env and take the first line.
           RAW_MSG: ${{ github.event.inputs.message || github.event.head_commit.message }}
-          # `eas update` doesn't read eas.json build-profile env, so EXPO_PUBLIC_* must be set
-          # here or the bundle ships with it undefined (→ app falls back, breaks every request).
-          # Keep these in sync with eas.json's production profile.
+          # `eas update` doesn't read eas.json build-profile env, so any EXPO_PUBLIC_* the app
+          # needs must come from somewhere explicit or the bundle ships with it undefined (→
+          # RevenueCat/API calls silently break, or - for RC - the SDK hard-crashes the app on
+          # launch, mistaking "undefined" for a bogus key). The RC keys and
+          # EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID live in EAS's hosted "production" environment
+          # (`eas env:list --environment production`) and are pulled in below via
+          # `eas env:exec` - do not remove that wrapper. EXPO_PUBLIC_API_URL and the iOS Google
+          # client ID aren't in that store, so they're set here directly; keep them in sync with
+          # eas.json's production build profile.
           EXPO_PUBLIC_API_URL: https://api.thatfridge.com/api
-          EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 354217060730-di8hektfrbt9imlcpqp78r63o12ao8gm.apps.googleusercontent.com
           EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: 354217060730-3jpu7mbm22mknqvs55523gikkmg7nru8.apps.googleusercontent.com
         run: |
           MSG="$(printf '%s' "$RAW_MSG" | head -1)"
-          eas update --branch production --non-interactive --message "$MSG"
+          eas env:exec production "eas update --branch production --non-interactive --message \"$MSG\""
