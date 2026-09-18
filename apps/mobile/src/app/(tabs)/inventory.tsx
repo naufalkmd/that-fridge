@@ -72,6 +72,7 @@ export default function Inventory() {
     faint: FAINT,
     muted: MUTED,
     onAccent: CANVAS,
+    canvas: PAGE_CANVAS,
     bad: BAD,
   } = useTheme().colors;
 
@@ -549,7 +550,7 @@ export default function Inventory() {
                         style={{
                           fontSize: 12.5,
                           fontWeight: "700",
-                          color: active ? CANVAS : INK,
+                          color: active ? PAGE_CANVAS : INK,
                         }}
                       >
                         {cat.name}
