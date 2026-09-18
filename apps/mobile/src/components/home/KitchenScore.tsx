@@ -278,7 +278,7 @@ export function KitchenScore({
 
   const overall = getOverallScore(ordered);
   const scoredCount = ordered.filter((r) => r.score !== null).length;
-  const streak = snapshots.length > 0 ? computeStreak(snapshots) : null;
+  const streak = computeStreak(snapshots);
   const wasteScore = ordered.find((r) => r.key === "waste")?.score ?? null;
   const wasteTrend = getScoreTrend(snapshots, "waste", wasteScore);
   const overdue = getOverdueItemStats(input.items).overdueCount;
@@ -393,40 +393,37 @@ export function KitchenScore({
 
           {/* right — streak + summary */}
           <View style={{ flex: 1, gap: 7 }}>
-            {streak !== null && (
-              <View
+            <View
+              style={{
+                alignSelf: "flex-start",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 5,
+                paddingVertical: 4,
+                paddingHorizontal: 10,
+                borderRadius: 20,
+                backgroundColor: streak > 0 ? "rgba(38,198,218,0.1)" : SURFACE2,
+                borderWidth: 1,
+                borderColor: streak > 0 ? ACCENT : STRONG,
+              }}
+            >
+              <MaterialCommunityIcons
+                name="fire"
+                size={12}
+                color={streak > 0 ? ACCENT : FAINT}
+              />
+              <Text
                 style={{
-                  alignSelf: "flex-start",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 5,
-                  paddingVertical: 4,
-                  paddingHorizontal: 10,
-                  borderRadius: 20,
-                  backgroundColor:
-                    streak > 0 ? "rgba(38,198,218,0.1)" : SURFACE2,
-                  borderWidth: 1,
-                  borderColor: streak > 0 ? ACCENT : STRONG,
+                  fontSize: 11,
+                  fontWeight: "700",
+                  color: streak > 0 ? ACCENT : FAINT,
                 }}
               >
-                <MaterialCommunityIcons
-                  name="fire"
-                  size={12}
-                  color={streak > 0 ? ACCENT : FAINT}
-                />
-                <Text
-                  style={{
-                    fontSize: 11,
-                    fontWeight: "700",
-                    color: streak > 0 ? ACCENT : FAINT,
-                  }}
-                >
-                  {streak > 0
-                    ? `${streak} week${streak === 1 ? "" : "s"} streak`
-                    : "No streak yet"}
-                </Text>
-              </View>
-            )}
+                {streak > 0
+                  ? `${streak} week${streak === 1 ? "" : "s"} streak`
+                  : "No streak yet"}
+              </Text>
+            </View>
 
             {overall !== null ? (
               <>
