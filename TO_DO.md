@@ -161,12 +161,18 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 | PixelMix commercial font licence                              | $25 one-time | Paid (embedding confirmation pending, see above) |
 | VPS — DigitalOcean SGP1, 2 vCPU/2GB + backups                | $21.60/mo    | Live                                             |
 | Legal site hosting (Cloudflare Workers), email routing        | $0           | Live                                             |
-| Sentry, RevenueCat, Expo EAS, Devpost                         | $0           | Free tiers                                       |
+| Expo EAS — Starter plan (upgraded from free tier)             | $19/mo       | Live (2026-09-18, hit free iOS build quota)      |
+| Sentry, RevenueCat, Devpost                                   | $0           | Free tiers                                       |
 | Google Play Console                                           | $25 one-time | Paid                                             |
 | OpenRouter wallet (AI chat/vision, prepaid, no auto-recharge) | $10 one-time | Paid                                             |
 | fal.ai wallet (icon generation, prepaid, no auto-recharge)    | $10 one-time | Paid                                             |
 
-**Fixed recurring cost: ≈$30.72/mo ($368.66/yr)**, regardless of user count. Apple's commission
+- [ ] **Downgrade EAS back to the free plan** before the next monthly renewal, if the extra iOS
+  build capacity isn't still needed by then — subscribed 2026-09-18 to unblock a TestFlight build
+  after hitting the free tier's monthly iOS build quota. Check the exact renewal date at
+  `expo.dev/accounts/avocacode/settings/billing`.
+
+**Fixed recurring cost: ≈$49.72/mo ($596.66/yr)**, regardless of user count. Apple's commission
 is 15% once the Small Business Program application (submitted 2026-09-05) is approved, 30%
 until then. US withholding is 30% on US-storefront sales only (Malaysian individual, W-8BEN
 filed) — shouldn't bite much given MY/KR are the target markets.
