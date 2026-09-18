@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ListFilter, Minus, PackageOpen, Plus, Refrigerator, Search } from "lucide-react";
 import { NUTRITION_CATEGORIES, STORAGE_LOCATIONS, guessNutritionCategory } from "@/lib/thatfridge/data";
 import { getScopeLabel, getScopedItems, type ItemWithSection } from "@/lib/thatfridge/selectors";
-import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
+import { daysLabel, freshColor, freshnessBand } from "@/lib/thatfridge/utils";
 import type { NutritionCategory, StorageLocation } from "@/lib/thatfridge/types";
 import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
@@ -91,7 +91,7 @@ export default function InventoryScreen() {
 
   const sortedItems =
     state.inventorySortMode === "expiry"
-      ? filteredItems.slice().sort((a, b) => a.freshness - b.freshness)
+      ? filteredItems.slice().sort((a, b) => freshnessBand(a.freshness) - freshnessBand(b.freshness) || a.days - b.days)
       : state.inventorySortMode === "days"
         ? filteredItems.slice().sort((a, b) => a.days - b.days)
         : state.inventorySortMode === "name"

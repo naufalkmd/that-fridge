@@ -44,6 +44,13 @@ export function freshColor(freshness: number): string {
   return FRESH_RED;
 }
 
+// Same thresholds as freshColor, as an ordinal for sorting: most urgent (red) first.
+export function freshnessBand(freshness: number): 0 | 1 | 2 {
+  if (freshness < 30) return 0;
+  if (freshness < 60) return 1;
+  return 2;
+}
+
 export function daysLabel(days: number): string {
   if (days < 0) return "Expired";
   return days <= 1 ? "Today" : `${days}d left`;

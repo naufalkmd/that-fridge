@@ -32,6 +32,7 @@ import {
   addedAgoLabel,
   daysLabel,
   freshColor,
+  freshnessBand,
   normalizeItemName,
   type Category,
   type FlatItem,
@@ -48,6 +49,9 @@ import { SkeletonList } from "@/components/ui";
 import { useTheme } from "@/lib/theme";
 
 const UNCATEGORIZED = "__uncat__";
+
+// Most urgent color band first, then soonest-to-expire within the same band.
+const byExpiry = (a: FlatItem, b: FlatItem) => freshnessBand(a.freshness) - freshnessBand(b.freshness) || a.days - b.days;
 
 type Sort = "category" | "expiry" | "days" | "name";
 const SORT_OPTIONS: { key: Sort; label: string }[] = [
@@ -209,7 +213,7 @@ export default function Inventory() {
 
   const sorted = useMemo(() => {
     if (sort === "expiry")
-      return [...filtered].sort((a, b) => a.freshness - b.freshness);
+      return [...filtered].sort(byExpiry);
     if (sort === "days")
       return [...filtered].sort((a, b) => a.days - b.days);
     if (sort === "name")
@@ -219,7 +223,6 @@ export default function Inventory() {
 
   const grouped = useMemo(() => {
     if (sort !== "category") return null;
-    const byExpiry = (a: FlatItem, b: FlatItem) => a.freshness - b.freshness;
     return [
       ...categories.map((c) => ({
         id: c.id,
