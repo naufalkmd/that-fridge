@@ -146,7 +146,7 @@ export default function Profile() {
             onPress={() => router.push("/paywall")}
             className="mt-3 items-center rounded-lg bg-accent py-2.5 active:opacity-80"
           >
-            <Text className="font-bold uppercase tracking-wide text-[#0a0a0c]">Go Pro</Text>
+            <Text className="font-bold uppercase tracking-wide text-on-accent">Go Pro</Text>
           </Pressable>
         ) : null}
         {available && !isPro && (
