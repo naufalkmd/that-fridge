@@ -10,12 +10,12 @@ fast-follow (see Deferred). API hosted in Singapore; v1 app UI is English-only.
 **Hard deadline: Sep 30, 2026, 11:45pm PDT.** The app must be **fully published and live**
 (review passed), not just submitted — review takes days, so submit ~2 weeks early.
 
-**Where we are (2026-09-17):** iOS — `v1.3.0 (18)` was rejected 2026-09-11 (Guideline 2.1(b) +
-5.1.1(v)), both fixed and **resubmitted** 2026-09-16 with all 5 IAPs attached; awaiting Apple's
-re-review. Android — new this cycle, actively in progress (own section below): Play Console
-account, store listing, and 4 of 5 IAP products are live; blocked on a Closed Testing
-requirement + a Payments Profile issue before the last product and full RevenueCat wiring can
-finish.
+**Where we are (2026-09-18):** iOS — `v1.3.0` **approved and live** on the App Store. `v1.3.2`
+(App Store rating support, swipe-to-profile, light/dark theme) submitted for review 2026-09-18;
+awaiting Apple's decision. Android — new this cycle, actively in progress (own section below):
+Play Console account, store listing, and 4 of 5 IAP products are live; blocked on a Closed
+Testing requirement + a Payments Profile issue before the last product and full RevenueCat
+wiring can finish.
 
 ---
 
@@ -23,13 +23,11 @@ finish.
 
 ### iOS — App Store
 
-- [x] `v1.3.0 (18)` rejected 2026-09-11 (2.1(b): couldn't locate IAPs; 5.1.1(v): no account
-  deletion found) — both root causes fixed (`7e775ed`, `d639fd1`: demo account had no path to
-  the paywall; account deletion existed but was unlabeled) and **resubmitted 2026-09-16** with
-  a new build, all 5 IAPs attached, Paid Apps Agreement confirmed Active, and a screen recording
-  of the delete-account flow linked in App Review Information → Notes. Full reply text is in git
-  history (`TO_DO.md` as of commit `37e21a7` or earlier) if it's ever needed again.
-- [ ] Awaiting Apple's decision on the resubmission.
+`v1.3.0` is approved and live. (Rejection/resubmission history from the 2.1(b)/5.1.1(v) round:
+git log around `37e21a7` if ever needed again.)
+
+- [ ] `v1.3.2` — App Store rating (Settings row + native review prompt), swipe-right-to-profile,
+  light/dark theme — submitted for review 2026-09-18, awaiting Apple's decision.
 
 ### Android — Play Store
 
@@ -52,14 +50,8 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
   there completed before retrying.
 - [ ] **`credits_100` product still not created** in Play Console — blocked on the above. The
   other 4 products (`thatfridge_pro_monthly` $2.99/mo, `thatfridge_pro_yearly` $19.99/yr,
-  `credits_500` $7.99, `credits_1500` $19.99) exist.
-- [x] **Attach the Android products to RevenueCat** — done via API 2026-09-17: all 4 synced
-  Android products (`thatfridge_pro_monthly:monthly`, `thatfridge_pro_yearly:yearly`,
-  `credits_500`, `credits_1500`) attached to the `thatfridge_pro` entitlement and their matching
-  offering packages, alongside the existing iOS/Test Store products. `credits_100` isn't in
-  RevenueCat yet since it doesn't exist in Play Console (blocked on the payments profile above)
-  — attach it the same way once it's created. Purchase-validation on the Android app's
-  credentials will likely only go green after a real test purchase, not a config issue.
+  `credits_500` $7.99, `credits_1500` $19.99) exist and are already attached to RevenueCat;
+  attach `credits_100` the same way once it's created.
 - [ ] **Closed testing must clear before Play Console allows creating the remaining IAP
   product** — track created and running (started 2026-09-16); check Play Console for the exact
   tester-count/day requirement and days remaining. Internal testing opt-ins do **not** count
@@ -69,9 +61,6 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 - [ ] Once the above clears: enable the tag trigger is already done
   (`.github/workflows/google-play.yml` fires on the same `v*` tag as `testflight.yml`) — just
   needs the service account fixed for it to actually work end-to-end.
-- [x] **Target API level 36 (Android 16) by Aug 31, 2026** — verified 2026-09-17 by dumping the
-  actual built `.aab`'s manifest (`bundletool dump manifest`): `targetSdkVersion="36"`,
-  `compileSdkVersion="36"`, confirmed compliant, not assumed.
 - [ ] **UGC reporting is stricter in wording than Apple's** — Google's policy says "in-app
   functionality for reporting"; the mailto-based report (`FridgeNotes.tsx`, `find-friend.tsx`)
   commonly passes review in practice but is a literal gap vs. the text. Deliberately left as-is;
@@ -81,10 +70,10 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 
 - [ ] Devpost project page + feature description.
 - [ ] Demo video ≤2:00, public on YouTube/Vimeo, no copyrighted music/footage.
-- [x] #BuildInPublic thread/dev log, updated 2-3×/week.
 - [ ] Peace Prize impact statement (household food-waste → savings + environmental).
 - [ ] App Store URL on the submission.
 - [ ] **Submit on Devpost before the deadline.**
+
 - **Don't** market as "launched" anywhere public (TestFlight link, ProductHunt, press) before
   the store listing is live — risks Shipaton's "brand-new app" disqualification.
 
@@ -151,6 +140,7 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
   Thanks,
   Muhammad Naufal Kamaruddin
   ```
+
   </details>
 - [ ] Privacy Policy §11 promises material changes get "surfaced in the app" — nothing does
   that yet.
@@ -165,16 +155,16 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 ### Cost tracker (all USD, approximate)
 
 | Item                                                          | Cost         | Status                                           |
-| --------------------------------------------------------------| ------------ | ------------------------------------------------ |
+| ------------------------------------------------------------- | ------------ | ------------------------------------------------ |
 | Apple Developer Program                                       | $99/yr       | Paid                                             |
-| Domain —`thatfridge.com`                                    | ~$10.46/yr   | Paid                                             |
-| PixelMix commercial font licence                               | $25 one-time | Paid (embedding confirmation pending, see above) |
-| VPS — DigitalOcean SGP1, 2 vCPU/2GB + backups                 | $21.60/mo    | Live                                             |
-| Legal site hosting (Cloudflare Workers), email routing         | $0           | Live                                             |
-| Sentry, RevenueCat, Expo EAS, Devpost                          | $0           | Free tiers                                       |
-| Google Play Console                                            | $25 one-time | Paid                                             |
-| OpenRouter wallet (AI chat/vision, prepaid, no auto-recharge)  | $10 one-time | Paid                                             |
-| fal.ai wallet (icon generation, prepaid, no auto-recharge)     | $10 one-time | Paid                                             |
+| Domain —`thatfridge.com`                                   | ~$10.46/yr   | Paid                                             |
+| PixelMix commercial font licence                              | $25 one-time | Paid (embedding confirmation pending, see above) |
+| VPS — DigitalOcean SGP1, 2 vCPU/2GB + backups                | $21.60/mo    | Live                                             |
+| Legal site hosting (Cloudflare Workers), email routing        | $0           | Live                                             |
+| Sentry, RevenueCat, Expo EAS, Devpost                         | $0           | Free tiers                                       |
+| Google Play Console                                           | $25 one-time | Paid                                             |
+| OpenRouter wallet (AI chat/vision, prepaid, no auto-recharge) | $10 one-time | Paid                                             |
+| fal.ai wallet (icon generation, prepaid, no auto-recharge)    | $10 one-time | Paid                                             |
 
 **Fixed recurring cost: ≈$30.72/mo ($368.66/yr)**, regardless of user count. Apple's commission
 is 15% once the Small Business Program application (submitted 2026-09-05) is approved, 30%
@@ -206,16 +196,14 @@ Android section above).
 - Headline: **Get more out of your fridge** (turquoise `#26c6da`, ~22pt bold, centered)
 - Subtitle: *Know before you open the door.*
 - Comparison card — header row `· / Free / Pro`, then:
-
   | Feature                                 | Free         | Pro          |
-  | ---------------------------------------- | ------------ | ------------ |
-  | Fridge & pantry tracking, expiry alerts  | ✓            | ✓            |
-  | Monthly AI credits (chat, scans, icons)  | 50           | 400          |
-  | Bulk-add from a receipt or fridge photo  | Uses credits | Uses credits |
-  | Buy more credits anytime                 | ✓            | ✓            |
-  | Own more than one fridge                 | –            | ✓            |
-  | Host a shared fridge for your household  | –            | ✓            |
-
+  | --------------------------------------- | ------------ | ------------ |
+  | Fridge & pantry tracking, expiry alerts | ✓           | ✓           |
+  | Monthly AI credits (chat, scans, icons) | 50           | 400          |
+  | Bulk-add from a receipt or fridge photo | Uses credits | Uses credits |
+  | Buy more credits anytime                | ✓           | ✓           |
+  | Own more than one fridge                | –           | ✓           |
+  | Host a shared fridge for your household | –           | ✓           |
 - Footer: *Every AI action spends credits. Free gives you 50 a month; Pro gives you 400, rolls
   the unused ones over, and unlocks hosting shared fridges.*
 - Rules: sentence case, **never the word "unlimited"**, lead with the credit number not a
@@ -224,6 +212,7 @@ Android section above).
   you cancel.* CTA: **Get Pro access**.
 
 `app_context` for the RC Paywall AI editor (`edit-paywall-ai`):
+
 ```
 app_identity: name "ThatFridge", category "Food & Drink / kitchen inventory",
   desc "Track what's in your fridge and pantry, get pinged before food goes bad, see what you
@@ -240,6 +229,7 @@ premium highlights: 400 AI credits a month vs 50 (credits pay for crew chat, rec
   fridge for the household.
 visual: primary #26c6da, dark charcoal bg + cyan accent, bold sans headline / regular sans body.
 ```
+
 </details>
 
 ### AI credits (metered, server-authoritative)
@@ -248,17 +238,17 @@ Every AI action spends credits from `users.ai_credits`. The backend ledger
 (`ai_credit_ledger`, unique on `reason`+`ref`) is authoritative; RevenueCat Virtual Currency
 (`AICR`) is a best-effort display mirror.
 
-| Action                             | Cost | Notes (`App\Support\CreditCost`)                        |
-| ----------------------------------- | ---- | -------------------------------------------------------- |
-| Quick Chat message                 | 1    | `+2` surcharge (best-effort) when the crew used a tool   |
-| AI icon generation (item + recipe) | 3    | curated pixel picks are free                              |
-| Expiry-date photo scan             | 2    | no refund — the vision call runs even on "not found"     |
-| Receipt scan                       | 3    | refunded on hard failure                                  |
-| Fridge-photo scan                  | 3    | refunded on hard failure                                  |
-| Add-item auto-fill                 | 1    | 402 → top-up prompt on the draft card                     |
-| Memory extraction                  | 0    | tiny call right after a chat that already paid            |
-| Home crew tip cards                | 0    | cached per user+agent per day                             |
-| Quick Chat with a photo            | 3    | vision is ~3-5× a text chat; refund matches on failure    |
+| Action                             | Cost | Notes (`App\Support\CreditCost`)                       |
+| ---------------------------------- | ---- | -------------------------------------------------------- |
+| Quick Chat message                 | 1    | `+2` surcharge (best-effort) when the crew used a tool |
+| AI icon generation (item + recipe) | 3    | curated pixel picks are free                             |
+| Expiry-date photo scan             | 2    | no refund — the vision call runs even on "not found"    |
+| Receipt scan                       | 3    | refunded on hard failure                                 |
+| Fridge-photo scan                  | 3    | refunded on hard failure                                 |
+| Add-item auto-fill                 | 1    | 402 → top-up prompt on the draft card                   |
+| Memory extraction                  | 0    | tiny call right after a chat that already paid           |
+| Home crew tip cards                | 0    | cached per user+agent per day                            |
+| Quick Chat with a photo            | 3    | vision is ~3-5× a text chat; refund matches on failure  |
 
 Grants: free accounts topped up to 50/month; Pro gets 400/month, rolling over up to 800.
 `app:grant-monthly-credits` runs `monthlyOn(1, 00:15)`; the RevenueCat webhook also grants the
@@ -430,15 +420,15 @@ disclosure, permissions, UGC reporting caveat noted above) — both compliant, s
 
 ### QA matrix
 
-| Area          | Checks                                                                                                                                    |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Devices        | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device; one Android device                                                            |
-| Auth           | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session                                         |
-| Core loop      | add item, barcode scan (camera allow/deny/deny-then-enable), inventory edit/delete, mark recipe made decrements stock                     |
-| Notifications  | local alert fires at the right time, taps route to the item, permission denied handled                                                    |
-| Paywall        | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow                                                             |
-| AI credits     | balance shows on chat + profile, spend decrements it, 0 credits routes to /credits, pack purchase tops up, Pro renewal grants the bundle |
-| Native chrome  | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe                                                      |
-| Network        | airplane mode on every screen, slow 3G, API 500s, retry paths                                                                              |
-| Lifecycle      | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly                                                   |
-| Compliance     | account deletion from a clean install, privacy-policy link opens, demo account works fresh                                                |
+| Area          | Checks                                                                                                                                   |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Devices       | iPhone with notch (14/15), iPhone SE, one iOS 15/16 device; one Android device                                                           |
+| Auth          | register, login, logout, token expiry, wrong password, offline attempt, token revoked mid-session                                        |
+| Core loop     | add item, barcode scan (camera allow/deny/deny-then-enable), inventory edit/delete, mark recipe made decrements stock                    |
+| Notifications | local alert fires at the right time, taps route to the item, permission denied handled                                                   |
+| Paywall       | trial start, purchase (sandbox), restore, entitlement gate on/off, cancel flow                                                           |
+| AI credits    | balance shows on chat + profile, spend decrements it, 0 credits routes to /credits, pack purchase tops up, Pro renewal grants the bundle |
+| Native chrome | safe areas, status bar, splash → app, keyboard avoidance, sheet gestures, back-swipe                                                    |
+| Network       | airplane mode on every screen, slow 3G, API 500s, retry paths                                                                            |
+| Lifecycle     | background/foreground, cold-start time, memory after 10 min, EAS Update applies cleanly                                                  |
+| Compliance    | account deletion from a clean install, privacy-policy link opens, demo account works fresh                                               |
