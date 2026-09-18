@@ -1,4 +1,4 @@
-import { ScrollView, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 
@@ -38,6 +38,11 @@ const CREW = [
     gif: require("../../assets/images/thatfridge/shopkeeper.gif"),
     blurb: "Builds your next grocery list and tells you what not to rebuy.",
   },
+];
+
+const LEGAL_LINKS = [
+  { label: "Terms of Service", url: "https://thatfridge.com/terms" },
+  { label: "Privacy Policy", url: "https://thatfridge.com/privacy" },
 ];
 
 export default function About() {
@@ -81,6 +86,43 @@ export default function About() {
                 <Text style={{ fontSize: 11.5, lineHeight: 16, color: MUTED }}>{c.blurb}</Text>
               </View>
             </View>
+          ))}
+        </View>
+
+        <Text
+          style={{
+            fontSize: 12,
+            fontWeight: "800",
+            letterSpacing: 0.3,
+            color: FAINT,
+            marginTop: 24,
+            marginBottom: 10,
+          }}
+        >
+          LEGAL
+        </Text>
+        <View
+          style={{
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: HAIRLINE,
+            backgroundColor: SURFACE,
+            overflow: "hidden",
+          }}
+        >
+          {LEGAL_LINKS.map((l, i) => (
+            <Pressable
+              key={l.label}
+              onPress={() => Linking.openURL(l.url)}
+              style={{
+                paddingVertical: 14,
+                paddingHorizontal: 14,
+                borderTopWidth: i === 0 ? 0 : 1,
+                borderTopColor: HAIRLINE,
+              }}
+            >
+              <Text style={{ fontSize: 13, color: INK }}>{l.label}</Text>
+            </Pressable>
           ))}
         </View>
       </ScrollView>
