@@ -13,6 +13,19 @@ use Illuminate\Support\Facades\Auth;
  */
 class ItemObserver
 {
+    /**
+     * Stamps `opened_at` whenever `opened` flips, so ItemResource can count down the 3-day
+     * "opened" window from the moment it actually happened instead of re-deriving a frozen
+     * cap from today's date on every request. Not client-settable - this is the only place
+     * it's written.
+     */
+    public function saving(Item $item): void
+    {
+        if ($item->isDirty('opened')) {
+            $item->opened_at = $item->opened ? now() : null;
+        }
+    }
+
     public function created(Item $item): void
     {
         if (! Auth::check()) {

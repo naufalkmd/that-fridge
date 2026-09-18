@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\ItemFreshness;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,15 +16,7 @@ class ItemResource extends JsonResource
     public function toArray(Request $request): array
     {
         $shelfLifeDays = $this->shelf_life_days ?? $this->product?->default_shelf_life_days;
-        $days = $this->expiry_date
-            ? (int) now()->startOfDay()->diffInDays($this->expiry_date->copy()->startOfDay(), false)
-            : null;
-
-        // An opened item goes bad sooner — cap its effective days so freshness/urgency reflect
-        // "already started", matching the web's markItemOpened behaviour.
-        if ($this->opened && $days !== null) {
-            $days = min($days, 3);
-        }
+        $days = ItemFreshness::effectiveDaysUntilExpiry($this->resource);
 
         $freshness = null;
         if ($days !== null && $shelfLifeDays) {

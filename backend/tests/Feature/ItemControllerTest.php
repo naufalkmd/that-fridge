@@ -139,4 +139,57 @@ class ItemControllerTest extends TestCase
         $response->assertJson(['data' => ['nutrition_category' => 'protein']]);
         $this->assertDatabaseHas('items', ['id' => $item->id, 'nutrition_category' => 'protein']);
     }
+
+    public function test_marking_an_item_opened_stamps_opened_at(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        $item = $section->items()->create([
+            'name' => 'Jam',
+            'icon' => 'jam',
+            'expiry_date' => now()->addDays(60)->toDateString(),
+        ]);
+
+        $this->actingAs($user)->patchJson("/api/items/{$item->id}", ['opened' => true])->assertStatus(200);
+
+        $this->assertNotNull($item->fresh()->opened_at);
+    }
+
+    public function test_an_opened_items_days_left_counts_down_instead_of_freezing(): void
+    {
+        // Regression test for a bug where an opened item's "days left" was recomputed as
+        // min(realDaysLeft, 3) on every request with no anchor to when it was opened - so an
+        // item with more than 3 days of real shelf life left showed a frozen "3 days left" for
+        // as long as that remained true, instead of counting down 3, 2, 1, 0.
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        $item = $section->items()->create([
+            'name' => 'Jam',
+            'icon' => 'jam',
+            'expiry_date' => now()->addDays(60)->toDateString(),
+        ]);
+        // opened_at isn't client-settable (not in Item's #[Fillable]) - stamp it via the
+        // observer, then backdate it directly the way only the observer itself would.
+        $item->forceFill(['opened' => true])->save();
+        $item->forceFill(['opened_at' => now()->subDays(2)])->save();
+
+        // No standalone GET /items/{item} route exists - a no-op-ish PATCH is the cheapest way
+        // to get ItemResource's computed `days` back over the API.
+        $response = $this->actingAs($user)->patchJson("/api/items/{$item->id}", ['note' => 'checked']);
+
+        $this->assertSame(1, $response->json('data.days'));
+    }
+
+    public function test_clearing_opened_also_clears_opened_at(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        $item = $section->items()->create(['name' => 'Jam', 'icon' => 'jam']);
+        $item->forceFill(['opened' => true])->save();
+        $this->assertNotNull($item->fresh()->opened_at);
+
+        $this->actingAs($user)->patchJson("/api/items/{$item->id}", ['opened' => false])->assertStatus(200);
+
+        $this->assertNull($item->fresh()->opened_at);
+    }
 }

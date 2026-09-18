@@ -33,6 +33,7 @@ class Item extends Model
         return [
             'expiry_date' => 'date',
             'opened' => 'boolean',
+            'opened_at' => 'datetime',
         ];
     }
 

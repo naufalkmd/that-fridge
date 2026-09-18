@@ -267,10 +267,7 @@ class AgentToolbox
             $items = $items->filter(fn ($i) => str_contains(Str::lower($i->name), Str::lower((string) $args['search'])));
         }
         $items = $items->map(function ($i) {
-            $days = ItemFreshness::daysUntilExpiry($i);
-            if ($i->opened && $days !== null) {
-                $days = min($days, 3);
-            }
+            $days = ItemFreshness::effectiveDaysUntilExpiry($i);
 
             return [
                 'model' => $i,
