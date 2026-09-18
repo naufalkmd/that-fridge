@@ -532,7 +532,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   // creates them via addManyItems (the backend /confirm route is a mock that creates nothing).
   function scanReceipt(sectionId: string, image: unknown): Promise<ScanResult> {
     const fd = new FormData();
-    fd.append("image", image as never);
+    fd.append("image", image as never, "scan.jpg");
     return http.post<ScanResult>(
       `/sections/${sectionId}/items/receipt/scan`,
       fd,
@@ -543,7 +543,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     image: unknown,
   ): Promise<ScanResult> {
     const fd = new FormData();
-    fd.append("image", image as never);
+    fd.append("image", image as never, "scan.jpg");
     return http.post<ScanResult>(`/sections/${sectionId}/items/photo/scan`, fd);
   }
 
@@ -553,7 +553,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     image: unknown,
   ): Promise<ExpiryScanResult> {
     const fd = new FormData();
-    fd.append("image", image as never);
+    fd.append("image", image as never, "expiry.jpg");
     return http.post<ExpiryScanResult>(
       `/sections/${sectionId}/items/expiry-scan`,
       fd,

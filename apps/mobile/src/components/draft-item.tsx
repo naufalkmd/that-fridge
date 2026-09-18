@@ -224,12 +224,11 @@ export function useDraftItems(initial: () => Draft[]) {
       setScanningDateId(d.id);
       try {
         const sectionId = await ensureSectionId();
-        const image = {
-          uri: res.assets[0].uri,
-          name: "expiry.jpg",
-          type: "image/jpeg",
-        };
-        const r = await api.scanExpiryPhoto(sectionId, image);
+        // Expo's fetch/FormData implementation needs a real Blob for a file part - it doesn't
+        // support React Native's classic { uri, name, type } placeholder object, despite the
+        // types still listing it as valid.
+        const blob = await (await fetch(res.assets[0].uri)).blob();
+        const r = await api.scanExpiryPhoto(sectionId, blob);
         if (r.found && r.date) set(d.id, { expiryDate: r.date });
         else
           Alert.alert(

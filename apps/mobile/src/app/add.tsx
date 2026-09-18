@@ -327,11 +327,14 @@ function ScanFlow({
     setStatus("scanning");
     try {
       const sectionId = await ensureSectionId();
-      const image = { uri, name: "scan.jpg", type: "image/jpeg" };
+      // Expo's fetch/FormData implementation needs a real Blob for a file part - it doesn't
+      // support React Native's classic { uri, name, type } placeholder object, despite the
+      // types still listing it as valid.
+      const blob = await (await fetch(uri)).blob();
       const scan =
         mode === "receipt"
-          ? await api.scanReceipt(sectionId, image)
-          : await api.scanFridgePhoto(sectionId, image);
+          ? await api.scanReceipt(sectionId, blob)
+          : await api.scanFridgePhoto(sectionId, blob);
       drafts.setItems(
         scan.detected_items.map((d) =>
           blankDraft({
