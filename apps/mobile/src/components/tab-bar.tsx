@@ -1,10 +1,11 @@
 import { type ComponentProps, memo, useCallback, useRef } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { Tabs, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
 import { useOnboarding } from "@/lib/onboarding";
+import { useTheme } from "@/lib/theme";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Animated, {
   FadeIn,
@@ -21,13 +22,6 @@ import Animated, {
 type TabBarProps = Parameters<
   NonNullable<ComponentProps<typeof Tabs>["tabBar"]>
 >[0];
-
-const AMBER = "#26c6da";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const FAINT = "rgba(234,234,236,0.34)";
 
 // All animations run on the UI thread via Reanimated, so tab switches stay smooth
 // even while the destination screen is mounting.
@@ -74,6 +68,7 @@ const Tab = memo(function Tab({
 }) {
   const meta = META[name];
   const { setCoachRect } = useOnboarding();
+  const { colors } = useTheme();
   const ref = useRef<View>(null);
 
   // Publish this pill's screen rect so the onboarding spotlight can point at it.
@@ -90,11 +85,12 @@ const Tab = memo(function Tab({
     [active],
   );
 
+  const surface2 = colors.surface2;
   const pillStyle = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(
       progress.value,
       [0, 1],
-      ["rgba(26,26,31,0)", SURFACE2],
+      ["rgba(26,26,31,0)", surface2],
     ),
   }));
 
@@ -105,19 +101,23 @@ const Tab = memo(function Tab({
       onPress={onPress}
       onLayout={reportRect}
       hitSlop={TAB_HIT_SLOP}
-      style={[styles.tab, { paddingHorizontal: active ? 14 : 12 }, pillStyle]}
+      style={[
+        { flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: 20, paddingVertical: 11 },
+        { paddingHorizontal: active ? 14 : 12 },
+        pillStyle,
+      ]}
     >
       <Ionicons
         name={active ? meta.activeIcon : meta.icon}
         size={16}
-        color={active ? AMBER : FAINT}
+        color={active ? colors.accent : colors.faint}
       />
       {active && (
         <Animated.Text
           entering={FadeIn.duration(150)}
           exiting={FadeOut.duration(110)}
           numberOfLines={1}
-          style={styles.label}
+          style={{ marginLeft: 6, fontSize: 12, fontWeight: "700", color: colors.ink }}
         >
           {meta.label}
         </Animated.Text>
@@ -129,6 +129,7 @@ const Tab = memo(function Tab({
 function AddFab() {
   const router = useRouter();
   const { setCoachRect } = useOnboarding();
+  const { colors } = useTheme();
   const slotRef = useRef<View>(null);
   const scale = useSharedValue(1);
   const style = useAnimatedStyle(() => ({
@@ -145,8 +146,22 @@ function AddFab() {
   }, [setCoachRect]);
 
   return (
-    <View ref={slotRef} style={styles.fabSlot} onLayout={reportRect}>
-      <Animated.View style={[styles.fab, style]}>
+    <View ref={slotRef} style={{ width: 58, alignItems: "center" }} onLayout={reportRect}>
+      <Animated.View
+        style={[
+          {
+            position: "absolute",
+            top: -22,
+            width: 58,
+            height: 58,
+            borderRadius: 29,
+            backgroundColor: colors.accent,
+            borderWidth: 4,
+            borderColor: colors.surface,
+          },
+          style,
+        ]}
+      >
         <Pressable
           onPress={() => {
             void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -158,10 +173,10 @@ function AddFab() {
           onPressOut={() => {
             scale.value = withSpring(1, SPRING);
           }}
-          style={styles.fabPress}
+          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
           hitSlop={{ top: 10, bottom: 18, left: 14, right: 14 }}
         >
-          <Ionicons name="add" size={26} color="#0a0a0c" />
+          <Ionicons name="add" size={26} color={colors.canvas} />
         </Pressable>
       </Animated.View>
     </View>
@@ -170,6 +185,7 @@ function AddFab() {
 
 function FloatingTabBarBase({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   const routeByName = Object.fromEntries(state.routes.map((r) => [r.name, r]));
   const activeName = state.routes[state.index]?.name;
@@ -205,7 +221,24 @@ function FloatingTabBarBase({ state, navigation }: TabBarProps) {
   };
 
   return (
-    <View style={[styles.bar, { bottom: (insets.bottom || 10) + 6 }]}>
+    <View
+      style={[
+        {
+          position: "absolute",
+          left: 16,
+          right: 16,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: 6,
+          backgroundColor: colors.surface,
+          borderRadius: 26,
+          borderWidth: 1,
+          borderColor: colors.hairline,
+        },
+        { bottom: (insets.bottom || 10) + 6 },
+      ]}
+    >
       {renderTab("home")}
       {renderTab("inventory")}
       <AddFab />
@@ -216,51 +249,3 @@ function FloatingTabBarBase({ state, navigation }: TabBarProps) {
 }
 
 export const FloatingTabBar = memo(FloatingTabBarBase);
-
-const styles = StyleSheet.create({
-  bar: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 6,
-    backgroundColor: SURFACE,
-    borderRadius: 26,
-    borderWidth: 1,
-    borderColor: HAIRLINE,
-  },
-  tab: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 20,
-    paddingVertical: 11,
-  },
-  label: {
-    marginLeft: 6,
-    fontSize: 12,
-    fontWeight: "700",
-    color: INK,
-  },
-  fabSlot: {
-    width: 58,
-    alignItems: "center",
-  },
-  fab: {
-    position: "absolute",
-    top: -22,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: AMBER,
-    borderWidth: 4,
-    borderColor: SURFACE,
-  },
-  fabPress: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

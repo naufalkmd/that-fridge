@@ -39,17 +39,9 @@ import { stashRecipeSuggestion, useRecipes } from "@/lib/recipes";
 import { useVoiceDictation } from "@/lib/voice";
 import { MarkdownText } from "@/components/markdown-text";
 import { RecipeSuggestionCard } from "@/components/recipe-suggestion-card";
+import { useTheme } from "@/lib/theme";
 
 const WALLPAPER = require("../../../assets/images/thatfridge/chat-wallpaper.png");
-
-const AMBER = "#26c6da";
-const BAD = "#ff5567";
-const SURFACE = "#131316";
-const SURFACE2 = "#1a1a1f";
-const HAIRLINE = "rgba(255,255,255,0.09)";
-const INK = "#eaeaec";
-const MUTED = "rgba(234,234,236,0.58)";
-const FAINT = "rgba(234,234,236,0.34)";
 
 const GREETING: Msg = {
   role: "agent",
@@ -74,6 +66,19 @@ export default function Chat() {
   const { scope } = useScope();
   const { markChecklistVisited } = useOnboarding();
   const { balance: credits, setBalance: setCredits, refresh: refreshCredits } = useCredits();
+  const { colors } = useTheme();
+  const {
+    accent: AMBER,
+    bad: BAD,
+    canvas: CANVAS,
+    surface: SURFACE,
+    surface2: SURFACE2,
+    hairline: HAIRLINE,
+    hairlineStrong: STRONG,
+    ink: INK,
+    muted: MUTED,
+    faint: FAINT,
+  } = colors;
   const [messages, setMessages] = useState<Msg[]>([GREETING]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [text, setText] = useState("");
@@ -221,7 +226,7 @@ export default function Chat() {
     <ImageBackground
       source={WALLPAPER}
       resizeMode="repeat"
-      style={{ flex: 1, backgroundColor: "#0a0a0c" }}
+      style={{ flex: 1, backgroundColor: CANVAS }}
     >
       <SafeAreaView className="flex-1" edges={["top"]}>
         <KeyboardAvoidingView
@@ -237,7 +242,7 @@ export default function Chat() {
               gap: 10,
               paddingHorizontal: 16,
               paddingBottom: 12,
-              backgroundColor: "rgba(19,19,22,0.8)",
+              backgroundColor: `${SURFACE}cc`,
               borderBottomWidth: 1,
               borderBottomColor: HAIRLINE,
             }}
@@ -275,7 +280,7 @@ export default function Chat() {
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: HAIRLINE,
-                backgroundColor: "rgba(19,19,22,0.85)",
+                backgroundColor: `${SURFACE}d9`,
                 paddingHorizontal: 12,
                 paddingVertical: 8,
               }}
@@ -315,7 +320,7 @@ export default function Chat() {
               paddingBottom: insets.bottom + 74,
               borderTopWidth: 1,
               borderTopColor: HAIRLINE,
-              backgroundColor: "rgba(19,19,22,0.9)",
+              backgroundColor: `${SURFACE}e6`,
             }}
           >
             {attachment && (
@@ -334,9 +339,9 @@ export default function Chat() {
                     width: 18,
                     height: 18,
                     borderRadius: 9,
-                    backgroundColor: "#0a0a0c",
+                    backgroundColor: CANVAS,
                     borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.18)",
+                    borderColor: STRONG,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
@@ -361,14 +366,14 @@ export default function Chat() {
                       width: 7,
                       height: 7,
                       borderRadius: 4,
-                      backgroundColor: "#ff5f56",
+                      backgroundColor: BAD,
                     }}
                   />
                 )}
                 <Text
                   style={{
                     fontSize: 11.5,
-                    color: voice.error ? "#ff5f56" : MUTED,
+                    color: voice.error ? BAD : MUTED,
                   }}
                 >
                   {voice.error ?? "Listening… tap the mic to stop"}
@@ -422,7 +427,7 @@ export default function Chat() {
                     opacity: sending || (!text.trim() && !attachment) ? 0.5 : 1,
                   }}
                 >
-                  <Ionicons name="arrow-up" size={18} color="#0a0a0c" />
+                  <Ionicons name="arrow-up" size={18} color={CANVAS} />
                 </Pressable>
               ) : (
                 <Pressable
@@ -433,13 +438,13 @@ export default function Chat() {
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: 19,
-                    backgroundColor: voice.listening ? "#ff5f56" : SURFACE2,
+                    backgroundColor: voice.listening ? BAD : SURFACE2,
                   }}
                 >
                   <Ionicons
                     name={voice.listening ? "stop" : "mic"}
                     size={17}
-                    color={voice.listening ? "#0a0a0c" : INK}
+                    color={voice.listening ? CANVAS : INK}
                   />
                 </Pressable>
               )}
@@ -458,6 +463,7 @@ function HeaderBtn({
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -468,17 +474,18 @@ function HeaderBtn({
         borderRadius: 15,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: SURFACE2,
+        backgroundColor: colors.surface2,
         borderWidth: 1,
-        borderColor: HAIRLINE,
+        borderColor: colors.hairline,
       }}
     >
-      <Ionicons name={icon} size={15} color={INK} />
+      <Ionicons name={icon} size={15} color={colors.ink} />
     </Pressable>
   );
 }
 
 function Dot({ delay }: { delay: number }) {
+  const { colors } = useTheme();
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(
@@ -506,7 +513,7 @@ function Dot({ delay }: { delay: number }) {
         width: 6,
         height: 6,
         borderRadius: 3,
-        backgroundColor: FAINT,
+        backgroundColor: colors.faint,
         opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
         transform: [
           {
@@ -522,6 +529,7 @@ function Dot({ delay }: { delay: number }) {
 }
 
 function TypingDots() {
+  const { colors } = useTheme();
   return (
     <View
       style={{
@@ -529,9 +537,9 @@ function TypingDots() {
         flexDirection: "row",
         alignItems: "center",
         gap: 4,
-        backgroundColor: SURFACE,
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: HAIRLINE,
+        borderColor: colors.hairline,
         borderTopLeftRadius: 4,
         borderTopRightRadius: 16,
         borderBottomLeftRadius: 16,
@@ -549,6 +557,7 @@ function TypingDots() {
 
 function Bubble({ msg }: { msg: Msg }) {
   const router = useRouter();
+  const { colors } = useTheme();
   const isUser = msg.role === "user";
   const { recipes, create } = useRecipes();
   const [added, setAdded] = useState(false);
@@ -594,9 +603,9 @@ function Bubble({ msg }: { msg: Msg }) {
           padding: msg.attachmentUri ? 6 : undefined,
           paddingHorizontal: msg.attachmentUri ? 6 : 14,
           paddingVertical: msg.attachmentUri ? 6 : 11,
-          backgroundColor: isUser ? AMBER : SURFACE,
+          backgroundColor: isUser ? colors.accent : colors.surface,
           borderWidth: isUser ? 0 : 1,
-          borderColor: HAIRLINE,
+          borderColor: colors.hairline,
           borderTopLeftRadius: isUser ? 16 : 4,
           borderTopRightRadius: isUser ? 4 : 16,
           borderBottomLeftRadius: 16,
@@ -622,7 +631,7 @@ function Bubble({ msg }: { msg: Msg }) {
               style={{
                 fontSize: 13.5,
                 lineHeight: 20,
-                color: "#0a0a0c",
+                color: colors.canvas,
                 paddingHorizontal: msg.attachmentUri ? 8 : 0,
                 paddingBottom: msg.attachmentUri ? 4 : 0,
               }}
@@ -639,7 +648,7 @@ function Bubble({ msg }: { msg: Msg }) {
                   fontWeight: "700",
                   letterSpacing: 0.4,
                   textTransform: "uppercase",
-                  color: FAINT,
+                  color: colors.faint,
                   marginBottom: 4,
                 }}
               >
