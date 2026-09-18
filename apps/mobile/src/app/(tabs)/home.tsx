@@ -79,6 +79,7 @@ export default function Home() {
     hairlineStrong: STRONG,
     ink: INK,
     muted: MUTED,
+    canvas: CANVAS,
   } = useTheme().colors;
 
   const [refreshing, setRefreshing] = useState(false);
@@ -364,7 +365,7 @@ export default function Home() {
                         position: "absolute",
                         bottom: 12,
                         left: 14,
-                        backgroundColor: "rgba(10,10,12,0.55)",
+                        backgroundColor: `${CANVAS}8c`,
                         paddingVertical: 5,
                         paddingHorizontal: 10,
                         borderRadius: 20,
@@ -387,7 +388,7 @@ export default function Home() {
                         borderRadius: 16,
                         alignItems: "center",
                         justifyContent: "center",
-                        backgroundColor: "rgba(19,19,22,0.85)",
+                        backgroundColor: `${SURFACE}d9`,
                       }}
                     >
                       <MaterialCommunityIcons
@@ -411,7 +412,7 @@ export default function Home() {
                       borderWidth: 2,
                       borderStyle: "dashed",
                       borderColor: STRONG,
-                      backgroundColor: "rgba(19,19,22,0.5)",
+                      backgroundColor: `${SURFACE}80`,
                       alignItems: "center",
                       justifyContent: "center",
                       gap: 12,
