@@ -167,7 +167,7 @@ function CrewSelector({
   onChange: (t: Tab) => void;
 }) {
   const { colors } = useTheme();
-  const { surface2: SURFACE2, muted: MUTED, canvas: CANVAS } = colors;
+  const { surface2: SURFACE2, muted: MUTED, onAccent: CANVAS } = colors;
   const TAB_COLOR = tabColors(colors);
   const [width, setWidth] = useState(0);
   const seg = width > 0 ? (width - 8) / TABS.length : 0; // 4px inner padding each side
@@ -271,7 +271,7 @@ export default function Crew() {
     good: GOOD,
     bad: BAD,
     warn: WARN,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = colors;
   const TAB_COLOR = tabColors(colors);
   const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
@@ -823,7 +823,7 @@ function RecipesPanel() {
     muted: MUTED,
     surface: SURFACE,
     surface2: SURFACE2,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = useTheme().colors;
   const [filter, setFilter] = useState<(typeof RECIPE_FILTERS)[number]>("all");
 
@@ -1117,7 +1117,7 @@ function ShoppingPanel({
     faint: FAINT,
     surface: SURFACE,
     surface2: SURFACE2,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = useTheme().colors;
   const REC_META = {
     recipe: { label: "Recipe", color: AMBER },

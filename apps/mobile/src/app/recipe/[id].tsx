@@ -37,7 +37,7 @@ export default function RecipeDetail() {
     blue: BLUE,
     good: GOOD,
     bad: BAD,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = useTheme().colors;
 
   const cached = byId(id);

@@ -64,7 +64,7 @@ export default function ItemDetail() {
     blue: BLUE,
     good: GOOD,
     bad: BAD,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = useTheme().colors;
 
   const inputStyle = {
@@ -755,7 +755,7 @@ function ChipRow({
     accent: AMBER,
     surface2: SURFACE2,
     ink: INK,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = useTheme().colors;
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>

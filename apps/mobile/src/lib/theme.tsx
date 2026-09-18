@@ -34,6 +34,14 @@ export interface ThemeColors {
   agentOrganizer: string;
   agentChef: string;
   agentShopkeeper: string;
+  /**
+   * Text/icon color for something drawn on top of an accent/status/agent-colored fill
+   * (a filled button, an active chip, an icon circle). Those fills are the same bright,
+   * dark-mode-tuned values in both themes (see lightColors), so the right contrasting
+   * text is NOT the same token as `canvas`/`ink` (which flip per theme) - it's always the
+   * near-black one, since the fills themselves are always light/bright.
+   */
+  onAccent: string;
 }
 
 // Mirrors tailwind.config.js's existing "dark neon pixel tech" palette exactly.
@@ -55,10 +63,15 @@ export const darkColors: ThemeColors = {
   agentOrganizer: "#3d6fe0",
   agentChef: "#f5a623",
   agentShopkeeper: "#39e07f",
+  onAccent: "#0a0a0c",
 };
 
-// First light-mode pass - same shape as darkColors, hues deepened from the neon dark
-// values where needed for contrast on a white/light surface. Flag for visual QA.
+// Same shape as darkColors. The structural surface/text tokens flip for a light
+// background; the accent/agent identity colors stay identical to dark - they're
+// tuned to read against near-black and turn pale/washed-out on white (validated:
+// e.g. accent drops to 2.06:1, chef to 2.03:1), but they're mostly used as icon
+// fills, tinted badge backgrounds, and ring segments here, not body text, so that
+// tradeoff was chosen deliberately over having two separate identity palettes.
 export const lightColors: ThemeColors = {
   canvas: "#f5f6f7",
   surface: "#ffffff",
@@ -68,15 +81,16 @@ export const lightColors: ThemeColors = {
   ink: "#16171a",
   muted: "rgba(22,23,26,0.58)",
   faint: "rgba(22,23,26,0.38)",
-  accent: "#0f9fb0",
-  blue: "#3f68c9",
-  good: "#1fa863",
-  warn: "#c97c12",
-  bad: "#e02f45",
-  agentGuardian: "#e0433a",
-  agentOrganizer: "#2f5bc9",
-  agentChef: "#c97c12",
-  agentShopkeeper: "#1fa863",
+  accent: "#26c6da",
+  blue: "#5b8dee",
+  good: "#39e07f",
+  warn: "#f5a623",
+  bad: "#ff5567",
+  agentGuardian: "#ff5f56",
+  agentOrganizer: "#3d6fe0",
+  agentChef: "#f5a623",
+  agentShopkeeper: "#39e07f",
+  onAccent: "#16171a",
 };
 
 /**
@@ -106,6 +120,7 @@ export function themeCssVars(colors: ThemeColors): Record<string, string> {
     "--color-agent-organizer": colors.agentOrganizer,
     "--color-agent-chef": colors.agentChef,
     "--color-agent-shopkeeper": colors.agentShopkeeper,
+    "--color-on-accent": colors.onAccent,
   };
 }
 

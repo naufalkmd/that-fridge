@@ -41,7 +41,7 @@ export default function MarkRecipeMade() {
     muted: MUTED,
     good: GOOD,
     warn: WARN,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = useTheme().colors;
 
   const recipe = byId(id);

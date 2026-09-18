@@ -30,7 +30,7 @@ export default function Fridges() {
     ink: INK,
     faint: FAINT,
     blue: BLUE,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = useTheme().colors;
   const [name, setName] = useState("");
   const [adding, setAdding] = useState(false);

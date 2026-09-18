@@ -52,7 +52,7 @@ export default function WhatToEat() {
     muted: MUTED,
     faint: FAINT,
     bad: BAD,
-    canvas: CANVAS,
+    onAccent: ONACCENT,
   } = useTheme().colors;
 
   const [meal, setMeal] = useState<MealType | null>(null);
@@ -131,7 +131,7 @@ export default function WhatToEat() {
           onPress={loading ? undefined : run}
           style={{ alignItems: "center", paddingVertical: 13, borderRadius: 8, backgroundColor: loading ? SURFACE2 : AMBER }}
         >
-          <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: loading ? FAINT : CANVAS }}>
+          <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: loading ? FAINT : ONACCENT }}>
             {loading ? "Finding meals…" : "Find meals"}
           </Text>
         </Pressable>
@@ -175,7 +175,7 @@ export default function WhatToEat() {
 }
 
 function AskChef({ onPress, primary }: { onPress: () => void; primary?: boolean }) {
-  const { accent: AMBER, hairlineStrong: STRONG, ink: INK, canvas: CANVAS } = useTheme().colors;
+  const { accent: AMBER, hairlineStrong: STRONG, ink: INK, onAccent: ONACCENT } = useTheme().colors;
   return (
     <Pressable
       onPress={onPress}
@@ -188,7 +188,7 @@ function AskChef({ onPress, primary }: { onPress: () => void; primary?: boolean 
         borderColor: STRONG,
       }}
     >
-      <Text style={{ fontSize: primary ? 13 : 12.5, fontWeight: "700", textTransform: primary ? "uppercase" : "none", letterSpacing: primary ? 0.5 : 0, color: primary ? CANVAS : INK }}>
+      <Text style={{ fontSize: primary ? 13 : 12.5, fontWeight: "700", textTransform: primary ? "uppercase" : "none", letterSpacing: primary ? 0.5 : 0, color: primary ? ONACCENT : INK }}>
         Ask Chef instead
       </Text>
     </Pressable>
@@ -250,7 +250,7 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
     faint: FAINT,
     good: GOOD,
     blue: BLUE,
-    canvas: CANVAS,
+    onAccent: ONACCENT,
   } = useTheme().colors;
 
   const ingredients = recipe.ingredients.map((ing) => ({
@@ -307,7 +307,7 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
                     style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 14, borderBottomWidth: i === ingredients.length - 1 ? 0 : 1, borderBottomColor: HAIRLINE }}
                   >
                     <View style={{ width: 20, height: 20, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: `${tint}${done ? "" : "1a"}` }}>
-                      <MaterialCommunityIcons name={done ? "check" : "plus"} size={12} color={done ? CANVAS : tint} />
+                      <MaterialCommunityIcons name={done ? "check" : "plus"} size={12} color={done ? ONACCENT : tint} />
                     </View>
                     <Text style={{ flex: 1, fontSize: 13.5, fontWeight: "600", color: INK }}>{ing.name}</Text>
                     <Text style={{ fontSize: 11.5, fontWeight: "700", color: tint }}>
@@ -337,11 +337,11 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
             style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 8, backgroundColor: AMBER }}
           >
             {marking ? (
-              <ActivityIndicator color={CANVAS} />
+              <ActivityIndicator color={ONACCENT} />
             ) : (
               <>
-                <MaterialCommunityIcons name="chef-hat" size={15} color={CANVAS} />
-                <Text style={{ fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: CANVAS }}>Mark as made</Text>
+                <MaterialCommunityIcons name="chef-hat" size={15} color={ONACCENT} />
+                <Text style={{ fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: ONACCENT }}>Mark as made</Text>
               </>
             )}
           </Pressable>
@@ -362,10 +362,10 @@ function ChipGroup({ label, children }: { label: string; children: React.ReactNo
 }
 
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  const { accent: AMBER, surface2: SURFACE2, ink: INK, canvas: CANVAS } = useTheme().colors;
+  const { accent: AMBER, surface2: SURFACE2, ink: INK, onAccent: ONACCENT } = useTheme().colors;
   return (
     <Pressable onPress={onPress} style={{ paddingVertical: 7, paddingHorizontal: 14, borderRadius: 6, backgroundColor: active ? AMBER : SURFACE2 }}>
-      <Text style={{ fontSize: 12.5, fontWeight: "700", color: active ? CANVAS : INK }}>{label}</Text>
+      <Text style={{ fontSize: 12.5, fontWeight: "700", color: active ? ONACCENT : INK }}>{label}</Text>
     </Pressable>
   );
 }

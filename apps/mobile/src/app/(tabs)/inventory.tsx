@@ -71,7 +71,7 @@ export default function Inventory() {
     blue: BLUE,
     faint: FAINT,
     muted: MUTED,
-    canvas: CANVAS,
+    onAccent: CANVAS,
     bad: BAD,
   } = useTheme().colors;
 
@@ -985,7 +985,7 @@ function HeaderBtn({
   accent?: boolean;
   onPress: () => void;
 }) {
-  const { accent: ACCENT, surface: SURFACE, hairline: HAIRLINE, ink: INK, canvas: CANVAS } = useTheme().colors;
+  const { accent: ACCENT, surface: SURFACE, hairline: HAIRLINE, ink: INK, onAccent: CANVAS } = useTheme().colors;
   return (
     <Pressable onPress={onPress} hitSlop={8}>
       <View
@@ -1053,7 +1053,7 @@ function ItemRow({
     blue: BLUE,
     faint: FAINT,
     warn: WARN,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = useTheme().colors;
   const fresh = freshColor(item.freshness);
 

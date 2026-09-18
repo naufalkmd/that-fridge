@@ -234,7 +234,7 @@ function Row({
           }`}
         >
           {checked && (
-            <Text className="text-[11px] font-bold text-canvas">✓</Text>
+            <Text className="text-[11px] font-bold text-on-accent">✓</Text>
           )}
         </View>
         <Text

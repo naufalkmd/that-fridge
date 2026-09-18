@@ -145,7 +145,7 @@ export default function Scan() {
           onPress={() => router.replace("/add")}
           className="rounded-lg bg-accent px-5 py-3 active:opacity-80"
         >
-          <Text className="font-bold uppercase text-canvas">Add manually</Text>
+          <Text className="font-bold uppercase text-on-accent">Add manually</Text>
         </Pressable>
         <Pressable onPress={() => router.back()}>
           <Text className="text-muted">Cancel</Text>
@@ -168,7 +168,7 @@ export default function Scan() {
           onPress={requestPermission}
           className="rounded-lg bg-accent px-5 py-3 active:opacity-80"
         >
-          <Text className="font-bold uppercase text-canvas">Grant access</Text>
+          <Text className="font-bold uppercase text-on-accent">Grant access</Text>
         </Pressable>
         <Pressable onPress={() => router.back()}>
           <Text className="text-muted">Not now</Text>
@@ -246,7 +246,7 @@ export default function Scan() {
                 onPress={() => setEditingId(null)}
                 className="mt-2 items-center rounded-lg bg-accent py-3 active:opacity-80"
               >
-                <Text className="font-bold uppercase tracking-wide text-canvas">
+                <Text className="font-bold uppercase tracking-wide text-on-accent">
                   Done editing
                 </Text>
               </Pressable>
@@ -311,7 +311,7 @@ export default function Scan() {
                   style={items.length === 0 ? { opacity: 0.45 } : undefined}
                 >
                   <MaterialCommunityIcons name="check" size={16} color={CANVAS} />
-                  <Text className="font-bold uppercase tracking-wide text-canvas">
+                  <Text className="font-bold uppercase tracking-wide text-on-accent">
                     {items.length > 0 ? `Done (${items.length})` : "Done"}
                   </Text>
                 </Pressable>

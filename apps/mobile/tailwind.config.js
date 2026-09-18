@@ -28,6 +28,10 @@ module.exports = {
         "agent-organizer": "var(--color-agent-organizer)",
         "agent-chef": "var(--color-agent-chef)",
         "agent-shopkeeper": "var(--color-agent-shopkeeper)",
+        // Text/icon color for anything drawn on an accent/status/agent-colored fill -
+        // those fills are the same bright value in both themes, so the right
+        // contrasting text is always this near-black token, never canvas/ink.
+        "on-accent": "var(--color-on-accent)",
       },
       borderRadius: {
         sm: "6px",

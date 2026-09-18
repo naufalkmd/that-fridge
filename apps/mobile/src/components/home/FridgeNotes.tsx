@@ -45,7 +45,7 @@ export function FridgeNotes({ variant = "editor" }: { variant?: "grid" | "editor
     good,
     warn,
     bad,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = useTheme().colors;
   const NOTE_COLOR: Record<FridgeNoteColor, string> = {
     amber: accent,

@@ -138,7 +138,7 @@ function Overlay({
 }) {
   const chip = big ? FAB_SIZE : 46;
   const {
-    canvas: CANVAS,
+    onAccent: CANVAS,
     surface: SURFACE,
     hairline: HAIRLINE,
     accent: ACCENT,

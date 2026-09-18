@@ -42,7 +42,7 @@ export default function RecipeForm() {
     ink: INK,
     faint: FAINT,
     blue: BLUE,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = colors;
   const input = inputStyle(colors);
 

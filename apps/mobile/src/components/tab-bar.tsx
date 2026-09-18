@@ -176,7 +176,7 @@ function AddFab() {
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
           hitSlop={{ top: 10, bottom: 18, left: 14, right: 14 }}
         >
-          <Ionicons name="add" size={26} color={colors.canvas} />
+          <Ionicons name="add" size={26} color={colors.onAccent} />
         </Pressable>
       </Animated.View>
     </View>

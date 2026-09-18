@@ -71,6 +71,7 @@ export default function Chat() {
     accent: AMBER,
     bad: BAD,
     canvas: CANVAS,
+    onAccent: ONACCENT,
     surface: SURFACE,
     surface2: SURFACE2,
     hairline: HAIRLINE,
@@ -427,7 +428,7 @@ export default function Chat() {
                     opacity: sending || (!text.trim() && !attachment) ? 0.5 : 1,
                   }}
                 >
-                  <Ionicons name="arrow-up" size={18} color={CANVAS} />
+                  <Ionicons name="arrow-up" size={18} color={ONACCENT} />
                 </Pressable>
               ) : (
                 <Pressable
@@ -444,7 +445,7 @@ export default function Chat() {
                   <Ionicons
                     name={voice.listening ? "stop" : "mic"}
                     size={17}
-                    color={voice.listening ? CANVAS : INK}
+                    color={voice.listening ? ONACCENT : INK}
                   />
                 </Pressable>
               )}
@@ -631,7 +632,7 @@ function Bubble({ msg }: { msg: Msg }) {
               style={{
                 fontSize: 13.5,
                 lineHeight: 20,
-                color: colors.canvas,
+                color: colors.onAccent,
                 paddingHorizontal: msg.attachmentUri ? 8 : 0,
                 paddingBottom: msg.attachmentUri ? 4 : 0,
               }}

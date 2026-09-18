@@ -47,7 +47,7 @@ export function RecipeSuggestionCard({
     blue,
     agentOrganizer,
     agentGuardian,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = useTheme().colors;
   const CATEGORY_STYLE: Record<RecipeCategory, Style> = {
     breakfast: { color: warn, label: "Breakfast", icon: "food-croissant" },

@@ -14,15 +14,21 @@
   --color-ink: #16171a;
   --color-muted: rgba(22, 23, 26, 0.58);
   --color-faint: rgba(22, 23, 26, 0.38);
-  --color-accent: #0f9fb0;
-  --color-blue: #3f68c9;
-  --color-good: #1fa863;
-  --color-warn: #c97c12;
-  --color-bad: #e02f45;
-  --color-agent-guardian: #e0433a;
-  --color-agent-organizer: #2f5bc9;
-  --color-agent-chef: #c97c12;
-  --color-agent-shopkeeper: #1fa863;
+  /* Accent/agent identity colors intentionally match .dark's exactly - they're mostly
+     icon fills, tinted badges, and ring segments here, not body text, so one shared
+     set was chosen over separate light/dark identity palettes. */
+  --color-accent: #26c6da;
+  --color-blue: #5b8dee;
+  --color-good: #39e07f;
+  --color-warn: #f5a623;
+  --color-bad: #ff5567;
+  --color-agent-guardian: #ff5f56;
+  --color-agent-organizer: #3d6fe0;
+  --color-agent-chef: #f5a623;
+  --color-agent-shopkeeper: #39e07f;
+  /* The bright fills above need dark text/icons in BOTH modes - this is light mode's
+     own near-black ink, not the (near-white) canvas. */
+  --color-on-accent: #16171a;
 }
 
 .dark {
@@ -43,4 +49,5 @@
   --color-agent-organizer: #3d6fe0;
   --color-agent-chef: #f5a623;
   --color-agent-shopkeeper: #39e07f;
+  --color-on-accent: #0a0a0c;
 }

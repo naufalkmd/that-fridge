@@ -319,7 +319,7 @@ function ScanFlow({
 }) {
   const router = useRouter();
   const { ensureSectionId, addManyItems } = useInventory();
-  const { accent: AMBER, muted: MUTED, faint: FAINT, canvas: CANVAS } =
+  const { accent: AMBER, muted: MUTED, faint: FAINT, onAccent: CANVAS } =
     useTheme().colors;
   const [status, setStatus] = useState<"idle" | "scanning" | "review">("idle");
   const [saving, setSaving] = useState(false);
@@ -554,7 +554,7 @@ function DraftList({
     hairlineStrong: STRONG_BORDER,
     faint: FAINT,
     blue: BLUE,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = useTheme().colors;
   const count = scanMode
     ? drafts.items.filter((d) => d.checked && d.name.trim()).length

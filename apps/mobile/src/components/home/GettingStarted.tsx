@@ -260,7 +260,7 @@ function PathRow({
 
 function PathNode({ state }: { state: NodeState }) {
   const pulse = useRef(new Animated.Value(0)).current;
-  const { faint: FAINT, canvas: CANVAS, good: GOOD, accent: ACCENT, surface: SURFACE } = useTheme().colors;
+  const { faint: FAINT, canvas: CANVAS, good: GOOD, accent: ACCENT, surface: SURFACE, onAccent: ONACCENT } = useTheme().colors;
 
   useEffect(() => {
     if (state !== "current") return;
@@ -314,7 +314,7 @@ function PathNode({ state }: { state: NodeState }) {
           zIndex: 1,
         }}
       >
-        <MaterialCommunityIcons name="check" size={9} color={CANVAS} />
+        <MaterialCommunityIcons name="check" size={9} color={ONACCENT} />
       </View>
     );
   }

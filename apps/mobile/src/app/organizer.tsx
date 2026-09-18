@@ -35,7 +35,7 @@ export default function Organizer() {
     faint: FAINT,
     agentOrganizer: BLUE,
     good: GOOD,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = useTheme().colors;
 
   const [status, setStatus] = useState<"idle" | "checking" | "done">("idle");

@@ -28,7 +28,7 @@ export default function Categories() {
     muted: MUTED,
     faint: FAINT,
     bad: BAD,
-    canvas: CANVAS,
+    onAccent: CANVAS,
   } = useTheme().colors;
   const [newName, setNewName] = useState("");
   const [busy, setBusy] = useState(false);

@@ -204,9 +204,9 @@ function Submit({
       style={busy ? { opacity: 0.7 } : undefined}
     >
       {busy ? (
-        <ActivityIndicator color={colors.canvas} />
+        <ActivityIndicator color={colors.onAccent} />
       ) : (
-        <Text className="text-[14px] font-bold uppercase tracking-wide text-canvas">
+        <Text className="text-[14px] font-bold uppercase tracking-wide text-on-accent">
           {label}
         </Text>
       )}
