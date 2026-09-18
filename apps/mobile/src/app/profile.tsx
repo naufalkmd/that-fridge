@@ -209,6 +209,19 @@ export default function Profile() {
           />
           <LinkRow icon="cart-outline" label="Shopping list" onPress={() => router.push("/shopping")} />
           <LinkRow
+            icon="contrast-outline"
+            label="Appearance"
+            value={THEME_LABELS[mode]}
+            onPress={() =>
+              Alert.alert("Appearance", "Choose how ThatFridge looks.", [
+                { text: "Light", onPress: () => setMode("light") },
+                { text: "Dark", onPress: () => setMode("dark") },
+                { text: "System", onPress: () => setMode("system") },
+                { text: "Cancel", style: "cancel" },
+              ])
+            }
+          />
+          <LinkRow
             icon="refresh-outline"
             label="Replay intro & tips"
             onPress={replayIntro}
@@ -219,35 +232,6 @@ export default function Profile() {
             onPress={() => router.push("/about")}
             last
           />
-        </View>
-      </View>
-
-      <View>
-        <SectionHeader>Appearance</SectionHeader>
-        <View className="gap-2 rounded-xl border border-hairline bg-surface p-4">
-          <Text className="text-[14px] font-semibold text-ink">Theme</Text>
-          <View className="flex-row gap-2">
-            {THEME_MODES.map((t) => {
-              const active = mode === t.key;
-              return (
-                <Pressable
-                  key={t.key}
-                  onPress={() => setMode(t.key)}
-                  className="flex-1 items-center rounded-lg py-2.5"
-                  style={{
-                    backgroundColor: active ? colors.accent : colors.surface2,
-                  }}
-                >
-                  <Text
-                    className="text-[12.5px] font-bold"
-                    style={{ color: active ? colors.canvas : colors.ink }}
-                  >
-                    {t.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
         </View>
       </View>
 
@@ -287,20 +271,22 @@ export default function Profile() {
   );
 }
 
-const THEME_MODES: { key: ThemeMode; label: string }[] = [
-  { key: "light", label: "Light" },
-  { key: "dark", label: "Dark" },
-  { key: "system", label: "System" },
-];
+const THEME_LABELS: Record<ThemeMode, string> = {
+  light: "Light",
+  dark: "Dark",
+  system: "System",
+};
 
 function LinkRow({
   icon,
   label,
+  value,
   onPress,
   last,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
+  value?: string;
   onPress: () => void;
   last?: boolean;
 }) {
@@ -314,6 +300,7 @@ function LinkRow({
     >
       <Ionicons name={icon} size={18} color={colors.muted} />
       <Text className="flex-1 text-[14px] text-ink">{label}</Text>
+      {value && <Text className="text-[13px] text-faint">{value}</Text>}
       <Ionicons name="chevron-forward" size={16} color={colors.faint} />
     </Pressable>
   );
