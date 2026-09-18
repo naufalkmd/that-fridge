@@ -1,6 +1,7 @@
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
+import Constants from "expo-constants";
 
 import { PixelText } from "@/components/brand";
 import { PageHeader } from "@/components/ui";
@@ -11,7 +12,7 @@ const INK = "#eaeaec";
 const MUTED = "rgba(234,234,236,0.58)";
 const FAINT = "rgba(234,234,236,0.34)";
 
-const APP_VERSION = "1.0.0";
+const APP_VERSION = String(Constants.expoConfig?.version ?? "dev");
 
 const CREW = [
   {
