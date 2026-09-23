@@ -725,7 +725,18 @@ export default function Inventory() {
 
               {!selecting && (
                 <Pressable
-                  onPress={() => router.push("/add")}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/add",
+                      // Pre-fills the new item's category with whichever chip the user is
+                      // currently filtered to, so it actually shows up back under that
+                      // filter afterward instead of only in "All"/"Uncategorized".
+                      params:
+                        categoryFilter !== "all" && categoryFilter !== UNCATEGORIZED
+                          ? { categoryId: categoryFilter }
+                          : {},
+                    })
+                  }
                   style={{
                     flexDirection: "row",
                     alignItems: "center",

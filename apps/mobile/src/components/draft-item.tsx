@@ -83,6 +83,9 @@ export type Draft = {
   qty: number;
   location: StorageLocation;
   category: NutritionCategory | null;
+  /** The user-defined inventory Category (Inventory tab's chips) to file this item under -
+   *  distinct from `category` above (the nutrition/food-group taxonomy). Null = uncategorized. */
+  categoryId: string | null;
   expiryDate: string | null;
   condition: "vibrant" | "wilting" | "past_best" | null;
   checked: boolean;
@@ -96,6 +99,7 @@ export const blankDraft = (over: Partial<Draft> = {}): Draft => ({
   qty: 1,
   location: "fridge",
   category: null,
+  categoryId: null,
   expiryDate: null,
   condition: null,
   checked: true,
@@ -115,6 +119,7 @@ export const toCreatePayload = (d: Draft) => ({
   quantity: d.qty,
   location: d.location,
   nutrition_category: d.category,
+  category_id: d.categoryId,
   ...(d.expiryDate
     ? { expiry_date: d.expiryDate, shelf_life_days: daysUntil(d.expiryDate) }
     : {}),

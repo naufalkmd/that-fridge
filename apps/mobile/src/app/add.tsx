@@ -97,6 +97,10 @@ export default function Add() {
     name?: string;
     location?: string;
     category?: string;
+    // The Inventory category the user was filtered to when they opened Add - distinct from
+    // `category` above (the nutrition/food-group param). Every item created in this session
+    // (including scan-derived and "Add another item" rows) inherits it, same as location.
+    categoryId?: string;
     shelfLife?: string;
     method?: string;
   }>();
@@ -124,6 +128,7 @@ export default function Add() {
               : "generic",
             location: (params.location as StorageLocation) ?? "fridge",
             category: (params.category as NutritionCategory) ?? null,
+            categoryId: params.categoryId ?? null,
             expiryDate: params.shelfLife
               ? isoInDays(Number(params.shelfLife))
               : null,
@@ -190,7 +195,10 @@ export default function Add() {
           "Barcode scanning uses the camera, which isn't available in Expo Go. Use a development build.",
         );
       } else {
-        router.push("/scan");
+        router.push({
+          pathname: "/scan",
+          params: params.categoryId ? { categoryId: params.categoryId } : {},
+        });
       }
       return;
     }
@@ -286,11 +294,12 @@ export default function Add() {
           ))}
         </ScrollView>
       ) : method === "receipt" || method === "photo" ? (
-        <ScanFlow mode={method} onDone={() => router.back()} />
+        <ScanFlow mode={method} onDone={() => router.back()} categoryId={params.categoryId ?? null} />
       ) : (
         <DraftList
           drafts={drafts}
           scanMode={false}
+          categoryId={params.categoryId ?? null}
           notice={dupNames.length ? <DuplicateNotice names={dupNames} /> : null}
           intro={
             <Text style={{ fontSize: 13, color: MUTED }}>
@@ -313,9 +322,11 @@ export default function Add() {
 function ScanFlow({
   mode,
   onDone,
+  categoryId,
 }: {
   mode: "receipt" | "photo";
   onDone: () => void;
+  categoryId: string | null;
 }) {
   const router = useRouter();
   const { ensureSectionId, addManyItems } = useInventory();
@@ -345,6 +356,7 @@ function ScanFlow({
             icon: d.icon || guessFoodIcon(d.parsed_name) || "generic",
             qty: Math.max(1, d.parsed_quantity ?? 1),
             condition: d.condition ?? null,
+            categoryId,
           }),
         ),
       );
@@ -508,6 +520,7 @@ function ScanFlow({
     <DraftList
       drafts={drafts}
       scanMode
+      categoryId={categoryId}
       intro={
         <Text style={{ fontSize: 12.5, color: MUTED, lineHeight: 17 }}>
           Found {drafts.items.length} item{drafts.items.length === 1 ? "" : "s"}{" "}
@@ -536,6 +549,7 @@ function DraftList({
   submitLabel,
   submitting,
   onSubmit,
+  categoryId,
 }: {
   drafts: DraftStore;
   scanMode: boolean;
@@ -546,6 +560,9 @@ function DraftList({
   submitLabel: (count: number) => string;
   submitting: boolean;
   onSubmit: () => void;
+  /** The Inventory category this add session started from (if any) - new rows added via
+   *  "Add another item" inherit it too, same as the first row. */
+  categoryId?: string | null;
 }) {
   const {
     accent: AMBER,
@@ -629,7 +646,7 @@ function DraftList({
             ))}
 
             <Pressable
-              onPress={() => drafts.append()}
+              onPress={() => drafts.append(blankDraft({ categoryId: categoryId ?? null }))}
               style={{
                 flexDirection: "row",
                 alignItems: "center",

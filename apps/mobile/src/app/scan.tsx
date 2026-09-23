@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import Constants from "expo-constants";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -40,6 +40,9 @@ type ScanResult =
 
 export default function Scan() {
   const router = useRouter();
+  // The Inventory category the user was filtered to when they opened Add - forwarded here
+  // from add.tsx's chooseMethod() so every barcode-scanned item inherits it too.
+  const { categoryId } = useLocalSearchParams<{ categoryId?: string }>();
   const { lookupBarcode } = useInventory();
   const drafts = useDraftItems(() => []);
   const [permission, requestPermission] = useCameraPermissions();
@@ -102,6 +105,7 @@ export default function Scan() {
             expiryDate: s.default_shelf_life_days
               ? isoInDays(s.default_shelf_life_days)
               : null,
+            categoryId: categoryId ?? null,
           }),
         );
         showResult({ kind: "ok", code: data, name: s.name });
@@ -111,7 +115,7 @@ export default function Scan() {
             Haptics.NotificationFeedbackType.Warning,
           );
           codesRef.current.add(data);
-          drafts.append(blankDraft({ name: "" }));
+          drafts.append(blankDraft({ name: "", categoryId: categoryId ?? null }));
           showResult({ kind: "unknown", code: data });
         } else {
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
