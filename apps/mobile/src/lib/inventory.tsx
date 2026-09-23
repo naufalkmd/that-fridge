@@ -13,6 +13,7 @@ import {
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ensureOnboardingFridge } from "@/lib/hydrateOnboarding";
+import { useScope } from "@/lib/scope";
 
 interface InventoryContextValue {
   fridges: Fridge[];
@@ -49,6 +50,7 @@ const InventoryContext = createContext<InventoryContextValue | null>(null);
 
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const { status } = useAuth();
+  const { scope } = useScope();
   const [fridges, setFridges] = useState<Fridge[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,19 +98,28 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     [load],
   );
 
-  // Ensure the account has at least one fridge, returning its id. Delegates to
-  // ensureOnboardingFridge, which server-checks first and honours the name the user chose
-  // in pre-sign-in onboarding — so this and hydrateOnboarding can't both create one.
+  // Ensure the account has at least one fridge, returning its id. Prefers whichever fridge
+  // is actively scoped (FridgeScopePicker) over the first/oldest one — an item added while
+  // viewing fridge B must land in fridge B, not silently fall back to fridge A just because
+  // it happened to be created first. Falls back to fridges[0] when scope is "all" or points
+  // at a fridge that no longer exists. Delegates fridge *creation* (brand-new account, zero
+  // fridges) to ensureOnboardingFridge, which server-checks first and honours the name the
+  // user chose in pre-sign-in onboarding — so this and hydrateOnboarding can't both create one.
   const ensureFridgeId = useCallback(async (): Promise<string> => {
+    if (scope !== "all") {
+      const scoped = fridges.find((f) => f.id === scope);
+      if (scoped) return scoped.id;
+    }
     if (fridges.length > 0) return fridges[0].id;
     const fridge =
       (await ensureOnboardingFridge()) ?? (await api.createFridge("My Fridge"));
     setFridges([fridge]);
     return fridge.id;
-  }, [fridges]);
+  }, [fridges, scope]);
 
-  // Resolve where a new item goes: first section of the first fridge, creating a
-  // fridge and/or "General" section on the fly for a brand-new account.
+  // Resolve where a new item goes: first section of ensureFridgeId()'s fridge (the scoped
+  // one, or the first/oldest as a fallback), creating a fridge and/or "General" section on
+  // the fly for a brand-new account.
   const resolveTarget = useCallback(async (): Promise<string> => {
     const fridgeId = await ensureFridgeId();
     const current = fridges.find((f) => f.id === fridgeId);

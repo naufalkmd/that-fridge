@@ -81,8 +81,8 @@ function AppShell({
                     fridge / notes / recipes if a stale session lingered. */}
                 <AccountBoundary>
                   <CreditsProvider>
-                  <InventoryProvider>
                   <ScopeProvider>
+                  <InventoryProvider>
                     <SocialProvider>
                       <NotificationsProvider>
                         <ShoppingProvider>
@@ -303,8 +303,8 @@ function AppShell({
                         </ShoppingProvider>
                       </NotificationsProvider>
                     </SocialProvider>
+                  </InventoryProvider>
                   </ScopeProvider>
-                </InventoryProvider>
                   </CreditsProvider>
                 </AccountBoundary>
               </ProProvider>
