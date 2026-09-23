@@ -374,10 +374,6 @@ export function kitchenScoreResults(input: KitchenScoreInput): KitchenScoreResul
   ];
 }
 
-// ---- Streak (loss-aversion mechanic on Waste Saver) --------------------------
-
-export const WASTE_STREAK_THRESHOLD = 70;
-
 /**
  * Delta of a live sub-score vs the most recent weekly snapshot — the "▲ +3 vs last week"
  * readout on the Waste Saver / Food Balance cards. null when there's no snapshot or no live score.
@@ -422,17 +418,4 @@ export function getScoreSeries(
   }
   points.push({ weekOf: "now", score: currentScore });
   return points.slice(-SPARKLINE_MAX_POINTS);
-}
-
-export function computeStreak(
-  snapshots: ScoreSnapshot[],
-  threshold: number = WASTE_STREAK_THRESHOLD,
-): number {
-  const sorted = [...snapshots].sort((a, b) => (a.weekOf < b.weekOf ? 1 : a.weekOf > b.weekOf ? -1 : 0));
-  let streak = 0;
-  for (const snap of sorted) {
-    if (snap.wasteScore < threshold) break;
-    streak++;
-  }
-  return streak;
 }

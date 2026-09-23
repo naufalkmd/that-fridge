@@ -84,9 +84,11 @@ Revokes the token used to make this request. No body.
 
 ### `GET /me` 🔒
 
-**200** `{ "user": { "id": "5", "name": "Jordan Diaz", "email": "jordan@example.com" } }`
+**200** `{ "user": { "id": "5", "name": "Jordan Diaz", "email": "jordan@example.com", "streak": 3 } }`
 
 **401** — missing/invalid/revoked token.
+
+`streak` is a daily "opened the app" streak, not tied to any score. `User::recordDailyOpen()` runs on every authenticated round trip that returns a user payload (register/login/social-sign-in/me/profile updates) and compares UTC calendar dates against `last_active_on`: same day is a no-op, yesterday increments, anything older resets to 1.
 
 ---
 
@@ -631,7 +633,7 @@ Default for new users: `metricType: "waste_rate"`, `targetValue: 20`, `period: "
 
 ## Score snapshots
 
-Read-only weekly history of the "Your Kitchen This Week" scores (Waste Saver / Food Balance — see the [Kitchen score cron](#kitchen-score-cron-not-an-http-endpoint) below), used to compute the Waste Saver streak and a week-over-week trend on the frontend. Rows are written exclusively by that cron, never by a client request — so a week only has a row if the cron actually computed one, which is what makes a missing week correctly read as a broken streak instead of a guess.
+Read-only weekly history of the "Your Kitchen This Week" scores (Waste Saver / Food Balance — see the [Kitchen score cron](#kitchen-score-cron-not-an-http-endpoint) below), used for the week-over-week trend on the frontend (the streak shown alongside it is a separate daily "opened the app" streak — see `GET /me`, not derived from these snapshots). Rows are written exclusively by that cron, never by a client request — so a week only has a row if the cron actually computed one.
 
 ### `GET /score-snapshots` 🔒
 
@@ -732,7 +734,7 @@ php artisan app:check-item-freshness
 
 `app:snapshot-kitchen-scores` runs weekly, Monday at 07:30 (`routes/console.php`). For every user, computes the same Waste Saver / Food Balance scores the frontend shows live (`App\Services\KitchenScoreService` — a deliberately-kept-in-sync PHP port of `frontend/lib/thatfridge/scoring.ts`'s `computeWasteSaverScore`/`computeFoodBalanceScore`), independent of whether that user opened the app that week:
 
-- if the user has no items and no usage history at all, skips them entirely rather than storing a fabricated score — a missing week already reads as a broken streak on the frontend
+- if the user has no items and no usage history at all, skips them entirely rather than storing a fabricated score
 - otherwise upserts a `weekly_score_snapshots` row keyed on `(user_id, week_of)` — re-running mid-week updates the existing row rather than duplicating it
 - when the computed `overdueCount` is 0, awards the `zero_waste_week` badge (see [Badges](#badges))
 

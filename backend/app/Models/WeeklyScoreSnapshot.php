@@ -11,9 +11,9 @@ class WeeklyScoreSnapshot extends Model
 {
     // Deliberately no 'date' cast on week_of - it's always written and queried as a plain
     // "Y-m-d" string (see SnapshotKitchenScores), and a Carbon-backed date cast round-trips
-    // through the DB with a time component added on some drivers, which breaks both the
-    // (user_id, week_of) uniqueness lookup in updateOrCreate and the streak's week-to-week
-    // string comparisons.
+    // through the DB with a time component added on some drivers, which breaks the
+    // (user_id, week_of) uniqueness lookup in updateOrCreate and any week-to-week string
+    // comparisons (e.g. the trend sparkline's sort).
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

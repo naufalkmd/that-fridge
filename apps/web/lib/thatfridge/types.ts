@@ -298,6 +298,9 @@ export interface CurrentUser {
   name: string;
   username: string;
   email: string;
+  /** Consecutive-day "opened the app" streak, computed server-side (User::recordDailyOpen)
+   *  on every authenticated round trip. Not related to any Kitchen Score. */
+  streak?: number;
 }
 
 export interface UserSearchResult {

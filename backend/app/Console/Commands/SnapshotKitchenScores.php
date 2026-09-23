@@ -12,7 +12,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
 #[Signature('app:snapshot-kitchen-scores')]
-#[Description('Compute and store each user\'s weekly Waste Saver / Food Balance scores, independent of whether they opened the app that week - backs the streak feature')]
+#[Description('Compute and store each user\'s weekly Waste Saver / Food Balance scores, independent of whether they opened the app that week - backs the week-over-week trend, not the streak (that\'s daily, see User::recordDailyOpen)')]
 class SnapshotKitchenScores extends Command
 {
     public function __construct(private KitchenScoreService $scores, private BadgeService $badges)
@@ -32,7 +32,7 @@ class SnapshotKitchenScores extends Command
 
                 // No honest number to show yet (brand new account, nothing used up) - skip
                 // rather than store a fabricated 0, same "not enough data" fallback the live
-                // score card shows. A missing week already reads as a broken streak.
+                // score card shows.
                 if ($score['wasteScore'] === null) {
                     $skipped++;
 

@@ -352,6 +352,12 @@ class AuthController extends Controller
      */
     private function userPayload(User $user): array
     {
+        // Every caller of userPayload() is an authenticated round trip (register, login,
+        // social sign-in, me, profile updates) - i.e. proof the app is actually open right
+        // now, so this is the one choke point that marks today active for every entry path
+        // instead of duplicating the call across each controller method.
+        $user->recordDailyOpen();
+
         return [
             'id' => (string) $user->id,
             'name' => $user->name,
@@ -359,6 +365,7 @@ class AuthController extends Controller
             'email' => $user->email,
             'preferences' => $user->preferences ?? null,
             'credits' => (int) $user->ai_credits,
+            'streak' => (int) $user->current_streak,
             'isDemo' => (bool) $user->is_demo,
             'profileChanges' => $user->is_demo ? null : collect(User::PROFILE_CHANGE_LIMITS)
                 ->mapWithKeys(fn ($limit, $field) => [$field => [

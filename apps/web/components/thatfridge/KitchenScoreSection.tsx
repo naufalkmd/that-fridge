@@ -11,7 +11,6 @@ import {
   hasFullFoodGroupVariety,
   type KitchenScoreResult,
 } from "@/lib/thatfridge/scoring";
-import { computeStreak } from "@/lib/thatfridge/streak";
 import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
 import AgentScoreCard, { AGENT_META } from "./AgentScoreCard";
@@ -66,9 +65,9 @@ export default function KitchenScoreSection() {
   const scoredCount = orderedResults.filter((r) => r.score !== null).length;
   const fullVariety = hasFullFoodGroupVariety(state);
 
-  // Nothing to show before the cron has ever run for this account - a "0 week streak" on a
-  // brand new signup would read as a broken streak that was never actually started.
-  const streak = state.scoreSnapshots.length > 0 ? computeStreak(state.scoreSnapshots) : null;
+  // Daily "opened the app" streak, computed server-side and refreshed on every /me call -
+  // not derived from scoreSnapshots. Nothing to show until the user object has loaded.
+  const streak = state.currentUser?.streak ?? null;
 
   useEffect(() => {
     if (fullVariety) actions.awardBadgeProgress("full_week_variety", 1);
@@ -157,7 +156,7 @@ export default function KitchenScoreSection() {
           >
             <Flame size={13} strokeWidth={2.4} color={streak > 0 ? theme.amber : theme.text.faint} />
             <span style={{ fontFamily: theme.fontMono, fontSize: 11.5, fontWeight: 700, color: streak > 0 ? theme.amber : theme.text.faint }}>
-              {streak > 0 ? `${streak} week${streak === 1 ? "" : "s"} streak` : "No streak yet"}
+              {streak > 0 ? `${streak} day${streak === 1 ? "" : "s"} streak` : "No streak yet"}
             </span>
           </div>
         )}

@@ -11,7 +11,6 @@ import Svg, { Circle, G } from "react-native-svg";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import {
-  computeStreak,
   getFoodGroupCoverage,
   getOverallScore,
   getOverdueItemStats,
@@ -260,9 +259,12 @@ function Corner({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
 export function KitchenScore({
   input,
   snapshots = [],
+  streak = 0,
 }: {
   input: KitchenScoreInput;
   snapshots?: ScoreSnapshot[];
+  /** Daily "opened the app" streak from CurrentUser.streak, not derived from snapshots. */
+  streak?: number;
 }) {
   const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
@@ -278,7 +280,6 @@ export function KitchenScore({
 
   const overall = getOverallScore(ordered);
   const scoredCount = ordered.filter((r) => r.score !== null).length;
-  const streak = computeStreak(snapshots);
   const wasteScore = ordered.find((r) => r.key === "waste")?.score ?? null;
   const wasteTrend = getScoreTrend(snapshots, "waste", wasteScore);
   const overdue = getOverdueItemStats(input.items).overdueCount;
@@ -420,7 +421,7 @@ export function KitchenScore({
                 }}
               >
                 {streak > 0
-                  ? `${streak} week${streak === 1 ? "" : "s"} streak`
+                  ? `${streak} day${streak === 1 ? "" : "s"} streak`
                   : "No streak yet"}
               </Text>
             </View>

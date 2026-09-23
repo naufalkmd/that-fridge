@@ -37,10 +37,34 @@ class User extends Authenticatable
             'pro_trial_until' => 'datetime',
             'revenuecat_last_event_ms' => 'integer',
             'ai_credits' => 'integer',
+            'current_streak' => 'integer',
+            'last_active_on' => 'date',
             'is_demo' => 'boolean',
             'preferences' => 'array',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Called on every register/login/me - the three points where we know the user actually
+     * opened the app. Compares calendar dates (app runs on UTC, same convention as the old
+     * weekly score snapshots) rather than a rolling 24h window, so "yesterday" and "today"
+     * match what a user would circle on a calendar. A second call the same day is a no-op;
+     * a gap of 2+ days resets to 1 instead of 0, since today itself still counts.
+     */
+    public function recordDailyOpen(): void
+    {
+        $today = Carbon::now()->toDateString();
+        $lastActive = $this->last_active_on?->toDateString();
+
+        if ($lastActive === $today) {
+            return;
+        }
+
+        $yesterday = Carbon::now()->subDay()->toDateString();
+        $this->current_streak = $lastActive === $yesterday ? $this->current_streak + 1 : 1;
+        $this->last_active_on = $today;
+        $this->save();
     }
 
     public function fridges(): HasMany

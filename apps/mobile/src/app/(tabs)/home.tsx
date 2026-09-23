@@ -486,7 +486,7 @@ export default function Home() {
           </View>
 
           {/* your kitchen this week */}
-          <KitchenScore input={scoreInput} snapshots={scoreSnapshots} />
+          <KitchenScore input={scoreInput} snapshots={scoreSnapshots} streak={user?.streak ?? 0} />
 
           {/* meet your crew */}
           <View>

@@ -320,6 +320,9 @@ export interface CurrentUser {
   /** Current AI-credit balance. Every AI action spends credits; Pro grants a monthly
    *  bundle, free users get a smaller monthly allowance, top up with packs. */
   credits?: number;
+  /** Consecutive-day "opened the app" streak, computed server-side (User::recordDailyOpen)
+   *  on every authenticated round trip. Not related to any Kitchen Score. */
+  streak?: number;
   /** Managed demo / App Review account — always treated as Pro, name/username locked. */
   isDemo?: boolean;
   /**

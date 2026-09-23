@@ -96,7 +96,6 @@ import {
 import { ApiError, clearToken, getToken } from "./apiClient";
 import { findItem, findSectionIdForGroup, getActiveFridgeItems, getScopedItems } from "./selectors";
 import { BADGE_CATALOG } from "./badges";
-import { computeStreak } from "./streak";
 import type {
   AuthMode,
   BadgeKey,
@@ -183,9 +182,8 @@ function buildUsageSummary(usageHistory: UsageHistoryEntry[]): string | undefine
     .join("\n");
 }
 
-function buildStreakSummary(scoreSnapshots: ScoreSnapshot[]): string | undefined {
-  const streak = computeStreak(scoreSnapshots);
-  return streak >= 1 ? `Waste Saver streak: ${streak} week${streak === 1 ? "" : "s"}` : undefined;
+function buildStreakSummary(streak: number | undefined): string | undefined {
+  return streak && streak >= 1 ? `Daily streak: ${streak} day${streak === 1 ? "" : "s"}` : undefined;
 }
 
 function shuffleArray<T>(items: T[]): T[] {
@@ -449,9 +447,9 @@ export interface ThatFridgeState {
   // Cumulative, all-time - backs the Tidiness sub-score. null until the initial fetch resolves,
   // same firstOrCreate()-so-only-briefly-null story as userGoal above.
   organizerTally: OrganizerTally | null;
-  // Written weekly, server-side only, by app:snapshot-kitchen-scores - see streak.ts's
-  // computeStreak and scoring.ts's getScoreTrend, both of which read this instead of a
-  // client-computed history.
+  // Written weekly, server-side only, by app:snapshot-kitchen-scores - see scoring.ts's
+  // getScoreTrend, which reads this instead of a client-computed history. Not related to
+  // the (daily, server-side) streak on currentUser.streak.
   scoreSnapshots: ScoreSnapshot[];
   badges: BadgeProgress[];
   badgeUnlockToast: string | null;
@@ -1845,7 +1843,7 @@ export function useThatFridge() {
 
     const inventory = buildInventorySummary(state);
     const usageSummary = buildUsageSummary(state.usageHistory);
-    const streakSummary = buildStreakSummary(state.scoreSnapshots);
+    const streakSummary = buildStreakSummary(state.currentUser?.streak);
     sendChatMessage(messageForApi, routeChatAgent(messageForApi), inventory, state.currentSessionId, usageSummary, undefined, streakSummary, attachmentFile)
       .then((res) => {
         const reply: ChatMessage = {
@@ -1903,7 +1901,7 @@ export function useThatFridge() {
     patch((s) => ({ agentInsightLoading: { ...s.agentInsightLoading, [agent]: true } }));
     const inventory = buildInventorySummary(state);
     const usageSummary = buildUsageSummary(state.usageHistory);
-    const streakSummary = buildStreakSummary(state.scoreSnapshots);
+    const streakSummary = buildStreakSummary(state.currentUser?.streak);
     sendChatMessage(AGENT_ACTIVATE_PROMPT[agent], agent, inventory, undefined, usageSummary, true, streakSummary)
       .then((res) => {
         patch((s) => ({
