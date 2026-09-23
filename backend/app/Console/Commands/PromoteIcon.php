@@ -4,23 +4,21 @@ namespace App\Console\Commands;
 
 use App\Models\GeneratedIcon;
 use App\Models\SharedIcon;
+use App\Services\IconCurator;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use RuntimeException;
 
 /**
- * Curate one user-generated icon into the app-wide shared pack. The image file is COPIED to
- * its own path so it stays available if the generator later deletes their icon or account,
- * and no user id is carried over - it becomes a de-identified app asset (see the
- * shared_icons migration and apps/legal/terms §4).
+ * Curate one user-generated icon into the app-wide shared pack (see IconCurator::promote for
+ * why the file is copied and de-identified). The admin panel's AI icons page does the same.
  */
 #[Signature('app:promote-icon {id : generated_icons row id} {--label= : short picker label, e.g. "Tomato"}')]
 #[Description('Add a generated icon to the shared icon pack shown to all users')]
 class PromoteIcon extends Command
 {
-    public function handle(): int
+    public function handle(IconCurator $curator): int
     {
         $source = GeneratedIcon::find($this->argument('id'));
         if (! $source) {
@@ -35,25 +33,15 @@ class PromoteIcon extends Command
             return self::SUCCESS;
         }
 
-        $disk = Storage::disk(config('filesystems.media_disk'));
-        if (! $disk->exists($source->image_path)) {
-            $this->error("Source image is missing on disk: {$source->image_path}");
+        try {
+            $icon = $curator->promote($source, $this->option('label'));
+        } catch (RuntimeException $e) {
+            $this->error($e->getMessage());
 
             return self::FAILURE;
         }
 
-        $path = 'shared-icons/'.Str::uuid().'.png';
-        $disk->put($path, $disk->get($source->image_path));
-
-        $label = $this->option('label') ?: Str::limit(Str::title(trim($source->prompt)), 40, '');
-
-        $icon = SharedIcon::create([
-            'label' => $label ?: null,
-            'image_path' => $path,
-            'image_url' => $disk->url($path),
-            'source_generated_icon_id' => $source->id,
-        ]);
-
+        $label = $icon->label;
         $this->info("Promoted generated icon #{$source->id} → shared_icons #{$icon->id}".($label ? " (\"{$label}\")" : ''));
 
         return self::SUCCESS;

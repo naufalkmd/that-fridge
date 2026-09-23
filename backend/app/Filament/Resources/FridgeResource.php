@@ -21,7 +21,9 @@ class FridgeResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-archive-box';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?string $navigationGroup = 'Fridge data';
+
+    protected static ?int $navigationSort = 1;
 
     public static function infolist(Infolist $infolist): Infolist
     {

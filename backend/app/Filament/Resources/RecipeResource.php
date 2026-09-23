@@ -3,9 +3,11 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\RecipeResource\Pages;
+use App\Models\AdminAuditLog;
 use App\Models\Recipe;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -24,7 +26,9 @@ class RecipeResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-book-open';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?string $navigationGroup = 'Content';
+
+    protected static ?int $navigationSort = 1;
 
     public static function form(Form $form): Form
     {
@@ -59,8 +63,10 @@ class RecipeResource extends Resource
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
+                Tables\Columns\ImageColumn::make('icon_url')->label('')->size(36),
                 Tables\Columns\TextColumn::make('id')->sortable(),
                 Tables\Columns\TextColumn::make('name')->searchable(),
+                Tables\Columns\TextColumn::make('meal_type')->badge()->placeholder('-')->toggleable(),
                 Tables\Columns\TextColumn::make('user.email')->label('Owner')->placeholder('Curated')->searchable(),
                 Tables\Columns\TextColumn::make('category')->placeholder('-'),
                 Tables\Columns\TextColumn::make('minutes')->numeric()->sortable(),
@@ -68,15 +74,39 @@ class RecipeResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\Filter::make('curated')
-                    ->query(fn ($query) => $query->whereNull('user_id')),
+                Tables\Filters\TernaryFilter::make('curated')
+                    ->label('Source')
+                    ->trueLabel('Curated')
+                    ->falseLabel('User-created')
+                    ->queries(
+                        true: fn ($query) => $query->whereNull('user_id'),
+                        false: fn ($query) => $query->whereNotNull('user_id'),
+                        blank: fn ($query) => $query,
+                    ),
+                Tables\Filters\SelectFilter::make('meal_type')
+                    ->options(fn () => Recipe::whereNotNull('meal_type')->distinct()->orderBy('meal_type')->pluck('meal_type', 'meal_type')->all()),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('copyToCurated')
+                    ->label('Copy to curated')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->visible(fn (Recipe $record) => $record->user_id !== null)
+                    ->requiresConfirmation()
+                    ->modalDescription('Makes a copy every user can see. The original stays with its owner. Photos and the AI icon are not copied, since they belong to the owner\'s uploads.')
+                    ->action(function (Recipe $record) {
+                        $copy = $record->replicate(['user_id', 'made_count', 'attachments', 'icon_url']);
+                        $copy->user_id = null;
+                        $copy->made_count = 0;
+                        $copy->save();
+                        AdminAuditLog::record('copied_to_curated', $copy, ['from_recipe_id' => $record->id]);
+                        Notification::make()->success()->title("Curated copy #{$copy->id} created.")->send();
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->after(fn ($records) => $records->each(fn ($r) => AdminAuditLog::record('deleted', $r, ['name' => $r->name]))),
                 ]),
             ]);
     }
