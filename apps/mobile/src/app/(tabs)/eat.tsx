@@ -1105,6 +1105,7 @@ function ShoppingPanel({
   scoped: FlatItem[];
   showFridgeTags: boolean;
 }) {
+  const router = useRouter();
   const { items, add, toggle, remove } = useShopping();
   const { recipes } = useRecipes();
   const { usageHistory } = useKitchenScore();
@@ -1321,16 +1322,20 @@ function ShoppingPanel({
                     color={it.checked ? GOOD : FAINT}
                   />
                 </Pressable>
-                <Text
-                  style={{
-                    flex: 1,
-                    fontSize: 14,
-                    color: it.checked ? FAINT : INK,
-                    textDecorationLine: it.checked ? "line-through" : "none",
-                  }}
+                <Pressable
+                  onPress={() => router.push(`/shopping-item/${it.id}`)}
+                  style={{ flex: 1 }}
                 >
-                  {it.name}
-                </Text>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: it.checked ? FAINT : INK,
+                      textDecorationLine: it.checked ? "line-through" : "none",
+                    }}
+                  >
+                    {it.name}
+                  </Text>
+                </Pressable>
                 {!!it.shopUrl && (
                   <Pressable
                     onPress={() => Linking.openURL(it.shopUrl!).catch(() => {})}
