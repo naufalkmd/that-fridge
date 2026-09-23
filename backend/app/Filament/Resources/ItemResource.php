@@ -21,7 +21,9 @@ class ItemResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?string $navigationGroup = 'Fridge data';
+
+    protected static ?int $navigationSort = 2;
 
     public static function infolist(Infolist $infolist): Infolist
     {

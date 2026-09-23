@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
+use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -13,10 +14,10 @@ use Filament\Tables;
 use Filament\Tables\Table;
 
 /**
- * Users sign up through the app, so there's no create page and no delete: account deletion
- * goes through the app's own flow, which also cleans up tokens and uploads. Pro status and
- * AI credits are shown but not editable here - they're owned by RevenueCat webhooks and the
- * credit ledger respectively, and hand-editing them would drift from those sources.
+ * Users sign up through the app, so there's no create page. Pro status is shown but never
+ * editable - RevenueCat webhooks own it. AI credits change only through the view page's
+ * "Adjust credits" button, which goes through CreditService so the ledger stays in step.
+ * Account deletion (view page) mirrors DELETE /api/me and is audit-logged.
  */
 class UserResource extends Resource
 {
@@ -27,6 +28,8 @@ class UserResource extends Resource
     protected static bool $shouldSkipAuthorization = true;
 
     protected static ?string $navigationIcon = 'heroicon-o-users';
+
+    protected static ?string $navigationGroup = 'Users';
 
     protected static ?int $navigationSort = 1;
 
@@ -77,6 +80,25 @@ class UserResource extends Resource
                         Infolists\Components\TextEntry::make('pro_trial_until')->dateTime()->placeholder('-'),
                         Infolists\Components\TextEntry::make('ai_credits')->numeric(),
                     ]),
+                Infolists\Components\Section::make('Activity')
+                    ->columns(3)
+                    ->schema([
+                        Infolists\Components\TextEntry::make('current_streak')->label('Daily streak')->numeric(),
+                        Infolists\Components\TextEntry::make('last_active_on')->label('Last opened the app')->date()->placeholder('Never'),
+                        // Counts only - chat content and AI memory are private and never shown here.
+                        Infolists\Components\TextEntry::make('chat_messages')
+                            ->state(fn (User $record): int => $record->chatHistory()->count())
+                            ->numeric(),
+                        Infolists\Components\TextEntry::make('goal')
+                            ->state(fn (User $record): ?string => $record->goal
+                                ? "{$record->goal->metric_type}: {$record->goal->target_value} / {$record->goal->period}".($record->goal->is_active ? '' : ' (inactive)')
+                                : null)
+                            ->placeholder('No goal set'),
+                        Infolists\Components\IconEntry::make('has_ai_memory')
+                            ->label('Has AI memory')
+                            ->state(fn (User $record): bool => $record->userMemory()->exists())
+                            ->boolean(),
+                    ]),
             ]);
     }
 
@@ -94,17 +116,52 @@ class UserResource extends Resource
                 Tables\Columns\IconColumn::make('is_demo')->boolean()->toggleable(),
                 Tables\Columns\TextColumn::make('ai_credits')->numeric()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('fridges_count')->counts('fridges')->label('Fridges')->sortable(),
+                Tables\Columns\TextColumn::make('current_streak')->label('Streak')->numeric()->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('last_active_on')->label('Last active')->date()->sortable()->placeholder('-')->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable(),
             ])
             ->filters([
                 Tables\Filters\Filter::make('pro')
                     ->query(fn ($query) => $query->where('pro_expires_at', '>', now())),
                 Tables\Filters\TernaryFilter::make('is_demo'),
+                Tables\Filters\SelectFilter::make('sign_in')
+                    ->label('Sign-in method')
+                    ->options(['apple' => 'Apple', 'google' => 'Google', 'password' => 'Email + password'])
+                    ->query(fn ($query, array $data) => match ($data['value'] ?? null) {
+                        'password' => $query->whereNull('oauth_provider'),
+                        null, '' => $query,
+                        default => $query->where('oauth_provider', $data['value']),
+                    }),
+                Tables\Filters\Filter::make('inactive')
+                    ->label('Inactive 30+ days')
+                    ->query(fn ($query) => $query->where(fn ($q) => $q
+                        ->whereNull('last_active_on')
+                        ->orWhere('last_active_on', '<', now()->subDays(30)->toDateString()))),
+                Tables\Filters\Filter::make('signed_up')
+                    ->form([
+                        Forms\Components\DatePicker::make('from')->label('Signed up from'),
+                        Forms\Components\DatePicker::make('until')->label('Signed up until'),
+                    ])
+                    ->query(fn ($query, array $data) => $query
+                        ->when($data['from'] ?? null, fn ($q, $d) => $q->whereDate('created_at', '>=', $d))
+                        ->when($data['until'] ?? null, fn ($q, $d) => $q->whereDate('created_at', '<=', $d))),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\CreditLedgerRelationManager::class,
+            RelationManagers\FridgesRelationManager::class,
+            RelationManagers\BadgesRelationManager::class,
+            RelationManagers\BlockingRelationManager::class,
+            RelationManagers\BlockedByRelationManager::class,
+            RelationManagers\PushTokensRelationManager::class,
+        ];
     }
 
     public static function getPages(): array
