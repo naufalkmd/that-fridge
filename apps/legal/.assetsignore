@@ -1,0 +1,4 @@
+# Files in this folder that must not be served on thatfridge.com (Workers static assets).
+README.md
+wrangler.jsonc
+.assetsignore

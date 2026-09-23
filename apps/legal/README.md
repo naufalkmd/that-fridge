@@ -4,14 +4,38 @@ Static pages for the marketing/legal domain `thatfridge.com`:
 
 | Path | File |
 | --- | --- |
-| `/` | `index.html` |
+| `/` | `index.html` + `home.css` — the landing page (`assets/` holds its images) |
 | `/privacy/` | `privacy/index.html` — App Store **Privacy Policy URL** |
 | `/privacy/pdpa/` | `privacy/pdpa/index.html` — bilingual (BM + EN) Section 7 PDPA notice for Malaysia |
 | `/terms/` | `terms/index.html` — Terms of Service + EULA (Guideline 3.1.2 + Apple LAEULA additions) |
 | `/support/` | `support/index.html` — App Store **Support URL** |
 
+Every page shares one theme: `site.css` (tokens, nav, scene header, side index + panel, footer)
+and `site.js` (smooth scroll, hide-on-scroll nav, side index, reveals). On top of that,
+`home.css` + an inline script drive the landing page, and `doc.css` styles the legal/support
+pages. Their side index is built from the page's `h2`s (or the `h3` questions on `/support/`), so
+editing legal text needs no layout changes. Moving between pages uses a View Transition (`transitions.js` + the
+"Page transitions" block in `site.css`): the pixel scene, title card and nav are shared elements
+that morph from page to page, and the body crossfades with a slight drift in nav order
+Home → Privacy → Terms → Support. Browsers without cross-document View Transitions (Firefox)
+just navigate normally. The App Store link (`id6806239306`) appears several times in
+`index.html` — search for the id to change them all. App screenshots in `assets/shots/` are
+built from the 1320×2868 App Store PNGs as AVIF + WebP at 480/720/1080px wide (`<picture>` +
+`srcset`, so each device downloads one size). Crew sprites are lossless animated WebP.
+
+Smooth scrolling uses Lenis **1.3.26**, vendored at `assets/vendor/lenis-1.3.26.min.js` (MIT,
+licence alongside) so the page never depends on a CDN. Fonts still come from Google Fonts.
+
+**Before launch:** the "From the team" quotes in `index.html` are DRAFT copy attributed to Keira,
+Joey and Naufal. Each must approve their own quote, and they stay labelled as team quotes. Don't
+convert them into customer reviews; replace them with real App Store reviews when you have some.
+
+**Pricing section** (`#pricing` in `index.html`) mirrors the in-app paywall: Free 50 credits/month,
+Pro 400 + rollover + multiple/shared fridges, US$2.99/month or US$19.99/year, 7-day free trial.
+Update it whenever App Store Connect prices or the paywall change.
+
 Folder-per-page layout so clean URLs (`/privacy/`) work on **any** static host with no redirect
-config. `style.css` is shared and served from the root.
+config. The shared CSS/JS are served from the root.
 
 ## Placeholders — filled 2026-08-28
 

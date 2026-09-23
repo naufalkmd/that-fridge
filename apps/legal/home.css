@@ -1,0 +1,410 @@
+/* ThatFridge landing page (/ only), on top of site.css.
+   The pixel scene + crew sprites carry the brand; the type stays calm around them. */
+
+.walker {
+  --fx: 1;
+  position: absolute; width: var(--walker, 96px); height: var(--walker, 96px);
+  transform: translate(-50%, -88%) scaleX(var(--fx));
+  transition-property: left, top; transition-timing-function: linear;
+}
+.walker.flip { --fx: -1; }
+.card-wrap { position: relative; width: min(600px, 100%); margin-top: 24px; }
+.peek {
+  position: absolute; z-index: 0; right: 40px; top: -100px;
+  width: 144px; height: 144px;
+  animation: peek 5s var(--ease) 1.2s infinite;
+}
+@keyframes peek {
+  0%, 60%, 100% { transform: translateY(0); }
+  70%, 88% { transform: translateY(-10px); }
+}
+.hero-card {
+  position: relative; z-index: 1;
+  display: grid; grid-template-rows: auto auto 1fr auto; gap: 18px;
+  min-height: 380px; padding: 28px 30px 24px;
+  background: rgba(244, 238, 227, 0.94);
+  color: var(--ink);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+}
+@supports ((-webkit-backdrop-filter: blur(8px)) or (backdrop-filter: blur(8px))) {
+  .hero-card { -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+}
+.hero-card h1 {
+  margin: 0;
+  font-size: clamp(30px, 4.2vw, 46px); line-height: 1.02; font-weight: 600; letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.hero-card h1 em.s { color: var(--accent); font-size: 1.08em; }
+.hero-card .crew-line {
+  margin: 0; align-self: start;
+  font-size: 18px; font-weight: 500; color: var(--ink-2); letter-spacing: -0.01em;
+}
+.crew-dots { display: inline-flex; gap: 5px; margin-right: 8px; vertical-align: 1px; }
+.crew-dots i { width: 9px; height: 9px; display: block; }
+/* Mini fridge list: shows the product inside the hero card. */
+.ticket { align-self: center; border-top: 1px solid var(--line); }
+.ticket-head {
+  display: flex; justify-content: space-between; margin: 10px 0 2px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2);
+}
+.ticket ul, .snip { list-style: none; margin: 0; padding: 0; }
+.ticket li, .snip li {
+  display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 12px;
+  padding: 6px 0; border-bottom: 1px solid var(--line); font-weight: 500;
+}
+.ticket li img, .snip li img { width: 32px; height: 32px; }
+.pill {
+  font-size: 13px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.p-red { color: var(--guardian-ink); background: color-mix(in srgb, var(--guardian) 18%, #fff); }
+.p-amber { color: var(--chef-ink); background: color-mix(in srgb, var(--chef) 22%, #fff); }
+.p-green { color: var(--shopkeeper-ink); background: color-mix(in srgb, var(--shopkeeper) 20%, #fff); }
+.card-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.stack {
+  margin: 0; text-align: right;
+  font-weight: 700; font-size: 26px; line-height: 0.95; letter-spacing: -0.04em; color: var(--accent);
+}
+.stack span { display: block; padding-left: 0.7em; }
+
+.hero-tag {
+  margin: 44px 0 0; max-width: 17em; text-align: center;
+  font-size: clamp(26px, 3.2vw, 40px); line-height: 1.08; font-weight: 600; letter-spacing: -0.035em;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
+  text-wrap: balance;
+}
+.hero-tag em.s { font-size: 1.1em; }
+
+.side-milk {
+  display: flex; align-items: center; gap: 8px; margin: 40px 0 0;
+  font-size: 13px; color: var(--ink-2);
+}
+.side-milk img { width: 16px; height: 16px; }
+.side-milk b { font-weight: 600; color: var(--ink); }
+.side-milk.urgent b { color: var(--guardian-ink); }
+
+/* Landing-only: milk countdown under the side index (shares the index's reveal). */
+.js .side-milk { opacity: 0; transform: translateX(-14px); transition: opacity 500ms var(--ease), transform 500ms var(--ease); }
+.js .side.on .side-milk { opacity: 1; transform: none; transition-delay: 420ms; }
+
+
+/* ---------- Sections ---------- */
+section { position: relative; }
+.sec { padding: clamp(80px, 11vw, 150px) 0; }
+h2 {
+  margin: 0 0 20px;
+  font-size: clamp(34px, 5.4vw, 68px); line-height: 1; font-weight: 600; letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+h2 em.s { color: var(--accent); font-size: 1.06em; }
+.lede { margin: 0; max-width: 34em; font-size: clamp(18px, 1.6vw, 21px); color: var(--ink-2); }
+
+/* Why it matters */
+.why .wrap { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(32px, 6vw, 96px); align-items: end; }
+.why-copy p {
+  margin: 0 0 14px;
+  font-size: clamp(22px, 2.4vw, 30px); line-height: 1.25; letter-spacing: -0.02em; font-weight: 500;
+}
+.why-copy p + p { color: var(--ink-2); }
+.inline-food { display: inline-block; width: 32px; height: 32px; vertical-align: -0.2em; margin: 0 0.08em; }
+.why-copy .source {
+  font-size: 15px; line-height: 1.5; font-weight: 400; letter-spacing: 0;
+  margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--line);
+  font-size: 14px; color: var(--ink-2);
+}
+.source strong { color: var(--ink); font-size: 18px; letter-spacing: -0.02em; }
+.source a { text-underline-offset: 3px; }
+
+/* How it works */
+.how { background: var(--paper-2); }
+.how-head { display: flex; justify-content: space-between; align-items: end; gap: 32px; margin-bottom: 56px; flex-wrap: wrap; }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); list-style: none; margin: 0; padding: 0; }
+.step { background: var(--paper); padding: 28px 28px 32px; display: flex; flex-direction: column; min-height: 360px; }
+.step-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.step-num { font-size: 14px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.sprite-tile { width: 112px; height: 112px; display: grid; place-items: center; }
+.sprite-tile img { width: 96px; height: 96px; }
+/* Small real-UI snippets so every step shows the product. */
+.snip { margin-top: 16px; background: var(--nav); border: 1px solid var(--line); padding: 4px 12px; }
+.snip li:last-child { border-bottom: 0; }
+.snip-card {
+  margin-top: 16px; padding: 14px 14px 12px; background: var(--nav); border: 1px solid var(--line);
+  display: grid; gap: 2px;
+}
+.snip-card b { font-weight: 600; letter-spacing: -0.01em; }
+.snip-card > span { font-size: 14px; color: var(--ink-2); }
+.snip-icons { display: flex; gap: 6px; margin-top: 8px; }
+.snip-icons img { width: 32px; height: 32px; }
+.step h3 { margin: 36px 0 6px; font-size: 40px; line-height: 1; font-weight: 600; letter-spacing: -0.04em; }
+.who { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+.step p:last-child { margin: 0; color: var(--ink-2); }
+.ways { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; }
+.ways li { font-size: 13px; font-weight: 500; padding: 5px 9px; border: 1px solid var(--line); background: var(--nav); }
+
+/* Real app preview (dark band so the dark screenshots sit in their own world) */
+.preview { background: var(--night-2); color: var(--nav); overflow: hidden; }
+/* Pixel "staircase" edges instead of a straight cut between cream and dark. */
+.preview::before, .preview::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 16px; background-repeat: repeat-x; background-size: 64px 16px;
+}
+.preview::before {
+  top: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='16' shape-rendering='crispEdges'%3E%3Cpath fill='%23ebe3d3' d='M0 0h64v4h-8v4h-8v4H32v4H24v-4h-8V8H8V4H0z'/%3E%3C/svg%3E");
+}
+.preview::after {
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='16' shape-rendering='crispEdges'%3E%3Cpath fill='%23f4eee3' d='M0 16h64v-4h-8V8h-8V4H32V0H24v4h-8v4H8v4H0z'/%3E%3C/svg%3E");
+}
+.preview .eyebrow { color: rgba(255, 253, 248, 0.7); }
+.preview .eyebrow::before { background: #26c6da; }
+.preview h2 em.s { color: #7fdce8; }
+.preview .lede { color: rgba(255, 253, 248, 0.72); }
+.shots {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(16px, 2.4vw, 32px);
+  margin: 104px 0 0; padding: 0; list-style: none;
+}
+.shots figure { margin: 0; }
+/* Own compositor layer: the big soft shadows are painted once, then just moved by the parallax. */
+@media (min-width: 861px) { .shots figure { will-change: transform; } }
+.shots img {
+  width: 100%; height: auto; aspect-ratio: 1320 / 2868; object-fit: cover;
+  border-radius: 18px; border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+}
+.shots li:nth-child(2) { transform: translateY(40px); }
+.shots figcaption { margin-top: 16px; font-size: 15px; color: rgba(255, 253, 248, 0.72); }
+.shots figcaption b { display: block; color: var(--nav); font-weight: 600; font-size: 17px; }
+
+/* Meet the crew */
+.crew-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 56px 0 0; padding: 0; list-style: none; }
+.mate {
+  background: var(--nav); border: 1px solid var(--line); padding: 20px 20px 24px; display: flex; flex-direction: column;
+  transition: border-color 250ms var(--ease), transform 250ms var(--ease), box-shadow 250ms var(--ease);
+}
+.mate:hover { border-color: var(--c); transform: translateY(-4px); box-shadow: 0 4px 0 0 var(--c); }
+.mate .sprite-tile { width: 100%; height: 176px; margin-bottom: 20px; transition: background-color 250ms var(--ease); }
+.mate .sprite-tile img { width: 144px; height: 144px; }
+.mate h3 { margin: 0; font-size: 26px; letter-spacing: -0.035em; font-weight: 600; }
+.mate .role { margin: 2px 0 14px; font-size: 14px; font-weight: 600; }
+/* Pixel speech bubble: square "cut" corners from stacked box-shadows, stepped tail. */
+.bubble {
+  position: relative; margin: auto 4px 4px; padding: 12px 14px;
+  font-size: 16px; line-height: 1.4; color: var(--ink); background: var(--paper);
+  box-shadow: 0 -4px 0 0 var(--ink), 0 4px 0 0 var(--ink), -4px 0 0 0 var(--ink), 4px 0 0 0 var(--ink);
+  transition: transform 250ms var(--ease);
+}
+.bubble::before {
+  content: ""; position: absolute; left: 20px; top: -12px; width: 8px; height: 8px;
+  background: var(--ink); box-shadow: 4px 4px 0 0 var(--paper), 4px 0 0 0 var(--ink);
+}
+.mate:hover .bubble { transform: translateY(-3px) rotate(-1deg); }
+.mate p.does { margin: 0 0 16px; font-size: 15px; color: var(--ink-2); }
+
+.t-guardian { background: color-mix(in srgb, var(--guardian) 16%, var(--paper)); }
+.t-organizer { background: color-mix(in srgb, var(--organizer) 14%, var(--paper)); }
+.t-chef { background: color-mix(in srgb, var(--chef) 18%, var(--paper)); }
+.t-shopkeeper { background: color-mix(in srgb, var(--shopkeeper) 16%, var(--paper)); }
+.c-guardian { color: var(--guardian-ink); }
+.c-organizer { color: var(--organizer-ink); }
+.c-chef { color: var(--chef-ink); }
+.c-shopkeeper { color: var(--shopkeeper-ink); }
+.d-guardian { background: var(--guardian); }
+.d-organizer { background: var(--organizer); }
+.d-chef { background: var(--chef); }
+.d-shopkeeper { background: var(--shopkeeper); }
+
+/* Benefits */
+.benefits { background: var(--paper-2); }
+.groups { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(24px, 4vw, 56px); margin: 56px 0 0; }
+.group { border-top: 2px solid var(--ink); padding-top: 20px; }
+.group h3 { margin: 0 0 18px; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.group ul { list-style: none; margin: 0; padding: 0; }
+.group li { padding: 14px 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 32px 1fr; gap: 14px; }
+.group li img { width: 32px; height: 32px; margin-top: -2px; }
+.group li b { display: block; font-weight: 600; letter-spacing: -0.01em; }
+.group li span { color: var(--ink-2); font-size: 15px; }
+.group a { text-underline-offset: 3px; }
+
+/* Final CTA */
+.cta { padding-bottom: clamp(80px, 10vw, 140px); }
+.cta-card {
+  display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: clamp(32px, 5vw, 80px);
+  background: var(--nav); border: 1px solid var(--line); padding: clamp(28px, 5vw, 64px);
+}
+.cta-card h2 { font-size: clamp(34px, 4.6vw, 60px); }
+.cta-card .fine { margin: 18px 0 0; font-size: 14px; color: var(--ink-2); }
+.fridge-stage { position: relative; aspect-ratio: 1 / 1.05; }
+.fridge-stage .fridge {
+  position: absolute; left: 50%; top: 50%; width: 64%; transform: translate(-50%, -50%);
+  box-shadow: 0 24px 50px rgba(27, 25, 22, 0.25);
+}
+/* "Open the fridge": the light comes on and the crew walk up when the card scrolls in. */
+.fridge-stage .fridge { transition: filter 1200ms var(--ease) 300ms, box-shadow 1200ms var(--ease) 300ms; }
+.js .cta-card:not(.in) .fridge { filter: brightness(0.35) saturate(0.4); }
+.js .cta-card.in .fridge { box-shadow: 0 24px 50px rgba(27, 25, 22, 0.25), 0 0 90px rgba(120, 205, 255, 0.55); }
+.fridge-stage .mate-sprite {
+  position: absolute; width: 96px; height: 96px;
+  transition: transform 900ms var(--ease), opacity 600ms var(--ease);
+}
+.js .cta-card:not(.in) .ms-guardian, .js .cta-card:not(.in) .ms-organizer { transform: translateX(-80px); opacity: 0; }
+.js .cta-card:not(.in) .ms-chef, .js .cta-card:not(.in) .ms-shopkeeper { transform: translateX(80px); opacity: 0; }
+.cta-card.in .ms-guardian { transition-delay: 700ms; }
+.cta-card.in .ms-chef { transition-delay: 850ms; }
+.cta-card.in .ms-organizer { transition-delay: 1000ms; }
+.cta-card.in .ms-shopkeeper { transition-delay: 1150ms; }
+.fridge-stage .ms-guardian { left: 2%; top: 6%; }
+.fridge-stage .ms-chef { right: 0; top: 18%; }
+.fridge-stage .ms-organizer { left: 0; bottom: 10%; }
+.fridge-stage .ms-shopkeeper { right: 4%; bottom: 2%; }
+
+/* Official App Store badge (Apple artwork, unmodified). Apple: >= 40px tall, clear space ~1/4 height. */
+.store-badge { display: inline-block; border-radius: 10px; line-height: 0; transition: transform 200ms var(--ease); }
+.store-badge:hover { transform: translateY(-1px); }
+.store-badge img { height: 50px; width: auto; }
+.cta-card .store-badge { margin-top: 4px; }
+
+.pro-tag {
+  display: inline-block; margin-left: 6px; padding: 1px 7px; vertical-align: 2px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--nav); background: var(--accent); border-radius: 999px;
+}
+
+/* Pricing */
+.pricing-head { display: flex; justify-content: space-between; align-items: end; gap: 32px; flex-wrap: wrap; }
+.billing {
+  display: inline-flex; gap: 4px; margin: 0; padding: 4px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--nav);
+}
+.billing input { position: absolute; opacity: 0; pointer-events: none; }
+.billing label {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px;
+  font-size: 15px; font-weight: 600; border-radius: 999px; cursor: pointer; color: var(--ink-2);
+  transition: background-color 250ms var(--ease), color 250ms var(--ease);
+}
+.billing input:checked + label { background: var(--ink); color: var(--nav); }
+.billing input:focus-visible + label { outline: 2px solid var(--ink); outline-offset: 3px; }
+.save { font-size: 12px; padding: 2px 7px; border-radius: 999px; background: var(--p-save, #d7f9e5); color: var(--shopkeeper-ink); }
+.plans { display: grid; grid-template-columns: 1fr 1.15fr; gap: 20px; margin-top: 48px; align-items: stretch; }
+.plan {
+  position: relative; display: flex; flex-direction: column;
+  padding: 32px; background: var(--nav); border: 1px solid var(--line); border-radius: 20px;
+}
+.plan h3 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+.plan-price { margin: 14px 0 4px; display: flex; align-items: baseline; gap: 8px; }
+.plan-price b { font-size: 52px; line-height: 1; font-weight: 700; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+.plan-price span span, .plan-price > span:not(.yearly):not(.monthly) { font-size: 15px; color: var(--ink-2); }
+.plan-price .yearly, .plan-price .monthly { display: inline-flex; align-items: baseline; gap: 8px; }
+.plan-for { margin: 0 0 22px; color: var(--ink-2); min-height: 1.55em; }
+.plan-list { list-style: none; margin: 0 0 28px; padding: 22px 0 0; border-top: 1px solid var(--line); display: grid; gap: 12px; }
+.plan-list li { display: grid; grid-template-columns: 16px 1fr; gap: 12px; align-items: start; font-size: 16px; }
+.plan-list img { width: 16px; height: 16px; margin-top: 4px; }
+.plan-list b { font-weight: 600; }
+.plan .btn { margin-top: auto; justify-content: center; }
+.btn-ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.btn-ghost:hover { background: var(--ink); color: var(--nav); }
+.plan-pro { background: var(--night-2); color: var(--nav); border-color: transparent; box-shadow: 0 30px 60px rgba(13, 17, 22, 0.25); }
+.plan-pro .plan-price span span, .plan-pro .plan-for, .plan-pro .plan-note { color: rgba(255, 253, 248, 0.72); }
+.plan-pro .plan-list { border-color: rgba(255, 253, 248, 0.14); }
+.plan-pro .btn { background: #26c6da; color: var(--night-2); }
+.plan-pro .btn:hover { background: #7fdce8; }
+.plan-pro :focus-visible { outline-color: var(--nav); box-shadow: none; }
+.plan-flag {
+  position: absolute; top: -13px; left: 32px; margin: 0; padding: 4px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  background: #26c6da; color: var(--night-2); border-radius: 999px;
+}
+.plan-sprite { position: absolute; top: -52px; right: 24px; width: 96px; height: 96px; }
+.plan-note { margin: 12px 0 0; font-size: 13px; line-height: 1.5; }
+.pricing-fine { margin: 24px 0 0; font-size: 14px; color: var(--ink-2); max-width: 60em; }
+.pricing-fine a { text-underline-offset: 3px; }
+/* Billing switch (CSS only): yearly is the default. */
+.pricing .monthly { display: none !important; }
+.pricing:has(#bill-monthly:checked) .monthly { display: inline-flex !important; }
+.pricing:has(#bill-monthly:checked) .yearly { display: none !important; }
+.plan-for .monthly, .plan-for .yearly, .plan-note .monthly, .plan-note .yearly { display: inline; }
+
+/* From the team: auto-scrolling quotes with faded edges; pauses on hover/focus. */
+.team { overflow: hidden; }
+.marquee {
+  margin-top: 56px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+.marquee-track { display: flex; gap: 20px; width: max-content; list-style: none; margin: 0; padding: 8px 0 12px; }
+.marquee-track.run { animation: marquee 48s linear infinite; }
+.marquee:hover .marquee-track, .marquee:focus-within .marquee-track, .marquee-track.paused { animation-play-state: paused; }
+.marquee-toggle {
+  margin-top: 20px; min-height: 40px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--nav); color: var(--ink); font: 600 14px/1 var(--sans); cursor: pointer;
+}
+.marquee-toggle:hover { border-color: var(--ink); }
+@keyframes marquee { to { transform: translateX(calc(-50% - 10px)); } }
+.quote {
+  width: min(460px, 80vw); padding: 28px 28px 22px;
+  background: var(--nav); border: 1px solid var(--line); border-radius: 16px;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 22px;
+}
+.quote p { margin: 0; }
+.quote > p:first-child { font-size: 18px; line-height: 1.5; letter-spacing: -0.01em; }
+.who-q { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink-2); }
+.who-q img { width: 48px; height: 48px; background: var(--paper-2); }
+.who-q b { color: var(--ink); font-weight: 600; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1000px) {
+  .crew-grid { grid-template-columns: repeat(2, 1fr); }
+  .steps { grid-template-columns: 1fr; }
+  .step { min-height: 0; }
+  .step h3 { margin-top: 28px; }
+}
+@media (max-width: 860px) {
+  .why .wrap, .cta-card, .groups, .plans { grid-template-columns: 1fr; }
+  .plans { gap: 40px; }
+  .plan-pro { order: -1; }  /* single column: lead with the plan we want seen */
+  .fridge-stage { max-width: 440px; width: 100%; margin: 0 auto; }
+  /* Screenshots become a swipeable strip inside the section (the page itself never scrolls sideways). */
+  .shots {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 16px;
+    margin-left: calc(-1 * var(--gutter)); margin-right: calc(-1 * var(--gutter));
+    padding: 0 var(--gutter) 12px; scrollbar-width: none;
+  }
+  .shots::-webkit-scrollbar { display: none; }
+  .shots li { flex: 0 0 min(72vw, 300px); scroll-snap-align: center; }
+  .shots li:nth-child(2) { transform: none; }
+}
+
+/* Phone: the hero becomes a composed poster, not a squeezed desktop card. */
+@media (max-width: 640px) {
+
+  .hero { justify-content: flex-end; padding: 120px 16px 40px; }
+  .card-wrap { margin-top: 0; }
+  .peek { display: none; }
+  .hero-card {
+    min-height: 0; padding: 22px 20px 20px; gap: 14px;
+    background: rgba(244, 238, 227, 0.95);
+  }
+  .hero-card h1 { font-size: clamp(32px, 9.4vw, 40px); line-height: 1.04; }
+  .poster-sprite { display: flex !important; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; color: var(--ink-2); }
+  .poster-sprite img { width: 48px; height: 48px; }
+  .ticket { display: none; }
+  .hero-card .crew-line { display: none; }
+  .stack { display: none; }
+  .card-foot { justify-content: center; }
+  .card-foot .store-badge img { height: 56px; }
+  .plans { grid-template-columns: 1fr; gap: 40px; }
+  .plan { padding: 26px 22px; }
+  .plan-price b { font-size: 44px; }
+  .hero-tag { display: none; }
+
+
+  .mate .sprite-tile { height: 128px; }
+  .mate .sprite-tile img { width: 96px; height: 96px; }
+  .crew-grid { grid-template-columns: 1fr; }
+}
+.poster-sprite { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .peek { animation: none; }
+  .walker, .mate, .bubble, .fridge-stage .fridge, .fridge-stage .mate-sprite { transition: none; }
+  .js .side-milk { transition: none; }
+}
