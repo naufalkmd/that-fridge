@@ -8,6 +8,7 @@ use App\Models\Item;
 use App\Models\Recipe;
 use App\Models\Section;
 use App\Models\User;
+use App\Models\UserBadge;
 use App\Services\AgentToolbox;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -87,18 +88,27 @@ class AgentToolboxTest extends TestCase
         $this->assertDatabaseHas('fridge_notes', ['fridge_id' => $this->fridge->id, 'text' => 'leftovers are Toms', 'user_id' => $this->user->id]);
     }
 
-    public function test_remove_note_deletes_by_id_and_by_unique_text_match(): void
+    public function test_remove_note_previews_without_confirm_then_deletes_with_confirm(): void
     {
-        $a = FridgeNote::create(['fridge_id' => $this->fridge->id, 'user_id' => $this->user->id, 'text' => 'buy milk', 'color' => 'amber']);
-        $b = FridgeNote::create(['fridge_id' => $this->fridge->id, 'user_id' => $this->user->id, 'text' => 'pizza friday', 'color' => 'amber']);
+        $note = FridgeNote::create(['fridge_id' => $this->fridge->id, 'user_id' => $this->user->id, 'text' => 'buy milk', 'color' => 'amber']);
 
-        $byId = $this->toolbox->run('remove_note', ['note_id' => $a->id], $this->user, $this->fridge->id);
-        $this->assertTrue($byId['mutated']);
-        $this->assertDatabaseMissing('fridge_notes', ['id' => $a->id]);
+        $preview = $this->toolbox->run('remove_note', ['note_id' => $note->id], $this->user, $this->fridge->id);
+        $this->assertFalse($preview['mutated']);
+        $this->assertStringContainsString('buy milk', $preview['content']);
+        $this->assertDatabaseHas('fridge_notes', ['id' => $note->id]);
 
-        $byText = $this->toolbox->run('remove_note', ['text' => 'pizza'], $this->user, $this->fridge->id);
+        $done = $this->toolbox->run('remove_note', ['note_id' => $note->id, 'confirm' => true], $this->user, $this->fridge->id);
+        $this->assertTrue($done['mutated']);
+        $this->assertDatabaseMissing('fridge_notes', ['id' => $note->id]);
+    }
+
+    public function test_remove_note_deletes_by_unique_text_match(): void
+    {
+        $note = FridgeNote::create(['fridge_id' => $this->fridge->id, 'user_id' => $this->user->id, 'text' => 'pizza friday', 'color' => 'amber']);
+
+        $byText = $this->toolbox->run('remove_note', ['text' => 'pizza', 'confirm' => true], $this->user, $this->fridge->id);
         $this->assertTrue($byText['mutated']);
-        $this->assertDatabaseMissing('fridge_notes', ['id' => $b->id]);
+        $this->assertDatabaseMissing('fridge_notes', ['id' => $note->id]);
     }
 
     public function test_remove_note_refuses_to_guess_when_the_text_matches_several(): void
@@ -225,7 +235,36 @@ class AgentToolboxTest extends TestCase
         $out = $this->toolbox->run('get_kitchen_score', [], $this->user, $this->fridge->id);
 
         $this->assertStringContainsString('Waste Saver:', $out['content']);
+        $this->assertStringContainsString('Tidiness (Organizer):', $out['content']);
+        $this->assertStringContainsString('Shopping List (Shopkeeper):', $out['content']);
         $this->assertStringContainsString('Overdue items right now: 1', $out['content']);
+        $this->assertFalse($out['mutated']);
+    }
+
+    public function test_list_badges_shows_earned_and_in_progress_badges(): void
+    {
+        UserBadge::create([
+            'user_id' => $this->user->id,
+            'badge_key' => 'first_link_recipe',
+            'progress' => 1,
+            'earned_at' => now(),
+        ]);
+
+        $out = $this->toolbox->run('list_badges', [], $this->user, $this->fridge->id);
+
+        $this->assertStringContainsString('✓ Link Master', $out['content']);
+        $this->assertStringContainsString('☐ Item Rescuer — 0/10', $out['content']);
+        $this->assertFalse($out['mutated']);
+    }
+
+    public function test_get_credits_balance_reports_the_users_balance(): void
+    {
+        // ai_credits isn't mass-assignable (see User::$fillable) - forceFill bypasses that.
+        $this->user->forceFill(['ai_credits' => 7])->save();
+
+        $out = $this->toolbox->run('get_credits_balance', [], $this->user, $this->fridge->id);
+
+        $this->assertSame('7 AI credits remaining.', $out['content']);
         $this->assertFalse($out['mutated']);
     }
 
@@ -284,6 +323,19 @@ class AgentToolboxTest extends TestCase
         $fresh = $item->fresh();
         $this->assertSame('Chicken curry', $fresh->name);
         $this->assertSame('protein', $fresh->nutrition_category);
+    }
+
+    public function test_update_item_sets_and_clears_the_note(): void
+    {
+        $item = $this->item();
+
+        $set = $this->toolbox->run('update_item', ['item_id' => $item->id, 'note' => 'for Sunday'], $this->user, $this->fridge->id);
+        $this->assertTrue($set['mutated']);
+        $this->assertSame('for Sunday', $item->fresh()->note);
+
+        $cleared = $this->toolbox->run('update_item', ['item_id' => $item->id, 'note' => ''], $this->user, $this->fridge->id);
+        $this->assertTrue($cleared['mutated']);
+        $this->assertSame('', $item->fresh()->note);
     }
 
     public function test_update_item_rejects_an_unknown_category(): void

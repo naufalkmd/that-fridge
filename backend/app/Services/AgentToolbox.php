@@ -9,6 +9,7 @@ use App\Models\Recipe;
 use App\Models\Section;
 use App\Models\ShoppingItem;
 use App\Models\User;
+use App\Models\UserBadge;
 use App\Support\ItemFreshness;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -18,10 +19,10 @@ use Illuminate\Support\Str;
  * The tools Quick Chat's agents can call to read and act on the user's kitchen. Everything
  * runs server-side AS the authenticated user and is scoped to fridges they're a member of -
  * same authorisation as the REST endpoints. Read tools execute freely; low-stakes writes
- * (add/move an item, adjust one, mark it used, shopping-list edits, notes, remembered facts,
- * saving a recipe) execute directly since they're all easily reversible; the destructive ones
- * (remove_item, clear_expired_items, delete_recipe) take a `confirm` flag and return a preview
- * first, so the agent has to check with the user before anything is deleted.
+ * (add/move an item, adjust one, mark it used, shopping-list edits, remembered facts,
+ * saving a recipe) execute directly since they're all easily reversible; every delete
+ * (remove_item, clear_expired_items, delete_recipe, remove_note) takes a `confirm` flag and
+ * returns a preview first, so the agent has to check with the user before anything is deleted.
  *
  * See AgentService::runWithTools for the loop that drives these.
  */
@@ -59,9 +60,23 @@ class AgentToolbox
 
     private const RECIPE_CATEGORIES = ['breakfast', 'lunch', 'dinner', 'dessert', 'snack', 'quick'];
 
+    /**
+     * Display metadata for list_badges - keys/thresholds are BadgeService::BADGES; label/
+     * description mirror apps/web/lib/thatfridge/badges.ts's BADGE_CATALOG (a third copy of the
+     * same catalog, following that file's own precedent of duplicating BadgeService's keys
+     * rather than this toolbox depending on frontend copy). Keep all three in sync.
+     */
+    private const BADGE_CATALOG = [
+        'rescued_10' => ['label' => 'Item Rescuer', 'description' => 'Marked 10 items used via a recipe while they still had 3 days or less left.'],
+        'first_link_recipe' => ['label' => 'Link Master', 'description' => 'Imported your first recipe straight from a link.'],
+        'full_week_variety' => ['label' => 'Balanced Plate', 'description' => 'Hit all 5 food groups in your Food Balance score.'],
+        'zero_waste_week' => ['label' => 'Zero Waste Week', 'description' => 'Had nothing overdue at a weekly check-in.'],
+    ];
+
     public function __construct(
         protected KitchenScoreService $kitchenScore,
         protected RecipeLinkImportService $recipeImport,
+        protected CreditService $credits,
     ) {}
 
     /**
@@ -100,11 +115,12 @@ class AgentToolbox
                 'text' => ['type' => 'string'],
                 'color' => ['type' => 'string', 'enum' => FridgeNote::COLORS, 'description' => 'Optional accent colour; defaults to amber.'],
             ], ['text']),
-            $fn('remove_note', 'Delete a sticky note. Pass note_id from list_notes, or a text fragment to match - if the fragment matches more than one note it will not guess, so read them back and ask which.', [
+            $fn('remove_note', 'Delete a sticky note. Pass note_id from list_notes, or a text fragment to match - if the fragment matches more than one note it will not guess, so read them back and ask which. Call once with confirm:false to preview, then again with confirm:true only after the user agrees.', [
                 'note_id' => ['type' => 'integer'],
                 'text' => ['type' => 'string', 'description' => 'Case-insensitive fragment of the note text. Only used when note_id is omitted.'],
+                'confirm' => ['type' => 'boolean', 'description' => 'Must be true to actually delete. Never set true without explicit user agreement in the conversation.'],
             ]),
-            $fn('update_item', 'Change one or more fields on an item: name, quantity, whether it is opened, its expiry date, its storage location, its food group, or a buy-again link. Get the item_id from list_items first.', [
+            $fn('update_item', 'Change one or more fields on an item: name, quantity, whether it is opened, its expiry date, its storage location, its food group, a personal note, or a buy-again link. Get the item_id from list_items first. NOTE here means a short text field on the item itself (e.g. "2 loaves", "for Sunday") - it is NOT the same thing as add_note/list_notes/update_note/remove_note, which are separate sticky notes shared on the whole fridge for the household to see. If the user says "leave a note on this item" or similar, they mean THIS note field via update_item, not a fridge-wide sticky note.', [
                 'item_id' => ['type' => 'integer'],
                 'name' => ['type' => 'string', 'description' => 'Rename the item.'],
                 'quantity' => ['type' => 'integer', 'description' => 'New quantity (>= 1). To use an item up entirely, call mark_item_used instead.'],
@@ -112,6 +128,7 @@ class AgentToolbox
                 'expiry_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD.'],
                 'location' => ['type' => 'string', 'enum' => ['fridge', 'freezer', 'pantry']],
                 'category' => ['type' => 'string', 'enum' => ['protein', 'vegetables', 'fruit', 'grains', 'dairy', 'other_extras'], 'description' => 'Food group (feeds the Food Balance score).'],
+                'note' => ['type' => 'string', 'description' => 'A short personal note on this specific item, e.g. "2 loaves" or "for Sunday\'s dinner". Empty string clears it. Not a fridge-wide sticky note.'],
                 'shop_url' => ['type' => 'string', 'description' => 'An http(s) link to buy this item again. Empty string clears it.'],
             ], ['item_id']),
             $fn('bulk_add_items', 'Add several food items to the fridge in one call - use this for a grocery haul instead of calling add_item many times.', [
@@ -150,7 +167,9 @@ class AgentToolbox
                 'confirm' => ['type' => 'boolean', 'description' => 'Must be true to actually delete. Never set true without explicit user agreement in the conversation.'],
             ]),
             $fn('list_fridges', 'List the fridges the user belongs to (id, name, whether they own it, item and member counts). Use it before add_item / move_item when the user names a specific fridge.', []),
-            $fn('get_kitchen_score', "The user's current Kitchen Score - Waste Saver (0-100), Food Balance (0-100), and how many items are overdue right now. Use it when they ask how they're doing.", []),
+            $fn('list_badges', "List every badge - which ones the user has earned (and when), and progress toward the ones they haven't. Use it when they ask what badges they have, or how close they are to one.", []),
+            $fn('get_credits_balance', 'The user\'s current AI-credit balance - how many actions they have left before Pro/top-up is needed. Use it when they ask how many credits they have.', []),
+            $fn('get_kitchen_score', "The user's current Kitchen Score - all four sub-scores (Waste Saver, Food Balance, Tidiness, Shopping List, each 0-100 or \"not enough data yet\") and how many items are overdue right now. Use it when they ask how they're doing.", []),
             $fn('get_recipe', 'The full detail of one saved recipe - every ingredient and every step. list_recipes only gives names, so call this when the user actually wants to cook one.', [
                 'recipe_id' => ['type' => 'integer'],
             ], ['recipe_id']),
@@ -227,6 +246,8 @@ class AgentToolbox
                 'remove_item' => $this->removeItem($user, $args),
                 'clear_expired_items' => $this->clearExpired($user, $fridgeId, $args),
                 'list_fridges' => $this->listFridges($user),
+                'list_badges' => $this->listBadges($user),
+                'get_credits_balance' => $this->getCreditsBalance($user),
                 'get_kitchen_score' => $this->getKitchenScore($user),
                 'get_recipe' => $this->getRecipe($user, $args),
                 'add_item' => $this->addItem($user, $fridgeId, $args),
@@ -440,6 +461,11 @@ class AgentToolbox
             $note = $matches->first();
         }
 
+        if (empty($args['confirm'])) {
+            return "Not removed yet. This will permanently delete the note \"{$note->text}\". ".
+                'Tell the user exactly what will be removed and ask them to confirm, then call remove_note again with confirm:true (and note_id set to this note\'s id, so it deletes the same one).';
+        }
+
         $text = $note->text;
         $note->delete();
         $this->mutated = true;
@@ -480,6 +506,9 @@ class AgentToolbox
                 return 'Error: shop_url must be a plain http(s) link.';
             }
         }
+        if (array_key_exists('note', $args)) {
+            $data['note'] = Str::limit(trim((string) $args['note']), 255, '');
+        }
         if (isset($args['expiry_date'])) {
             try {
                 $data['expiry_date'] = Carbon::parse($args['expiry_date'])->toDateString();
@@ -489,7 +518,7 @@ class AgentToolbox
         }
 
         if (! $data) {
-            return 'Error: nothing to change - pass at least one of name, quantity, opened, location, category, expiry_date, shop_url.';
+            return 'Error: nothing to change - pass at least one of name, quantity, opened, location, category, expiry_date, note, shop_url.';
         }
 
         $item->update($data);
@@ -610,14 +639,40 @@ class AgentToolbox
         })->implode("\n");
     }
 
+    private function listBadges(User $user): string
+    {
+        $earned = UserBadge::where('user_id', $user->id)->get()->keyBy('badge_key');
+
+        return collect(BadgeService::BADGES)->map(function (int $threshold, string $key) use ($earned) {
+            $meta = self::BADGE_CATALOG[$key];
+            $row = $earned->get($key);
+
+            if ($row && $row->earned_at) {
+                return "✓ {$meta['label']} — earned {$row->earned_at->toDateString()}. {$meta['description']}";
+            }
+
+            $progress = $row->progress ?? 0;
+
+            return "☐ {$meta['label']} — {$progress}/{$threshold}. {$meta['description']}";
+        })->implode("\n");
+    }
+
+    private function getCreditsBalance(User $user): string
+    {
+        return "{$this->credits->balance($user)} AI credits remaining.";
+    }
+
     private function getKitchenScore(User $user): string
     {
         $s = $this->kitchenScore->scoreFor($user);
 
-        $waste = $s['wasteScore'] === null ? 'not enough data yet' : "{$s['wasteScore']}/100";
-        $balance = $s['balanceScore'] === null ? 'not enough data yet' : "{$s['balanceScore']}/100";
+        $fmt = fn (?int $v) => $v === null ? 'not enough data yet' : "{$v}/100";
 
-        return "Waste Saver: {$waste}\nFood Balance: {$balance}\nOverdue items right now: {$s['overdueCount']}";
+        return "Waste Saver: {$fmt($s['wasteScore'])}\n".
+            "Food Balance: {$fmt($s['balanceScore'])}\n".
+            "Tidiness (Organizer): {$fmt($s['organizerScore'])}\n".
+            "Shopping List (Shopkeeper): {$fmt($s['shopkeeperScore'])}\n".
+            "Overdue items right now: {$s['overdueCount']}";
     }
 
     /** @return Builder<Recipe> */

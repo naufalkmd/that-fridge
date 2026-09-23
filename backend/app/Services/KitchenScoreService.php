@@ -4,18 +4,21 @@ namespace App\Services;
 
 use App\Models\Item;
 use App\Models\NotificationEvent;
+use App\Models\OrganizerTally;
+use App\Models\ShoppingItem;
 use App\Models\User;
 use App\Support\ItemFreshness;
 use Carbon\Carbon;
 
 /**
- * Server-side port of the "Your Kitchen This Week" scores
- * (frontend/lib/thatfridge/scoring.ts's computeWasteSaverScore/computeFoodBalanceScore), used
- * only by the weekly app:snapshot-kitchen-scores cron so streaks are computed independent of
- * whether the user actually opened the app that week. The frontend keeps computing the same
- * scores live/instantly for the Home screen - this is a second, deliberately kept-in-sync
- * implementation, not a replacement. If you tune a constant or the formula on one side, mirror
- * it on the other.
+ * Server-side port of all four "Your Kitchen This Week" sub-scores
+ * (frontend/lib/thatfridge/scoring.ts's computeWasteSaverScore/computeFoodBalanceScore/
+ * computeOrganizerScore/computeShopkeeperScore) - used by the weekly app:snapshot-kitchen-scores
+ * cron (Waste Saver / Food Balance only, for the streak) and by AgentToolbox::getKitchenScore
+ * (all four, so Quick Chat can answer honestly instead of only ever knowing half the picture).
+ * The frontend keeps computing the same scores live/instantly for the Home screen - this is a
+ * second, deliberately kept-in-sync implementation, not a replacement. If you tune a constant or
+ * the formula on one side, mirror it on the other.
  *
  * One documented divergence from the frontend: usage_history rows recorded before the
  * nutrition-category taxonomy existed have category = null. The frontend's live view falls back
@@ -53,8 +56,20 @@ class KitchenScoreService
 
     private const BALANCE_SCORE_CEILING = 98;
 
+    private const ORGANIZER_MIN_CHECKED = 5;
+
+    private const ORGANIZER_SCORE_FLOOR = 20;
+
+    private const ORGANIZER_SCORE_CEILING = 98;
+
+    private const SHOPKEEPER_MIN_ITEMS = 3;
+
+    private const SHOPKEEPER_SCORE_FLOOR = 20;
+
+    private const SHOPKEEPER_SCORE_CEILING = 98;
+
     /**
-     * @return array{wasteScore: ?int, balanceScore: ?int, overdueCount: int}
+     * @return array{wasteScore: ?int, balanceScore: ?int, organizerScore: ?int, shopkeeperScore: ?int, overdueCount: int}
      */
     public function scoreFor(User $user): array
     {
@@ -69,6 +84,8 @@ class KitchenScoreService
         return [
             'wasteScore' => $this->wasteSaverScore($user, $items->count(), $usageHistory, $overdueRatio),
             'balanceScore' => $this->foodBalanceScore($usageHistory),
+            'organizerScore' => $this->organizerScore($user),
+            'shopkeeperScore' => $this->shopkeeperScore($user),
             'overdueCount' => $overdueCount,
         ];
     }
@@ -152,5 +169,41 @@ class KitchenScoreService
         $raw = self::VARIETY_WEIGHT * $varietyRatio + self::EVENNESS_WEIGHT * (1 - $maxShare);
 
         return max(self::BALANCE_SCORE_FLOOR, min(self::BALANCE_SCORE_CEILING, (int) round($raw)));
+    }
+
+    /**
+     * Mirrors computeOrganizerScore: a cumulative, all-time tally (one row per user, written by
+     * OrganizerTallyController::increment after every sweep) rather than a point-in-time check -
+     * there's no synchronous "is this item in the right spot" signal to score on every call, so
+     * a single messy week doesn't erase a long track record the way a live check would.
+     */
+    private function organizerScore(User $user): ?int
+    {
+        $tally = OrganizerTally::where('user_id', $user->id)->first();
+        if (! $tally || $tally->items_checked_total < self::ORGANIZER_MIN_CHECKED) {
+            return null;
+        }
+
+        $correctRatio = $tally->items_correct_total / $tally->items_checked_total;
+
+        return max(self::ORGANIZER_SCORE_FLOOR, min(self::ORGANIZER_SCORE_CEILING, (int) round($correctRatio * 100)));
+    }
+
+    /**
+     * Mirrors computeShopkeeperScore: the shopping list's own checked/unchecked split is the
+     * only synchronous signal available (no purchase history to tell "avoided a duplicate buy"
+     * apart from "didn't need it after all") - reads as "how much of what you decided you
+     * needed has actually made it home", not shopping cleverness.
+     */
+    private function shopkeeperScore(User $user): ?int
+    {
+        $items = ShoppingItem::whereHas('fridge.members', fn ($q) => $q->where('users.id', $user->id))->get();
+        if ($items->count() < self::SHOPKEEPER_MIN_ITEMS) {
+            return null;
+        }
+
+        $checkedCount = $items->where('checked', true)->count();
+
+        return max(self::SHOPKEEPER_SCORE_FLOOR, min(self::SHOPKEEPER_SCORE_CEILING, (int) round(($checkedCount / $items->count()) * 100)));
     }
 }

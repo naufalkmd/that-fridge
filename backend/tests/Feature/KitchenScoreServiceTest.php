@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Fridge;
+use App\Models\OrganizerTally;
 use App\Models\Section;
+use App\Models\ShoppingItem;
 use App\Models\User;
 use App\Services\KitchenScoreService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,7 +37,54 @@ class KitchenScoreServiceTest extends TestCase
 
         $this->assertNull($score['wasteScore']);
         $this->assertNull($score['balanceScore']);
+        $this->assertNull($score['organizerScore']);
+        $this->assertNull($score['shopkeeperScore']);
         $this->assertSame(0, $score['overdueCount']);
+    }
+
+    public function test_organizer_score_needs_at_least_five_checked_items(): void
+    {
+        $user = User::factory()->create();
+        OrganizerTally::create(['user_id' => $user->id, 'items_checked_total' => 4, 'items_correct_total' => 4]);
+
+        $score = app(KitchenScoreService::class)->scoreFor($user);
+
+        $this->assertNull($score['organizerScore']);
+    }
+
+    public function test_organizer_score_is_the_correct_ratio(): void
+    {
+        $user = User::factory()->create();
+        OrganizerTally::create(['user_id' => $user->id, 'items_checked_total' => 10, 'items_correct_total' => 8]);
+
+        $score = app(KitchenScoreService::class)->scoreFor($user);
+
+        $this->assertSame(80, $score['organizerScore']);
+    }
+
+    public function test_shopkeeper_score_needs_at_least_three_items(): void
+    {
+        $user = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Fridge']);
+        $fridge->shoppingItems()->create(['name' => 'Milk', 'section' => 'dairy', 'checked' => true]);
+
+        $score = app(KitchenScoreService::class)->scoreFor($user);
+
+        $this->assertNull($score['shopkeeperScore']);
+    }
+
+    public function test_shopkeeper_score_is_the_checked_ratio_across_member_fridges(): void
+    {
+        $user = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Fridge']);
+        $fridge->shoppingItems()->create(['name' => 'Milk', 'section' => 'dairy', 'checked' => true]);
+        $fridge->shoppingItems()->create(['name' => 'Eggs', 'section' => 'dairy', 'checked' => true]);
+        $fridge->shoppingItems()->create(['name' => 'Bread', 'section' => 'bakery', 'checked' => false]);
+        $fridge->shoppingItems()->create(['name' => 'Butter', 'section' => 'dairy', 'checked' => false]);
+
+        $score = app(KitchenScoreService::class)->scoreFor($user);
+
+        $this->assertSame(50, $score['shopkeeperScore']);
     }
 
     public function test_overdue_items_lower_the_waste_score_below_the_neutral_base(): void
