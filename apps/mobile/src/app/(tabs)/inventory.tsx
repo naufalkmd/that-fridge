@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  LayoutAnimation,
   LayoutRectangle,
   Pressable,
   RefreshControl,
@@ -89,6 +90,18 @@ export default function Inventory() {
   const [selectMode, setSelectMode] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const selecting = selectMode || selected.size > 0;
+  // Same-name items collapse into one row by default (see buildRowDescriptors) - this is
+  // just which collapsed groups the user has opened back up, keyed by normalizeItemName.
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const toggleGroup = useCallback((key: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
   // ── drag an item onto a category ──────────────────────────────────────────
   const [dragId, setDragId] = useState<string | null>(null);
@@ -278,6 +291,58 @@ export default function Inventory() {
       }
     />
   );
+
+  // Collapses same-name items (dupKeys) into one row, in whichever position the current
+  // sort would have placed the first-encountered member - so an "Expiry" sort still shows
+  // the group where its soonest-to-expire entry belongs, etc. Skipped entirely while
+  // selecting: bulk actions (multi-select, drag-to-move) work per-item, and a collapsed
+  // group doesn't have an unambiguous single item to select or drag.
+  type Row = { type: "single"; item: FlatItem } | { type: "group"; key: string; items: FlatItem[] };
+  const buildRowDescriptors = (list: FlatItem[]): Row[] => {
+    if (selecting) return list.map((item) => ({ type: "single", item }));
+    // Scoped to this specific list (a category's items, or the flat filtered list) rather
+    // than dupKeys/allItems - a name that's duplicated globally but has only one entry in
+    // this particular category (when sorted/grouped by category) should render as a plain
+    // single row here, not an oddly-collapsed "group" of one.
+    const byKey = new Map<string, FlatItem[]>();
+    for (const it of list) {
+      const key = normalizeItemName(it.name);
+      const g = byKey.get(key);
+      if (g) g.push(it);
+      else byKey.set(key, [it]);
+    }
+    const emitted = new Set<string>();
+    const out: Row[] = [];
+    for (const item of list) {
+      const key = normalizeItemName(item.name);
+      const group = byKey.get(key)!;
+      if (group.length < 2) {
+        out.push({ type: "single", item });
+        continue;
+      }
+      if (emitted.has(key)) continue;
+      emitted.add(key);
+      out.push({ type: "group", key, items: group });
+    }
+    return out;
+  };
+
+  const renderList = (list: FlatItem[]) =>
+    buildRowDescriptors(list).map((row, i, arr) => {
+      const last = i === arr.length - 1;
+      return row.type === "single" ? (
+        renderRow(row.item, last)
+      ) : (
+        <MergedItemGroup
+          key={`group-${row.key}`}
+          items={row.items}
+          last={last}
+          expanded={expandedGroups.has(row.key)}
+          onToggle={() => toggleGroup(row.key)}
+          renderChild={renderRow}
+        />
+      );
+    });
 
   const toggleSelect = (id: string) =>
     setSelected((prev) => {
@@ -638,9 +703,7 @@ export default function Inventory() {
                         overflow: "hidden",
                       }}
                     >
-                      {g.items.map((item, i) =>
-                        renderRow(item, i === g.items.length - 1),
-                      )}
+                      {renderList(g.items)}
                     </View>
                   </View>
                 ))
@@ -655,9 +718,7 @@ export default function Inventory() {
                     marginBottom: 22,
                   }}
                 >
-                  {sorted.map((item, i) =>
-                    renderRow(item, i === sorted.length - 1),
-                  )}
+                  {renderList(sorted)}
                 </View>
               )}
 
@@ -1014,6 +1075,84 @@ function HeaderBtn({
         />
       </View>
     </Pressable>
+  );
+}
+
+/**
+ * Collapsed default view for 2+ items sharing a name ("which banana is the new one?") -
+ * replaces the old approach of flagging every row individually with a "USE FIRST" badge
+ * while still listing them as separate rows. Header shows the soonest-to-expire entry's
+ * freshness/date (the one actually worth acting on) and the combined quantity; tapping it
+ * expands to the exact same per-item rows as before (still with their own USE FIRST badge,
+ * added-ago label, stepper, tap-to-open) via `renderChild`, so nothing about editing an
+ * individual entry changed - only the resting/collapsed state did.
+ */
+function MergedItemGroup({
+  items,
+  last,
+  expanded,
+  onToggle,
+  renderChild,
+}: {
+  items: FlatItem[];
+  last: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+  renderChild: (item: FlatItem, last: boolean) => React.ReactNode;
+}) {
+  const { surface2: SURFACE2, hairline: HAIRLINE, ink: INK, faint: FAINT, blue: BLUE } = useTheme().colors;
+  const ordered = useMemo(() => [...items].sort(byExpiry), [items]);
+  const soonest = ordered[0];
+  const totalQty = items.reduce((sum, i) => sum + i.qty, 0);
+  const fresh = freshColor(soonest.freshness);
+
+  return (
+    <View>
+      <Pressable
+        onPress={onToggle}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          borderBottomWidth: !expanded && last ? 0 : 1,
+          borderBottomColor: HAIRLINE,
+        }}
+      >
+        <View style={{ width: 38, height: 38, borderRadius: 6, backgroundColor: SURFACE2, alignItems: "center", justifyContent: "center" }}>
+          <FoodIcon icon={soonest.icon} iconUrl={soonest.iconUrl} name={soonest.name} size={30} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 4 }}>
+            <Text style={{ flexShrink: 1, fontSize: 14, fontWeight: "600", color: INK }} numberOfLines={1}>
+              {soonest.name}
+            </Text>
+            <View style={{ backgroundColor: `${BLUE}29`, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+              <Text style={{ fontSize: 8.5, fontWeight: "800", letterSpacing: 0.4, color: BLUE }}>
+                {items.length}×
+              </Text>
+            </View>
+          </View>
+          <Text style={{ fontSize: 10.5, color: FAINT, marginBottom: 5 }} numberOfLines={1}>
+            {expanded ? "Tap to collapse" : `${items.length} entries · tap to see all`}
+          </Text>
+          <View style={{ height: 4, borderRadius: 2, backgroundColor: SURFACE2, overflow: "hidden" }}>
+            <View style={{ height: "100%", borderRadius: 2, width: `${Math.max(3, soonest.freshness)}%`, backgroundColor: fresh }} />
+          </View>
+        </View>
+        <View style={{ alignItems: "flex-end" }}>
+          <Text style={{ fontSize: 12, fontWeight: "700", color: fresh }}>{daysLabel(soonest.days)}</Text>
+          <Text style={{ fontSize: 10.5, color: FAINT, marginTop: 2 }}>{totalQty} total</Text>
+        </View>
+        <MaterialCommunityIcons name={expanded ? "chevron-up" : "chevron-down"} size={16} color={FAINT} />
+      </Pressable>
+      {expanded && (
+        <View style={{ backgroundColor: `${SURFACE2}80` }}>
+          {ordered.map((item, i) => renderChild(item, last && i === ordered.length - 1))}
+        </View>
+      )}
+    </View>
   );
 }
 
