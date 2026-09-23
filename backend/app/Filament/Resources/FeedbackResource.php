@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\FeedbackResource\Pages;
 use App\Models\AdminAuditLog;
 use App\Models\Feedback;
+use App\Support\AdminCacheKeys;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Infolists;
@@ -12,6 +13,7 @@ use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Cache;
 
 /** The in-app "Send feedback" inbox. Messages are read-only; admins triage status + a note. */
 class FeedbackResource extends Resource
@@ -30,7 +32,8 @@ class FeedbackResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $new = Feedback::where('status', 'new')->count();
+        // Cached; FeedbackObserver clears it on every feedback write.
+        $new = Cache::remember(AdminCacheKeys::FEEDBACK_BADGE, AdminCacheKeys::BADGE_TTL, fn () => Feedback::where('status', 'new')->count());
 
         return $new > 0 ? (string) $new : null;
     }

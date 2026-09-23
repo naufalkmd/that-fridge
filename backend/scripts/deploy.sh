@@ -37,6 +37,7 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan event:cache
+php artisan filament:optimize                          # caches Filament components + Blade icons
 php artisan storage:link --force
 
 echo "==> restart workers + reload php-fpm"

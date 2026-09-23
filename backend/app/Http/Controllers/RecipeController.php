@@ -18,7 +18,7 @@ class RecipeController extends Controller
 
     // "What Should I Eat?" tag enums - mirrored in AgentService::tagRecipe (which produces
     // meal_type/vibes/food_focus) and frontend/lib/thatfridge/types.ts.
-    private const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
+    public const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
     // Returned (not just the first 3 shown) so the frontend's Shuffle button can page through
     // other real matches instead of only ever offering the same top 3.

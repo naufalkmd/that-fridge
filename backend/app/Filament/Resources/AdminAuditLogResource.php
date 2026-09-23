@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\CachedOptions;
 use App\Filament\Resources\AdminAuditLogResource\Pages;
 use App\Models\AdminAuditLog;
 use Filament\Resources\Resource;
@@ -41,10 +42,10 @@ class AdminAuditLogResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('action')
-                    ->options(fn () => AdminAuditLog::distinct()->orderBy('action')->pluck('action', 'action')->all()),
+                    ->options(fn () => CachedOptions::distinct(AdminAuditLog::class, 'action')),
                 Tables\Filters\SelectFilter::make('subject_type')
                     ->label('Subject')
-                    ->options(fn () => AdminAuditLog::whereNotNull('subject_type')->distinct()->orderBy('subject_type')->pluck('subject_type', 'subject_type')->all()),
+                    ->options(fn () => CachedOptions::distinct(AdminAuditLog::class, 'subject_type')),
             ]);
     }
 

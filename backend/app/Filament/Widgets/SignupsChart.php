@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Services\AdminStats;
+use App\Support\AdminCacheKeys;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Cache;
 
@@ -12,9 +13,13 @@ class SignupsChart extends ChartWidget
 
     protected static ?int $sort = 2;
 
+    // Numbers are cached for minutes anyway; Filament's default 5s polling would just
+    // re-request the same cached payload every 5 seconds per open tab.
+    protected static ?string $pollingInterval = null;
+
     protected function getData(): array
     {
-        $d = Cache::remember('admin:signups:30', now()->addMinutes(5), fn () => app(AdminStats::class)->signupsByDay(30));
+        $d = Cache::flexible(AdminCacheKeys::SIGNUPS, AdminCacheKeys::DASHBOARD_TTL, fn () => app(AdminStats::class)->signupsByDay(30));
 
         return [
             'datasets' => [

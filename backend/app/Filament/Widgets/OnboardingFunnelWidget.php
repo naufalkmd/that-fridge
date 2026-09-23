@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Services\OnboardingFunnelReport;
+use App\Support\AdminCacheKeys;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\Cache;
 
@@ -18,15 +19,14 @@ class OnboardingFunnelWidget extends Widget
 
     protected function getViewData(): array
     {
-        return Cache::remember('admin:funnel:'.self::DAYS, now()->addMinutes(5), function () {
+        return Cache::flexible(AdminCacheKeys::ONBOARDING_FUNNEL, AdminCacheKeys::DASHBOARD_TTL, function () {
             $report = app(OnboardingFunnelReport::class);
-            $events = $report->events(self::DAYS);
 
             return [
                 'days' => self::DAYS,
-                'steps' => $report->steps($events),
-                'authMethods' => $report->authMethods($events)->all(),
-                'other' => $report->otherEventNames($events)->all(),
+                'steps' => $report->stepCounts(self::DAYS),
+                'authMethods' => $report->authMethods(self::DAYS)->all(),
+                'other' => $report->otherEventNames(self::DAYS)->all(),
             ];
         });
     }
