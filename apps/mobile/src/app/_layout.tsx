@@ -134,6 +134,13 @@ function AppShell({
                                       }}
                                     />
                                     <Stack.Screen
+                                      name="shopping-item/[id]"
+                                      options={{
+                                        headerShown: false,
+                                        presentation: "modal",
+                                      }}
+                                    />
+                                    <Stack.Screen
                                       name="add"
                                       options={{
                                         headerShown: false,

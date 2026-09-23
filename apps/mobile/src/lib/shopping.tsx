@@ -18,9 +18,11 @@ interface ShoppingContextValue {
   error: string | null;
   refresh: () => Promise<void>;
   add: (name: string, shopUrl?: string | null) => Promise<void>;
+  patch: (id: string, data: { name?: string; shopUrl?: string | null }) => Promise<void>;
   toggle: (id: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
   clearChecked: () => Promise<void>;
+  itemById: (id: string) => ShoppingItem | undefined;
 }
 
 const ShoppingContext = createContext<ShoppingContextValue | null>(null);
@@ -64,6 +66,17 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
     [ensureFridgeId],
   );
 
+  // Non-optimistic (unlike toggle) - this backs an edit form with its own saving/error
+  // state, same pattern as inventory.tsx's patchItem, so the caller decides what to show
+  // while it's in flight rather than the list flickering to an unconfirmed value first.
+  const patch = useCallback(
+    async (id: string, data: { name?: string; shopUrl?: string | null }) => {
+      const updated = await api.updateShoppingItem(id, data);
+      setItems((prev) => prev.map((i) => (i.id === id ? updated : i)));
+    },
+    [],
+  );
+
   const toggle = useCallback(
     async (id: string) => {
       const cur = items.find((i) => i.id === id);
@@ -102,6 +115,11 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
     await Promise.allSettled(checked.map((i) => api.deleteShoppingItem(i.id)));
   }, [items]);
 
+  const itemById = useCallback(
+    (id: string) => items.find((i) => i.id === id),
+    [items],
+  );
+
   const value = useMemo(
     () => ({
       items,
@@ -109,11 +127,13 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
       error,
       refresh: load,
       add,
+      patch,
       toggle,
       remove,
       clearChecked,
+      itemById,
     }),
-    [items, loading, error, load, add, toggle, remove, clearChecked],
+    [items, loading, error, load, add, patch, toggle, remove, clearChecked, itemById],
   );
 
   return (

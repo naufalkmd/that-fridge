@@ -12,6 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
@@ -27,6 +28,7 @@ import { SectionHeader } from "@/components/ui";
 export default function Shopping() {
   const { items, loading, error, refresh, add, toggle, remove, clearChecked } =
     useShopping();
+  const router = useRouter();
   const { colors } = useTheme();
   const { items: fridgeItems } = useInventory();
   const { recipes } = useRecipes();
@@ -165,6 +167,7 @@ export default function Shopping() {
                   shopUrl={item.shopUrl}
                   onToggle={() => toggle(item.id)}
                   onRemove={() => removeWithUndo(item.id, item.name)}
+                  onPress={() => router.push(`/shopping-item/${item.id}`)}
                 />
               ))}
             </View>
@@ -191,6 +194,7 @@ export default function Shopping() {
                   shopUrl={item.shopUrl}
                   onToggle={() => toggle(item.id)}
                   onRemove={() => removeWithUndo(item.id, item.name)}
+                  onPress={() => router.push(`/shopping-item/${item.id}`)}
                 />
               ))}
             </View>
@@ -208,6 +212,7 @@ function Row({
   shopUrl,
   onToggle,
   onRemove,
+  onPress,
 }: {
   name: string;
   checked: boolean;
@@ -215,6 +220,9 @@ function Row({
   shopUrl: string | null;
   onToggle: () => void;
   onRemove: () => void;
+  /** Opens the item's detail page — a separate tap target from the checkbox so checking an
+   *  item off and opening its details (e.g. to add a shop link) don't fight each other. */
+  onPress: () => void;
 }) {
   const { colors } = useTheme();
   return (
@@ -223,11 +231,7 @@ function Row({
         last ? "" : "border-b border-hairline"
       }`}
     >
-      <Pressable
-        onPress={onToggle}
-        hitSlop={8}
-        className="flex-1 flex-row items-center gap-3"
-      >
+      <Pressable onPress={onToggle} hitSlop={8}>
         <View
           className={`h-5 w-5 items-center justify-center rounded-full border ${
             checked ? "border-good bg-good" : "border-faint"
@@ -237,6 +241,8 @@ function Row({
             <Text className="text-[11px] font-bold text-on-accent">✓</Text>
           )}
         </View>
+      </Pressable>
+      <Pressable onPress={onPress} className="flex-1">
         <Text
           className={`text-[14px] ${checked ? "text-faint line-through" : "text-ink"}`}
         >
