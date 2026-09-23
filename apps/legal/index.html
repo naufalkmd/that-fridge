@@ -2,43 +2,562 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ThatFridge</title>
-<meta name="description" content="ThatFridge — know what's in your fridge, waste less food.">
-<link rel="stylesheet" href="/style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ThatFridge: the fridge app that remembers for you</title>
+<meta name="description" content="ThatFridge tracks your fridge, freezer and pantry with an AI crew that tells you what to use first, what to cook tonight and what you're running low on. On the App Store.">
+<meta name="theme-color" content="#15110d">
+<link rel="canonical" href="https://thatfridge.com/">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta name="apple-itunes-app" content="app-id=6806239306">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://thatfridge.com/">
+<meta property="og:title" content="ThatFridge: the fridge app that remembers for you">
+<meta property="og:description" content="Know what's in your fridge before you open the door. An AI crew that helps you waste less food.">
+<meta property="og:image" content="https://thatfridge.com/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preload" href="/assets/fonts/inter-tight-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/instrument-serif-italic-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" as="image" href="/assets/scene.avif" type="image/avif" fetchpriority="high">
+<link rel="stylesheet" href="/site.css">
+<link rel="stylesheet" href="/home.css">
+<script>document.documentElement.classList.add('js');</script>
+<script src="/transitions.js"></script>
 </head>
 <body>
-<div class="wrap">
-  <header class="site">
-    <span class="mark">ThatFridge</span>
-    <nav>
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- App Store link lives in three places below: search for "id6806239306". -->
+<header class="top" id="top">
+  <a class="announce" href="https://apps.apple.com/app/thatfridge/id6806239306" rel="noopener">
+    Now on the <u>App Store</u> for iPhone
+    <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 9 9 3M4 3h5v5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+  </a>
+  <nav class="nav" aria-label="Main">
+    <div class="nav-links">
       <a href="/privacy/">Privacy</a>
       <a href="/terms/">Terms</a>
+    </div>
+    <a class="brand" href="/" aria-label="ThatFridge home">
+      <img src="/assets/logo.svg" alt="" width="30" height="31">
+      <span>ThatFridge</span>
+    </a>
+    <div class="nav-right">
       <a href="/support/">Support</a>
+      <a class="btn btn-sm" href="https://apps.apple.com/app/thatfridge/id6806239306" rel="noopener">Get the app</a>
+    </div>
+  </nav>
+</header>
+
+<main id="main">
+
+  <!-- Hero: product promise first, crew personality second. -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-bg" aria-hidden="true">
+      <!-- Stage = the scene at its native 1180:842 ratio, scaled to cover. Crew walk the same
+           floor paths as apps/web CrewScene.tsx (percent of the stage). -->
+      <div class="stage" id="stage">
+        <picture><source srcset="/assets/scene.avif" type="image/avif"><img class="px" src="/assets/scene.webp" alt="" width="1180" height="842" fetchpriority="high"></picture>
+        <img class="walker px" data-crew="chef" src="/assets/crew/chef.webp" alt="" width="48" height="48">
+        <img class="walker px" data-crew="organizer" src="/assets/crew/organizer.webp" alt="" width="48" height="48">
+        <img class="walker px" data-crew="guardian" src="/assets/crew/guardian.webp" alt="" width="48" height="48">
+        <img class="walker px" data-crew="shopkeeper" src="/assets/crew/shopkeeper.webp" alt="" width="48" height="48">
+      </div>
+    </div>
+
+    <div class="card-wrap">
+      <img class="peek px" src="/assets/crew/guardian.webp" alt="" width="144" height="144" aria-hidden="true">
+      <div class="hero-card">
+        <h1 id="hero-title">A fridge app that remembers what you <em class="s">forgot</em> you bought.</h1>
+        <p class="crew-line">
+          <span class="crew-dots" aria-hidden="true"><i class="d-guardian"></i><i class="d-chef"></i><i class="d-organizer"></i><i class="d-shopkeeper"></i></span>Meet the crew keeping track.
+        </p>
+        <div class="ticket">
+          <p class="ticket-head"><span>Home Fridge</span><span>Use first</span></p>
+          <ul>
+            <li><img class="px" src="/assets/food/milk.png" alt="" width="32" height="32"><span>Milk</span><b class="pill p-red">2 days</b></li>
+            <li><img class="px" src="/assets/food/spinach.png" alt="" width="32" height="32"><span>Spinach</span><b class="pill p-amber">3 days</b></li>
+            <li><img class="px" src="/assets/food/eggs.png" alt="" width="32" height="32"><span>Eggs</span><b class="pill p-green">6 days</b></li>
+          </ul>
+        </div>
+        <p class="poster-sprite">
+          <img class="px" src="/assets/crew/guardian.webp" alt="" width="48" height="48">
+          Guardian's got your fridge.
+        </p>
+        <div class="card-foot">
+          <a class="store-badge" href="https://apps.apple.com/app/thatfridge/id6806239306" rel="noopener">
+            <img src="/assets/app-store-badge.svg" alt="Download on the App Store" width="150" height="50">
+          </a>
+          <p class="stack" aria-hidden="true">That<span>Fridge</span></p>
+        </div>
+      </div>
+    </div>
+
+    <p class="hero-tag">Open the app <em class="s">before</em> you open the door.</p>
+
+  </section>
+
+  <!-- Everything after the hero: sticky left index + rounded content panel (desktop only).
+       The index fades in once the hero has scrolled away; the section in view grows to heading size.
+       Footer countdown keeps the expiry story: milk goes from 10 days left to "use it today". -->
+  <div class="after-hero">
+    <nav class="side" id="side" aria-label="On this page">
+      <ol>
+        <li><a href="#why">Why it matters</a></li>
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#inside">Inside the app</a></li>
+        <li><a href="#crew">The crew</a></li>
+        <li><a href="#benefits">Why people keep it</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#team">From the team</a></li>
+        <li><a href="#get">Get the app</a></li>
+      </ol>
+      <p class="side-milk" id="side-milk">
+        <img class="px" src="/assets/food/milk.png" alt="" width="16" height="16">
+        <span>Milk: <b id="side-days">10 days left</b></span>
+      </p>
     </nav>
-  </header>
+    <div class="panel">
 
-  <h1>ThatFridge</h1>
-  <p class="updated">Know what's in your fridge. Waste less food.</p>
+  <!-- Why it matters: the stat is evidence, the voice stays ThatFridge. -->
+  <section class="sec why" id="why" aria-labelledby="why-title">
+    <div class="wrap">
+      <div class="rv">
+        <p class="eyebrow">Why it matters</p>
+        <h2 id="why-title">We waste more food <em class="s">than we think.</em></h2>
+      </div>
+      <div class="why-copy rv rv-d1">
+        <p>Sometimes it's not because we don't care.</p>
+        <p>We just forgot the spinach<img class="inline-food px" src="/assets/food/spinach.png" alt="" width="32" height="32"> was there.</p>
+        <p class="source">
+          <strong>79 kg</strong> of food wasted per person, per year, at home.<br>
+          Source: <a href="https://www.unep.org/resources/publication/food-waste-index-report-2024" rel="noopener">UNEP Food Waste Index Report 2024</a>
+        </p>
+      </div>
+    </div>
+  </section>
 
-  <p>ThatFridge is an iOS app that helps your household track food, expiry dates and shopping,
-  with an AI "crew" that suggests recipes and flags what to use before it spoils.</p>
+  <!-- How it works: three steps, each owned by a crew member. -->
+  <section class="sec how" id="how" aria-labelledby="how-title">
+    <div class="wrap">
+      <div class="how-head rv">
+        <div>
+          <p class="eyebrow">How it works</p>
+          <h2 id="how-title">Add it. Forget it. <em class="s">We won't.</em></h2>
+        </div>
+        <p class="lede">Put food in once. The crew keeps an eye on it until it's eaten.</p>
+      </div>
+      <ol class="steps">
+        <li class="step rv">
+          <div class="step-top">
+            <span class="step-num">01</span>
+            <span class="sprite-tile t-organizer"><img class="px" src="/assets/crew/organizer.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></span>
+          </div>
+          <h3>Add</h3>
+          <p class="who c-organizer">Organizer files it</p>
+          <p>Four ways in, and every item lands on the right shelf.</p>
+          <ul class="ways">
+            <li>Scan a receipt</li><li>Scan a barcode</li><li>Photo of the fridge</li><li>Type it in</li>
+          </ul>
+        </li>
+        <li class="step rv rv-d1">
+          <div class="step-top">
+            <span class="step-num">02</span>
+            <span class="sprite-tile t-guardian"><img class="px" src="/assets/crew/guardian.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></span>
+          </div>
+          <h3>Track</h3>
+          <p class="who c-guardian">Guardian watches the dates</p>
+          <p>Expiry and low-stock reminders tell you what to use first, before it turns.</p>
+          <ul class="snip" aria-label="Example reminders">
+            <li><img class="px" src="/assets/food/milk.png" alt="" width="32" height="32" loading="lazy" decoding="async"><span>Milk</span><b class="pill p-red">2 days</b></li>
+            <li><img class="px" src="/assets/food/spinach.png" alt="" width="32" height="32" loading="lazy" decoding="async"><span>Spinach</span><b class="pill p-amber">3 days</b></li>
+          </ul>
+        </li>
+        <li class="step rv rv-d2">
+          <div class="step-top">
+            <span class="step-num">03</span>
+            <span class="sprite-tile t-chef"><img class="px" src="/assets/crew/chef.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></span>
+          </div>
+          <h3>Eat</h3>
+          <p class="who c-chef">Chef plans tonight</p>
+          <p>"What to eat" turns what you already have into dinner, starting with what's about to expire.</p>
+          <div class="snip-card" aria-label="Example suggestion">
+            <b>Spinach omelette</b>
+            <span>Uses 3 items expiring soon</span>
+            <span class="snip-icons" aria-hidden="true">
+              <img class="px" src="/assets/food/eggs.png" alt="" width="32" height="32" loading="lazy" decoding="async"><img class="px" src="/assets/food/spinach.png" alt="" width="32" height="32" loading="lazy" decoding="async"><img class="px" src="/assets/food/cheese.png" alt="" width="32" height="32" loading="lazy" decoding="async">
+            </span>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
 
-  <div class="card">
-    <h3>Links</h3>
-    <ul>
-      <li><a href="/privacy/">Privacy Policy</a></li>
-      <li><a href="/terms/">Terms of Service &amp; EULA</a></li>
-      <li><a href="/support/">Support &amp; FAQ</a></li>
-    </ul>
+  <!-- Real app preview: proves this is a utility, not a game. -->
+  <section class="sec preview" id="inside" aria-labelledby="preview-title">
+    <div class="wrap">
+      <div class="rv">
+        <p class="eyebrow">Inside the app</p>
+        <h2 id="preview-title">What the crew <em class="s">actually</em> does.</h2>
+        <p class="lede">Real screens from the iPhone app.</p>
+      </div>
+      <ul class="shots" id="shots">
+        <li class="rv">
+          <figure>
+            <picture>
+              <source type="image/avif" srcset="/assets/shots/home-480.avif 480w, /assets/shots/home-720.avif 720w, /assets/shots/home-1080.avif 1080w" sizes="(max-width: 860px) min(72vw, 300px), 345px">
+              <img src="/assets/shots/home-720.webp" srcset="/assets/shots/home-480.webp 480w, /assets/shots/home-720.webp 720w, /assets/shots/home-1080.webp 1080w" sizes="(max-width: 860px) min(72vw, 300px), 345px" alt="ThatFridge home screen: a pixel-art fridge with 7 items, 5 expiring soon and 5 suggestions." width="1320" height="2868" loading="lazy" decoding="async">
+            </picture>
+            <figcaption><b>Your fridge at a glance</b>Items, expiry and what to cook the moment you open the app.</figcaption>
+          </figure>
+        </li>
+        <li class="rv rv-d1">
+          <figure>
+            <picture>
+              <source type="image/avif" srcset="/assets/shots/add-480.avif 480w, /assets/shots/add-720.avif 720w, /assets/shots/add-1080.avif 1080w" sizes="(max-width: 860px) min(72vw, 300px), 345px">
+              <img src="/assets/shots/add-720.webp" srcset="/assets/shots/add-480.webp 480w, /assets/shots/add-720.webp 720w, /assets/shots/add-1080.webp 1080w" sizes="(max-width: 860px) min(72vw, 300px), 345px" alt="The add-item sheet next to a barcode scan recognising a carton of milk." width="1320" height="2868" loading="lazy" decoding="async">
+            </picture>
+            <figcaption><b>Add in seconds</b>Receipt, barcode, fridge photo or typing.</figcaption>
+          </figure>
+        </li>
+        <li class="rv rv-d2">
+          <figure>
+            <picture>
+              <source type="image/avif" srcset="/assets/shots/score-480.avif 480w, /assets/shots/score-720.avif 720w, /assets/shots/score-1080.avif 1080w" sizes="(max-width: 860px) min(72vw, 300px), 345px">
+              <img src="/assets/shots/score-720.webp" srcset="/assets/shots/score-480.webp 480w, /assets/shots/score-720.webp 720w, /assets/shots/score-1080.webp 1080w" sizes="(max-width: 860px) min(72vw, 300px), 345px" alt="Weekly Kitchen Score of 74 out of 100 with separate scores from Guardian, Chef, Organizer and Shopkeeper." width="1320" height="2868" loading="lazy" decoding="async">
+            </picture>
+            <figcaption><b>A weekly Kitchen Score</b>Each crew member grades one habit. Waste less, build a streak.</figcaption>
+          </figure>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Meet the crew -->
+  <section class="sec" id="crew" aria-labelledby="crew-title">
+    <div class="wrap">
+      <div class="rv">
+        <p class="eyebrow">The crew</p>
+        <h2 id="crew-title">Meet the four <em class="s">inside your fridge.</em></h2>
+        <p class="lede">Each one looks after a different habit. Chat with any of them in the app.</p>
+      </div>
+      <ul class="crew-grid">
+        <li class="mate rv" style="--c: var(--guardian)">
+          <div class="sprite-tile t-guardian"><img class="px" src="/assets/crew/guardian.webp" alt="" width="144" height="144" loading="lazy" decoding="async"></div>
+          <h3>Guardian</h3>
+          <p class="role c-guardian">Waste saver</p>
+          <p class="does">Knows what expires next and makes sure you use it first.</p>
+          <blockquote class="bubble">"The milk goes first. Two days left."</blockquote>
+        </li>
+        <li class="mate rv rv-d1" style="--c: var(--chef)">
+          <div class="sprite-tile t-chef"><img class="px" src="/assets/crew/chef.webp" alt="" width="144" height="144" loading="lazy" decoding="async"></div>
+          <h3>Chef</h3>
+          <p class="role c-chef">Food balance</p>
+          <p class="does">Suggests what to cook tonight with what you already have.</p>
+          <blockquote class="bubble">"Eggs, spinach, cheese. That's an omelette."</blockquote>
+        </li>
+        <li class="mate rv rv-d2" style="--c: var(--organizer)">
+          <div class="sprite-tile t-organizer"><img class="px" src="/assets/crew/organizer.webp" alt="" width="144" height="144" loading="lazy" decoding="async"></div>
+          <h3>Organizer</h3>
+          <p class="role c-organizer">Tidiness</p>
+          <p class="does">Keeps every item on the right shelf so nothing hides at the back.</p>
+          <blockquote class="bubble">"Yogurt back on the top shelf."</blockquote>
+        </li>
+        <li class="mate rv rv-d3" style="--c: var(--shopkeeper)">
+          <div class="sprite-tile t-shopkeeper"><img class="px" src="/assets/crew/shopkeeper.webp" alt="" width="144" height="144" loading="lazy" decoding="async"></div>
+          <h3>Shopkeeper</h3>
+          <p class="role c-shopkeeper">Shopping list</p>
+          <p class="does">Spots what's running low and keeps the list honest.</p>
+          <blockquote class="bubble">"You're out of rice. It's on the list."</blockquote>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Benefits: three groups instead of a grid of small features. -->
+  <section class="sec benefits" id="benefits" aria-labelledby="benefits-title">
+    <div class="wrap">
+      <div class="rv">
+        <p class="eyebrow">Why people keep it</p>
+        <h2 id="benefits-title">Less guessing. <em class="s">Less waste.</em></h2>
+      </div>
+      <div class="groups">
+        <div class="group rv">
+          <h3>Keep track</h3>
+          <ul>
+            <li><img class="px" src="/assets/food/cheese.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Every fridge you own <span class="pro-tag">Pro</span></b><span>Fridge, freezer and pantry, each with its own look.</span></div></li>
+            <li><img class="px" src="/assets/food/eggs.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Shared with your household <span class="pro-tag">Pro</span></b><span>Everyone sees the same shelves. No double-buying.</span></div></li>
+            <li><img class="px" src="/assets/food/milk.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Expiry reminders</b><span>A nudge before it turns, not after.</span></div></li>
+          </ul>
+        </div>
+        <div class="group rv rv-d1">
+          <h3>Waste less</h3>
+          <ul>
+            <li><img class="px" src="/assets/food/spinach.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Use-first suggestions</b><span>What to eat next, sorted by what's about to go.</span></div></li>
+            <li><img class="px" src="/assets/food/carrot.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Recipes from your shelves</b><span>Cook with what's there before buying more.</span></div></li>
+            <li><img class="px" src="/assets/food/apple.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Goals, badges and streaks</b><span>A weekly Kitchen Score that makes it stick.</span></div></li>
+          </ul>
+        </div>
+        <div class="group rv rv-d2">
+          <h3>Stay in control</h3>
+          <ul>
+            <li><img class="px" src="/assets/food/cheese.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>A plain-English privacy policy</b><span><a href="/privacy/">Read exactly what we collect</a> and why.</span></div></li>
+            <li><img class="px" src="/assets/food/eggs.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Delete anytime</b><span>Remove your account and data from Profile, in one step.</span></div></li>
+            <li><img class="px" src="/assets/food/milk.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Malaysia PDPA notice</b><span><a href="/privacy/pdpa/">In Bahasa Melayu and English.</a></span></div></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing: mirrors the in-app paywall (apps/mobile/src/app/paywall.tsx). USD list prices;
+       the App Store charges the local equivalent. Keep in sync with the paywall + Terms §3. -->
+  <section class="sec pricing" id="pricing" aria-labelledby="pricing-title">
+    <div class="wrap">
+      <div class="pricing-head rv">
+        <div>
+          <p class="eyebrow">Pricing</p>
+          <h2 id="pricing-title">Free to start. <em class="s">Pro</em> when you're hooked.</h2>
+          <p class="lede">Track your fridge for free. Go Pro for more crew help, more fridges and the whole household.</p>
+        </div>
+        <fieldset class="billing" aria-label="Billing period">
+          <input type="radio" name="billing" id="bill-yearly" value="yearly" checked>
+          <label for="bill-yearly">Yearly <span class="save">Save 44%</span></label>
+          <input type="radio" name="billing" id="bill-monthly" value="monthly">
+          <label for="bill-monthly">Monthly</label>
+        </fieldset>
+      </div>
+
+      <div class="plans">
+        <article class="plan rv" aria-labelledby="plan-free">
+          <h3 id="plan-free">Free</h3>
+          <p class="plan-price"><b>$0</b><span>free plan</span></p>
+          <p class="plan-for">Everything you need to stop forgetting food.</p>
+          <ul class="plan-list">
+            <li><img class="px" src="/assets/food/milk.png" alt="" width="16" height="16" loading="lazy" decoding="async">Fridge &amp; pantry tracking with expiry alerts</li>
+            <li><img class="px" src="/assets/food/spinach.png" alt="" width="16" height="16" loading="lazy" decoding="async"><span><b>50 AI credits</b> a month for crew chat, scans and icons</span></li>
+            <li><img class="px" src="/assets/food/carrot.png" alt="" width="16" height="16" loading="lazy" decoding="async">Top up with credit packs anytime</li>
+          </ul>
+          <a class="btn btn-ghost" href="https://apps.apple.com/app/thatfridge/id6806239306" rel="noopener">Download free</a>
+        </article>
+
+        <article class="plan plan-pro rv rv-d1" aria-labelledby="plan-pro">
+          <p class="plan-flag">7-day free trial</p>
+          <img class="plan-sprite px" src="/assets/crew/chef.webp" alt="" width="96" height="96" loading="lazy" decoding="async">
+          <h3 id="plan-pro">Pro</h3>
+          <p class="plan-price">
+            <span class="yearly"><b>$19.99</b><span>per year</span></span>
+            <span class="monthly"><b>$2.99</b><span>per month</span></span>
+          </p>
+          <p class="plan-for">
+            <span class="yearly">Just $1.67 a month, billed yearly.</span>
+            <span class="monthly">Pay month to month. Cancel anytime.</span>
+          </p>
+          <ul class="plan-list">
+            <li><img class="px" src="/assets/food/milk.png" alt="" width="16" height="16" loading="lazy" decoding="async">Everything in Free</li>
+            <li><img class="px" src="/assets/food/spinach.png" alt="" width="16" height="16" loading="lazy" decoding="async"><span><b>400 AI credits</b> a month, 8&times; more crew help</span></li>
+            <li><img class="px" src="/assets/food/cheese.png" alt="" width="16" height="16" loading="lazy" decoding="async">Unused credits roll over each month</li>
+            <li><img class="px" src="/assets/food/eggs.png" alt="" width="16" height="16" loading="lazy" decoding="async">Own more than one fridge</li>
+            <li><img class="px" src="/assets/food/apple.png" alt="" width="16" height="16" loading="lazy" decoding="async">Host a shared fridge for your household</li>
+          </ul>
+          <a class="btn" href="https://apps.apple.com/app/thatfridge/id6806239306" rel="noopener">Start 7-day free trial</a>
+          <p class="plan-note">
+            <span class="yearly">Free for 7 days, then $19.99/year.</span>
+            <span class="monthly">Free for 7 days, then $2.99/month.</span>
+            Renews automatically; cancel anytime in your Apple ID settings.
+          </p>
+        </article>
+      </div>
+
+      <p class="pricing-fine rv">Every AI action spends credits: crew chat, receipt and fridge-photo scans, icon generation. Prices in USD; the App Store shows your local price. Free trial for new subscribers. See the <a href="/terms/">Terms</a>.</p>
+    </div>
+  </section>
+
+  <!-- From the team: marquee of quotes. These are the team's own words, labelled as such, NOT
+       customer reviews (no stars, no invented customers). DRAFT copy: Keira, Joey and Naufal
+       must approve their quote. Swap in real App Store reviews once you have them. -->
+  <section class="sec team" id="team" aria-labelledby="team-title">
+    <div class="wrap rv">
+      <p class="eyebrow">From the team</p>
+      <h2 id="team-title">Built by people who were <em class="s">tired</em> of the bin.</h2>
+      <p class="lede">We use ThatFridge in our own kitchens every day. Here's what changed.</p>
+      <button class="marquee-toggle" id="marquee-toggle" type="button" aria-pressed="false" aria-controls="marquee-track" hidden>Pause quotes</button>
+    </div>
+    <div class="marquee rv rv-d1">
+      <ul class="marquee-track" id="marquee-track">
+        <li class="quote">
+          <p>"Sunday used to mean finding mystery containers at the back of the fridge. Now Guardian nudges me two days before anything turns, and I actually cook it."</p>
+          <p class="who-q"><img class="px" src="/assets/crew/guardian.webp" alt="" width="48" height="48" loading="lazy" decoding="async"><span><b>Keira</b> · ThatFridge team</span></p>
+        </li>
+        <li class="quote">
+          <p>"I scan the receipt while I'm still unpacking the bags. Ten seconds, and I haven't typed an expiry date since."</p>
+          <p class="who-q"><img class="px" src="/assets/crew/organizer.webp" alt="" width="48" height="48" loading="lazy" decoding="async"><span><b>Joey</b> · ThatFridge team</span></p>
+        </li>
+        <li class="quote">
+          <p>"Our shared-house fridge was chaos. Now everyone sees the same shelves, and nobody comes home with a third bottle of soy sauce."</p>
+          <p class="who-q"><img class="px" src="/assets/crew/shopkeeper.webp" alt="" width="48" height="48" loading="lazy" decoding="async"><span><b>Naufal</b> · ThatFridge team</span></p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Final CTA: all four crew around the fridge. -->
+  <section class="sec cta" id="get" aria-labelledby="cta-title">
+    <div class="wrap">
+      <div class="cta-card rv">
+        <div>
+          <h2 id="cta-title">Open the fridge. Let the crew handle <em class="s">the rest.</em></h2>
+          <a class="store-badge" href="https://apps.apple.com/app/thatfridge/id6806239306" rel="noopener">
+            <img src="/assets/app-store-badge.svg" alt="Download on the App Store" width="150" height="50">
+          </a>
+          <p class="fine">Free for iPhone. ThatFridge Pro starts with a 7-day free trial for new subscribers.</p>
+        </div>
+        <div class="fridge-stage" aria-hidden="true">
+          <img class="fridge px" src="/assets/fridge.webp" alt="" width="896" height="1152" loading="lazy" decoding="async">
+          <img class="mate-sprite ms-guardian px" src="/assets/crew/guardian.webp" alt="" width="96" height="96" loading="lazy" decoding="async">
+          <img class="mate-sprite ms-chef px" src="/assets/crew/chef.webp" alt="" width="96" height="96" loading="lazy" decoding="async">
+          <img class="mate-sprite ms-organizer px" src="/assets/crew/organizer.webp" alt="" width="96" height="96" loading="lazy" decoding="async">
+          <img class="mate-sprite ms-shopkeeper px" src="/assets/crew/shopkeeper.webp" alt="" width="96" height="96" loading="lazy" decoding="async">
+        </div>
+      </div>
+    </div>
+  </section>
+
+    </div>
   </div>
 
-  <p>Questions: <a href="mailto:support@thatfridge.com">support@thatfridge.com</a></p>
+</main>
 
-  <footer class="site">
-    &copy; <span id="y">2026</span> ThatFridge. All rights reserved.
-  </footer>
-</div>
-<script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+<footer class="foot">
+  <div class="wrap">
+    <div>
+      <a class="brand" href="/" aria-label="ThatFridge home"><img src="/assets/logo.svg" alt="" width="30" height="31"><span>ThatFridge</span></a>
+      <p>Know what's in your fridge. Waste less food.</p>
+    </div>
+    <div>
+      <h2>Legal</h2>
+      <ul>
+        <li><a href="/privacy/">Privacy Policy</a></li>
+        <li><a href="/privacy/pdpa/">PDPA notice (BM + EN)</a></li>
+        <li><a href="/terms/">Terms of Service &amp; EULA</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Help</h2>
+      <ul>
+        <li><a href="/support/">Support &amp; FAQ</a></li>
+        <li><a href="mailto:support@thatfridge.com">support@thatfridge.com</a></li>
+        <li><a href="https://apps.apple.com/app/thatfridge/id6806239306" rel="noopener">App Store</a></li>
+      </ul>
+    </div>
+    <p class="legal-line">&copy; <span id="y">2026</span> ThatFridge. All rights reserved. App Store is a service mark of Apple Inc.</p>
+  </div>
+  <p class="foot-mark" aria-hidden="true">ThatFridge</p>
+</footer>
+
+<!-- Lenis 1.3.26, vendored (no CDN dependency): eased, constant-pace wheel/trackpad scrolling.
+     Touch stays native. Page works without it. To upgrade, replace the file and bump the name. -->
+<script src="/assets/vendor/lenis-1.3.26.min.js"></script>
+<script src="/site.js"></script>
+<script>
+// Landing-only behaviour. Nav, smooth scroll, side index and reveals come from site.js.
+(function () {
+  var reduce = TF.reduce;
+  var hero = document.querySelector('.hero');
+
+  // Milk countdown under the side index follows the active section.
+  var days = ['10 days left', '8 days left', '7 days left', '6 days left', '5 days left', '3 days left', '2 days left', 'use it today'];
+  var daysEl = document.getElementById('side-days');
+  var milk = document.getElementById('side-milk');
+  TF.onActive(function (i, n) {
+    daysEl.textContent = days[Math.min(i, days.length - 1)];
+    milk.classList.toggle('urgent', i === n - 1);
+  });
+  // Testimonial marquee: clone the set once so the CSS loop (-50%) is seamless. Clones are hidden from AT.
+  var track = document.querySelector('.marquee-track');
+  if (track && !reduce) {
+    Array.prototype.slice.call(track.children).forEach(function (li) {
+      var c = li.cloneNode(true); c.setAttribute('aria-hidden', 'true'); track.appendChild(c);
+    });
+    track.classList.add('run');
+    // WCAG 2.2.2: moving content needs a pause control (hover/focus pause alone isn't enough).
+    var toggle = document.getElementById('marquee-toggle');
+    toggle.hidden = false;
+    toggle.addEventListener('click', function () {
+      var paused = track.classList.toggle('paused');
+      toggle.setAttribute('aria-pressed', String(paused));
+      toggle.textContent = paused ? 'Play quotes' : 'Pause quotes';
+    });
+  }
+
+  // Living hero: the crew wander their rooms. Same floor paths as apps/web CrewScene.tsx, in % of
+  // the stage. Walk point to point in order, then back; pause between steps. Paused off-screen.
+  var PATHS = {
+    chef: [[12.4,28.4],[15.87,27.65],[30,26.91],[35.6,28.4],[47.33,28.03],[41.2,29.52],[40.13,33.24],[36.4,34.36],[35.6,44.79],[20.4,45.16],[26.53,46.28],[30,50.75],[23.6,44.79],[16.4,44.05],[12.93,39.95]],
+    organizer: [[59.07,29.89],[71.33,29.89],[74.27,31.38],[87.33,31.38],[87.6,40.32],[77.73,40.69],[77.47,33.62]],
+    guardian: [[8.93,77.4],[21.73,77.77],[26,74.42],[27.87,86.71],[18.53,87.08],[18.27,81.12],[36.13,80.75]],
+    shopkeeper: [[59.76,67.38],[67.49,68.13],[68.83,69.99],[73.36,69.62],[75.49,68.5],[80.03,67.75],[84.83,68.5],[87.49,73.34],[87.76,82.28],[87.23,86.38],[83.49,88.99],[65.63,88.99],[62.16,87.13],[57.36,88.24],[57.63,75.58],[53.89,74.46]]
+  };
+  var stage = document.getElementById('stage');
+  var walkers = stage.querySelectorAll('.walker');
+  var heroVisible = true;
+  // Sprite size: whole multiples of the 48px art (crisp pixels), roughly 6.5% of the stage.
+  function sizeWalkers() {
+    var k = Math.max(1, Math.round(stage.offsetWidth * 0.065 / 48));
+    stage.style.setProperty('--walker', (48 * k) + 'px');
+  }
+  sizeWalkers();
+  window.addEventListener('resize', sizeWalkers);
+  walkers.forEach(function (el) {
+    var path = PATHS[el.getAttribute('data-crew')];
+    var i = Math.floor(Math.random() * path.length), dir = 1;
+    function place(p) { el.style.left = p[0] + '%'; el.style.top = p[1] + '%'; }
+    place(path[i]);
+    if (reduce) return;
+    function step() {
+      if (!heroVisible) { setTimeout(step, 800); return; }
+      if (i + dir < 0 || i + dir >= path.length) dir = -dir;
+      var a = path[i], b = path[i + dir];
+      var dist = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      var dur = Math.min(4.5, Math.max(1.2, dist / 5));
+      el.classList.toggle('flip', b[0] < a[0]);
+      el.style.transitionDuration = dur + 's';
+      place(b); i += dir;
+      setTimeout(step, dur * 1000 + 700 + Math.random() * 1900);
+    }
+    setTimeout(step, 400 + Math.random() * 1500);
+  });
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (e) { heroVisible = e[0].isIntersecting; }).observe(hero);
+  }
+
+  // Screenshot parallax: each phone drifts at its own speed (desktop only, not the swipe strip).
+  var shots = document.querySelectorAll('#shots figure');
+  var speeds = [0.06, -0.03, 0.08];
+  var wide = window.matchMedia('(min-width: 861px)');
+  // One rAF per frame; read every position first, then write, so the browser lays out once.
+  var pTicking = false;
+  function parallax() {
+    pTicking = false;
+    if (reduce || !wide.matches) { shots.forEach(function (f) { f.style.transform = ''; }); return; }
+    var vh = window.innerHeight, mid = vh / 2;
+    var rects = Array.prototype.map.call(shots, function (f) { return f.parentNode.getBoundingClientRect(); });
+    if (rects[0].top > vh + 200 || rects[rects.length - 1].bottom < -200) return;
+    rects.forEach(function (r, n) {
+      var off = Math.max(-48, Math.min(48, (r.top + r.height / 2 - mid) * speeds[n]));
+      shots[n].style.transform = 'translate3d(0,' + off.toFixed(1) + 'px,0)';
+    });
+  }
+  window.addEventListener('scroll', function () {
+    if (!pTicking) { pTicking = true; requestAnimationFrame(parallax); }
+  }, { passive: true });
+  window.addEventListener('resize', parallax);
+  parallax();
+})();
+</script>
 </body>
 </html>

@@ -1,0 +1,120 @@
+/* ThatFridge legal + support pages (/privacy/, /privacy/pdpa/, /terms/, /support/), on top of site.css.
+   Short dark scene header with a cream title card, then the shared side index + panel with a
+   ~68ch reading column. The legal text itself is unchanged; this file only styles it. */
+
+/* Header band: the landing's scene, graded + grain, at ~46% height. */
+.doc-hero {
+  min-height: 46vh; min-height: 46svh;
+  justify-content: flex-end; align-items: stretch;
+  padding: 150px var(--gutter) 48px;
+}
+.doc-card {
+  width: min(820px, 100%); margin: 0 auto;
+  padding: 28px 32px 26px;
+  background: rgba(244, 238, 227, 0.95); color: var(--ink);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+}
+@supports ((-webkit-backdrop-filter: blur(8px)) or (backdrop-filter: blur(8px))) {
+  .doc-card { -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+}
+.doc-card .eyebrow { margin-bottom: 14px; }
+.doc-card h1 {
+  margin: 0 0 12px;
+  font-size: clamp(32px, 4.4vw, 54px); line-height: 1.02; font-weight: 600; letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.doc-card .updated { margin: 0; font-size: 15px; color: var(--ink-2); }
+.doc-card a { color: var(--ink); text-decoration-color: var(--accent); text-underline-offset: 3px; }
+
+/* Long lists: tighter index, scrolls on its own if it outgrows the viewport. */
+.side-doc { justify-content: flex-start; overflow-y: auto; scrollbar-width: none; padding-top: 104px; }
+.side-doc::-webkit-scrollbar { display: none; }
+.side-doc li + li::before { margin: 8px 0; }
+.side-doc a { font-size: 14px; line-height: 1.25; }
+.side-doc a.active { font-size: 20px; letter-spacing: -0.025em; line-height: 1.15; }
+.side.empty { visibility: hidden; }
+/* Without JS the index can't be built: single column instead of an empty 280px gutter. */
+html:not(.js) .side-doc { display: none; }
+html:not(.js) .after-hero { grid-template-columns: minmax(0, 1fr); }
+html:not(.js) .panel { margin-left: 16px; }
+
+/* Phone/tablet stand-in for the side index. Built by site.js; hidden without JS. */
+.toc-m {
+  margin: 28px var(--gutter) 0; padding: 0 16px;
+  background: var(--nav); border: 1px solid var(--line); border-radius: 12px;
+}
+.toc-m summary {
+  display: flex; align-items: center; justify-content: space-between; min-height: 48px;
+  font-weight: 600; cursor: pointer; list-style: none;
+}
+.toc-m summary::-webkit-details-marker { display: none; }
+.toc-m summary::after { content: "+"; font-size: 20px; font-weight: 400; color: var(--ink-2); }
+.toc-m[open] summary::after { content: "\2212"; }
+.toc-m ol { margin: 0 0 12px; padding: 0 0 0 20px; font-size: 15px; }
+.toc-m li { margin: 6px 0; }
+.toc-m a { color: var(--ink); text-decoration-color: var(--line); text-underline-offset: 3px; }
+@media (min-width: 1100px) { .toc-m { display: none; } }
+
+/* Reading column */
+.doc-body {
+  max-width: 68ch; margin: 0 auto;
+  padding: clamp(40px, 6vw, 88px) var(--gutter) clamp(64px, 8vw, 120px);
+  font-size: 17px; line-height: 1.7;
+}
+.doc-body > :first-child { margin-top: 0; }
+.doc-body h2 {
+  margin: 56px 0 14px; padding-top: 28px; border-top: 1px solid var(--line);
+  font-size: clamp(23px, 2.3vw, 29px); line-height: 1.15; font-weight: 600; letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.doc-body h2 .num { color: var(--accent); margin-right: 0.3em; font-variant-numeric: tabular-nums; }
+.doc-body h3 { margin: 32px 0 8px; font-size: 19px; line-height: 1.3; font-weight: 600; letter-spacing: -0.015em; }
+.doc-body p, .doc-body li { color: var(--ink); }
+.doc-body ul, .doc-body ol { padding-left: 22px; }
+.doc-body li { margin: 6px 0; }
+.doc-body li::marker { color: var(--accent); }
+.doc-body strong { font-weight: 600; }
+.doc-body a { color: var(--ink); text-decoration-color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.doc-body a:hover { color: var(--accent); }
+.doc-body code {
+  padding: 1px 6px; font-size: 0.86em;
+  background: var(--paper-2); border: 1px solid var(--line); border-radius: 4px;
+}
+/* Old ".card" boxes become callouts. */
+.doc-body .card {
+  margin: 24px 0; padding: 18px 22px;
+  background: var(--nav); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 4px;
+}
+.doc-body .card > :first-child { margin-top: 0; }
+.doc-body .card > :last-child { margin-bottom: 0; }
+.doc-body .card h2 { margin: 0 0 8px; padding: 0; border: 0; font-size: 19px; letter-spacing: -0.015em; }
+.doc-body table {
+  width: 100%; margin: 20px 0; border-collapse: collapse;
+  font-size: 14.5px; line-height: 1.5;
+  background: var(--nav); border: 1px solid var(--line);
+}
+.doc-body th, .doc-body td { padding: 10px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+.doc-body th {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2);
+  background: var(--paper-2);
+}
+@media (max-width: 640px) {
+  .doc-hero { padding: 104px 16px 24px; min-height: 40svh; }
+  .doc-card { padding: 22px 20px; }
+  /* Wide tables scroll inside themselves; the page never scrolls sideways. */
+  .doc-body table { display: block; overflow-x: auto; }
+}
+
+/* Print: just the document, black on white. */
+@media print {
+  .top, .side, .toc-m, .foot, .hero-bg, .skip { display: none !important; }
+  body, .after-hero, .panel { background: #fff !important; }
+  .doc-hero { min-height: 0; padding: 0; background: none; color: #000; }
+  .doc-card { margin: 0; padding: 0 0 12px; box-shadow: none; background: none; width: auto; }
+  .after-hero { display: block; }
+  .panel { margin: 0; border-radius: 0; box-shadow: none; overflow: visible; }
+  .doc-body { max-width: none; padding: 0; font-size: 11pt; }
+  .doc-body a { color: #000; }
+  .doc-body h2 { break-after: avoid; }
+  .doc-body table, .doc-body tr { break-inside: avoid; }
+}
