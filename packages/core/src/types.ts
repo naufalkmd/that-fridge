@@ -310,7 +310,8 @@ export type NotificationKind =
   | "removed"
   | "itemAdded"
   | "itemUsed"
-  | "note";
+  | "note"
+  | "machine";
 
 export interface NotificationEvent {
   id: string;

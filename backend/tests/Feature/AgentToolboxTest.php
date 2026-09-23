@@ -564,4 +564,384 @@ class AgentToolboxTest extends TestCase
 
         $this->assertStringContainsString('no longer in your fridge', $out['content']);
     }
+
+    // ---- weight / calories / custom_fields ------------------------------------------------
+
+    public function test_list_items_shows_weight_and_calories_per_unit(): void
+    {
+        $this->item(['name' => 'Yogurt', 'quantity' => 1, 'weight' => 500, 'weight_unit' => 'g', 'calories' => 240]);
+        $this->item(['name' => 'Butter', 'quantity' => 3, 'weight' => 250, 'weight_unit' => 'g', 'calories' => 720]);
+
+        $out = $this->toolbox->run('list_items', [], $this->user, $this->fridge->id);
+
+        $this->assertStringContainsString('500g · 240 kcal', $out['content']);
+        $this->assertStringContainsString('250g each · 720 kcal each', $out['content']);
+    }
+
+    public function test_list_items_shows_compact_custom_fields_capped(): void
+    {
+        $fields = [];
+        for ($i = 1; $i <= 7; $i++) {
+            $fields[] = ['id' => (string) \Illuminate\Support\Str::uuid(), 'label' => "Field {$i}", 'value' => "Value {$i}"];
+        }
+        $this->item(['name' => 'Flour', 'custom_fields' => $fields]);
+
+        $out = $this->toolbox->run('list_items', [], $this->user, $this->fridge->id);
+
+        $this->assertStringContainsString('Field 1=Value 1', $out['content']);
+        $this->assertStringContainsString('Field 5=Value 5', $out['content']);
+        $this->assertStringNotContainsString('Field 6=', $out['content']);
+        $this->assertStringContainsString('(+2 more)', $out['content']);
+    }
+
+    public function test_list_items_filters_by_fridge_id_and_ignores_foreign_fridge(): void
+    {
+        $this->item(['name' => 'Home Milk']);
+        $otherFridge = Fridge::create(['user_id' => $this->user->id, 'name' => 'Cabin']);
+        $otherSection = Section::create(['fridge_id' => $otherFridge->id, 'name' => 'Fridge']);
+        Item::create(['section_id' => $otherSection->id, 'name' => 'Cabin Milk', 'icon' => 'milk', 'quantity' => 1]);
+
+        $home = $this->toolbox->run('list_items', ['fridge_id' => $this->fridge->id], $this->user, $this->fridge->id);
+        $this->assertStringContainsString('Home Milk', $home['content']);
+        $this->assertStringNotContainsString('Cabin Milk', $home['content']);
+
+        // A fridge_id the user doesn't belong to is ignored, not leaked as a filter or an error.
+        $stranger = Fridge::create(['user_id' => User::factory()->create()->id, 'name' => 'Not Mine']);
+        $ignored = $this->toolbox->run('list_items', ['fridge_id' => $stranger->id], $this->user, $this->fridge->id);
+        $this->assertStringContainsString('Home Milk', $ignored['content']);
+    }
+
+    public function test_update_item_sets_weight_with_unit(): void
+    {
+        $item = $this->item(['name' => 'Cheese']);
+
+        $out = $this->toolbox->run('update_item', ['item_id' => $item->id, 'weight' => 0.75, 'weight_unit' => 'kg'], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $this->assertSame(0.75, $item->fresh()->weight);
+        $this->assertSame('kg', $item->fresh()->weight_unit);
+        $this->assertStringContainsString('weight=0.75kg', $out['content']);
+    }
+
+    public function test_update_item_rejects_weight_without_unit(): void
+    {
+        $item = $this->item(['name' => 'Cheese']);
+
+        $out = $this->toolbox->run('update_item', ['item_id' => $item->id, 'weight' => 5], $this->user, $this->fridge->id);
+
+        $this->assertStringStartsWith('Error:', $out['content']);
+        $this->assertFalse($out['mutated']);
+        $this->assertNull($item->fresh()->weight);
+    }
+
+    public function test_update_item_rejects_unknown_weight_unit(): void
+    {
+        $item = $this->item(['name' => 'Cheese']);
+
+        $out = $this->toolbox->run('update_item', ['item_id' => $item->id, 'weight' => 5, 'weight_unit' => 'stone'], $this->user, $this->fridge->id);
+
+        $this->assertStringStartsWith('Error:', $out['content']);
+        $this->assertFalse($out['mutated']);
+    }
+
+    public function test_update_item_clearing_weight_clears_unit(): void
+    {
+        $item = $this->item(['name' => 'Cheese', 'weight' => 500, 'weight_unit' => 'g']);
+
+        $out = $this->toolbox->run('update_item', ['item_id' => $item->id, 'weight' => null], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $this->assertNull($item->fresh()->weight);
+        $this->assertNull($item->fresh()->weight_unit);
+        $this->assertStringContainsString('weight=cleared', $out['content']);
+    }
+
+    public function test_update_item_rejects_unit_alone_when_no_weight(): void
+    {
+        $item = $this->item(['name' => 'Cheese']);
+
+        $out = $this->toolbox->run('update_item', ['item_id' => $item->id, 'weight_unit' => 'g'], $this->user, $this->fridge->id);
+
+        $this->assertStringStartsWith('Error:', $out['content']);
+        $this->assertFalse($out['mutated']);
+    }
+
+    public function test_update_item_sets_and_clears_calories(): void
+    {
+        $item = $this->item(['name' => 'Cheese']);
+
+        $set = $this->toolbox->run('update_item', ['item_id' => $item->id, 'calories' => 350], $this->user, $this->fridge->id);
+        $this->assertTrue($set['mutated']);
+        $this->assertSame(350, $item->fresh()->calories);
+
+        $cleared = $this->toolbox->run('update_item', ['item_id' => $item->id, 'calories' => null], $this->user, $this->fridge->id);
+        $this->assertTrue($cleared['mutated']);
+        $this->assertNull($item->fresh()->calories);
+
+        $rejected = $this->toolbox->run('update_item', ['item_id' => $item->id, 'calories' => 999999], $this->user, $this->fridge->id);
+        $this->assertStringStartsWith('Error:', $rejected['content']);
+    }
+
+    public function test_update_item_upserts_custom_field_by_label_without_clobbering_others(): void
+    {
+        $item = $this->item(['name' => 'Flour', 'custom_fields' => [
+            ['id' => 'a', 'label' => 'Batch code', 'value' => 'L4471-09'],
+            ['id' => 'b', 'label' => 'Supplier', 'value' => 'Metro'],
+        ]]);
+
+        $out = $this->toolbox->run('update_item', [
+            'item_id' => $item->id,
+            'set_custom_fields' => [['label' => 'batch code', 'value' => 'L4471-10']],
+        ], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $fields = collect($item->fresh()->custom_fields)->keyBy('label');
+        $this->assertSame('L4471-10', $fields['Batch code']['value']);
+        $this->assertSame('a', $fields['Batch code']['id']);
+        $this->assertSame('Metro', $fields['Supplier']['value']);
+        $this->assertSame('b', $fields['Supplier']['id']);
+    }
+
+    public function test_update_item_appends_new_custom_field_with_uuid(): void
+    {
+        $item = $this->item(['name' => 'Flour']);
+
+        $this->toolbox->run('update_item', [
+            'item_id' => $item->id,
+            'set_custom_fields' => [['label' => 'Batch code', 'value' => 'L4471-09']],
+        ], $this->user, $this->fridge->id);
+
+        $fields = $item->fresh()->custom_fields;
+        $this->assertCount(1, $fields);
+        $this->assertNotEmpty($fields[0]['id']);
+        $this->assertSame('Batch code', $fields[0]['label']);
+    }
+
+    public function test_update_item_empty_value_removes_custom_field(): void
+    {
+        $item = $this->item(['name' => 'Flour', 'custom_fields' => [
+            ['id' => 'a', 'label' => 'Batch code', 'value' => 'L4471-09'],
+        ]]);
+
+        $this->toolbox->run('update_item', [
+            'item_id' => $item->id,
+            'set_custom_fields' => [['label' => 'Batch code', 'value' => '']],
+        ], $this->user, $this->fridge->id);
+
+        $this->assertSame([], $item->fresh()->custom_fields);
+    }
+
+    public function test_update_item_custom_field_limits_are_enforced(): void
+    {
+        $item = $this->item(['name' => 'Flour']);
+
+        $tooManyEdits = array_map(fn ($i) => ['label' => "Field {$i}", 'value' => 'x'], range(1, 21));
+        $tooMany = $this->toolbox->run('update_item', ['item_id' => $item->id, 'set_custom_fields' => $tooManyEdits], $this->user, $this->fridge->id);
+        $this->assertStringStartsWith('Error:', $tooMany['content']);
+        $this->assertSame([], $item->fresh()->custom_fields ?? []);
+
+        $longLabel = $this->toolbox->run('update_item', [
+            'item_id' => $item->id,
+            'set_custom_fields' => [['label' => str_repeat('a', 41), 'value' => 'x']],
+        ], $this->user, $this->fridge->id);
+        $this->assertStringStartsWith('Error:', $longLabel['content']);
+
+        $longValue = $this->toolbox->run('update_item', [
+            'item_id' => $item->id,
+            'set_custom_fields' => [['label' => 'Note', 'value' => str_repeat('a', 256)]],
+        ], $this->user, $this->fridge->id);
+        $this->assertStringStartsWith('Error:', $longValue['content']);
+    }
+
+    public function test_update_item_confirmation_renders_weight_and_fields_readably(): void
+    {
+        $item = $this->item(['name' => 'Flour']);
+
+        $out = $this->toolbox->run('update_item', [
+            'item_id' => $item->id,
+            'weight' => 1,
+            'weight_unit' => 'kg',
+            'set_custom_fields' => [['label' => 'Batch code', 'value' => 'L4471-09']],
+        ], $this->user, $this->fridge->id);
+
+        $this->assertStringNotContainsString('Array', $out['content']);
+        $this->assertStringContainsString('weight=1kg', $out['content']);
+        $this->assertStringContainsString('Batch code=L4471-09', $out['content']);
+    }
+
+    public function test_add_item_accepts_weight_calories(): void
+    {
+        $out = $this->toolbox->run('add_item', [
+            'name' => 'Yogurt', 'weight' => 500, 'weight_unit' => 'g', 'calories' => 240,
+        ], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $this->assertDatabaseHas('items', ['name' => 'Yogurt', 'weight' => 500, 'weight_unit' => 'g', 'calories' => 240]);
+        $this->assertStringContainsString('500g', $out['content']);
+        $this->assertStringContainsString('240 kcal', $out['content']);
+
+        $rejected = $this->toolbox->run('add_item', ['name' => 'Butter', 'weight' => 250], $this->user, $this->fridge->id);
+        $this->assertStringStartsWith('Error:', $rejected['content']);
+    }
+
+    public function test_bulk_add_items_skips_entry_with_weight_but_no_unit(): void
+    {
+        $out = $this->toolbox->run('bulk_add_items', [
+            'items' => [
+                ['name' => 'Milk', 'weight' => 1, 'weight_unit' => 'l'],
+                ['name' => 'Butter', 'weight' => 250], // no unit - should be skipped, not fatal
+            ],
+        ], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $this->assertDatabaseHas('items', ['name' => 'Milk', 'weight' => 1, 'weight_unit' => 'l']);
+        $this->assertDatabaseMissing('items', ['name' => 'Butter']);
+        $this->assertStringContainsString('Milk', $out['content']);
+        $this->assertStringContainsString('Skipped', $out['content']);
+        $this->assertStringContainsString('Butter', $out['content']);
+    }
+
+    // ---- sum_item_field ---------------------------------------------------------------
+
+    public function test_sum_item_field_sums_quantity(): void
+    {
+        $this->item(['name' => 'Milk', 'quantity' => 2]);
+        $this->item(['name' => 'Eggs', 'quantity' => 12]);
+
+        $out = $this->toolbox->run('sum_item_field', ['field' => 'quantity'], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['ok']);
+        $this->assertSame('14', $out['value']);
+        $this->assertStringContainsString('Total quantity: 14 across 2 items', $out['content']);
+    }
+
+    public function test_sum_item_field_sums_calories_multiplied_by_quantity_and_skips_unset(): void
+    {
+        $this->item(['name' => 'Yogurt', 'quantity' => 3, 'calories' => 100]);
+        $this->item(['name' => 'Mystery', 'quantity' => 1]); // no calories set
+
+        $out = $this->toolbox->run('sum_item_field', ['field' => 'calories'], $this->user, $this->fridge->id);
+
+        $this->assertSame('300 kcal', $out['value']);
+        $this->assertStringContainsString('Total calories: 300 kcal across 1 item', $out['content']);
+        $this->assertStringContainsString('1 skipped', $out['content']);
+    }
+
+    public function test_sum_item_field_sums_weight_in_target_unit_and_never_mixes_mass_and_volume(): void
+    {
+        $this->item(['name' => 'Flour', 'quantity' => 2, 'weight' => 500, 'weight_unit' => 'g']);
+        $this->item(['name' => 'Sugar', 'quantity' => 1, 'weight' => 1, 'weight_unit' => 'kg']);
+        $this->item(['name' => 'Milk', 'quantity' => 1, 'weight' => 1, 'weight_unit' => 'l']); // volume - excluded from a mass sum
+
+        $out = $this->toolbox->run('sum_item_field', ['field' => 'weight', 'unit' => 'kg'], $this->user, $this->fridge->id);
+
+        // 2x500g = 1000g = 1kg, plus 1x1kg = 1kg -> 2kg total; the 1l milk is skipped.
+        $this->assertSame('2kg', $out['value']);
+        $this->assertStringContainsString('across 2 items', $out['content']);
+        $this->assertStringContainsString('1 skipped', $out['content']);
+    }
+
+    public function test_sum_item_field_rejects_unknown_field(): void
+    {
+        $out = $this->toolbox->run('sum_item_field', ['field' => 'price'], $this->user, $this->fridge->id);
+
+        $this->assertFalse($out['ok']);
+        $this->assertStringStartsWith('Error:', $out['content']);
+    }
+
+    public function test_sum_item_field_rejects_weight_without_a_valid_unit(): void
+    {
+        $this->item(['name' => 'Flour', 'weight' => 500, 'weight_unit' => 'g']);
+
+        $out = $this->toolbox->run('sum_item_field', ['field' => 'weight', 'unit' => 'stone'], $this->user, $this->fridge->id);
+
+        $this->assertFalse($out['ok']);
+    }
+
+    public function test_sum_item_field_respects_list_items_style_filters(): void
+    {
+        $this->item(['name' => 'Fresh Milk', 'quantity' => 1, 'expiry_date' => now()->addDays(10)]);
+        $this->item(['name' => 'Old Milk', 'quantity' => 1, 'expiry_date' => now()->subDays(2)]);
+
+        $out = $this->toolbox->run('sum_item_field', ['field' => 'quantity', 'expired_only' => true], $this->user, $this->fridge->id);
+
+        $this->assertSame('1', $out['value']);
+    }
+
+    // ---- notify_user ------------------------------------------------------------------
+
+    public function test_notify_user_creates_a_notification_event(): void
+    {
+        $out = $this->toolbox->run('notify_user', ['message' => 'Expiring soon: 3 items'], $this->user, $this->fridge->id, 'machine');
+
+        $this->assertTrue($out['mutated']);
+        $this->assertDatabaseHas('notification_events', [
+            'fridge_id' => $this->fridge->id,
+            'user_id' => $this->user->id,
+            'kind' => 'machine',
+            'message' => 'Expiring soon: 3 items',
+        ]);
+    }
+
+    public function test_notify_user_requires_a_message(): void
+    {
+        $out = $this->toolbox->run('notify_user', [], $this->user, $this->fridge->id, 'machine');
+
+        $this->assertStringStartsWith('Error:', $out['content']);
+        $this->assertFalse($out['mutated']);
+    }
+
+    public function test_notify_user_is_not_available_on_the_chat_surface(): void
+    {
+        $out = $this->toolbox->run('notify_user', ['message' => 'hi'], $this->user, $this->fridge->id, 'chat');
+
+        $this->assertFalse($out['ok']);
+        $this->assertDatabaseMissing('notification_events', ['message' => 'hi']);
+    }
+
+    // ---- machine-surface eligibility ---------------------------------------------------
+
+    public function test_schemas_excludes_notify_user_from_chat_and_includes_it_for_machine(): void
+    {
+        $chatNames = collect($this->toolbox->schemas('chat'))->map(fn ($t) => $t['function']['name']);
+        $machineNames = collect($this->toolbox->schemas('machine'))->map(fn ($t) => $t['function']['name']);
+
+        $this->assertNotContains('notify_user', $chatNames);
+        $this->assertContains('notify_user', $machineNames);
+    }
+
+    public function test_schemas_on_machine_surface_excludes_destructive_and_item_id_targeted_tools(): void
+    {
+        $machineNames = collect($this->toolbox->schemas('machine'))->map(fn ($t) => $t['function']['name']);
+
+        foreach (['remove_item', 'remove_note', 'clear_expired_items', 'delete_recipe', 'remove_from_shopping', 'forget_fact', 'update_item', 'move_item', 'mark_item_used', 'mark_recipe_made', 'fetch_url', 'import_recipe_from_link'] as $excluded) {
+            $this->assertNotContains($excluded, $machineNames, "{$excluded} should not be Machine-eligible");
+        }
+
+        foreach (['list_items', 'sum_item_field', 'notify_user', 'add_to_shopping', 'add_note', 'add_item', 'bulk_add_items', 'get_kitchen_score', 'list_shopping'] as $included) {
+            $this->assertContains($included, $machineNames, "{$included} should be Machine-eligible");
+        }
+    }
+
+    public function test_run_refuses_a_disallowed_tool_on_the_machine_surface_even_if_named_directly(): void
+    {
+        $item = $this->item(['name' => 'Milk']);
+
+        // Simulates a hand-edited/tampered Machine step naming a non-eligible tool - schema
+        // filtering alone wouldn't catch this, since it never goes through schemas().
+        $out = $this->toolbox->run('remove_item', ['item_id' => $item->id, 'confirm' => true], $this->user, $this->fridge->id, 'machine');
+
+        $this->assertFalse($out['ok']);
+        $this->assertFalse($out['mutated']);
+        $this->assertDatabaseHas('items', ['id' => $item->id]);
+    }
+
+    public function test_run_allows_a_machine_eligible_tool_on_the_machine_surface(): void
+    {
+        $this->item(['name' => 'Milk', 'quantity' => 2]);
+
+        $out = $this->toolbox->run('sum_item_field', ['field' => 'quantity'], $this->user, $this->fridge->id, 'machine');
+
+        $this->assertTrue($out['ok']);
+    }
 }

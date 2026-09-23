@@ -12,6 +12,7 @@ class AgentService
         protected OpenRouterClient $client,
         protected WebContentService $web,
         protected AgentToolbox $toolbox,
+        protected MachineDraftValidator $machineValidator,
     ) {}
 
     /**
@@ -647,6 +648,96 @@ PROMPT;
         }
 
         return $this->fallbackCalorieEstimate($name, $weight, $weightUnit);
+    }
+
+    /**
+     * AI-assisted authoring for a Kitchen Lab Machine: turns a sentence into a validated
+     * {name, trigger, steps} draft the user reviews/edits before saving - see
+     * MachineDraftValidator for the real validation and AgentToolbox::MACHINE_TOOLS for what
+     * a step may call. Unlike estimateCalories/suggestItemDetails there is no sensible
+     * fallback for "draft an automation" without a model - the caller (MachineController) is
+     * responsible for refunding the credit charge when this returns ok:false.
+     */
+    public function draftMachine(User $user, string $prompt): array
+    {
+        if (! $this->client->available()) {
+            return ['ok' => false, 'draft' => null, 'message' => "AI isn't configured right now - build this one step by step instead."];
+        }
+
+        $draft = $this->requestMachineDraft($user, $prompt);
+        $result = $draft
+            ? $this->machineValidator->validate($draft, $user)
+            : ['valid' => false, 'errors' => ["the model's reply wasn't valid JSON."], 'draft' => null];
+
+        if (! $result['valid']) {
+            // One repair round-trip: hand the errors (and the broken draft, if we got one at
+            // all) back and ask for a fix, rather than failing outright on the first attempt.
+            $repaired = $this->requestMachineDraft($user, $prompt, $draft, $result['errors']);
+            $result = $repaired ? $this->machineValidator->validate($repaired, $user) : $result;
+        }
+
+        if (! $result['valid']) {
+            return ['ok' => false, 'draft' => null, 'message' => "Couldn't draft this automatically - build it step by step instead."];
+        }
+
+        return ['ok' => true, 'draft' => $result['draft'], 'message' => null];
+    }
+
+    /**
+     * One completion call for draftMachine - either the initial attempt, or (when
+     * $priorDraft/$errors are passed) a repair attempt. Returns the parsed JSON object, or
+     * null if the call or the JSON parse failed.
+     *
+     * @param  string[]  $errors
+     */
+    private function requestMachineDraft(User $user, string $prompt, ?array $priorDraft = null, array $errors = []): ?array
+    {
+        $tools = json_encode($this->toolbox->schemas('machine'), JSON_PRETTY_PRINT);
+        $fridges = $user->memberFridges()->get(['fridges.id', 'fridges.name'])
+            ->map(fn ($f) => "{$f->id}: {$f->name}")->implode(', ');
+
+        $repairLine = $errors !== []
+            ? "\n\nYour previous attempt was:\n".json_encode($priorDraft).
+                "\nIt failed validation for these reasons - fix ONLY what's wrong, keep everything else the same:\n- ".implode("\n- ", $errors)
+            : '';
+
+        $instructions = <<<PROMPT
+You are turning a plain-language request into a "Machine" - a fixed, deterministic automation for a kitchen-inventory app. It will run later with NO model involved, calling only the tools listed below with the exact arguments you give it now, so be precise: never invent a tool or argument that isn't listed.
+
+The user's fridges (use one of these ids for any fridge_id argument, or omit it to mean "every fridge"): {$fridges}
+
+Available tools (OpenAI function-calling schema - name, description, parameters):
+{$tools}
+
+The user's request: "{$prompt}"{$repairLine}
+
+Return ONLY a JSON object (no prose, no markdown fences) shaped exactly like this:
+{
+  "name": "short Machine name, under 60 characters",
+  "trigger": {
+    "type": "schedule" | "item_added" | "threshold",
+    "config": { ... depends on type - see below ... }
+  },
+  "steps": [ { "tool": "tool_name", "args": { ... } }, ... up to 10 steps ]
+}
+
+trigger.config by type:
+- schedule: {"frequency": "daily"|"weekly", "time": "HH:MM" (24-hour), "weekday": 0-6 (0=Sunday, required only when frequency is weekly), "timezone": an IANA name, default "UTC" if the user didn't say one}
+- item_added: {"search": a name substring, or null for any item, "location": "fridge"|"freezer"|"pantry", or null for any}
+- threshold: {"field": "quantity"|"weight"|"calories", "unit": required (one of g/kg/mg/ml/l/oz/lb) only when field is "weight", "filter": optional sum_item_field-style filters, "op": "lt"|"lte"|"gt"|"gte", "value": a number}
+
+A later step's string argument may reference an earlier step's result with {stepN} (1-based), e.g. {"message": "Expiring soon: {step1}"} - never reference the current step or a later one.
+PROMPT;
+
+        $result = $this->client->complete([
+            ['role' => 'user', 'content' => $instructions],
+        ], 800);
+
+        if (! $result['ok']) {
+            return null;
+        }
+
+        return $this->parseJsonObject($result['content']);
     }
 
     /**

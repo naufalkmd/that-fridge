@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Resources\ItemResource;
 use App\Models\Item;
 use App\Models\Section;
+use App\Support\ItemPayload;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class ItemController extends Controller
@@ -15,9 +15,9 @@ class ItemController extends Controller
     // migration - same treatment as the icon/location/source fields below.
     public const NUTRITION_CATEGORIES = ['protein', 'vegetables', 'fruit', 'grains', 'dairy', 'other_extras'];
 
-    // Metric mass/volume plus imperial - covers a block of cheese in grams and a carton of
-    // milk in liters the same way. Order matters to the client's chip picker.
-    public const WEIGHT_UNITS = ['g', 'kg', 'mg', 'ml', 'l', 'oz', 'lb'];
+    // Alias so existing Rule::in(self::WEIGHT_UNITS) call sites below don't need to change -
+    // the real list now lives in ItemPayload, shared with AgentToolbox's update_item tool.
+    public const WEIGHT_UNITS = ItemPayload::WEIGHT_UNITS;
 
     public function store(Request $request, Section $section)
     {
@@ -46,7 +46,7 @@ class ItemController extends Controller
             'custom_fields.*.value' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $item = $section->items()->create($this->normalizeItemPayload($data));
+        $item = $section->items()->create(ItemPayload::normalize($data));
 
         return new ItemResource($item->load('product'));
     }
@@ -87,32 +87,9 @@ class ItemController extends Controller
             'custom_fields.*.value' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $item->update($this->normalizeItemPayload($data));
+        $item->update(ItemPayload::normalize($data));
 
         return new ItemResource($item->load('product'));
-    }
-
-    /**
-     * Two rules validation alone can't express: clearing `weight` must clear `weight_unit`
-     * too (Rule::in/required_with only constrain what's present, not what a null implies);
-     * and custom_fields entries need a stable id - the client omits it for a brand-new row,
-     * so one is assigned here rather than trusting the client to invent one.
-     */
-    private function normalizeItemPayload(array $data): array
-    {
-        if (array_key_exists('weight', $data) && $data['weight'] === null) {
-            $data['weight_unit'] = null;
-        }
-
-        if (isset($data['custom_fields'])) {
-            $data['custom_fields'] = array_values(array_map(fn ($field) => [
-                'id' => $field['id'] ?? (string) Str::uuid(),
-                'label' => trim($field['label']),
-                'value' => trim($field['value'] ?? ''),
-            ], $data['custom_fields']));
-        }
-
-        return $data;
     }
 
     public function destroy(Request $request, Item $item)

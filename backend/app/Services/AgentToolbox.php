@@ -12,6 +12,7 @@ use App\Models\ShoppingItem;
 use App\Models\User;
 use App\Models\UserBadge;
 use App\Support\ItemFreshness;
+use App\Support\ItemPayload;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -25,12 +26,51 @@ use Illuminate\Support\Str;
  * (remove_item, clear_expired_items, delete_recipe, remove_note) takes a `confirm` flag and
  * returns a preview first, so the agent has to check with the user before anything is deleted.
  *
+ * The same tool vocabulary also backs Kitchen Lab "Machines" - a saved, named, triggerable
+ * sequence of these same calls, replayed on a schedule/event with no model in the loop (see
+ * set_recipe_consumption_plan/mark_recipe_made for a working example of that exact pattern).
+ * `$surface` ('chat' or 'machine') controls which tools are even offered/dispatchable - see
+ * MACHINE_TOOLS below. A Machine runs unattended, so its tool set deliberately excludes:
+ * (a) every confirm-gated or ungated delete (remove_item, remove_note, clear_expired_items,
+ * delete_recipe, remove_from_shopping, forget_fact) - confirm-then-wait is enforced only by
+ * instruction to the model in getSystemPrompt, which means nothing when replayed with nobody
+ * watching; (b) every tool that targets one saved item_id (update_item, move_item,
+ * mark_item_used, check_off_shopping, update_note, mark_recipe_made) - a resolved id goes
+ * stale the moment that stock item is used up and replaced; (c) fetch_url/
+ * import_recipe_from_link - an outbound request on a schedule is a fresh SSRF surface and a
+ * result that differs run to run, the opposite of what a Machine promises; (d) everything
+ * else with no automation value at replay time - pure-chat bookkeeping (remember_fact,
+ * list_facts, save_recipe, set_recipe_consumption_plan) and reads nobody would want as a
+ * scheduled step's output (list_fridges, list_recipes, get_recipe, list_notes, list_badges,
+ * get_credits_balance). notify_user is the mirror image - Machine-only, never offered in chat,
+ * since the chat reply already IS the user-facing output there, and offering it in chat would
+ * let a page read via fetch_url potentially prompt-inject push-notification spam through a
+ * tool call.
+ *
  * See AgentService::runWithTools for the loop that drives these.
  */
 class AgentToolbox
 {
     /** Set true by a write method only when it actually touched the DB; read back in run(). */
     private bool $mutated = false;
+
+    /** Set by a tool that produces a clean value worth inserting into a later Machine step
+     *  (e.g. sum_item_field's total) - read back in run(); null for everything else. */
+    private ?string $value = null;
+
+    /**
+     * Tools a Machine may call unattended - see the class docblock for the exclusion
+     * reasoning. Anything not listed here is refused on the 'machine' surface even if a
+     * Machine's saved steps somehow name it (enforced in run(), not just schemas()).
+     */
+    private const MACHINE_TOOLS = [
+        'list_items', 'list_shopping', 'get_kitchen_score',
+        'sum_item_field', 'notify_user',
+        'add_to_shopping', 'add_note', 'add_item', 'bulk_add_items',
+    ];
+
+    /** Offered ONLY on the 'machine' surface, never in chat - see the class docblock. */
+    private const MACHINE_ONLY_TOOLS = ['notify_user'];
 
     /**
      * Name-keyword => curated icon key, ported from the 10 curated entries of
@@ -81,10 +121,12 @@ class AgentToolbox
     ) {}
 
     /**
-     * OpenAI function-tool schemas for every tool. `$fridgeId` is the chat's active fridge;
-     * writes default to it (or the user's own fridge when chatting across all of them).
+     * OpenAI function-tool schemas, filtered to what's usable on `$surface` ('chat' or
+     * 'machine' - see the class docblock and MACHINE_TOOLS/MACHINE_ONLY_TOOLS). `$fridgeId`
+     * is the chat's active fridge; writes default to it (or the user's own fridge when
+     * chatting across all of them).
      */
-    public function schemas(): array
+    public function schemas(string $surface = 'chat'): array
     {
         $fn = fn (string $name, string $description, array $properties, array $required = []) => [
             'type' => 'function',
@@ -95,12 +137,13 @@ class AgentToolbox
             ],
         ];
 
-        return [
-            $fn('list_items', "List the food items in the user's fridge(s), newest first. Use this instead of guessing what they have - the short inventory summary in your context is truncated and lacks IDs, quantities and locations.", [
+        $all = [
+            $fn('list_items', "List the food items in the user's fridge(s), newest first. Use this instead of guessing what they have - the short inventory summary in your context is truncated and lacks IDs, quantities and locations. Each row also shows weight and calories when set - these are PER SINGLE UNIT, not multiplied by quantity, so '3x · 500g each' means 500g per unit with 3 in stock, 1500g total - and any custom fields (label/value pairs like a batch code or supplier), capped at 5 shown per item.", [
                 'expired_only' => ['type' => 'boolean', 'description' => 'Only items already past their date.'],
                 'expiring_within_days' => ['type' => 'integer', 'description' => 'Only items expiring within this many days (0 = today or overdue).'],
                 'location' => ['type' => 'string', 'enum' => ['fridge', 'freezer', 'pantry']],
                 'search' => ['type' => 'string', 'description' => 'Case-insensitive name substring.'],
+                'fridge_id' => ['type' => 'integer', 'description' => 'From list_fridges. Omit to include every fridge the user belongs to.'],
             ]),
             $fn('list_notes', 'List the sticky notes on the fridge(s) - free-text reminders household members leave for each other.', []),
             $fn('list_shopping', 'List what is currently on the shopping list, with any buy links.', []),
@@ -121,7 +164,7 @@ class AgentToolbox
                 'text' => ['type' => 'string', 'description' => 'Case-insensitive fragment of the note text. Only used when note_id is omitted.'],
                 'confirm' => ['type' => 'boolean', 'description' => 'Must be true to actually delete. Never set true without explicit user agreement in the conversation.'],
             ]),
-            $fn('update_item', 'Change one or more fields on an item: name, quantity, whether it is opened, its expiry date, its storage location, its food group, a personal note, or a buy-again link. Get the item_id from list_items first. NOTE here means a short text field on the item itself (e.g. "2 loaves", "for Sunday") - it is NOT the same thing as add_note/list_notes/update_note/remove_note, which are separate sticky notes shared on the whole fridge for the household to see. If the user says "leave a note on this item" or similar, they mean THIS note field via update_item, not a fridge-wide sticky note.', [
+            $fn('update_item', 'Change one or more fields on an item: name, quantity, whether it is opened, its expiry date, its storage location, its food group, its weight/calories, custom fields, a personal note, or a buy-again link. Get the item_id from list_items first. NOTE here means a short text field on the item itself (e.g. "2 loaves", "for Sunday") - it is NOT the same thing as add_note/list_notes/update_note/remove_note, which are separate sticky notes shared on the whole fridge for the household to see. If the user says "leave a note on this item" or similar, they mean THIS note field via update_item, not a fridge-wide sticky note.', [
                 'item_id' => ['type' => 'integer'],
                 'name' => ['type' => 'string', 'description' => 'Rename the item.'],
                 'quantity' => ['type' => 'integer', 'description' => 'New quantity (>= 1). To use an item up entirely, call mark_item_used instead.'],
@@ -131,6 +174,21 @@ class AgentToolbox
                 'category' => ['type' => 'string', 'enum' => ['protein', 'vegetables', 'fruit', 'grains', 'dairy', 'other_extras'], 'description' => 'Food group (feeds the Food Balance score).'],
                 'note' => ['type' => 'string', 'description' => 'A short personal note on this specific item, e.g. "2 loaves" or "for Sunday\'s dinner". Empty string clears it. Not a fridge-wide sticky note.'],
                 'shop_url' => ['type' => 'string', 'description' => 'An http(s) link to buy this item again. Empty string clears it.'],
+                'weight' => ['type' => ['number', 'null'], 'description' => 'Weight/volume of ONE unit (not the total across quantity). Always pass weight_unit in the SAME call. Pass null to clear both.'],
+                'weight_unit' => ['type' => 'string', 'enum' => ItemPayload::WEIGHT_UNITS, 'description' => 'Required whenever weight is set.'],
+                'calories' => ['type' => ['integer', 'null'], 'description' => 'Total kcal for ONE unit (0-100000, not multiplied by quantity). Pass null to clear.'],
+                'set_custom_fields' => [
+                    'type' => 'array',
+                    'description' => 'Add or edit named custom fields (e.g. "Batch code", "Supplier") without touching any other existing field. Matches by label, case-insensitive. An empty value removes that field. To read the current fields first, use list_items.',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => (object) [
+                            'label' => ['type' => 'string'],
+                            'value' => ['type' => 'string', 'description' => 'Empty string removes this field.'],
+                        ],
+                        'required' => ['label'],
+                    ],
+                ],
             ], ['item_id']),
             $fn('bulk_add_items', 'Add several food items to the fridge in one call - use this for a grocery haul instead of calling add_item many times.', [
                 'items' => [
@@ -145,6 +203,9 @@ class AgentToolbox
                             'expiry_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD.'],
                             'shelf_life_days' => ['type' => 'integer'],
                             'section' => ['type' => 'string'],
+                            'weight' => ['type' => 'number', 'description' => 'Weight/volume of ONE unit. Needs weight_unit alongside it.'],
+                            'weight_unit' => ['type' => 'string', 'enum' => ItemPayload::WEIGHT_UNITS],
+                            'calories' => ['type' => 'integer', 'description' => 'kcal for ONE unit (0-100000).'],
                         ],
                         'required' => ['name'],
                     ],
@@ -182,6 +243,9 @@ class AgentToolbox
                 'shelf_life_days' => ['type' => 'integer', 'description' => 'Days from today until it goes off - use when the user gives a rough guess instead of a date.'],
                 'section' => ['type' => 'string', 'description' => 'Shelf / section label, e.g. "Produce", "Door". Created if new.'],
                 'fridge_id' => ['type' => 'integer', 'description' => 'From list_fridges. Omit for the active/default fridge.'],
+                'weight' => ['type' => 'number', 'description' => 'Weight/volume of ONE unit, e.g. from a package label. Needs weight_unit alongside it.'],
+                'weight_unit' => ['type' => 'string', 'enum' => ItemPayload::WEIGHT_UNITS],
+                'calories' => ['type' => 'integer', 'description' => 'kcal for ONE unit (0-100000).'],
             ], ['name']),
             $fn('move_item', 'Move an item to a different shelf/section, and optionally change its storage location. Get item_id from list_items.', [
                 'item_id' => ['type' => 'integer'],
@@ -238,15 +302,51 @@ class AgentToolbox
             $fn('import_recipe_from_link', 'Read a recipe from a URL the user shared and return its name, ingredients and steps. Follow up with save_recipe if they want it kept. Only use a URL the user actually provided.', [
                 'url' => ['type' => 'string'],
             ], ['url']),
+            $fn('sum_item_field', "Compute a precise total across matching items - use this instead of adding up list_items' rows yourself. It exists because a Machine replaying this later has no model to eyeball a total with, so it needs deterministic math computed by the server, not by you reading numbers off a list. 'quantity' sums the plain unit count. 'weight' and 'calories' are MULTIPLIED BY QUANTITY - i.e. the total amount in stock, not per-unit (the opposite convention from list_items' per-unit display). A weight sum never mixes mass and volume: the target unit you pass decides which system it sums (g/kg/mg/oz/lb are mass, ml/l are volume) - items measured in the other system, or with no weight set, are excluded and reported as skipped, never estimated.", [
+                'field' => ['type' => 'string', 'enum' => ['quantity', 'weight', 'calories']],
+                'unit' => ['type' => 'string', 'enum' => ItemPayload::WEIGHT_UNITS, 'description' => 'Required when field is weight - the unit to sum into, e.g. "kg" totals every mass-measured matching item converted to kg. Ignored otherwise.'],
+                'expired_only' => ['type' => 'boolean', 'description' => 'Only items already past their date.'],
+                'expiring_within_days' => ['type' => 'integer', 'description' => 'Only items expiring within this many days (0 = today or overdue).'],
+                'location' => ['type' => 'string', 'enum' => ['fridge', 'freezer', 'pantry']],
+                'search' => ['type' => 'string', 'description' => 'Case-insensitive name substring.'],
+                'fridge_id' => ['type' => 'integer', 'description' => 'From list_fridges. Omit to include every fridge the user belongs to.'],
+            ], ['field']),
+            $fn('notify_user', "Send the user a push/in-app notification right now. This is the ONLY way for a Machine step to surface something to them outside of a live chat reply - never call it in chat itself, since the chat reply you're about to send already IS the output there.", [
+                'message' => ['type' => 'string', 'description' => 'Up to 240 characters. Can reference an earlier step\'s result, e.g. "Expiring soon: {step1}".'],
+                'title' => ['type' => 'string', 'description' => 'Up to 60 characters. Optional - defaults to a generic title.'],
+            ], ['message']),
         ];
+
+        return array_values(array_filter(
+            $all,
+            fn ($tool) => self::toolAllowedOn($tool['function']['name'], $surface)
+        ));
+    }
+
+    /** Whether `$name` may run on `$surface` ('chat' or 'machine') - see MACHINE_TOOLS/
+     *  MACHINE_ONLY_TOOLS and the class docblock. Filters schemas() (what the model sees)
+     *  AND is re-checked in run() (what actually dispatches), since schema filtering alone
+     *  only controls the model's menu, not a hand-edited or tampered Machine step list. */
+    public static function toolAllowedOn(string $name, string $surface): bool
+    {
+        if ($surface === 'machine') {
+            return in_array($name, self::MACHINE_TOOLS, true);
+        }
+
+        return ! in_array($name, self::MACHINE_ONLY_TOOLS, true);
     }
 
     /**
-     * @return array{content: string, mutated: bool}
+     * @return array{content: string, mutated: bool, ok: bool, value: ?string}
      */
-    public function run(string $name, array $args, User $user, ?int $fridgeId): array
+    public function run(string $name, array $args, User $user, ?int $fridgeId, string $surface = 'chat'): array
     {
         $this->mutated = false;
+        $this->value = null;
+
+        if (! self::toolAllowedOn($name, $surface)) {
+            return ['content' => "Error: \"{$name}\" isn't available on the {$surface} surface.", 'mutated' => false, 'ok' => false, 'value' => null];
+        }
 
         try {
             $content = match ($name) {
@@ -280,13 +380,20 @@ class AgentToolbox
                 'set_recipe_consumption_plan' => $this->setRecipeConsumptionPlan($user, $args),
                 'delete_recipe' => $this->deleteRecipe($user, $args),
                 'import_recipe_from_link' => $this->importRecipeFromLink($args),
+                'sum_item_field' => $this->sumItemField($user, $args),
+                'notify_user' => $this->notifyUser($user, $fridgeId, $args),
                 default => "Error: unknown tool \"{$name}\".",
             };
         } catch (\Throwable $e) {
-            return ['content' => 'Error running that tool: '.$e->getMessage(), 'mutated' => false];
+            return ['content' => 'Error running that tool: '.$e->getMessage(), 'mutated' => false, 'ok' => false, 'value' => null];
         }
 
-        return ['content' => $content, 'mutated' => $this->mutated];
+        return [
+            'content' => $content,
+            'mutated' => $this->mutated,
+            'ok' => ! str_starts_with($content, 'Error'),
+            'value' => $this->value,
+        ];
     }
 
     // ---- reads ---------------------------------------------------------------
@@ -301,12 +408,56 @@ class AgentToolbox
 
     private function listItems(User $user, array $args): string
     {
-        $items = $this->items($user)->orderByDesc('created_at')->limit(200)->get();
+        $items = $this->filteredItems($user, $args, 200);
 
+        if ($items->isEmpty()) {
+            return 'No items match.';
+        }
+
+        $lines = $items->map(function ($i) {
+            $exp = $i['days_to_expiry'] === null
+                ? 'no date'
+                : ($i['days_to_expiry'] < 0 ? abs($i['days_to_expiry']).'d overdue' : $i['days_to_expiry'].'d left');
+            $each = $i['quantity'] > 1 ? ' each' : '';
+
+            return "#{$i['id']} {$i['name']} · {$i['quantity']}x · ".
+                ($i['location'] ?? '?')." · {$i['section']} · {$exp}".
+                ($i['opened'] ? ' · opened' : '').
+                ($i['category'] ? " · {$i['category']}" : '').
+                ($i['weight'] !== null ? ' · '.$this->formatWeight($i['weight'], $i['weight_unit']).$each : '').
+                ($i['calories'] !== null ? " · {$i['calories']} kcal{$each}" : '').
+                ($i['shop_url'] ? " · buy: {$i['shop_url']}" : '').
+                $this->formatCustomFields($i['custom_fields']);
+        });
+
+        return $lines->implode("\n");
+    }
+
+    /**
+     * Shared query + filter logic for list_items and (later) aggregation tools. A null
+     * $limit means "no cap" - list_items still passes 200 itself; only a caller doing math
+     * across the whole matching set should pass null, since list_items' 200-row cap is
+     * applied before these filters and an aggregation must not silently inherit that.
+     *
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    private function filteredItems(User $user, array $args, ?int $limit): \Illuminate\Support\Collection
+    {
+        $query = $this->items($user)->orderByDesc('created_at');
+        if ($limit !== null) {
+            $query->limit($limit);
+        }
+        $items = $query->get();
+
+        if (isset($args['fridge_id']) && $this->fridgeIds($user)->contains((int) $args['fridge_id'])) {
+            $fridgeId = (int) $args['fridge_id'];
+            $items = $items->filter(fn ($i) => $i->section?->fridge?->id === $fridgeId);
+        }
         if (isset($args['search'])) {
             $items = $items->filter(fn ($i) => str_contains(Str::lower($i->name), Str::lower((string) $args['search'])));
         }
-        $items = $items->map(function ($i) {
+
+        $rows = $items->map(function ($i) {
             $days = ItemFreshness::effectiveDaysUntilExpiry($i);
 
             return [
@@ -321,37 +472,112 @@ class AgentToolbox
                 'opened' => (bool) $i->opened,
                 'days_to_expiry' => $days,
                 'shop_url' => $i->shop_url,
+                'weight' => $i->weight,
+                'weight_unit' => $i->weight_unit,
+                'calories' => $i->calories,
+                'custom_fields' => $i->custom_fields ?? [],
             ];
         });
 
         if (! empty($args['expired_only'])) {
-            $items = $items->filter(fn ($i) => $i['days_to_expiry'] !== null && $i['days_to_expiry'] < 0);
+            $rows = $rows->filter(fn ($i) => $i['days_to_expiry'] !== null && $i['days_to_expiry'] < 0);
         }
         if (isset($args['expiring_within_days'])) {
             $n = (int) $args['expiring_within_days'];
-            $items = $items->filter(fn ($i) => $i['days_to_expiry'] !== null && $i['days_to_expiry'] <= $n);
+            $rows = $rows->filter(fn ($i) => $i['days_to_expiry'] !== null && $i['days_to_expiry'] <= $n);
         }
         if (isset($args['location'])) {
-            $items = $items->filter(fn ($i) => $i['location'] === $args['location']);
+            $rows = $rows->filter(fn ($i) => $i['location'] === $args['location']);
         }
 
-        if ($items->isEmpty()) {
-            return 'No items match.';
+        return $rows->values();
+    }
+
+    /** Trims trailing zeros so 500.000 reads as "500g" and 0.750 as "0.75kg". */
+    private function formatWeight(float $weight, ?string $unit): string
+    {
+        $formatted = rtrim(rtrim(number_format($weight, 3, '.', ''), '0'), '.');
+
+        return $formatted.($unit ?? '');
+    }
+
+    /** Compact "label=value; label=value (+N more)" rendering, capped so one item with many
+     *  fields can't dominate a list_items reply. */
+    private function formatCustomFields(array $fields): string
+    {
+        if ($fields === []) {
+            return '';
         }
 
-        $lines = $items->map(function ($i) {
-            $exp = $i['days_to_expiry'] === null
-                ? 'no date'
-                : ($i['days_to_expiry'] < 0 ? abs($i['days_to_expiry']).'d overdue' : $i['days_to_expiry'].'d left');
+        $shown = array_slice($fields, 0, 5);
+        $rest = count($fields) - count($shown);
+        $parts = array_map(
+            fn ($f) => ($f['label'] ?? '?').'='.Str::limit((string) ($f['value'] ?? ''), 40, '…'),
+            $shown
+        );
 
-            return "#{$i['id']} {$i['name']} · {$i['quantity']}x · ".
-                ($i['location'] ?? '?')." · {$i['section']} · {$exp}".
-                ($i['opened'] ? ' · opened' : '').
-                ($i['category'] ? " · {$i['category']}" : '').
-                ($i['shop_url'] ? " · buy: {$i['shop_url']}" : '');
+        return ' · fields: '.implode('; ', $parts).($rest > 0 ? " (+{$rest} more)" : '');
+    }
+
+    // Base units for weight conversion - mass and volume never mix (see sumItemField).
+    private const GRAMS_PER_UNIT = ['g' => 1, 'kg' => 1000, 'mg' => 0.001, 'oz' => 28.3495, 'lb' => 453.592];
+
+    private const ML_PER_UNIT = ['ml' => 1, 'l' => 1000];
+
+    private function sumItemField(User $user, array $args): string
+    {
+        $field = $args['field'] ?? null;
+        if (! in_array($field, ['quantity', 'weight', 'calories'], true)) {
+            return 'Error: field must be one of quantity, weight, calories.';
+        }
+
+        // No row cap, unlike list_items (200) - an aggregation must see every matching item
+        // or it silently under-counts.
+        $items = $this->filteredItems($user, $args, null);
+
+        if ($field === 'quantity') {
+            $total = (int) $items->sum('quantity');
+            $this->value = (string) $total;
+
+            return "Total quantity: {$total} across {$items->count()} item".($items->count() === 1 ? '' : 's').'.';
+        }
+
+        if ($field === 'calories') {
+            $matched = $items->filter(fn ($i) => $i['calories'] !== null);
+            $skipped = $items->count() - $matched->count();
+            // Total in stock (per-unit x quantity) - the opposite of list_items' per-unit
+            // display, since "how much is in stock" is what a Machine summing calories wants.
+            $total = (int) $matched->sum(fn ($i) => $i['calories'] * $i['quantity']);
+            $this->value = "{$total} kcal";
+
+            return "Total calories: {$total} kcal across {$matched->count()} item".($matched->count() === 1 ? '' : 's').
+                ($skipped > 0 ? " ({$skipped} skipped: no calories set)" : '').'.';
+        }
+
+        // weight
+        $unit = $args['unit'] ?? 'g';
+        if (! in_array($unit, ItemPayload::WEIGHT_UNITS, true)) {
+            return 'Error: unit must be one of '.implode(', ', ItemPayload::WEIGHT_UNITS).' (required when field is weight).';
+        }
+        $unitIsMass = array_key_exists($unit, self::GRAMS_PER_UNIT);
+
+        $matched = $items->filter(function ($i) use ($unitIsMass) {
+            if ($i['weight'] === null || $i['weight_unit'] === null) {
+                return false;
+            }
+
+            return array_key_exists($i['weight_unit'], self::GRAMS_PER_UNIT) === $unitIsMass;
         });
+        $skipped = $items->count() - $matched->count();
 
-        return $lines->implode("\n");
+        $baseTable = $unitIsMass ? self::GRAMS_PER_UNIT : self::ML_PER_UNIT;
+        $totalBase = $matched->sum(fn ($i) => $baseTable[$i['weight_unit']] * $i['weight'] * $i['quantity']);
+        $total = $totalBase / $baseTable[$unit];
+        $rendered = $this->formatWeight($total, $unit);
+        $this->value = $rendered;
+
+        return "Total weight: {$rendered} across {$matched->count()} item".($matched->count() === 1 ? '' : 's').
+            ($skipped > 0 ? " ({$skipped} skipped: no weight set, or measured in the other system - mass vs volume)" : '').'.';
     }
 
     private function listNotes(User $user): string
@@ -454,6 +680,26 @@ class AgentToolbox
         return "Left a note on {$fridge->name}: \"{$text}\".";
     }
 
+    /** Machine-only (see the class docblock) - wraps Notifier::notify() rather than a second
+     *  delivery path, so this rides the same push pipeline as expiry/invite/member alerts. */
+    private function notifyUser(User $user, ?int $fridgeId, array $args): string
+    {
+        $message = trim((string) ($args['message'] ?? ''));
+        if ($message === '') {
+            return 'Error: message is required.';
+        }
+        $message = Str::limit($message, 240, '');
+
+        $title = trim((string) ($args['title'] ?? ''));
+        $title = $title !== '' ? Str::limit($title, 60, '') : null;
+
+        $fridge = $this->targetFridge($user, $fridgeId);
+        Notifier::notify($user, 'machine', $message, $fridge, null, $title);
+        $this->mutated = true;
+
+        return "Notified: \"{$message}\".";
+    }
+
     private function removeNote(User $user, array $args): string
     {
         $notes = FridgeNote::whereIn('fridge_id', $this->fridgeIds($user));
@@ -536,14 +782,85 @@ class AgentToolbox
             }
         }
 
-        if (! $data) {
-            return 'Error: nothing to change - pass at least one of name, quantity, opened, location, category, expiry_date, note, shop_url.';
+        if (array_key_exists('weight', $args)) {
+            if ($args['weight'] === null) {
+                $data['weight'] = null;
+            } elseif (! is_numeric($args['weight']) || (float) $args['weight'] < 0 || (float) $args['weight'] > 9999999) {
+                return 'Error: weight must be a number between 0 and 9999999, or null to clear it.';
+            } elseif (empty($args['weight_unit']) || ! in_array($args['weight_unit'], ItemPayload::WEIGHT_UNITS, true)) {
+                return 'Error: weight needs a weight_unit (one of '.implode(', ', ItemPayload::WEIGHT_UNITS).') in the same call.';
+            } else {
+                $data['weight'] = (float) $args['weight'];
+                $data['weight_unit'] = $args['weight_unit'];
+            }
+        } elseif (isset($args['weight_unit'])) {
+            if (! $item->weight) {
+                return 'Error: weight_unit needs a weight to go with it, and this item has none set. Pass weight too.';
+            }
+            if (! in_array($args['weight_unit'], ItemPayload::WEIGHT_UNITS, true)) {
+                return 'Error: weight_unit must be one of '.implode(', ', ItemPayload::WEIGHT_UNITS).'.';
+            }
+            $data['weight_unit'] = $args['weight_unit'];
         }
 
+        if (array_key_exists('calories', $args)) {
+            if ($args['calories'] === null) {
+                $data['calories'] = null;
+            } elseif (! is_numeric($args['calories']) || (int) $args['calories'] < 0 || (int) $args['calories'] > 100000) {
+                return 'Error: calories must be a whole number between 0 and 100000, or null to clear it.';
+            } else {
+                $data['calories'] = (int) $args['calories'];
+            }
+        }
+
+        if (isset($args['set_custom_fields']) && is_array($args['set_custom_fields'])) {
+            $merged = ItemPayload::mergeCustomFields($item->custom_fields ?? [], $args['set_custom_fields']);
+            if (is_string($merged)) {
+                return "Error: {$merged}";
+            }
+            $data['custom_fields'] = $merged;
+        }
+
+        if (! $data) {
+            return 'Error: nothing to change - pass at least one of name, quantity, opened, location, category, expiry_date, note, shop_url, weight, calories, set_custom_fields.';
+        }
+
+        $data = ItemPayload::normalize($data);
         $item->update($data);
         $this->mutated = true;
 
-        return "Updated \"{$item->name}\": ".collect($data)->map(fn ($v, $k) => "{$k}=".(is_bool($v) ? ($v ? 'true' : 'false') : ($v ?? 'cleared')))->implode(', ').'.';
+        return "Updated \"{$item->name}\": ".$this->describeItemChanges($data).'.';
+    }
+
+    /** Renders update_item's $data for the confirmation string - weight/unit fold into one
+     *  "weight=500g" part instead of two, and custom_fields into readable "label=value"s. */
+    private function describeItemChanges(array $data): string
+    {
+        $parts = [];
+        foreach ($data as $k => $v) {
+            if ($k === 'weight') {
+                $parts[] = $v === null ? 'weight=cleared' : 'weight='.$this->formatWeight((float) $v, $data['weight_unit'] ?? null);
+
+                continue;
+            }
+            if ($k === 'weight_unit') {
+                if (array_key_exists('weight', $data)) {
+                    continue; // already folded into the weight= part above
+                }
+                $parts[] = "weight_unit={$v}";
+
+                continue;
+            }
+            if ($k === 'custom_fields') {
+                $rendered = collect($v)->map(fn ($f) => "{$f['label']}={$f['value']}")->implode(', ');
+                $parts[] = 'custom fields: '.($rendered !== '' ? $rendered : 'none');
+
+                continue;
+            }
+            $parts[] = "{$k}=".(is_bool($v) ? ($v ? 'true' : 'false') : ($v ?? 'cleared'));
+        }
+
+        return implode(', ', $parts);
     }
 
     private function updateNote(User $user, array $args): string
@@ -731,7 +1048,9 @@ class AgentToolbox
         }
 
         return "Added \"{$item->name}\" ({$item->quantity}x) to {$item->section->name} in {$fridge->name}".
-            ($item->expiry_date ? ' · expires '.$item->expiry_date->toDateString() : '').'.';
+            ($item->expiry_date ? ' · expires '.$item->expiry_date->toDateString() : '').
+            ($item->weight !== null ? ' · '.$this->formatWeight($item->weight, $item->weight_unit) : '').
+            ($item->calories !== null ? " · {$item->calories} kcal" : '').'.';
     }
 
     private function bulkAddItems(User $user, ?int $fridgeId, array $args): string
@@ -797,6 +1116,27 @@ class AgentToolbox
             $expiry = Carbon::now()->addDays((int) $spec['shelf_life_days'])->toDateString();
         }
 
+        $weight = null;
+        $weightUnit = null;
+        if (isset($spec['weight']) && $spec['weight'] !== null) {
+            if (! is_numeric($spec['weight']) || (float) $spec['weight'] < 0 || (float) $spec['weight'] > 9999999) {
+                return 'weight must be a number between 0 and 9999999';
+            }
+            if (empty($spec['weight_unit']) || ! in_array($spec['weight_unit'], ItemPayload::WEIGHT_UNITS, true)) {
+                return 'weight needs a weight_unit (one of '.implode(', ', ItemPayload::WEIGHT_UNITS).')';
+            }
+            $weight = (float) $spec['weight'];
+            $weightUnit = $spec['weight_unit'];
+        }
+
+        $calories = null;
+        if (isset($spec['calories']) && $spec['calories'] !== null) {
+            if (! is_numeric($spec['calories']) || (int) $spec['calories'] < 0 || (int) $spec['calories'] > 100000) {
+                return 'calories must be a whole number between 0 and 100000';
+            }
+            $calories = (int) $spec['calories'];
+        }
+
         $section = $this->sectionFor($fridge, $spec['section'] ?? null, $location);
         $icon = $this->guessIcon($name) ?? 'leftovers';
 
@@ -808,6 +1148,9 @@ class AgentToolbox
             'quantity' => isset($spec['quantity']) ? max(1, (int) $spec['quantity']) : 1,
             'expiry_date' => $expiry,
             'source' => 'manual',
+            'weight' => $weight,
+            'weight_unit' => $weightUnit,
+            'calories' => $calories,
         ]);
         $this->mutated = true;
 

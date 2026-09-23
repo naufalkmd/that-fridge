@@ -37,4 +37,8 @@ final class CreditCost
 
     /** Vision: read the calorie figure off a nutrition-label photo. */
     public const LABEL_SCAN = 2;
+
+    /** One-time AI draft of a Kitchen Lab Machine's step list from a sentence; runs
+     *  afterward are AI-free and cost nothing. Refunded if no valid draft comes back. */
+    public const MACHINE_BUILD = 2;
 }

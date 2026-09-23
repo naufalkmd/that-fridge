@@ -19,6 +19,13 @@ import { useSocial } from "@/lib/social";
 import { PixelText } from "@/components/brand";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 
+// Same shape as kindMeta's per-kind entries - used for a `kind` this build doesn't recognize
+// yet (an older, not-yet-updated install receiving a notification kind added after it
+// shipped), so the row degrades to a generic bell instead of crashing the whole list.
+function fallbackMeta(colors: ThemeColors): { color: string; icon: keyof typeof MaterialCommunityIcons.glyphMap } {
+  return { color: colors.faint, icon: "bell-outline" };
+}
+
 function kindMeta(
   colors: ThemeColors,
 ): Record<NotificationKind, { color: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }> {
@@ -37,6 +44,9 @@ function kindMeta(
     itemAdded: { color: colors.agentOrganizer, icon: "package-variant-closed" },
     itemUsed: { color: colors.agentOrganizer, icon: "package-variant" },
     note: { color: colors.agentOrganizer, icon: "note-text-outline" },
+    // Accent (the brand cyan, not one of the four crew-agent colors) - a Machine is
+    // cross-cutting, not owned by any one agent. See Kitchen Lab's Machine concept.
+    machine: { color: colors.accent, icon: "cog-outline" },
   };
 }
 
@@ -247,7 +257,9 @@ function Row({
     faint: FAINT,
     blue: BLUE,
   } = colors;
-  const meta = kindMeta(colors)[event.kind];
+  // `event.kind` is a string from the server, not a compile-time-checked union - guard
+  // against a kind this build doesn't know yet (see fallbackMeta above) rather than crashing.
+  const meta = kindMeta(colors)[event.kind] ?? fallbackMeta(colors);
   return (
     <View
       style={{

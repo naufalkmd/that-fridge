@@ -17,3 +17,4 @@ $heartbeat(Schedule::command('app:check-item-freshness')->dailyAt('07:00'), 'app
 $heartbeat(Schedule::command('app:snapshot-kitchen-scores')->weeklyOn(1, '07:30'), 'app:snapshot-kitchen-scores');
 $heartbeat(Schedule::command('app:prune-stale-data')->dailyAt('04:00'), 'app:prune-stale-data');
 $heartbeat(Schedule::command('app:grant-monthly-credits')->monthlyOn(1, '00:15'), 'app:grant-monthly-credits');
+$heartbeat(Schedule::command('app:run-due-machines')->everyFiveMinutes(), 'app:run-due-machines');

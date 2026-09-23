@@ -19,6 +19,7 @@ use App\Http\Controllers\FridgeNoteController;
 use App\Http\Controllers\IconController;
 use App\Http\Controllers\IngestionController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\MachineController;
 use App\Http\Controllers\MemoryController;
 use App\Http\Controllers\NotificationEventController;
 use App\Http\Controllers\NotificationPrefController;
@@ -159,6 +160,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // slightly tighter than text (same 20/text vs. 15/vision split as everywhere else).
     Route::middleware('throttle:20,1')->post('/items/{item}/estimate-calories', [CalorieController::class, 'estimate']);
     Route::middleware('throttle:15,1')->post('/items/{item}/scan-label', [CalorieController::class, 'scanLabel']);
+
+    // Kitchen Lab Machines - draft hits an LLM (throttled like the AI routes above); the
+    // rest are plain CRUD on the saved automation, no AI involved.
+    Route::get('/machines', [MachineController::class, 'index']);
+    Route::middleware('throttle:20,1')->post('/machines/draft', [MachineController::class, 'draft']);
+    Route::post('/machines', [MachineController::class, 'store']);
+    Route::patch('/machines/{machine}', [MachineController::class, 'update']);
+    Route::delete('/machines/{machine}', [MachineController::class, 'destroy']);
 
     Route::get('/shopping-items', [ShoppingItemController::class, 'index']);
     Route::post('/fridges/{fridge}/shopping-items', [ShoppingItemController::class, 'store']);

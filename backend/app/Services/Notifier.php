@@ -36,6 +36,9 @@ class Notifier
         'itemAdded' => ['crew_actions_enabled', 'New in the fridge'],
         'itemUsed' => ['crew_actions_enabled', 'Item used up'],
         'note' => ['crew_actions_enabled', 'Fridge note'],
+        // No pref column - a Machine's on/off switch IS its own notification opt-in/out;
+        // there's no separate "mute Machine notifications but keep the Machine running" case.
+        'machine' => [null, 'Machine'],
     ];
 
     public static function notify(
@@ -44,12 +47,14 @@ class Notifier
         string $message,
         Fridge $fridge,
         ?Item $item = null,
+        ?string $title = null,
     ): ?NotificationEvent {
         if (! $user) {
             return null;
         }
 
-        [$prefColumn, $title] = self::KINDS[$kind] ?? [null, 'ThatFridge'];
+        [$prefColumn, $defaultTitle] = self::KINDS[$kind] ?? [null, 'ThatFridge'];
+        $title ??= $defaultTitle;
 
         $pref = $user->notificationPref;
         if ($pref && $prefColumn && ! $pref->{$prefColumn}) {

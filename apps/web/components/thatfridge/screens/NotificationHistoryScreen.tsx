@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Bell, Check, ChefHat, ChevronLeft, Hourglass, LogOut, Mail, PackagePlus, ShoppingCart, StickyNote, UserPlus, X } from "lucide-react";
+import { Bell, Check, ChefHat, ChevronLeft, Cog, Hourglass, LogOut, Mail, PackagePlus, ShoppingCart, StickyNote, UserPlus, X } from "lucide-react";
 import { timeAgo } from "@/lib/thatfridge/utils";
 import { theme } from "@/lib/thatfridge/theme";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
@@ -24,6 +24,9 @@ const KIND_META: Record<NotificationKind, { Icon: typeof Hourglass; color: strin
   itemAdded: { Icon: PackagePlus, color: theme.agent.organizer },
   itemUsed: { Icon: PackagePlus, color: theme.agent.organizer },
   note: { Icon: StickyNote, color: theme.agent.organizer },
+  // Cyan (the brand accent, not one of the four crew-agent colors) - a Machine is
+  // cross-cutting, not owned by any one agent. See Kitchen Lab's Machine concept.
+  machine: { Icon: Cog, color: theme.amber },
 };
 
 const FALLBACK_META = { Icon: Bell, color: theme.text.faint };
