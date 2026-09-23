@@ -88,6 +88,8 @@ export default function ItemDetail() {
   const [expiryTouched, setExpiryTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [editingQty, setEditingQty] = useState(false);
+  const [qtyDraft, setQtyDraft] = useState("");
 
   const onShoppingList = useMemo(
     () =>
@@ -630,17 +632,53 @@ export default function ItemDetail() {
               icon="minus"
               onPress={() => setItemQty(item.id, item.qty - 1)}
             />
-            <Text
-              style={{
-                minWidth: 24,
-                textAlign: "center",
-                fontSize: 15,
-                fontWeight: "700",
-                color: INK,
-              }}
-            >
-              {item.qty}
-            </Text>
+            {editingQty ? (
+              <TextInput
+                value={qtyDraft}
+                onChangeText={setQtyDraft}
+                onBlur={() => {
+                  setEditingQty(false);
+                  const n = parseInt(qtyDraft, 10);
+                  if (Number.isFinite(n) && n >= 1 && n !== item.qty) {
+                    setItemQty(item.id, n);
+                  }
+                }}
+                keyboardType="number-pad"
+                selectTextOnFocus
+                autoFocus
+                returnKeyType="done"
+                style={{
+                  minWidth: 32,
+                  textAlign: "center",
+                  fontSize: 15,
+                  fontWeight: "700",
+                  color: INK,
+                  padding: 0,
+                }}
+              />
+            ) : (
+              // Tap the number to type an exact quantity - the +/- buttons alone meant
+              // getting from 1 to 24 took 23 taps.
+              <Pressable
+                onPress={() => {
+                  setQtyDraft(String(item.qty));
+                  setEditingQty(true);
+                }}
+                hitSlop={6}
+              >
+                <Text
+                  style={{
+                    minWidth: 24,
+                    textAlign: "center",
+                    fontSize: 15,
+                    fontWeight: "700",
+                    color: INK,
+                  }}
+                >
+                  {item.qty}
+                </Text>
+              </Pressable>
+            )}
             <Step
               icon="plus"
               onPress={() => setItemQty(item.id, item.qty + 1)}

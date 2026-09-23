@@ -7,6 +7,7 @@ import {
   RefreshControl,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -1190,6 +1191,8 @@ function ItemRow({
   onPress: () => void;
 }) {
   const { setItemQty } = useInventory();
+  const [editingQty, setEditingQty] = useState(false);
+  const [qtyDraft, setQtyDraft] = useState(String(item.qty));
   const {
     accent: ACCENT,
     surface2: SURFACE2,
@@ -1397,17 +1400,55 @@ function ItemRow({
                 icon="minus"
                 onPress={() => setItemQty(item.id, item.qty - 1)}
               />
-              <Text
-                style={{
-                  minWidth: 14,
-                  textAlign: "center",
-                  fontSize: 12,
-                  fontWeight: "700",
-                  color: INK,
-                }}
-              >
-                {item.qty}
-              </Text>
+              {editingQty ? (
+                <TextInput
+                  value={qtyDraft}
+                  onChangeText={setQtyDraft}
+                  onBlur={() => {
+                    setEditingQty(false);
+                    const n = parseInt(qtyDraft, 10);
+                    if (Number.isFinite(n) && n >= 1 && n !== item.qty) {
+                      setItemQty(item.id, n);
+                    } else {
+                      setQtyDraft(String(item.qty));
+                    }
+                  }}
+                  keyboardType="number-pad"
+                  selectTextOnFocus
+                  autoFocus
+                  returnKeyType="done"
+                  style={{
+                    minWidth: 22,
+                    textAlign: "center",
+                    fontSize: 12,
+                    fontWeight: "700",
+                    color: INK,
+                    padding: 0,
+                  }}
+                />
+              ) : (
+                // Tap the number itself to type an exact quantity - the +/- buttons alone
+                // meant getting from 1 to 24 took 23 taps.
+                <Pressable
+                  onPress={() => {
+                    setQtyDraft(String(item.qty));
+                    setEditingQty(true);
+                  }}
+                  hitSlop={6}
+                >
+                  <Text
+                    style={{
+                      minWidth: 14,
+                      textAlign: "center",
+                      fontSize: 12,
+                      fontWeight: "700",
+                      color: INK,
+                    }}
+                  >
+                    {item.qty}
+                  </Text>
+                </Pressable>
+              )}
               <Stepper
                 icon="plus"
                 onPress={() => setItemQty(item.id, item.qty + 1)}
