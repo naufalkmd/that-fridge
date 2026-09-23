@@ -169,6 +169,12 @@ export default function Chat() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     const messageForApi = msg || "What do you see in this photo?";
     try {
+      // Expo's fetch/FormData implementation needs a real Blob for a file part - it doesn't
+      // support React Native's classic { uri, name, type } placeholder object, despite the
+      // types still listing it as valid (see draft-item.tsx's expiry-scan photo for the same
+      // fix). Without this, fetch() throws before the request is sent, which the shared http
+      // client then misreports as "you're offline".
+      const imageBlob = img ? await (await fetch(img)).blob() : undefined;
       const res = await api.sendChat(
         messageForApi,
         routeChatAgent(messageForApi),
@@ -176,9 +182,7 @@ export default function Chat() {
           inventory: inventorySummary,
           sessionId,
           fridgeId: scope === "all" ? undefined : scope,
-          image: img
-            ? { uri: img, name: "photo.jpg", type: "image/jpeg" }
-            : undefined,
+          image: imageBlob,
         },
       );
       if (res.session_id) setSessionId(res.session_id);

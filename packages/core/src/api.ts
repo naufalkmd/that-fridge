@@ -449,8 +449,12 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     opts: {
       inventory?: string;
       sessionId?: string | null;
-      /** A photo to attach — RN: `{ uri, name, type }`; web: a `File`/`Blob`. */
-      image?: unknown;
+      /** A photo to attach — a real `Blob`/`File` on both RN and web. RN's own FormData
+       *  claims to accept the classic `{ uri, name, type }` placeholder too, but Expo's
+       *  fetch runtime rejects it (throws before the request is even sent, misreported by
+       *  the http client as "offline") — callers must read the picked photo into a Blob
+       *  first, same as scanReceipt/scanFridgePhoto/scanExpiryPhoto below. */
+      image?: Blob;
       /** One-shot crew tip fetch (Home tip cards / "Activate {agent}") - asks the server for
        * a short plain-text reply and skips saving it into chat history/sessions. Still counts
        * against the free weekly quota, same as a real Quick Chat message. */
@@ -468,8 +472,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       if (opts.sessionId) fd.append("session_id", opts.sessionId);
       if (opts.compact) fd.append("compact", "1");
       if (opts.fridgeId) fd.append("fridge_id", opts.fridgeId);
-      // RN's FormData accepts { uri, name, type }; the DOM one accepts Blob/File.
-      fd.append("image", opts.image as never);
+      fd.append("image", opts.image as never, "photo.jpg");
       return http.post<SendChatResult>("/chat", fd);
     }
     return http.post<SendChatResult>("/chat", {
