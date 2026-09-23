@@ -178,6 +178,7 @@ php artisan config:cache      # each on its own line — artisan rejects them ch
 php artisan route:cache
 php artisan view:cache
 php artisan event:cache
+php artisan filament:optimize # caches the admin panel's components + icons
 ```
 
 > Change the seeded reviewer password from the default before submitting, and put the real
