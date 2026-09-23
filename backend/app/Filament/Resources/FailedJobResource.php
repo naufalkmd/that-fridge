@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\FailedJobResource\Pages;
 use App\Models\AdminAuditLog;
 use App\Models\FailedJob;
+use App\Support\AdminCacheKeys;
 use Filament\Infolists;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -12,6 +13,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 
 /** Queue jobs that exhausted their retries. Retry pushes them back onto the queue. */
 class FailedJobResource extends Resource
@@ -28,7 +30,7 @@ class FailedJobResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $count = FailedJob::count();
+        $count = Cache::remember(AdminCacheKeys::FAILED_JOBS_BADGE, AdminCacheKeys::BADGE_TTL, fn () => FailedJob::count());
 
         return $count > 0 ? (string) $count : null;
     }
@@ -62,7 +64,10 @@ class FailedJobResource extends Resource
                     ->icon('heroicon-o-arrow-path')
                     ->action(fn (FailedJob $record) => self::retry(collect([$record]))),
                 Tables\Actions\DeleteAction::make()
-                    ->after(fn (FailedJob $record) => AdminAuditLog::record('deleted_failed_job', $record, ['job' => $record->jobName()])),
+                    ->after(function (FailedJob $record) {
+                        AdminAuditLog::record('deleted_failed_job', $record, ['job' => $record->jobName()]);
+                        Cache::forget(AdminCacheKeys::FAILED_JOBS_BADGE);
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkAction::make('retry')
@@ -70,7 +75,10 @@ class FailedJobResource extends Resource
                     ->deselectRecordsAfterCompletion()
                     ->action(fn (Collection $records) => self::retry($records)),
                 Tables\Actions\DeleteBulkAction::make()
-                    ->after(fn (Collection $records) => AdminAuditLog::record('deleted_failed_job', null, ['count' => $records->count()])),
+                    ->after(function (Collection $records) {
+                        AdminAuditLog::record('deleted_failed_job', null, ['count' => $records->count()]);
+                        Cache::forget(AdminCacheKeys::FAILED_JOBS_BADGE);
+                    }),
             ]);
     }
 
@@ -79,6 +87,7 @@ class FailedJobResource extends Resource
     {
         Artisan::call('queue:retry', ['id' => $records->pluck('uuid')->all()]);
         AdminAuditLog::record('retried_failed_jobs', null, ['uuids' => $records->pluck('uuid')->all()]);
+        Cache::forget(AdminCacheKeys::FAILED_JOBS_BADGE);
         Notification::make()->success()->title("Retrying {$records->count()} job(s).")->send();
     }
 

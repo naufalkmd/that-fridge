@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\CachedOptions;
 use App\Filament\Resources\AnalyticsEventResource\Pages;
 use App\Models\AnalyticsEvent;
 use Filament\Forms;
@@ -26,6 +27,8 @@ class AnalyticsEventResource extends Resource
     {
         return $table
             ->defaultSort('id', 'desc')
+            // No "All" option - with simple pagination it would load the whole table.
+            ->paginated([25, 50, 100])
             ->columns([
                 Tables\Columns\TextColumn::make('occurred_at')->dateTime()->sortable()->placeholder('-'),
                 Tables\Columns\TextColumn::make('name')->badge()->searchable(),
@@ -41,11 +44,11 @@ class AnalyticsEventResource extends Resource
                 Tables\Filters\SelectFilter::make('name')
                     ->label('Event')
                     ->searchable()
-                    ->options(fn () => AnalyticsEvent::distinct()->orderBy('name')->pluck('name', 'name')->all()),
+                    ->options(fn () => CachedOptions::distinct(AnalyticsEvent::class, 'name')),
                 Tables\Filters\SelectFilter::make('platform')
-                    ->options(fn () => AnalyticsEvent::whereNotNull('platform')->distinct()->pluck('platform', 'platform')->all()),
+                    ->options(fn () => CachedOptions::distinct(AnalyticsEvent::class, 'platform')),
                 Tables\Filters\SelectFilter::make('app_version')
-                    ->options(fn () => AnalyticsEvent::whereNotNull('app_version')->distinct()->orderByDesc('app_version')->pluck('app_version', 'app_version')->all()),
+                    ->options(fn () => array_reverse(CachedOptions::distinct(AnalyticsEvent::class, 'app_version'), true)),
                 Tables\Filters\Filter::make('date')
                     ->form([
                         Forms\Components\DatePicker::make('from'),

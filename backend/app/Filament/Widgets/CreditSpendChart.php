@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Services\AdminStats;
+use App\Support\AdminCacheKeys;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Cache;
 
@@ -12,9 +13,13 @@ class CreditSpendChart extends ChartWidget
 
     protected static ?int $sort = 3;
 
+    // Numbers are cached for minutes anyway; Filament's default 5s polling would just
+    // re-request the same cached payload every 5 seconds per open tab.
+    protected static ?string $pollingInterval = null;
+
     protected function getData(): array
     {
-        $byReason = Cache::remember('admin:credit-spend:7', now()->addMinutes(5), fn () => app(AdminStats::class)->creditSpendByReason(7));
+        $byReason = Cache::flexible(AdminCacheKeys::CREDIT_SPEND, AdminCacheKeys::DASHBOARD_TTL, fn () => app(AdminStats::class)->creditSpendByReason(7));
 
         return [
             'datasets' => [

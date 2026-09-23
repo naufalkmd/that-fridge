@@ -64,19 +64,27 @@ class AdminStats
 
     /**
      * Credits spent per ledger reason over the last N days, biggest first. Spends are
-     * negative deltas; admin adjustments are folded into one 'admin_adjust' bucket.
+     * negative deltas; admin adjustments are folded into one 'admin_adjust' bucket. Summed in
+     * SQL - only the handful of grouped rows come back to PHP.
      *
      * @return array<string, int>
      */
     public function creditSpendByReason(int $days = 7): array
     {
-        return AiCreditLedger::where('created_at', '>=', Carbon::now()->subDays($days))
+        $out = [];
+        AiCreditLedger::query()
+            ->where('created_at', '>=', Carbon::now()->subDays($days))
             ->where('delta', '<', 0)
-            ->get(['reason', 'delta'])
-            ->groupBy(fn ($row) => str_starts_with($row->reason, 'admin_adjust') ? 'admin_adjust' : $row->reason)
-            ->map(fn ($rows) => (int) -$rows->sum('delta'))
-            ->sortDesc()
-            ->all();
+            ->groupBy('reason')
+            ->selectRaw('reason, sum(delta) as total')
+            ->get()
+            ->each(function ($row) use (&$out) {
+                $key = str_starts_with($row->reason, 'admin_adjust') ? 'admin_adjust' : $row->reason;
+                $out[$key] = ($out[$key] ?? 0) + (int) -$row->total;
+            });
+        arsort($out);
+
+        return $out;
     }
 
     /**

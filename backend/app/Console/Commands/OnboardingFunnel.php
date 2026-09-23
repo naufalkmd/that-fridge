@@ -16,9 +16,7 @@ class OnboardingFunnel extends Command
     {
         $days = max(1, (int) $this->option('days'));
         $since = Carbon::now()->subDays($days);
-        $events = $report->events($days);
-
-        if ($events->isEmpty()) {
+        if (! $report->hasEvents($days)) {
             $this->warn("No analytics events in the last {$days} day(s).");
 
             return self::SUCCESS;
@@ -29,11 +27,11 @@ class OnboardingFunnel extends Command
 
         $this->table(
             ['Step', 'Events', 'Unique installs/users'],
-            array_map(fn ($row) => [$row['label'], $row['events'], $row['unique']], $report->steps($events)),
+            array_map(fn ($row) => [$row['label'], $row['events'], $row['unique']], $report->stepCounts($days)),
         );
 
         // Auth method split.
-        $methods = $report->authMethods($events);
+        $methods = $report->authMethods($days);
         if ($methods->isNotEmpty()) {
             $this->newLine();
             $this->line('Auth methods:');
@@ -42,7 +40,7 @@ class OnboardingFunnel extends Command
             }
         }
 
-        $other = $report->otherEventNames($events);
+        $other = $report->otherEventNames($days);
         if ($other->isNotEmpty()) {
             $this->newLine();
             $this->line('Other events seen: '.$other->implode(', '));

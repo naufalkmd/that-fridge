@@ -28,6 +28,8 @@ class ThatFridgeAdminPanelProvider extends PanelProvider
             ->path('admin')
             ->brandName('That Fridge Admin')
             ->login()
+            // Page-to-page navigation swaps content instead of reloading the whole document.
+            ->spa()
             ->colors([
                 'primary' => Color::Amber,
             ])

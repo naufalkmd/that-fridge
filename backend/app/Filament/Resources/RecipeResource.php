@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\RecipeResource\Pages;
+use App\Http\Controllers\RecipeController;
 use App\Models\AdminAuditLog;
 use App\Models\Recipe;
 use Filament\Forms;
@@ -37,7 +38,7 @@ class RecipeResource extends Resource
                 Forms\Components\TextInput::make('name')->required()->maxLength(255),
                 Forms\Components\TextInput::make('minutes')->required()->numeric()->minValue(0),
                 Forms\Components\TextInput::make('category')->maxLength(255),
-                Forms\Components\TextInput::make('meal_type')->maxLength(255),
+                Forms\Components\Select::make('meal_type')->options(self::mealTypeOptions()),
                 Forms\Components\TextInput::make('icon')->maxLength(255),
                 Forms\Components\Select::make('user_id')
                     ->relationship('user', 'email')
@@ -84,7 +85,7 @@ class RecipeResource extends Resource
                         blank: fn ($query) => $query,
                     ),
                 Tables\Filters\SelectFilter::make('meal_type')
-                    ->options(fn () => Recipe::whereNotNull('meal_type')->distinct()->orderBy('meal_type')->pluck('meal_type', 'meal_type')->all()),
+                    ->options(self::mealTypeOptions()),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -109,6 +110,12 @@ class RecipeResource extends Resource
                         ->after(fn ($records) => $records->each(fn ($r) => AdminAuditLog::record('deleted', $r, ['name' => $r->name]))),
                 ]),
             ]);
+    }
+
+    /** The fixed set the API accepts (RecipeController::MEAL_TYPES) - no DB lookup needed. */
+    private static function mealTypeOptions(): array
+    {
+        return collect(RecipeController::MEAL_TYPES)->mapWithKeys(fn ($t) => [$t => ucfirst($t)])->all();
     }
 
     public static function getPages(): array

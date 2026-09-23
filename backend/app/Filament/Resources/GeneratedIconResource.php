@@ -5,7 +5,6 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\GeneratedIconResource\Pages;
 use App\Models\AdminAuditLog;
 use App\Models\GeneratedIcon;
-use App\Models\SharedIcon;
 use App\Services\IconCurator;
 use Filament\Forms;
 use Filament\Notifications\Notification;
@@ -39,15 +38,16 @@ class GeneratedIconResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            // One EXISTS subquery for the whole page instead of two lookups per row.
+            ->modifyQueryUsing(fn ($query) => $query->withExists('sharedIcon'))
             ->defaultSort('created_at', 'desc')
             ->columns([
                 Tables\Columns\ImageColumn::make('image_url')->label('Icon')->size(56),
                 Tables\Columns\TextColumn::make('id')->sortable(),
                 Tables\Columns\TextColumn::make('kind')->badge(),
                 Tables\Columns\TextColumn::make('prompt')->limit(50)->searchable(),
-                Tables\Columns\IconColumn::make('in_pack')
+                Tables\Columns\IconColumn::make('shared_icon_exists')
                     ->label('In pack')
-                    ->state(fn (GeneratedIcon $record): bool => SharedIcon::where('source_generated_icon_id', $record->id)->exists())
                     ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')->since()->sortable(),
             ])
@@ -55,7 +55,7 @@ class GeneratedIconResource extends Resource
                 Tables\Filters\SelectFilter::make('kind')->options(['icon' => 'Item icon', 'recipe' => 'Recipe icon']),
                 Tables\Filters\Filter::make('not_in_pack')
                     ->label('Not in pack yet')
-                    ->query(fn ($query) => $query->whereNotIn('id', SharedIcon::whereNotNull('source_generated_icon_id')->select('source_generated_icon_id'))),
+                    ->query(fn ($query) => $query->whereDoesntHave('sharedIcon')),
                 Tables\Filters\SelectFilter::make('age')
                     ->label('Generated')
                     ->options(['7' => 'Last 7 days', '30' => 'Last 30 days', '90' => 'Last 90 days'])
@@ -65,7 +65,7 @@ class GeneratedIconResource extends Resource
                 Tables\Actions\Action::make('promote')
                     ->label('Add to pack')
                     ->icon('heroicon-o-plus')
-                    ->hidden(fn (GeneratedIcon $record) => SharedIcon::where('source_generated_icon_id', $record->id)->exists())
+                    ->hidden(fn (GeneratedIcon $record) => (bool) $record->shared_icon_exists)
                     ->form([
                         Forms\Components\TextInput::make('label')
                             ->helperText('Short picker label, e.g. "Tomato"')
