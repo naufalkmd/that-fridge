@@ -117,6 +117,17 @@ export interface Recipe {
   isMine: boolean;
   ownerName: string | null;
   ownerUsername: string | null;
+  /** A deterministic "when marked made, do this to inventory" plan, set via chat
+   *  (AgentToolbox::setRecipeConsumptionPlan) - null until the user has one. Read-only here;
+   *  there's no in-app editor yet, only the crew can set one. */
+  consumptionPlan: RecipeConsumptionPlanEntry[] | null;
+}
+
+export interface RecipeConsumptionPlanEntry {
+  ingredient: string;
+  action: "decrement" | "mark_opened" | "use_up" | "skip";
+  itemId?: string;
+  amount?: number;
 }
 
 export interface FridgeStyleDef {

@@ -6,6 +6,7 @@ use App\Models\Fridge;
 use App\Models\FridgeNote;
 use App\Models\Item;
 use App\Models\Recipe;
+use App\Models\RecipeConsumptionPlan;
 use App\Models\Section;
 use App\Models\ShoppingItem;
 use App\Models\User;
@@ -214,9 +215,26 @@ class AgentToolbox
                 'steps' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Ordered steps.'],
                 'category' => ['type' => 'string', 'enum' => self::RECIPE_CATEGORIES],
             ], ['name', 'minutes', 'ingredients', 'steps']),
-            $fn('mark_recipe_made', 'Record that the user cooked a recipe - bumps its made count (feeds "something new" suggestions). Get recipe_id from list_recipes. Does NOT change inventory; use mark_item_used for ingredients they finished.', [
+            $fn('mark_recipe_made', 'Record that the user cooked a recipe - bumps its made count (feeds "something new" suggestions). Get recipe_id from list_recipes. If a consumption plan exists for this recipe (see set_recipe_consumption_plan), it runs automatically and inventory updates deterministically - otherwise inventory is untouched and you should offer to set one up, or use mark_item_used/update_item for ingredients they finished this one time only.', [
                 'recipe_id' => ['type' => 'integer'],
             ], ['recipe_id']),
+            $fn('set_recipe_consumption_plan', 'Define, ONCE, exactly what happens to inventory every future time this recipe is marked made - a deterministic plan that replays identically forever after, with no guessing needed at mark_recipe_made time. Call list_items and get_recipe first. Cover EVERY ingredient with one entry each: "decrement" (reduce a matched item\'s quantity by a whole number of units - e.g. bags/cartons/eggs, never grams or ml, since inventory only tracks whole-unit counts), "mark_opened" (flag a matched item as opened without changing its count - use this whenever the amount used can\'t cleanly be expressed as whole units, e.g. "500g flour" out of a bag), "use_up" (the matched item is fully consumed by this recipe), or "skip" (nothing to track - water, salt, an ingredient not in their inventory). ALWAYS read the full plan back to the user and get their OK before calling this - they know their own kitchen best, and a wrong plan will silently mis-adjust their inventory every future time.', [
+                'recipe_id' => ['type' => 'integer'],
+                'plan' => [
+                    'type' => 'array',
+                    'description' => 'One entry per ingredient line on the recipe, same order as get_recipe/list_recipes shows them.',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => (object) [
+                            'ingredient' => ['type' => 'string', 'description' => 'The ingredient line this entry is for, e.g. "500g flour" - for the user\'s reference, doesn\'t have to match exactly.'],
+                            'action' => ['type' => 'string', 'enum' => ['decrement', 'mark_opened', 'use_up', 'skip']],
+                            'item_id' => ['type' => 'integer', 'description' => 'Matched inventory item id from list_items. Required for every action except skip.'],
+                            'amount' => ['type' => 'integer', 'description' => 'Whole units to decrement by. Required only when action is decrement.'],
+                        ],
+                        'required' => ['ingredient', 'action'],
+                    ],
+                ],
+            ], ['recipe_id', 'plan']),
             $fn('import_recipe_from_link', 'Read a recipe from a URL the user shared and return its name, ingredients and steps. Follow up with save_recipe if they want it kept. Only use a URL the user actually provided.', [
                 'url' => ['type' => 'string'],
             ], ['url']),
@@ -259,6 +277,7 @@ class AgentToolbox
                 'forget_fact' => $this->forgetFact($user, $args),
                 'save_recipe' => $this->saveRecipe($user, $args),
                 'mark_recipe_made' => $this->markRecipeMade($user, $args),
+                'set_recipe_consumption_plan' => $this->setRecipeConsumptionPlan($user, $args),
                 'delete_recipe' => $this->deleteRecipe($user, $args),
                 'import_recipe_from_link' => $this->importRecipeFromLink($args),
                 default => "Error: unknown tool \"{$name}\".",
@@ -985,8 +1004,143 @@ class AgentToolbox
         $recipe->increment('made_count');
         $this->mutated = true;
 
-        return "Logged that you made \"{$recipe->name}\" ({$recipe->made_count}x now). ".
-            "I didn't touch your inventory - tell me which ingredients you used up if you want those logged.";
+        $plan = RecipeConsumptionPlan::where('user_id', $user->id)->where('recipe_id', $recipe->id)->first();
+        if (! $plan || empty($plan->plan)) {
+            return "Logged that you made \"{$recipe->name}\" ({$recipe->made_count}x now). I didn't touch your inventory - ".
+                'ask me to set up a consumption plan (set_recipe_consumption_plan) so this happens automatically every time, or tell me which ingredients you used up just for now.';
+        }
+
+        $summary = $this->applyConsumptionPlan($user, $plan->plan);
+
+        return "Logged that you made \"{$recipe->name}\" ({$recipe->made_count}x now) and applied its consumption plan:\n{$summary}";
+    }
+
+    /**
+     * Replays a saved plan (see setRecipeConsumptionPlan) - purely mechanical, no model
+     * judgement involved, so the same plan produces the same result every time it's called.
+     * An item_id the plan points at that's since been deleted/moved out of reach is reported,
+     * not treated as an error - the rest of the plan still runs.
+     */
+    private function applyConsumptionPlan(User $user, array $plan): string
+    {
+        $lines = [];
+
+        foreach ($plan as $entry) {
+            $ingredient = $entry['ingredient'] ?? '(ingredient)';
+            $action = $entry['action'] ?? 'skip';
+
+            if ($action === 'skip') {
+                $lines[] = "- {$ingredient}: not tracked.";
+
+                continue;
+            }
+
+            $item = $this->items($user)->find($entry['item_id'] ?? null);
+            if (! $item) {
+                $lines[] = "- {$ingredient}: skipped - that item is no longer in your fridge.";
+
+                continue;
+            }
+
+            if ($action === 'mark_opened') {
+                if (! $item->opened) {
+                    $item->update(['opened' => true]);
+                    $this->mutated = true;
+                }
+                $lines[] = "- {$ingredient}: marked \"{$item->name}\" opened.";
+
+                continue;
+            }
+
+            if ($action === 'use_up') {
+                $days = ItemFreshness::daysUntilExpiry($item);
+                $this->recordUsage($user, $item->name, $item->icon, $days);
+                $name = $item->name;
+                $item->delete();
+                $this->mutated = true;
+                $lines[] = "- {$ingredient}: used up \"{$name}\".";
+
+                continue;
+            }
+
+            // decrement
+            $amount = max(1, (int) ($entry['amount'] ?? 1));
+            if ($amount >= $item->quantity) {
+                $days = ItemFreshness::daysUntilExpiry($item);
+                $this->recordUsage($user, $item->name, $item->icon, $days);
+                $name = $item->name;
+                $item->delete();
+                $this->mutated = true;
+                $lines[] = "- {$ingredient}: used up \"{$name}\" (had {$item->quantity}, plan called for {$amount}).";
+            } else {
+                $item->decrement('quantity', $amount);
+                $this->mutated = true;
+                $lines[] = "- {$ingredient}: \"{$item->name}\" now {$item->quantity} left.";
+            }
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Saves a deterministic plan for this (user, recipe) pair - see the schema description
+     * for the full contract. Validated strictly since a bad plan silently mis-adjusts
+     * inventory every future mark_recipe_made, not just once.
+     */
+    private function setRecipeConsumptionPlan(User $user, array $args): string
+    {
+        $recipe = $this->recipesFor($user)->find($args['recipe_id'] ?? null);
+        if (! $recipe) {
+            return 'Error: no recipe with that id. Call list_recipes for valid ids.';
+        }
+
+        $plan = $args['plan'] ?? null;
+        if (! is_array($plan) || ! $plan) {
+            return 'Error: plan must be a non-empty array, one entry per ingredient.';
+        }
+
+        $accessibleIds = $this->items($user)->pluck('id')->all();
+        $clean = [];
+
+        foreach ($plan as $entry) {
+            if (! is_array($entry) || trim((string) ($entry['ingredient'] ?? '')) === '') {
+                return 'Error: every plan entry needs an ingredient.';
+            }
+            $ingredient = Str::limit(trim((string) $entry['ingredient']), 255, '');
+            $action = $entry['action'] ?? null;
+            if (! in_array($action, ['decrement', 'mark_opened', 'use_up', 'skip'], true)) {
+                return "Error: action for \"{$ingredient}\" must be one of decrement, mark_opened, use_up, skip.";
+            }
+
+            $row = ['ingredient' => $ingredient, 'action' => $action];
+
+            if ($action !== 'skip') {
+                $itemId = (int) ($entry['item_id'] ?? 0);
+                if (! $itemId || ! in_array($itemId, $accessibleIds, true)) {
+                    return "Error: item_id for \"{$ingredient}\" must be a real item id from list_items (or use action=skip if it's not in their inventory).";
+                }
+                $row['item_id'] = $itemId;
+            }
+
+            if ($action === 'decrement') {
+                $amount = (int) ($entry['amount'] ?? 0);
+                if ($amount < 1) {
+                    return "Error: \"{$ingredient}\" needs amount >= 1 for a decrement action.";
+                }
+                $row['amount'] = $amount;
+            }
+
+            $clean[] = $row;
+        }
+
+        RecipeConsumptionPlan::updateOrCreate(
+            ['user_id' => $user->id, 'recipe_id' => $recipe->id],
+            ['plan' => $clean],
+        );
+        $this->mutated = true;
+
+        return "Saved the consumption plan for \"{$recipe->name}\" (".count($clean).' ingredient(s)). '.
+            'Every future mark_recipe_made on this recipe will apply it automatically.';
     }
 
     private function deleteRecipe(User $user, array $args): string

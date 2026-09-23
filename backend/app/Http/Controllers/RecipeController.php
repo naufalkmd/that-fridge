@@ -44,7 +44,11 @@ class RecipeController extends Controller
             ->where(fn ($q) => $q->whereNull('user_id')
                 ->orWhere('user_id', $user->id)
                 ->orWhereHas('favoritedBy', fn ($q2) => $q2->where('users.id', $user->id)))
-            ->with(['favoritedBy' => fn ($q) => $q->where('users.id', $user->id), 'user:id,name,username'])
+            ->with([
+                'favoritedBy' => fn ($q) => $q->where('users.id', $user->id),
+                'user:id,name,username',
+                'consumptionPlans' => fn ($q) => $q->where('user_id', $user->id),
+            ])
             ->orderBy('name')
             ->get();
 
@@ -59,7 +63,10 @@ class RecipeController extends Controller
     {
         $this->authorize('view', $recipe);
 
-        return new RecipeResource($recipe->load('user:id,name,username'));
+        return new RecipeResource($recipe->load([
+            'user:id,name,username',
+            'consumptionPlans' => fn ($q) => $q->where('user_id', $request->user()->id),
+        ]));
     }
 
     public function store(Request $request, AgentService $agentService)
