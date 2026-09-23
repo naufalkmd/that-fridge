@@ -601,6 +601,55 @@ PROMPT;
     }
 
     /**
+     * AI calorie estimate for a single item as stored - one number for the whole
+     * unit/package (matching how `weight` is scoped), not per-100g and not multiplied by
+     * quantity. Same stateless-call-with-fallback shape as suggestItemDetails above.
+     */
+    public function estimateCalories(string $name, ?float $weight = null, ?string $weightUnit = null, int $quantity = 1): array
+    {
+        if (! $this->client->available()) {
+            return $this->fallbackCalorieEstimate($name, $weight, $weightUnit);
+        }
+
+        try {
+            $weightLine = $weight !== null
+                ? "Stated weight: {$weight} {$weightUnit} (this is per single unit/package, already excluding quantity)."
+                : 'No weight given - assume one typical retail unit or portion of this item.';
+
+            $prompt = <<<PROMPT
+You are estimating the calorie count for a single grocery item a home cook is tracking in their kitchen inventory.
+
+Item name: "{$name}"
+{$weightLine}
+
+Return ONLY a JSON object (no prose, no markdown fences) with exactly these fields:
+- "calories": total kcal for this ONE item as stored - the whole package/unit, not per 100g and not per serving (integer, 0-100000)
+- "basis": a short phrase naming what you assumed, e.g. "per 500 g pack" or "one medium apple" (string, under 80 characters)
+PROMPT;
+
+            $result = $this->client->complete([
+                ['role' => 'user', 'content' => $prompt],
+            ], 100);
+
+            if ($result['ok']) {
+                $parsed = $this->parseJsonObject($result['content']);
+
+                if ($parsed && isset($parsed['calories'])) {
+                    return [
+                        'calories' => max(0, min(100000, (int) $parsed['calories'])),
+                        'basis' => is_string($parsed['basis'] ?? null) ? mb_substr($parsed['basis'], 0, 80) : '',
+                        'mocked' => false,
+                    ];
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Calorie estimate failed', ['name' => $name, 'error' => $e->getMessage()]);
+        }
+
+        return $this->fallbackCalorieEstimate($name, $weight, $weightUnit);
+    }
+
+    /**
      * The model is asked for raw JSON but occasionally wraps it in markdown fences anyway;
      * strip those defensively before decoding.
      */
@@ -698,6 +747,62 @@ PROMPT;
         }
 
         return null;
+    }
+
+    /**
+     * Rough kcal-per-100g by food group, keyed off the same buckets guessNutritionCategory
+     * already classifies into - deliberately reuses that keyword table rather than keeping a
+     * second one in sync. Coarse on purpose: this only runs when no AI key is configured, so
+     * local dev/demoing still produces a usable number instead of failing outright.
+     */
+    private const CALORIES_PER_100G_BY_GROUP = [
+        'protein' => 200,
+        'vegetables' => 30,
+        'fruit' => 50,
+        'grains' => 300,
+        'dairy' => 100,
+        'other_extras' => 250,
+    ];
+
+    private function fallbackCalorieEstimate(string $name, ?float $weight, ?string $weightUnit): array
+    {
+        $group = $this->guessNutritionCategory($name, null);
+        $per100g = self::CALORIES_PER_100G_BY_GROUP[$group] ?? 120;
+
+        $grams = $this->normalizeWeightToGrams($weight, $weightUnit);
+        // No weight given - 150g is a stand-in for "one typical retail unit/portion", the
+        // same spirit as fallbackItemSuggestion's flat per-icon shelf-life guesses above.
+        $grams ??= 150;
+
+        return [
+            'calories' => max(0, min(100000, (int) round(($grams / 100) * $per100g))),
+            'basis' => 'rough estimate',
+            'mocked' => true,
+        ];
+    }
+
+    /**
+     * Normalizes a weight/volume to grams for the fallback estimate's per-100g math.
+     * Volume units are converted assuming roughly water-like density (1 ml =~ 1 g) - a
+     * deliberate approximation; this path only runs without a configured AI key.
+     */
+    private function normalizeWeightToGrams(?float $weight, ?string $unit): ?float
+    {
+        if ($weight === null || $unit === null) {
+            return null;
+        }
+
+        $gramsPerUnit = [
+            'g' => 1,
+            'kg' => 1000,
+            'mg' => 0.001,
+            'ml' => 1,
+            'l' => 1000,
+            'oz' => 28.3495,
+            'lb' => 453.592,
+        ];
+
+        return $weight * ($gramsPerUnit[$unit] ?? 1);
     }
 
     /**

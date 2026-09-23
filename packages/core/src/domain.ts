@@ -1,4 +1,4 @@
-import type { NutritionCategory, StorageLocation } from "./types";
+import type { NutritionCategory, StorageLocation, WeightUnit } from "./types";
 import type { ChatAgentName } from "./api";
 
 // Picks which crew member should answer a Quick Chat message, from keywords — mirrors
@@ -141,4 +141,20 @@ export const STORAGE_LOCATIONS: {
   { key: "fridge", label: "Fridge", short: "Fr", color: "#2f6fb0" },
   { key: "freezer", label: "Freezer", short: "Fz", color: "#3f5c85" },
   { key: "pantry", label: "Pantry", short: "Pa", color: "#b5702f" },
+];
+
+// Metric mass, metric volume, then imperial, in that order - the chip picker groups on
+// `group` to show a subtle separator between the three clusters rather than one flat row.
+export const WEIGHT_UNITS: {
+  key: WeightUnit;
+  label: string;
+  group: "mass" | "volume" | "imperial";
+}[] = [
+  { key: "g", label: "g", group: "mass" },
+  { key: "kg", label: "kg", group: "mass" },
+  { key: "mg", label: "mg", group: "mass" },
+  { key: "ml", label: "ml", group: "volume" },
+  { key: "l", label: "L", group: "volume" },
+  { key: "oz", label: "oz", group: "imperial" },
+  { key: "lb", label: "lb", group: "imperial" },
 ];

@@ -4,6 +4,7 @@ import type {
   BadgeProgress,
   Category,
   CurrentUser,
+  CustomField,
   FoodFocus,
   AnalyticsEventInput,
   FriendProfile,
@@ -36,6 +37,7 @@ import type {
   UserGoal,
   UserSearchResult,
   Vibe,
+  WeightUnit,
 } from "./types";
 
 export interface AuthResult {
@@ -63,7 +65,11 @@ interface RawItem {
   note: string | null;
   location: StorageLocation | null;
   quantity: number | null;
+  weight: number | null;
+  weight_unit: WeightUnit | null;
   shop_url: string | null;
+  calories: number | null;
+  custom_fields: CustomField[] | null;
 }
 
 interface RawSection {
@@ -98,6 +104,10 @@ function toItem(raw: RawItem): Item {
     opened: raw.opened ?? false,
     location: raw.location ?? undefined,
     shopUrl: raw.shop_url ?? null,
+    weight: raw.weight ?? null,
+    weightUnit: raw.weight_unit ?? null,
+    calories: raw.calories ?? null,
+    customFields: raw.custom_fields ?? [],
   };
 }
 
@@ -125,10 +135,14 @@ export interface CreateItemInput {
   category_id?: string | null;
   location?: StorageLocation;
   quantity?: number;
+  weight?: number | null;
+  weight_unit?: WeightUnit | null;
   expiry_date?: string;
   shelf_life_days?: number;
   note?: string;
   shop_url?: string | null;
+  calories?: number | null;
+  custom_fields?: { id?: string; label: string; value: string }[];
 }
 
 export interface UpdateItemInput {
@@ -139,11 +153,15 @@ export interface UpdateItemInput {
   section_id?: string;
   location?: StorageLocation;
   quantity?: number;
+  weight?: number | null;
+  weight_unit?: WeightUnit | null;
   expiry_date?: string;
   shelf_life_days?: number;
   opened?: boolean;
   note?: string;
   shop_url?: string | null;
+  calories?: number | null;
+  custom_fields?: { id?: string; label: string; value: string }[];
 }
 
 export interface WhatToEatResult {
@@ -605,6 +623,29 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.post("/items/suggest-details", { name, icon });
   }
 
+  /** AI calorie estimate for an existing item, from its name/weight. Charges 1 credit; 402 when short. */
+  function estimateCalories(
+    itemId: string,
+  ): Promise<{ calories: number; basis: string; mocked: boolean }> {
+    return http.post(`/items/${itemId}/estimate-calories`, {});
+  }
+
+  /** Read the calorie figure off a nutrition-label photo. `found: false` when illegible. Charges credits; 402 when short. */
+  function scanNutritionLabel(
+    itemId: string,
+    image: unknown,
+  ): Promise<{
+    found: boolean;
+    calories?: number;
+    serving_size?: string | null;
+    confidence?: "high" | "medium" | "low";
+    message?: string;
+  }> {
+    const fd = new FormData();
+    fd.append("image", image as never, "label.jpg");
+    return http.post(`/items/${itemId}/scan-label`, fd);
+  }
+
   function listNotificationEvents(): Promise<NotificationEvent[]> {
     return http.get<NotificationEvent[]>("/notification-events");
   }
@@ -1007,6 +1048,8 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     listSharedIcons,
     deleteGeneratedIcon,
     suggestItemDetails,
+    estimateCalories,
+    scanNutritionLabel,
     listNotificationEvents,
     markNotification,
     deleteNotificationEvent,

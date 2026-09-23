@@ -37,7 +37,11 @@ class ItemResource extends JsonResource
             'note' => $this->note,
             'location' => $this->location,
             'quantity' => $this->quantity,
+            'weight' => $this->weight,
+            'weight_unit' => $this->weight_unit,
             'shop_url' => $this->shop_url,
+            'calories' => $this->calories,
+            'custom_fields' => $this->custom_fields ?? [],
         ];
     }
 }

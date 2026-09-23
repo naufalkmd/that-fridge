@@ -31,4 +31,10 @@ final class CreditCost
 
     /** Add-item "Auto-fill" shelf-life/location estimate. */
     public const AUTOFILL = 1;
+
+    /** Text: estimate an item's calorie count from its name/weight. */
+    public const CALORIE_ESTIMATE = 1;
+
+    /** Vision: read the calorie figure off a nutrition-label photo. */
+    public const LABEL_SCAN = 2;
 }

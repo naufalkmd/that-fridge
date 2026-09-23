@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\BlockController;
+use App\Http\Controllers\CalorieController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CreditController;
 use App\Http\Controllers\ExpiryScanController;
@@ -153,6 +154,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/items/bulk-category', [ItemController::class, 'bulkCategory']);
     Route::patch('/items/{item}', [ItemController::class, 'update']);
     Route::delete('/items/{item}', [ItemController::class, 'destroy']);
+
+    // Both hit an LLM per call - throttled like /chat and /items/suggest-details, vision
+    // slightly tighter than text (same 20/text vs. 15/vision split as everywhere else).
+    Route::middleware('throttle:20,1')->post('/items/{item}/estimate-calories', [CalorieController::class, 'estimate']);
+    Route::middleware('throttle:15,1')->post('/items/{item}/scan-label', [CalorieController::class, 'scanLabel']);
 
     Route::get('/shopping-items', [ShoppingItemController::class, 'index']);
     Route::post('/fridges/{fridge}/shopping-items', [ShoppingItemController::class, 'store']);

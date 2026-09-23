@@ -1,54 +1,42 @@
 import { useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Linking,
   Platform,
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import Ionicons from "@expo/vector-icons/Ionicons";
 
-import {
-  NUTRITION_CATEGORIES,
-  STORAGE_LOCATIONS,
-  daysLabel,
-  describeError,
-  freshColor,
-  normalizeShopUrl,
-  type NutritionCategory,
-  type StorageLocation,
-} from "@thatfridge/core";
+import { daysLabel, describeError, freshColor } from "@thatfridge/core";
 import { api } from "@/lib/api";
-import { DateField, daysUntil, isoInDays } from "@/components/draft-item";
 import { useInventory } from "@/lib/inventory";
 import { useShopping } from "@/lib/shopping";
 import { useKitchenScore } from "@/lib/kitchenScore";
 import { useToast } from "@/lib/toast";
-import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
-import { CategoryTag } from "@/components/tags";
 import { useTheme } from "@/lib/theme";
-
-const BEST_BEFORE_PRESETS = [
-  { label: "2 days", days: 2 },
-  { label: "1 week", days: 7 },
-  { label: "2 weeks", days: 14 },
-  { label: "1 month", days: 30 },
-];
-
+import {
+  AddCustomFieldRow,
+  BestBeforeRow,
+  CaloriesRow,
+  CustomFieldRows,
+  HeroRow,
+  NoteRow,
+  QuantityRow,
+  RowGroup,
+  ShopLinkRow,
+  StorageRow,
+  WeightRow,
+} from "@/components/item-detail";
 
 export default function ItemDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { itemById, fridges, setItemQty, patchItem, removeItem, restoreItem } =
-    useInventory();
+  const { itemById, removeItem, restoreItem, patchItem } = useInventory();
   const { items: shoppingItems, add: addToShopping } = useShopping();
   const { refresh: refreshScore } = useKitchenScore();
   const toast = useToast();
@@ -67,29 +55,11 @@ export default function ItemDetail() {
     onAccent: CANVAS,
   } = useTheme().colors;
 
-  const inputStyle = {
-    borderWidth: 1,
-    borderColor: HAIRLINE,
-    backgroundColor: SURFACE2,
-    borderRadius: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 13.5,
-    color: INK,
-  } as const;
-
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState("");
-  const [location, setLocation] = useState<StorageLocation>("fridge");
-  const [category, setCategory] = useState<NutritionCategory | null>(null);
-  const [note, setNote] = useState("");
-  const [shopUrl, setShopUrl] = useState("");
-  const [expiryDate, setExpiryDate] = useState<string | null>(null);
-  const [expiryTouched, setExpiryTouched] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [editingQty, setEditingQty] = useState(false);
-  const [qtyDraft, setQtyDraft] = useState("");
+  // One row open at a time across the whole screen - "storage" | "best-before" | "note" |
+  // "shop-link" | "weight" | "calories" | `custom:${id}` | "add-custom" | null.
+  const [openRow, setOpenRow] = useState<string | null>(null);
+  const toggleRow = (key: string) => setOpenRow((r) => (r === key ? null : key));
 
   const onShoppingList = useMemo(
     () =>
@@ -113,9 +83,6 @@ export default function ItemDetail() {
     );
   }
 
-  const loc = STORAGE_LOCATIONS.find(
-    (l) => l.key === (item.location ?? "fridge"),
-  )!;
   const fresh = freshColor(item.freshness);
 
   const tip =
@@ -124,45 +91,6 @@ export default function ItemDetail() {
       : item.freshness < 60
         ? `Plan to use ${item.name.toLowerCase()} within the next couple of days.`
         : `${item.name} is holding up well — no action needed.`;
-
-  function startEdit() {
-    setName(item!.name);
-    setLocation(item!.location ?? "fridge");
-    setCategory(item!.nutritionCategory ?? null);
-    setNote(item!.note ?? "");
-    setShopUrl(item!.shopUrl ?? "");
-    setExpiryDate(isoInDays(item!.days));
-    setExpiryTouched(false);
-    setEditing(true);
-  }
-
-  async function save() {
-    if (!name.trim()) {
-      Alert.alert("Name required", "Give the item a name.");
-      return;
-    }
-    setSaving(true);
-    try {
-      await patchItem(item!.id, {
-        name: name.trim(),
-        location,
-        nutrition_category: category,
-        note: note.trim(),
-        shop_url: normalizeShopUrl(shopUrl),
-        ...(expiryTouched && expiryDate
-          ? {
-              expiry_date: expiryDate,
-              shelf_life_days: Math.max(1, daysUntil(expiryDate)),
-            }
-          : {}),
-      });
-      setEditing(false);
-    } catch (e) {
-      Alert.alert("Error", describeError(e, "Couldn't save your changes."));
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function usedItUp() {
     const snap = item!;
@@ -237,268 +165,21 @@ export default function ItemDetail() {
     );
   }
 
-  if (editing) {
-    return (
-      <KeyboardAvoidingView
-        className="flex-1 bg-canvas"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <SheetHeader
-          title="Edit item"
-          onBack={() => setEditing(false)}
-          onClose={() => setEditing(false)}
-        />
-        <ScrollView
-          contentContainerStyle={{
-            paddingHorizontal: 22,
-            paddingTop: 4,
-            paddingBottom: 40,
-            gap: 16,
-          }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Field label="NAME">
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholderTextColor={FAINT}
-              style={inputStyle}
-            />
-          </Field>
-          <Field label="ICON">
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
-            >
-              <FoodIcon
-                icon={item.icon}
-                iconUrl={item.iconUrl}
-                name={item.name}
-                size={44}
-              />
-              <Pressable
-                onPress={() =>
-                  router.push({
-                    pathname: "/icon-picker",
-                    params: { itemId: item.id },
-                  })
-                }
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderRadius: 6,
-                  backgroundColor: SURFACE2,
-                }}
-              >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: INK }}>
-                  Change icon
-                </Text>
-              </Pressable>
-            </View>
-          </Field>
-          <Field label="LOCATION">
-            <ChipRow
-              options={STORAGE_LOCATIONS.map((l) => ({
-                key: l.key,
-                label: l.label,
-              }))}
-              value={location}
-              onChange={(k) => setLocation(k as StorageLocation)}
-            />
-          </Field>
-          <Field label="FOOD GROUP">
-            <ChipRow
-              options={NUTRITION_CATEGORIES.map((c) => ({
-                key: c.key,
-                label: c.label,
-              }))}
-              value={category}
-              onChange={(k) =>
-                setCategory(category === k ? null : (k as NutritionCategory))
-              }
-            />
-          </Field>
-          <Field label="BEST BEFORE">
-            <View style={{ flexDirection: "row" }}>
-              <DateField
-                value={expiryDate}
-                onChange={(iso) => {
-                  setExpiryDate(iso);
-                  setExpiryTouched(true);
-                }}
-              />
-            </View>
-            <View style={{ marginTop: 8 }}>
-              <ChipRow
-                options={BEST_BEFORE_PRESETS.map((p) => ({
-                  key: String(p.days),
-                  label: p.label,
-                }))}
-                value={
-                  expiryTouched && expiryDate
-                    ? (BEST_BEFORE_PRESETS.find(
-                        (p) => isoInDays(p.days) === expiryDate,
-                      )?.days.toString() ?? null)
-                    : null
-                }
-                onChange={(k) => {
-                  setExpiryDate(isoInDays(Number(k)));
-                  setExpiryTouched(true);
-                }}
-              />
-            </View>
-            <Text style={{ marginTop: 6, fontSize: 11, color: FAINT }}>
-              {expiryTouched
-                ? `New best-before: ${expiryDate}`
-                : `Currently ${daysLabel(item.days)} — leave untouched to keep it`}
-            </Text>
-          </Field>
-          <Field label="NOTE (OPTIONAL)">
-            <TextInput
-              value={note}
-              onChangeText={setNote}
-              placeholder="e.g. 2 loaves"
-              placeholderTextColor={FAINT}
-              style={inputStyle}
-            />
-          </Field>
-          <Field label="SHOP LINK (OPTIONAL)">
-            <TextInput
-              value={shopUrl}
-              onChangeText={setShopUrl}
-              placeholder="https://…"
-              placeholderTextColor={FAINT}
-              autoCapitalize="none"
-              keyboardType="url"
-              style={inputStyle}
-            />
-          </Field>
-
-          <View style={{ flexDirection: "row", gap: 12, marginTop: 4 }}>
-            <Pressable
-              onPress={() => setEditing(false)}
-              style={{
-                flex: 1,
-                alignItems: "center",
-                paddingVertical: 13,
-                borderRadius: 6,
-                backgroundColor: SURFACE2,
-                borderWidth: 1,
-                borderColor: HAIRLINE,
-              }}
-            >
-              <Text style={{ fontWeight: "700", color: INK }}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              onPress={save}
-              disabled={saving}
-              style={{
-                flex: 1,
-                alignItems: "center",
-                paddingVertical: 13,
-                borderRadius: 6,
-                backgroundColor: AMBER,
-              }}
-            >
-              {saving ? (
-                <ActivityIndicator color={CANVAS} />
-              ) : (
-                <Text
-                  style={{
-                    fontWeight: "700",
-                    textTransform: "uppercase",
-                    letterSpacing: 0.5,
-                    color: CANVAS,
-                  }}
-                >
-                  Save
-                </Text>
-              )}
-            </Pressable>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    );
-  }
-
   return (
-    <>
+    <KeyboardAvoidingView
+      className="flex-1 bg-canvas"
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <SheetHeader title="Item" />
       <ScrollView
-        className="flex-1 bg-canvas"
         contentContainerStyle={{
           paddingHorizontal: 22,
           paddingTop: 6,
           paddingBottom: 36,
         }}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={{ alignItems: "center", marginBottom: 14 }}>
-          <View
-            style={{
-              width: 88,
-              height: 88,
-              borderRadius: 10,
-              backgroundColor: SURFACE2,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <FoodIcon
-              icon={item.icon}
-              iconUrl={item.iconUrl}
-              name={item.name}
-              size={52}
-            />
-          </View>
-          <Pressable
-            onPress={startEdit}
-            style={{
-              position: "absolute",
-              top: -4,
-              right: "50%",
-              marginRight: -60,
-              width: 30,
-              height: 30,
-              borderRadius: 15,
-              backgroundColor: AMBER,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <MaterialCommunityIcons name="pencil" size={14} color={CANVAS} />
-          </Pressable>
-        </View>
-
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            marginBottom: 2,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 20,
-              fontWeight: "700",
-              color: INK,
-              textAlign: "center",
-            }}
-          >
-            {item.name}
-          </Text>
-          <CategoryTag category={item.nutritionCategory} />
-        </View>
-        <Text
-          style={{
-            textAlign: "center",
-            fontSize: 12.5,
-            color: FAINT,
-            marginBottom: 18,
-          }}
-        >
-          {item.fridgeName}
-        </Text>
+        <HeroRow item={item} />
 
         <View
           style={{
@@ -559,131 +240,18 @@ export default function ItemDetail() {
           </Text>
         </View>
 
-        {!!item.note && (
-          <View
-            style={{
-              backgroundColor: SURFACE2,
-              borderRadius: 6,
-              paddingVertical: 10,
-              paddingHorizontal: 14,
-              marginBottom: 16,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 11,
-                fontWeight: "700",
-                letterSpacing: 0.3,
-                color: FAINT,
-                marginBottom: 4,
-              }}
-            >
-              NOTE
-            </Text>
-            <Text style={{ fontSize: 12.5, lineHeight: 18, color: INK }}>
-              {item.note}
-            </Text>
-          </View>
-        )}
-
-        {!!item.shopUrl && (
-          <Pressable
-            onPress={() => Linking.openURL(item.shopUrl!)}
-            style={{
-              backgroundColor: SURFACE2,
-              borderRadius: 6,
-              paddingVertical: 10,
-              paddingHorizontal: 14,
-              marginBottom: 16,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontSize: 11,
-                  fontWeight: "700",
-                  letterSpacing: 0.3,
-                  color: FAINT,
-                  marginBottom: 4,
-                }}
-              >
-                SHOP LINK
-              </Text>
-              <Text
-                style={{ fontSize: 12.5, color: BLUE }}
-                numberOfLines={1}
-              >
-                {item.shopUrl}
-              </Text>
-            </View>
-            <Ionicons name="open-outline" size={15} color={BLUE} />
-          </Pressable>
-        )}
-
-        <View style={{ marginBottom: 14 }}>
-          <Text style={{ fontSize: 12.5, color: MUTED, marginBottom: 8 }}>
-            Quantity
-          </Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-            <Step
-              icon="minus"
-              onPress={() => setItemQty(item.id, item.qty - 1)}
-            />
-            {editingQty ? (
-              <TextInput
-                value={qtyDraft}
-                onChangeText={setQtyDraft}
-                onBlur={() => {
-                  setEditingQty(false);
-                  const n = parseInt(qtyDraft, 10);
-                  if (Number.isFinite(n) && n >= 1 && n !== item.qty) {
-                    setItemQty(item.id, n);
-                  }
-                }}
-                keyboardType="number-pad"
-                selectTextOnFocus
-                autoFocus
-                returnKeyType="done"
-                style={{
-                  minWidth: 32,
-                  textAlign: "center",
-                  fontSize: 15,
-                  fontWeight: "700",
-                  color: INK,
-                  padding: 0,
-                }}
-              />
-            ) : (
-              // Tap the number to type an exact quantity - the +/- buttons alone meant
-              // getting from 1 to 24 took 23 taps.
-              <Pressable
-                onPress={() => {
-                  setQtyDraft(String(item.qty));
-                  setEditingQty(true);
-                }}
-                hitSlop={6}
-              >
-                <Text
-                  style={{
-                    minWidth: 24,
-                    textAlign: "center",
-                    fontSize: 15,
-                    fontWeight: "700",
-                    color: INK,
-                  }}
-                >
-                  {item.qty}
-                </Text>
-              </Pressable>
-            )}
-            <Step
-              icon="plus"
-              onPress={() => setItemQty(item.id, item.qty + 1)}
-            />
-          </View>
+        <View style={{ marginBottom: 20 }}>
+          <RowGroup>
+            <StorageRow item={item} open={openRow === "storage"} onToggle={() => toggleRow("storage")} />
+            <BestBeforeRow item={item} open={openRow === "best-before"} onToggle={() => toggleRow("best-before")} />
+            <NoteRow item={item} open={openRow === "note"} onToggle={() => toggleRow("note")} />
+            <ShopLinkRow item={item} open={openRow === "shop-link"} onToggle={() => toggleRow("shop-link")} />
+            <WeightRow item={item} open={openRow === "weight"} onToggle={() => toggleRow("weight")} />
+            <CaloriesRow item={item} open={openRow === "calories"} onToggle={() => toggleRow("calories")} />
+            <QuantityRow item={item} />
+            <CustomFieldRows item={item} openId={openRow} onToggle={toggleRow} />
+            <AddCustomFieldRow item={item} open={openRow === "add-custom"} onToggle={() => toggleRow("add-custom")} />
+          </RowGroup>
         </View>
 
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 20 }}>
@@ -797,104 +365,6 @@ export default function ItemDetail() {
           </Pressable>
         </View>
       </ScrollView>
-    </>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  const { faint: FAINT } = useTheme().colors;
-  return (
-    <View>
-      <Text
-        style={{
-          marginBottom: 6,
-          fontSize: 12,
-          fontWeight: "700",
-          letterSpacing: 0.3,
-          color: FAINT,
-        }}
-      >
-        {label}
-      </Text>
-      {children}
-    </View>
-  );
-}
-
-function ChipRow({
-  options,
-  value,
-  onChange,
-}: {
-  options: { key: string; label: string }[];
-  value: string | null;
-  onChange: (key: string) => void;
-}) {
-  const {
-    accent: AMBER,
-    surface2: SURFACE2,
-    ink: INK,
-    onAccent: CANVAS,
-  } = useTheme().colors;
-  return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-      {options.map((o) => {
-        const active = value === o.key;
-        return (
-          <Pressable
-            key={o.key}
-            onPress={() => onChange(o.key)}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 7,
-              borderRadius: 6,
-              backgroundColor: active ? AMBER : SURFACE2,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 12,
-                fontWeight: "700",
-                color: active ? CANVAS : INK,
-              }}
-            >
-              {o.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-function Step({
-  icon,
-  onPress,
-}: {
-  icon: "minus" | "plus";
-  onPress: () => void;
-}) {
-  const { surface: SURFACE, ink: INK } = useTheme().colors;
-  return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={8}
-      style={{
-        height: 28,
-        width: 28,
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: 14,
-        backgroundColor: SURFACE,
-      }}
-    >
-      <MaterialCommunityIcons name={icon} size={15} color={INK} />
-    </Pressable>
+    </KeyboardAvoidingView>
   );
 }

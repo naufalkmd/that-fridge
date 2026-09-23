@@ -6,6 +6,18 @@ export interface IconData {
 
 export type StorageLocation = "fridge" | "freezer" | "pantry";
 
+// Metric mass/volume plus imperial - covers a block of cheese in grams and a carton of milk
+// in liters the same way. Mirrors ItemController::WEIGHT_UNITS on the backend.
+export type WeightUnit = "g" | "kg" | "mg" | "ml" | "l" | "oz" | "lb";
+
+// A user-defined label/value pair on an item, e.g. "Batch code" -> "L4471-09". The whole
+// customFields array is replaced on every item PATCH; `id` is server-assigned on first write.
+export interface CustomField {
+  id: string;
+  label: string;
+  value: string;
+}
+
 // A lightweight food-group tag, not macro/nutrition tracking. other_extras (sauces, snacks,
 // condiments, drinks, desserts, mixed/prepared dishes) is deliberately excluded from the Food
 // Balance score's variety calculation - see NUTRITION_CATEGORIES in data.ts and scoring.ts.
@@ -37,6 +49,16 @@ export interface Item {
   opened?: boolean;
   location?: StorageLocation;
   shopUrl: string | null;
+  /** Weight/volume of a single unit as stored; always paired with weightUnit. */
+  weight?: number | null;
+  weightUnit?: WeightUnit | null;
+  /**
+   * Total kcal for a single unit as stored (not per-100g, not per-serving, not multiplied by
+   * qty). Deliberately a plain top-level field, not nested under nutritionCategory - that's a
+   * food-group tag, not macro/nutrition tracking (see the comment above).
+   */
+  calories?: number | null;
+  customFields: CustomField[];
 }
 
 export interface Section {

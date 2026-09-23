@@ -192,4 +192,169 @@ class ItemControllerTest extends TestCase
 
         $this->assertNull($item->fresh()->opened_at);
     }
+
+    public function test_update_accepts_weight_and_unit_together(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        $item = $section->items()->create(['name' => 'Yogurt', 'icon' => 'yogurt']);
+
+        $response = $this->actingAs($user)->patchJson("/api/items/{$item->id}", [
+            'weight' => 12.75,
+            'weight_unit' => 'oz',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['data' => ['weight' => 12.75, 'weight_unit' => 'oz']]);
+        $this->assertSame(12.75, $item->fresh()->weight);
+        $this->assertSame('oz', $item->fresh()->weight_unit);
+    }
+
+    public function test_update_rejects_weight_without_a_unit(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        $item = $section->items()->create(['name' => 'Yogurt', 'icon' => 'yogurt']);
+
+        $response = $this->actingAs($user)->patchJson("/api/items/{$item->id}", ['weight' => 5]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('weight_unit');
+    }
+
+    public function test_update_rejects_an_unknown_weight_unit(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        $item = $section->items()->create(['name' => 'Yogurt', 'icon' => 'yogurt']);
+
+        $response = $this->actingAs($user)->patchJson("/api/items/{$item->id}", [
+            'weight' => 5,
+            'weight_unit' => 'stone',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('weight_unit');
+    }
+
+    public function test_clearing_weight_also_clears_the_unit(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        $item = $section->items()->create(['name' => 'Yogurt', 'icon' => 'yogurt', 'weight' => 500, 'weight_unit' => 'g']);
+
+        $response = $this->actingAs($user)->patchJson("/api/items/{$item->id}", ['weight' => null]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['data' => ['weight' => null, 'weight_unit' => null]]);
+    }
+
+    public function test_update_accepts_calories(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        $item = $section->items()->create(['name' => 'Yogurt', 'icon' => 'yogurt']);
+
+        $response = $this->actingAs($user)->patchJson("/api/items/{$item->id}", ['calories' => 180]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['data' => ['calories' => 180]]);
+    }
+
+    public function test_update_rejects_a_calorie_count_outside_the_sane_range(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        $item = $section->items()->create(['name' => 'Yogurt', 'icon' => 'yogurt']);
+
+        $response = $this->actingAs($user)->patchJson("/api/items/{$item->id}", ['calories' => 200000]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('calories');
+    }
+
+    public function test_custom_fields_are_assigned_ids_and_returned(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        $item = $section->items()->create(['name' => 'Yogurt', 'icon' => 'yogurt']);
+
+        $response = $this->actingAs($user)->patchJson("/api/items/{$item->id}", [
+            'custom_fields' => [['label' => 'Batch code', 'value' => 'L4471-09']],
+        ]);
+
+        $response->assertStatus(200);
+        $fields = $response->json('data.custom_fields');
+        $this->assertCount(1, $fields);
+        $this->assertSame('Batch code', $fields[0]['label']);
+        $this->assertSame('L4471-09', $fields[0]['value']);
+        $this->assertNotEmpty($fields[0]['id']);
+    }
+
+    public function test_custom_fields_preserve_a_supplied_id_across_updates(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        $item = $section->items()->create(['name' => 'Yogurt', 'icon' => 'yogurt']);
+
+        $first = $this->actingAs($user)->patchJson("/api/items/{$item->id}", [
+            'custom_fields' => [['label' => 'Batch code', 'value' => 'L4471-09']],
+        ]);
+        $id = $first->json('data.custom_fields.0.id');
+
+        $second = $this->actingAs($user)->patchJson("/api/items/{$item->id}", [
+            'custom_fields' => [['id' => $id, 'label' => 'Batch code', 'value' => 'L4471-10']],
+        ]);
+
+        $second->assertStatus(200);
+        $this->assertSame($id, $second->json('data.custom_fields.0.id'));
+        $this->assertSame('L4471-10', $second->json('data.custom_fields.0.value'));
+    }
+
+    public function test_custom_fields_reject_more_than_twenty_entries(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        $item = $section->items()->create(['name' => 'Yogurt', 'icon' => 'yogurt']);
+
+        $fields = array_map(fn ($i) => ['label' => "Field {$i}", 'value' => 'x'], range(1, 21));
+
+        $response = $this->actingAs($user)->patchJson("/api/items/{$item->id}", ['custom_fields' => $fields]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('custom_fields');
+    }
+
+    public function test_custom_fields_reject_a_label_over_forty_characters(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        $item = $section->items()->create(['name' => 'Yogurt', 'icon' => 'yogurt']);
+
+        $response = $this->actingAs($user)->patchJson("/api/items/{$item->id}", [
+            'custom_fields' => [['label' => str_repeat('a', 41), 'value' => 'x']],
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('custom_fields.0.label');
+    }
+
+    public function test_store_accepts_weight_calories_and_custom_fields(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+
+        $response = $this->actingAs($user)->postJson("/api/sections/{$section->id}/items", [
+            'name' => 'Yogurt',
+            'icon' => 'yogurt',
+            'weight' => 500,
+            'weight_unit' => 'g',
+            'calories' => 180,
+            'custom_fields' => [['label' => 'Batch code', 'value' => 'L4471-09']],
+        ]);
+
+        $response->assertStatus(201);
+        $response->assertJson(['data' => ['weight' => 500, 'weight_unit' => 'g', 'calories' => 180]]);
+        $this->assertCount(1, $response->json('data.custom_fields'));
+    }
 }
