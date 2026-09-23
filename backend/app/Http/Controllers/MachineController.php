@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\MachineResource;
 use App\Models\Machine;
 use App\Services\AgentService;
 use App\Services\CreditService;
@@ -41,14 +42,23 @@ class MachineController extends Controller
             return response()->json(['ok' => false, 'message' => $result['message']], 200);
         }
 
-        return response()->json(['ok' => true, 'draft' => $result['draft']], 200);
+        return response()->json(['ok' => true, 'draft' => [
+            'name' => $result['draft']['name'],
+            // Reshaped to {type, config} here so the client can feed this draft straight into
+            // POST /machines without translating field names - store()/update() only ever
+            // accept the nested shape, never trigger_type/trigger_config directly.
+            'trigger' => ['type' => $result['draft']['trigger_type'], 'config' => $result['draft']['trigger_config']],
+            'steps' => $result['draft']['steps'],
+        ]], 200);
     }
 
     /** The user's own Machines - a Machine is scoped to its owner, not fridge membership
      *  (see MachinePolicy), so this is never scoped by fridge like most list endpoints here. */
     public function index(Request $request)
     {
-        return Machine::where('user_id', $request->user()->id)->orderByDesc('created_at')->get();
+        return MachineResource::collection(
+            Machine::where('user_id', $request->user()->id)->orderByDesc('created_at')->get()
+        );
     }
 
     /**
@@ -88,7 +98,7 @@ class MachineController extends Controller
                 : null,
         ]);
 
-        return response()->json($machine, 201);
+        return (new MachineResource($machine))->response()->setStatusCode(201);
     }
 
     /**
@@ -145,7 +155,7 @@ class MachineController extends Controller
 
         $machine->save();
 
-        return response()->json($machine);
+        return new MachineResource($machine);
     }
 
     public function destroy(Request $request, Machine $machine)

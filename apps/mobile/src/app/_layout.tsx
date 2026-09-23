@@ -240,6 +240,10 @@ function AppShell({
                                       options={{ headerShown: false }}
                                     />
                                     <Stack.Screen
+                                      name="kitchen-lab"
+                                      options={{ headerShown: false }}
+                                    />
+                                    <Stack.Screen
                                       name="what-to-eat"
                                       options={{
                                         headerShown: false,

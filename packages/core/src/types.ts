@@ -313,6 +313,103 @@ export type NotificationKind =
   | "note"
   | "machine";
 
+// Kitchen Lab "Machine" - a user-defined automation with a trigger and a fixed, editable list
+// of steps, authored once with AI help but replayed with zero AI involved afterward. Mirrors
+// App\Models\Machine's docblock on the backend.
+export type MachineTriggerType = "schedule" | "item_added" | "threshold";
+
+export interface MachineScheduleTrigger {
+  type: "schedule";
+  config: {
+    frequency: "daily" | "weekly";
+    time: string; // "HH:MM", 24h
+    weekday: number | null; // 0 (Sunday) - 6 (Saturday), required when frequency is "weekly"
+    timezone: string;
+  };
+}
+
+export interface MachineItemAddedTrigger {
+  type: "item_added";
+  config: {
+    search: string | null;
+    location: StorageLocation | null;
+  };
+}
+
+export interface MachineThresholdTrigger {
+  type: "threshold";
+  config: {
+    field: "quantity" | "weight" | "calories";
+    unit: WeightUnit | null;
+    op: "lt" | "lte" | "gt" | "gte";
+    value: number;
+  };
+}
+
+export type MachineTrigger =
+  | MachineScheduleTrigger
+  | MachineItemAddedTrigger
+  | MachineThresholdTrigger;
+
+// One AgentToolbox tool call - see AgentToolbox::MACHINE_TOOLS on the backend for which tools
+// are eligible. `args` is opaque here since each tool's shape differs; the mobile UI only
+// needs to render a human-readable summary of it, not validate it (the server re-validates on
+// every save).
+export interface MachineStep {
+  tool: string;
+  args: Record<string, unknown>;
+}
+
+export interface Machine {
+  id: string;
+  name: string;
+  prompt: string | null;
+  fridgeId: string;
+  trigger: MachineTrigger;
+  steps: MachineStep[];
+  enabled: boolean;
+  version: number;
+  nextRunAt: string | null;
+  lastRunAt: string | null;
+  lastRunStatus: "success" | "failed" | null;
+  runCount: number;
+  createdAt: string;
+}
+
+// What POST /machines/draft returns - already reshaped server-side to the same {trigger:
+// {type, config}} shape store()/update() accept, so a draft can be posted back unmodified.
+export interface MachineDraft {
+  name: string;
+  trigger: MachineTrigger;
+  steps: MachineStep[];
+}
+
+export interface MachineDraftResult {
+  ok: boolean;
+  draft?: MachineDraft;
+  message?: string;
+}
+
+// The POST/PATCH /machines request body - snake_case fridge_id since that's the literal
+// field MachineController validates, unlike Machine's camelCase response shape (see
+// RecipeInput's icon_url for the same wire-vs-resource convention).
+export interface MachineInput {
+  name: string;
+  prompt?: string | null;
+  fridge_id: string;
+  trigger: MachineTrigger;
+  steps: MachineStep[];
+}
+
+// PATCH /machines/{id} accepts a different field set than create (no fridge_id/prompt - a
+// Machine's fridge is fixed at creation - but adds `enabled`, absent from MachineInput).
+export interface MachineUpdateInput {
+  name?: string;
+  enabled?: boolean;
+  trigger?: MachineTrigger;
+  steps?: MachineStep[];
+}
+
 export interface NotificationEvent {
   id: string;
   fridgeId: string;

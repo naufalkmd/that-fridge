@@ -2,7 +2,7 @@
 
 Get ThatFridge running locally, plus every wall we've actually hit and the fix that worked.
 
-_Last updated: 2026-09-07._
+_Last updated: 2026-09-24._
 
 ## Where the other docs live
 
@@ -299,6 +299,37 @@ tagged TestFlight build. Only JS + JS-imported assets travel over the air.
 
 macOS has no `timeout`. Use `gtimeout` (`brew install coreutils`) or a background job +
 `sleep` + check.
+
+### `pod install` fails with `Encoding::CompatibilityError` (`UnicodeNormalize.normalize`)
+
+CocoaPods' Ruby needs a UTF-8 locale; a shell with `LANG` unset crashes it. Fix per-command:
+
+```bash
+LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 npx expo run:ios
+```
+
+or add `export LANG=en_US.UTF-8` to your shell profile so it's never unset.
+
+### `expo run:ios` fails to build: `xcodebuild exited with error code 65` (not yet fixed)
+
+2026-09-24: Xcode 26.3 targeting iOS Simulator SDK 26.2 fails compiling
+`expo-modules-jsi@57.0.6`'s `RuntimeScheduler.h` — `'RuntimeScheduler' cannot be annotated
+with either SWIFT_RETURNS_RETAINED or SWIFT_RETURNS_UNRETAINED because it is not returning a
+SWIFT_SHARED_REFERENCE type`. `expo run:ios` only prints `1 error(s)`, not the real message —
+get it with a direct `xcodebuild` invocation instead (swap in the booted sim's udid from
+`xcrun simctl list devices`):
+
+```bash
+cd apps/mobile/ios && xcodebuild -workspace ThatFridge.xcworkspace -scheme ThatFridge \
+  -configuration Debug -sdk iphonesimulator -destination 'platform=iOS Simulator,id=<udid>' \
+  build 2>&1 | grep -B2 -A5 "error:"
+```
+
+Environment/toolchain issue, not app code — a newer Xcode update on the machine outran the
+pinned `expo-modules-jsi` version. `expo-modules-jsi` has patches past the installed `57.0.6`
+(`57.0.7`, `57.0.8`, `57.1.0`, all still on the `expo@~57` line) that may contain the fix -
+untried as of this entry. If you hit this, try bumping that one package first before anything
+more invasive (Xcode downgrade, `react-native` upgrade).
 
 ---
 

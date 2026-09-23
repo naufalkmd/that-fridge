@@ -202,6 +202,12 @@ export default function Profile() {
           <LinkRow icon="restaurant-outline" label="Recipe book" onPress={() => router.push("/recipes")} />
           <LinkRow icon="ribbon-outline" label="Badges" onPress={() => router.push("/badges")} />
           <LinkRow icon="sync-outline" label="Organizer" onPress={() => router.push("/organizer")} />
+          <LinkRow
+            icon="flask-outline"
+            label="Kitchen Lab"
+            badge="BETA"
+            onPress={() => router.push("/kitchen-lab")}
+          />
           <LinkRow icon="sparkles-outline" label="AI Data & Memory" onPress={() => router.push("/ai-data")} />
           <LinkRow
             icon="notifications-outline"
@@ -292,12 +298,16 @@ function LinkRow({
   icon,
   label,
   value,
+  badge,
   onPress,
   last,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value?: string;
+  /** A short uppercase tag next to the label, e.g. "BETA" - for a feature that's live but
+   *  still being finished. */
+  badge?: string;
   onPress: () => void;
   last?: boolean;
 }) {
@@ -310,7 +320,22 @@ function LinkRow({
       }`}
     >
       <Ionicons name={icon} size={18} color={colors.muted} />
-      <Text className="flex-1 text-[14px] text-ink">{label}</Text>
+      <View className="flex-1 flex-row items-center gap-2">
+        <Text className="text-[14px] text-ink">{label}</Text>
+        {badge && (
+          <View
+            className="rounded-full px-1.5 py-0.5"
+            style={{ backgroundColor: `${colors.accent}26` }}
+          >
+            <Text
+              className="text-[9.5px] font-extrabold tracking-wide"
+              style={{ color: colors.accent }}
+            >
+              {badge}
+            </Text>
+          </View>
+        )}
+      </View>
       {value && <Text className="text-[13px] text-faint">{value}</Text>}
       <Ionicons name="chevron-forward" size={16} color={colors.faint} />
     </Pressable>

@@ -16,6 +16,10 @@ import type {
   GoalMetricType,
   GoalPeriod,
   Item,
+  Machine,
+  MachineDraftResult,
+  MachineInput,
+  MachineUpdateInput,
   MealType,
   MyInvite,
   MyJoinRequest,
@@ -829,6 +833,28 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.post<RecipeLinkImportResult>("/recipes/import-link", { url });
   }
 
+  // ---- kitchen lab: machines ----------------------------------------------------
+  function listMachines(): Promise<Machine[]> {
+    return http.get<Machine[]>("/machines");
+  }
+  /** AI-drafts a {name, trigger, steps} from a sentence - costs credits, nothing is saved
+   *  yet. Feed the returned draft straight into createMachine() once the user confirms. */
+  function draftMachine(prompt: string): Promise<MachineDraftResult> {
+    return http.post<MachineDraftResult>("/machines/draft", { prompt });
+  }
+  function createMachine(data: MachineInput): Promise<Machine> {
+    return http.post<Machine>("/machines", data);
+  }
+  function updateMachine(
+    id: string,
+    data: MachineUpdateInput,
+  ): Promise<Machine> {
+    return http.patch<Machine>(`/machines/${id}`, data);
+  }
+  function deleteMachine(id: string): Promise<void> {
+    return http.del(`/machines/${id}`).then(() => undefined);
+  }
+
   // ---- fridge management -------------------------------------------------------
   function updateFridge(
     id: string,
@@ -1069,6 +1095,11 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     setItemsCategory,
     suggestRecipes,
     markRecipeMade,
+    listMachines,
+    draftMachine,
+    createMachine,
+    updateMachine,
+    deleteMachine,
     getUsageHistory,
     getOrganizerTally,
     getScoreSnapshots,

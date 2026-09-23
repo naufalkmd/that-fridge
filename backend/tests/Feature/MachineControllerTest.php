@@ -125,7 +125,7 @@ class MachineControllerTest extends TestCase
         $response = $this->actingAs($user)->postJson('/api/machines', $this->validDraftPayload($fridge->id));
 
         $response->assertStatus(201);
-        $this->assertNotNull($response->json('next_run_at'));
+        $this->assertNotNull($response->json('data.nextRunAt'));
     }
 
     public function test_store_rejects_a_step_naming_a_non_machine_eligible_tool(): void
@@ -236,7 +236,7 @@ class MachineControllerTest extends TestCase
         $response = $this->actingAs($user)->getJson('/api/machines');
 
         $response->assertStatus(200);
-        $names = collect($response->json())->pluck('name');
+        $names = collect($response->json('data'))->pluck('name');
         $this->assertContains('Mine', $names);
         $this->assertNotContains('Not Mine', $names);
     }
