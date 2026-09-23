@@ -48,6 +48,32 @@ const GREETING: Msg = {
   text: "Hi! Ask me anything about what's in your fridge — or paste a recipe link and I'll turn it into a card.",
 };
 
+// Shown only on a fresh/empty chat (before the first real message) - the same activation
+// prompts Home's "Activate {agent}" tip cards use (see home.tsx's AGENT_ACTIVATE_PROMPT),
+// so a suggestion here and the equivalent Home shortcut land the same reply.
+const SUGGESTIONS: { icon: keyof typeof Ionicons.glyphMap; label: string; prompt: string }[] = [
+  {
+    icon: "restaurant-outline",
+    label: "Generate a recipe card",
+    prompt: "What can I cook tonight with what I have?",
+  },
+  {
+    icon: "warning-outline",
+    label: "What's expiring soon?",
+    prompt: "What's at risk of going bad soon?",
+  },
+  {
+    icon: "cart-outline",
+    label: "What should I restock?",
+    prompt: "What should I restock?",
+  },
+  {
+    icon: "sync-outline",
+    label: "Organize my fridge",
+    prompt: "How should I organize my fridge right now?",
+  },
+];
+
 type Msg = {
   role: "user" | "agent";
   text: string;
@@ -312,7 +338,12 @@ export default function Chat() {
             {loading ? (
               <ActivityIndicator color={AMBER} style={{ marginTop: 32 }} />
             ) : (
-              messages.map((m, i) => <Bubble key={i} msg={m} />)
+              <>
+                {messages.map((m, i) => <Bubble key={i} msg={m} />)}
+                {messages.length === 1 && messages[0] === GREETING && (
+                  <SuggestionChips onPick={(prompt) => send(prompt)} />
+                )}
+              </>
             )}
             {sending && <TypingDots />}
           </ScrollView>
@@ -458,6 +489,44 @@ export default function Chat() {
         </KeyboardAvoidingView>
       </SafeAreaView>
     </ImageBackground>
+  );
+}
+
+function SuggestionChips({ onPick }: { onPick: (prompt: string) => void }) {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+        alignSelf: "flex-start",
+        marginTop: 2,
+      }}
+    >
+      {SUGGESTIONS.map((s) => (
+        <Pressable
+          key={s.label}
+          onPress={() => onPick(s.prompt)}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 999,
+            backgroundColor: `${colors.surface}e6`,
+            borderWidth: 1,
+            borderColor: colors.hairline,
+          }}
+        >
+          <Ionicons name={s.icon} size={13} color={colors.accent} />
+          <Text style={{ fontSize: 12.5, fontWeight: "600", color: colors.ink }}>
+            {s.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
   );
 }
 
