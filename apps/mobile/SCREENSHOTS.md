@@ -87,7 +87,7 @@ show what the app actually leans on.
 | --- | --- | --- | --- |
 | `accent` | `#26c6da` (turquoise) | primary CTAs, active tab, Kitchen Score puck, corner brackets, brand moments (37 hits) | **eyebrow** on non-crew frames; the glow; Intro lockup underline/dot |
 | accent glow | `#26c6da` @ 0.10–0.12 alpha | already used behind Kitchen Score streak / selected rows (`rgba(38,198,218,0.1)`) | the radial glow behind every headline |
-| Android icon bg | `#1aa9bd` | adaptive-icon background only (`app.config.ts`) | do not use in frames — it's a deeper teal, off-system |
+| Android icon bg | `#26c6da` | adaptive-icon background only (`app.config.ts`) — now matches `accent` exactly | fine to reuse in frames, it's just the accent |
 
 > The accent is turquoise, **not** amber. `theme.ts` keeps `amber: "#26c6da"` as a legacy key
 > name — the value is the turquoise. Don't let the key name mislead the design.
