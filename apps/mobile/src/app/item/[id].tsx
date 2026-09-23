@@ -540,7 +540,6 @@ export default function ItemDetail() {
           </View>
           <Text style={{ fontSize: 12.5, color: MUTED }}>
             {daysLabel(item.days)}
-            {item.note ? ` · ${item.note}` : ""}
           </Text>
         </View>
 
@@ -557,6 +556,70 @@ export default function ItemDetail() {
             {tip}
           </Text>
         </View>
+
+        {!!item.note && (
+          <View
+            style={{
+              backgroundColor: SURFACE2,
+              borderRadius: 6,
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+              marginBottom: 16,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 11,
+                fontWeight: "700",
+                letterSpacing: 0.3,
+                color: FAINT,
+                marginBottom: 4,
+              }}
+            >
+              NOTE
+            </Text>
+            <Text style={{ fontSize: 12.5, lineHeight: 18, color: INK }}>
+              {item.note}
+            </Text>
+          </View>
+        )}
+
+        {!!item.shopUrl && (
+          <Pressable
+            onPress={() => Linking.openURL(item.shopUrl!)}
+            style={{
+              backgroundColor: SURFACE2,
+              borderRadius: 6,
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+              marginBottom: 16,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: "700",
+                  letterSpacing: 0.3,
+                  color: FAINT,
+                  marginBottom: 4,
+                }}
+              >
+                SHOP LINK
+              </Text>
+              <Text
+                style={{ fontSize: 12.5, color: BLUE }}
+                numberOfLines={1}
+              >
+                {item.shopUrl}
+              </Text>
+            </View>
+            <Ionicons name="open-outline" size={15} color={BLUE} />
+          </Pressable>
+        )}
 
         <View style={{ marginBottom: 14 }}>
           <Text style={{ fontSize: 12.5, color: MUTED, marginBottom: 8 }}>
@@ -620,22 +683,6 @@ export default function ItemDetail() {
                 : "Add to shopping list"}
             </Text>
           </Pressable>
-          {!!item.shopUrl && (
-            <Pressable
-              onPress={() => Linking.openURL(item.shopUrl!)}
-              style={{
-                width: 44,
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 6,
-                backgroundColor: SURFACE2,
-                borderWidth: 1,
-                borderColor: HAIRLINE,
-              }}
-            >
-              <Ionicons name="open-outline" size={15} color={BLUE} />
-            </Pressable>
-          )}
         </View>
 
         <Pressable
