@@ -745,6 +745,24 @@ php artisan app:snapshot-kitchen-scores
 
 ---
 
+## Feedback
+
+### `POST /feedback` 🔒
+
+**Body**
+```json
+{ "email": "me@example.com", "message": "The barcode scanner is great!" }
+```
+`email` is a free-typed contact address, not necessarily the account's own - the sender may want a reply somewhere else. `message` max 4000 chars.
+
+**201** `{ "message": "Thanks for the feedback." }`
+
+Stores the message in `feedback` (survives account deletion - `user_id` is nullable, set null on delete) and best-effort emails the team at `support@thatfridge.com` with `Reply-To` set to the submitted address. A mail failure doesn't fail the request - the row is already saved either way.
+
+**422** — validation failure.
+
+---
+
 ## Error shape
 
 Validation errors (422):

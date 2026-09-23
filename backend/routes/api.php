@@ -10,6 +10,7 @@ use App\Http\Controllers\BlockController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CreditController;
 use App\Http\Controllers\ExpiryScanController;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\FridgeController;
 use App\Http\Controllers\FridgeJoinRequestController;
 use App\Http\Controllers\FridgeMemberController;
@@ -66,6 +67,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // throttle here is just an anti-hammering floor.
     Route::middleware('throttle:12,1')->patch('/me/profile', [AuthController::class, 'updateProfile']);
     Route::delete('/me', [AuthController::class, 'destroy']);
+    Route::middleware('throttle:6,1')->post('/feedback', [FeedbackController::class, 'store']);
 
     // TRACK B: Ingestion & Agents
     Route::prefix('sections/{section}')->group(function () {

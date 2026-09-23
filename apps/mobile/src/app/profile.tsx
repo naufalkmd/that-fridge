@@ -233,6 +233,11 @@ export default function Profile() {
             onPress={openStoreReviewPage}
           />
           <LinkRow
+            icon="chatbubble-ellipses-outline"
+            label="Send feedback"
+            onPress={() => router.push("/feedback")}
+          />
+          <LinkRow
             icon="information-circle-outline"
             label="About ThatFridge"
             onPress={() => router.push("/about")}

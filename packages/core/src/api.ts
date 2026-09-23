@@ -429,6 +429,12 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return res.user;
   }
 
+  /** Settings' "Send feedback" form. `email` is a free-typed contact address, not necessarily
+   *  the signed-in account's own - the sender may want a reply somewhere else. */
+  function sendFeedback(email: string, message: string): Promise<void> {
+    return http.post<void>("/feedback", { email, message });
+  }
+
   /** Fire-and-forget batch of first-party analytics events. */
   function trackEvents(events: AnalyticsEventInput[]): Promise<unknown> {
     return http.post("/events", { events });
@@ -1069,6 +1075,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     deleteChatSession,
     deleteAllChatSessions,
     saveOnboardingProfile,
+    sendFeedback,
     trackEvents,
   };
 }
