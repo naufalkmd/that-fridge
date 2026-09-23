@@ -123,4 +123,19 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Admin Panel Access
+    |--------------------------------------------------------------------------
+    |
+    | Comma-separated emails allowed into the Filament admin panel at /admin
+    | (User::canAccessPanel). Everyone else gets a 403 even with a valid login.
+    |
+    */
+
+    'admin_emails' => array_values(array_filter(array_map(
+        fn (string $email) => strtolower(trim($email)),
+        explode(',', (string) env('ADMIN_EMAILS', ''))
+    ))),
+
 ];

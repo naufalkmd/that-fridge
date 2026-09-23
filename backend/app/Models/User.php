@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,7 +20,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'username', 'email', 'password', 'oauth_provider', 'oauth_sub', 'data_transfer_consented_at', 'preferences'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
@@ -65,6 +67,16 @@ class User extends Authenticatable
         $this->current_streak = $lastActive === $yesterday ? $this->current_streak + 1 : 1;
         $this->last_active_on = $today;
         $this->save();
+    }
+
+    /**
+     * Filament admin panel gate. Only emails listed in ADMIN_EMAILS (config/app.php
+     * 'admin_emails') get in - every app user can authenticate, so without this check any
+     * signed-up user could log into /admin.
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return in_array(strtolower($this->email), config('app.admin_emails'), true);
     }
 
     public function fridges(): HasMany
