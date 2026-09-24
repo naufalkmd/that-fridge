@@ -24,7 +24,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable([
     'user_id', 'fridge_id', 'name', 'prompt', 'trigger_type', 'trigger_config', 'steps',
-    'enabled', 'threshold_met', 'version', 'next_run_at', 'last_run_at', 'last_run_status', 'run_count',
+    'enabled', 'threshold_met', 'version', 'next_run_at', 'last_run_at', 'last_run_status',
+    'last_run_error', 'run_count',
 ])]
 class Machine extends Model
 {

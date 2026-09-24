@@ -375,6 +375,7 @@ export interface Machine {
   nextRunAt: string | null;
   lastRunAt: string | null;
   lastRunStatus: "success" | "failed" | null;
+  lastRunError: string | null;
   runCount: number;
   createdAt: string;
 }

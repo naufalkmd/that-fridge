@@ -28,12 +28,14 @@ class MachineRunner
 
     /**
      * Runs one Machine now, regardless of trigger type or next_run_at - callers (the due-
-     * schedule sweep, a future event hook) decide *when* to call this, not this method. Takes
-     * a per-machine lock so a Machine that's still running can't be started again by an
-     * overlapping dispatch; returns null (does nothing) if a run is already in flight, or if
-     * the Machine turns out to be disabled by the time the lock is acquired.
+     * schedule sweep, an event hook, a manual "Run now") decide *when* to call this, not this
+     * method. Takes a per-machine lock so a Machine that's still running can't be started
+     * again by an overlapping dispatch; returns null (does nothing) if a run is already in
+     * flight, or if the Machine is disabled and $force wasn't passed - $force is for an
+     * explicit manual test run, where testing a disabled (not-yet-trusted) Machine is the
+     * whole point.
      */
-    public function run(Machine $machine): ?MachineRun
+    public function run(Machine $machine, bool $force = false): ?MachineRun
     {
         $lock = Cache::lock("machine-run:{$machine->id}", 300);
         if (! $lock->get()) {
@@ -43,7 +45,7 @@ class MachineRunner
         try {
             $machine->refresh();
 
-            return $machine->enabled ? $this->execute($machine) : null;
+            return ($force || $machine->enabled) ? $this->execute($machine) : null;
         } finally {
             $lock->release();
         }
@@ -87,6 +89,7 @@ class MachineRunner
 
         $machine->last_run_at = now();
         $machine->last_run_status = $status;
+        $machine->last_run_error = $error;
         $machine->run_count++;
         if ($machine->trigger_type === 'schedule') {
             $machine->next_run_at = MachineSchedule::nextRunAt($machine->trigger_config, now());

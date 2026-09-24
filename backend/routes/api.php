@@ -167,6 +167,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('throttle:20,1')->post('/machines/draft', [MachineController::class, 'draft']);
     Route::post('/machines', [MachineController::class, 'store']);
     Route::patch('/machines/{machine}', [MachineController::class, 'update']);
+    Route::middleware('throttle:20,1')->post('/machines/{machine}/run', [MachineController::class, 'run']);
     Route::delete('/machines/{machine}', [MachineController::class, 'destroy']);
 
     Route::get('/shopping-items', [ShoppingItemController::class, 'index']);

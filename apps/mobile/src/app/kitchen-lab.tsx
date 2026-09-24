@@ -57,6 +57,12 @@ function describeTrigger(trigger: MachineTrigger): string {
   return `When total ${label} ${opLabel} ${value}${suffix}`;
 }
 
+const PROMPT_EXAMPLES = [
+  { label: "On a schedule", prompt: "Every day at 8am, tell me total calories expiring this week" },
+  { label: "When an item's added", prompt: "When milk is added, notify me" },
+  { label: "When stock runs low", prompt: "Notify me when stock drops below 2" },
+];
+
 const TOOL_LABELS: Record<string, string> = {
   list_items: "List matching items",
   list_shopping: "List the shopping list",
@@ -105,6 +111,7 @@ export default function KitchenLab() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [redrafted, setRedrafted] = useState(false);
+  const [running, setRunning] = useState(false);
   // True for edit/duplicate (review opened directly from a card tap, no prompt step this
   // session) - controls review's back destination and whether the fridge is a read-only
   // label vs a picker. False for a fresh create, where review's back returns to prompt.
@@ -227,6 +234,26 @@ export default function KitchenLab() {
     }
   }
 
+  /** Tests the *saved* Machine immediately, regardless of its trigger or enabled state - only
+   *  offered when there's no unsaved redraft in progress, since running would otherwise test
+   *  the old saved steps while the screen shows different ones. */
+  async function runNow() {
+    if (!editingId) return;
+    setRunning(true);
+    try {
+      const updated = await api.runMachine(editingId);
+      Alert.alert(
+        updated.lastRunStatus === "failed" ? "Run failed" : "Ran successfully",
+        updated.lastRunStatus === "failed" ? (updated.lastRunError ?? "No error details.") : "Check Notifications for the result.",
+      );
+      load();
+    } catch (e) {
+      Alert.alert("Couldn't run", describeError(e, "Try again in a moment."));
+    } finally {
+      setRunning(false);
+    }
+  }
+
   async function toggleEnabled(machine: Machine) {
     setBusyId(machine.id);
     const next = !machine.enabled;
@@ -274,6 +301,18 @@ export default function KitchenLab() {
             Describe what you want automated. The crew drafts a trigger and steps for you to
             review before anything is saved.
           </Text>
+          <View className="flex-row flex-wrap gap-2">
+            {PROMPT_EXAMPLES.map((example) => (
+              <Pressable
+                key={example.label}
+                onPress={() => setPrompt(example.prompt)}
+                className="rounded-lg px-3 py-2"
+                style={{ backgroundColor: colors.surface2 }}
+              >
+                <Text className="text-[12px] font-semibold text-ink">{example.label}</Text>
+              </Pressable>
+            ))}
+          </View>
           <TextInput
             value={prompt}
             onChangeText={setPrompt}
@@ -345,6 +384,23 @@ export default function KitchenLab() {
               ))}
             </View>
           </View>
+
+          {editingId && !redrafted && (
+            <Pressable
+              onPress={runNow}
+              disabled={running}
+              className="flex-row items-center justify-center gap-2 rounded-lg border border-hairline py-3 active:opacity-70 disabled:opacity-50"
+            >
+              {running ? (
+                <ActivityIndicator color={colors.accent} />
+              ) : (
+                <>
+                  <Ionicons name="play" size={14} color={colors.accent} />
+                  <Text className="text-[13px] font-semibold text-ink">Run now</Text>
+                </>
+              )}
+            </Pressable>
+          )}
 
           {enteredDirectly && (
             <Pressable
@@ -463,20 +519,27 @@ export default function KitchenLab() {
                   thumbColor={colors.ink}
                 />
               </View>
-              <View className="mt-3 flex-row items-center justify-between border-t border-hairline pt-3">
-                <Text className="text-[11.5px] text-faint">
-                  {machine.lastRunAt
-                    ? `Last ran ${machine.lastRunStatus === "failed" ? "and failed" : "ok"} · ${machine.runCount} run${machine.runCount === 1 ? "" : "s"}`
-                    : "Never run yet"}
-                </Text>
-                <View className="flex-row items-center gap-4">
-                  <Pressable onPress={() => openDuplicate(machine)} hitSlop={8} disabled={busyId === machine.id}>
-                    <Ionicons name="copy-outline" size={16} color={colors.faint} />
-                  </Pressable>
-                  <Pressable onPress={() => confirmDelete(machine)} hitSlop={8} disabled={busyId === machine.id}>
-                    <Ionicons name="trash-outline" size={16} color={colors.faint} />
-                  </Pressable>
+              <View className="mt-3 border-t border-hairline pt-3">
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-[11.5px] text-faint">
+                    {machine.lastRunAt
+                      ? `Last ran ${machine.lastRunStatus === "failed" ? "and failed" : "ok"} · ${machine.runCount} run${machine.runCount === 1 ? "" : "s"}`
+                      : "Never run yet"}
+                  </Text>
+                  <View className="flex-row items-center gap-4">
+                    <Pressable onPress={() => openDuplicate(machine)} hitSlop={8} disabled={busyId === machine.id}>
+                      <Ionicons name="copy-outline" size={16} color={colors.faint} />
+                    </Pressable>
+                    <Pressable onPress={() => confirmDelete(machine)} hitSlop={8} disabled={busyId === machine.id}>
+                      <Ionicons name="trash-outline" size={16} color={colors.faint} />
+                    </Pressable>
+                  </View>
                 </View>
+                {machine.lastRunStatus === "failed" && machine.lastRunError && (
+                  <Text className="mt-1.5 text-[11px] text-bad" numberOfLines={2}>
+                    {machine.lastRunError.slice(0, 140)}
+                  </Text>
+                )}
               </View>
             </Pressable>
           ))}

@@ -30,6 +30,7 @@ class MachineResource extends JsonResource
             'nextRunAt' => $this->next_run_at?->toIso8601String(),
             'lastRunAt' => $this->last_run_at?->toIso8601String(),
             'lastRunStatus' => $this->last_run_status,
+            'lastRunError' => $this->last_run_error,
             'runCount' => $this->run_count,
             'createdAt' => $this->created_at?->toIso8601String(),
         ];

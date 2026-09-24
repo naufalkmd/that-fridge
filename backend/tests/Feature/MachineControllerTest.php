@@ -9,6 +9,7 @@ use App\Models\Machine;
 use App\Models\Section;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -304,6 +305,74 @@ class MachineControllerTest extends TestCase
         $names = collect($response->json('data'))->pluck('name');
         $this->assertContains('Mine', $names);
         $this->assertNotContains('Not Mine', $names);
+    }
+
+    // ---- run (manual "Run now") ----------------------------------------------------------
+
+    public function test_run_executes_a_disabled_machine(): void
+    {
+        $user = User::factory()->create();
+        $fridge = $this->fridgeFor($user);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'X',
+            'trigger_type' => 'schedule', 'trigger_config' => ['frequency' => 'daily', 'time' => '08:00', 'weekday' => null, 'timezone' => 'UTC'],
+            'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+
+        $response = $this->actingAs($user)->postJson("/api/machines/{$machine->id}/run");
+
+        $response->assertStatus(200);
+        $this->assertSame('success', $response->json('data.lastRunStatus'));
+        $this->assertSame(1, $machine->fresh()->run_count);
+    }
+
+    public function test_run_returns_the_failure_reason_when_a_step_errors(): void
+    {
+        $user = User::factory()->create();
+        $fridge = $this->fridgeFor($user);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'X',
+            'trigger_type' => 'schedule', 'trigger_config' => ['frequency' => 'daily', 'time' => '08:00', 'weekday' => null, 'timezone' => 'UTC'],
+            'steps' => [['tool' => 'sum_item_field', 'args' => ['field' => 'weight', 'unit' => 'not-a-unit']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+
+        $response = $this->actingAs($user)->postJson("/api/machines/{$machine->id}/run");
+
+        $response->assertStatus(200);
+        $this->assertSame('failed', $response->json('data.lastRunStatus'));
+        $this->assertNotEmpty($response->json('data.lastRunError'));
+    }
+
+    public function test_run_returns_409_when_a_run_is_already_in_flight(): void
+    {
+        $user = User::factory()->create();
+        $fridge = $this->fridgeFor($user);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'X',
+            'trigger_type' => 'schedule', 'trigger_config' => ['frequency' => 'daily', 'time' => '08:00', 'weekday' => null, 'timezone' => 'UTC'],
+            'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+        $lock = Cache::lock("machine-run:{$machine->id}", 300);
+        $lock->get();
+
+        $this->actingAs($user)->postJson("/api/machines/{$machine->id}/run")->assertStatus(409);
+
+        $lock->release();
+    }
+
+    public function test_run_is_forbidden_for_another_users_machine(): void
+    {
+        $owner = User::factory()->create();
+        $stranger = User::factory()->create();
+        $machine = Machine::create([
+            'user_id' => $owner->id, 'fridge_id' => $this->fridgeFor($owner)->id, 'name' => 'X',
+            'trigger_type' => 'schedule', 'trigger_config' => [], 'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+        ]);
+
+        $this->actingAs($stranger)->postJson("/api/machines/{$machine->id}/run")->assertStatus(403);
     }
 
     public function test_destroy_removes_the_machine(): void

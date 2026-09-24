@@ -854,6 +854,11 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   function deleteMachine(id: string): Promise<void> {
     return http.del(`/machines/${id}`).then(() => undefined);
   }
+  /** Manual "Run now" - tests a Machine immediately regardless of trigger/enabled. Throws
+   *  (ApiError, status 409) if a run is already in flight. */
+  function runMachine(id: string): Promise<Machine> {
+    return http.post<Machine>(`/machines/${id}/run`);
+  }
 
   // ---- fridge management -------------------------------------------------------
   function updateFridge(
@@ -1100,6 +1105,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     createMachine,
     updateMachine,
     deleteMachine,
+    runMachine,
     getUsageHistory,
     getOrganizerTally,
     getScoreSnapshots,

@@ -119,6 +119,31 @@ class MachineRunnerTest extends TestCase
         $this->assertDatabaseCount('machine_runs', 0);
     }
 
+    public function test_force_executes_a_disabled_machine(): void
+    {
+        $machine = $this->machine(['enabled' => false]);
+
+        $run = $this->runner->run($machine, force: true);
+
+        $this->assertNotNull($run);
+        $this->assertSame('success', $run->status);
+    }
+
+    public function test_persists_the_last_run_error_and_clears_it_on_a_later_success(): void
+    {
+        $machine = $this->machine([
+            'steps' => [['tool' => 'sum_item_field', 'args' => ['field' => 'weight', 'unit' => 'not-a-unit']]],
+        ]);
+
+        $this->runner->run($machine);
+        $this->assertNotNull($machine->fresh()->last_run_error);
+
+        $machine->update(['steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]]]);
+        $this->runner->run($machine);
+
+        $this->assertNull($machine->fresh()->last_run_error);
+    }
+
     public function test_a_second_concurrent_run_is_skipped_while_the_first_holds_the_lock(): void
     {
         $machine = $this->machine();

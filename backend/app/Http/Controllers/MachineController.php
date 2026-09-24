@@ -7,6 +7,7 @@ use App\Models\Machine;
 use App\Services\AgentService;
 use App\Services\CreditService;
 use App\Services\MachineDraftValidator;
+use App\Services\MachineRunner;
 use App\Services\MachineTriggerService;
 use App\Support\CreditCost;
 use App\Support\MachineSchedule;
@@ -20,6 +21,7 @@ class MachineController extends Controller
         protected MachineDraftValidator $validator,
         protected CreditService $credits,
         protected MachineTriggerService $machines,
+        protected MachineRunner $runner,
     ) {}
 
     /**
@@ -176,6 +178,23 @@ class MachineController extends Controller
         }
 
         return new MachineResource($machine);
+    }
+
+    /** Manual "Run now" - tests a Machine immediately regardless of trigger/enabled, so it can
+     *  be verified before trusting it to fire on its own. Goes through the same MachineRunner
+     *  as every other run, so it updates last_run_at/last_run_status/run_count and writes an
+     *  audit row exactly like a real trigger would. */
+    public function run(Request $request, Machine $machine)
+    {
+        $this->authorize('update', $machine);
+
+        $run = $this->runner->run($machine, force: true);
+
+        if (! $run) {
+            return response()->json(['error' => 'already_running'], 409);
+        }
+
+        return new MachineResource($machine->fresh());
     }
 
     public function destroy(Request $request, Machine $machine)
