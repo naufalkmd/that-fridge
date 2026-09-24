@@ -169,15 +169,15 @@ class AgentToolbox
             $fn('bulk_add_items', 'Add several food items to the fridge in one call - use this for a grocery haul instead of calling add_item many times.', [
                 'items' => [
                     'type' => 'array',
-                    'description' => 'Up to 30 items. Each needs a name; quantity/location/expiry_date/shelf_life_days/section are optional.',
+                    'description' => 'Up to 30 items. Each needs a name; location/expiry_date/section are optional, but set shelf_life_days per item using ordinary food knowledge (milk ~7, bread ~5-7, fresh produce ~5-10, canned/dry goods ~180-365) unless the user gave an exact date - never leave every item dateless or default to today.',
                     'items' => [
                         'type' => 'object',
                         'properties' => (object) [
                             'name' => ['type' => 'string'],
                             'quantity' => ['type' => 'integer'],
                             'location' => ['type' => 'string', 'enum' => ['fridge', 'freezer', 'pantry']],
-                            'expiry_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD.'],
-                            'shelf_life_days' => ['type' => 'integer'],
+                            'expiry_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD. Only for a specific calendar date the user gave - otherwise use shelf_life_days.'],
+                            'shelf_life_days' => ['type' => 'integer', 'description' => 'Your own estimate of typical days until it goes off - prefer this over expiry_date whenever there is no exact date.'],
                             'section' => ['type' => 'string'],
                             'weight' => ['type' => 'number', 'description' => 'Weight/volume of ONE unit. Needs weight_unit alongside it.'],
                             'weight_unit' => ['type' => 'string', 'enum' => ItemPayload::WEIGHT_UNITS],
@@ -211,12 +211,12 @@ class AgentToolbox
             $fn('get_recipe', 'The full detail of one saved recipe - every ingredient and every step. list_recipes only gives names, so call this when the user actually wants to cook one.', [
                 'recipe_id' => ['type' => 'integer'],
             ], ['recipe_id']),
-            $fn('add_item', "Add a food item to the user's inventory. Guesses an icon from the name. Goes to the fridge named in fridge_id, else the chat's active fridge, else their default one.", [
+            $fn('add_item', "Add a food item to the user's inventory. Guesses an icon from the name. Goes to the fridge named in fridge_id, else the chat's active fridge, else their default one. Always set shelf_life_days unless the user gave an exact date or truly said nothing datable (e.g. a non-perishable with no sensible shelf life) - estimate it yourself from ordinary food knowledge (milk ~7, bread ~5-7, fresh leafy greens ~5, canned/dry goods ~180-365) rather than defaulting to today or leaving it blank; expiry alerts are useless without a real estimate.", [
                 'name' => ['type' => 'string'],
                 'quantity' => ['type' => 'integer', 'description' => 'Defaults to 1.'],
                 'location' => ['type' => 'string', 'enum' => ['fridge', 'freezer', 'pantry'], 'description' => 'Defaults to fridge.'],
-                'expiry_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD. Omit if unknown, or pass shelf_life_days instead.'],
-                'shelf_life_days' => ['type' => 'integer', 'description' => 'Days from today until it goes off - use when the user gives a rough guess instead of a date.'],
+                'expiry_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD. Only when the user gave (or clearly implied) a specific calendar date - otherwise use shelf_life_days instead, never guess an absolute date yourself.'],
+                'shelf_life_days' => ['type' => 'integer', 'description' => 'Days from today until it typically goes off. Your own best estimate for this food, not only for when the user mentions a rough timeframe - prefer this over expiry_date whenever there is no exact date.'],
                 'section' => ['type' => 'string', 'description' => 'Shelf / section label, e.g. "Produce", "Door". Created if new.'],
                 'fridge_id' => ['type' => 'integer', 'description' => 'From list_fridges. Omit for the active/default fridge.'],
                 'weight' => ['type' => 'number', 'description' => 'Weight/volume of ONE unit, e.g. from a package label. Needs weight_unit alongside it.'],

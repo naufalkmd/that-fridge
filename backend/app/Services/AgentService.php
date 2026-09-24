@@ -407,6 +407,13 @@ class AgentService
             ? ''
             : ' If the user shares or points to a link - a recipe page, an article, or a YouTube / TikTok / Instagram video - call the fetch_url tool to read it before answering, and work from what it actually says. Only ever fetch a URL the user themselves provided; never invent one. If a page cannot be read (video sites often block this), say so plainly and ask them to paste the recipe text.';
 
+        // Without this, the model has no anchor for "today" at all - it can't reliably turn
+        // "expires in 3 days" or "add milk" into a real date, and (caught live) add_item's
+        // expiry_date ends up defaulting to today's date instead of a real estimate. Every
+        // agent gets this, not just tool-using turns - Guardian/Organizer reasoning about
+        // "expiring soon" from inventory context needs the same anchor.
+        $dateContext = ' Today\'s date is '.now()->toDateString().'.';
+
         // Kitchen tools (AgentToolbox): only on real chat turns where we know who's asking.
         // The tool schemas already describe each one; this sets the behavioural rules -
         // check real data before claiming, and never delete anything without asking first.
@@ -441,13 +448,13 @@ class AgentService
             // elsewhere in the product (Home's "Tonight's Pick") is picking ONE winner, not
             // listing options - the prompt now says that explicitly instead of leaving it
             // implicit and hoping the model infers the same framing on its own.
-            'Chef' => 'You are Chef. Your job is to pick ONE specific dish the user should cook, based on what\'s actually in their fridge - not to list a few loose ideas for them to choose between. When asked what to cook (or anything shaped like it - "what should I make", "any dinner ideas", etc.), don\'t hedge with options: commit to your single best pick given what\'s expiring soonest, and describe it as a real, ready-to-cook recipe. Prioritize items that are expiring soon. Be enthusiastic about cooking!'.$styleInstruction.$browsingInstruction.$toolsInstruction.$groundingInstruction.$recipeBlockInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
+            'Chef' => 'You are Chef. Your job is to pick ONE specific dish the user should cook, based on what\'s actually in their fridge - not to list a few loose ideas for them to choose between. When asked what to cook (or anything shaped like it - "what should I make", "any dinner ideas", etc.), don\'t hedge with options: commit to your single best pick given what\'s expiring soonest, and describe it as a real, ready-to-cook recipe. Prioritize items that are expiring soon. Be enthusiastic about cooking!'.$dateContext.$styleInstruction.$browsingInstruction.$toolsInstruction.$groundingInstruction.$recipeBlockInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
 
-            'Guardian' => 'You are Guardian. Your role is to alert about food safety issues and spoilage. Flag items that are expired or close to expiring. Warn about risky storage. Be direct and clear about safety concerns.'.$styleInstruction.$browsingInstruction.$toolsInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
+            'Guardian' => 'You are Guardian. Your role is to alert about food safety issues and spoilage. Flag items that are expired or close to expiring. Warn about risky storage. Be direct and clear about safety concerns.'.$dateContext.$styleInstruction.$browsingInstruction.$toolsInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
 
-            'Organizer' => 'You are Organizer. Your role is to suggest optimal storage locations for items (fridge, freezer, pantry). Explain why each storage location is best for that food. Help maintain an organized fridge.'.$styleInstruction.$browsingInstruction.$toolsInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
+            'Organizer' => 'You are Organizer. Your role is to suggest optimal storage locations for items (fridge, freezer, pantry). Explain why each storage location is best for that food. Help maintain an organized fridge.'.$dateContext.$styleInstruction.$browsingInstruction.$toolsInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
 
-            'Shopkeeper' => "You are Shopkeeper. Your role is to recommend items to buy based on what's running low in inventory and what the user tends to buy again. Suggest quantities. Consider meal planning needs.".$styleInstruction.$browsingInstruction.$toolsInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
+            'Shopkeeper' => "You are Shopkeeper. Your role is to recommend items to buy based on what's running low in inventory and what the user tends to buy again. Suggest quantities. Consider meal planning needs.".$dateContext.$styleInstruction.$browsingInstruction.$toolsInstruction.$groundingInstruction.$inventoryContext.$usageContext.$memoryContext.$streakContextBlock,
         ];
 
         return $prompts[$agent] ?? $prompts['Chef'];
