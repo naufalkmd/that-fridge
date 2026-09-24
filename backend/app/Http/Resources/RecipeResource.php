@@ -41,22 +41,6 @@ class RecipeResource extends JsonResource
             'isFavorite' => $this->relationLoaded('favoritedBy')
                 ? $this->favoritedBy->contains('id', $request->user()->id)
                 : $this->favoritedBy()->where('users.id', $request->user()->id)->exists(),
-            // Only ever set via an explicit, already-user-filtered eager load (see
-            // RecipeController's index()/show()) - never lazy-loaded here, since an
-            // unfiltered lazy load on this relation would leak another user's plan for a
-            // shared curated recipe. AgentToolbox stores each entry's item_id in snake_case
-            // (it writes plain tool args, not through a Resource) - map to camelCase here so
-            // the wire format stays consistent with every other field on this resource.
-            'consumptionPlan' => $this->whenLoaded('consumptionPlans', function () {
-                $plan = $this->consumptionPlans->first()?->plan;
-
-                return $plan === null ? null : collect($plan)->map(fn ($entry) => [
-                    'ingredient' => $entry['ingredient'] ?? '',
-                    'action' => $entry['action'] ?? 'skip',
-                    'itemId' => isset($entry['item_id']) ? (string) $entry['item_id'] : null,
-                    'amount' => $entry['amount'] ?? null,
-                ])->all();
-            }),
         ];
     }
 }

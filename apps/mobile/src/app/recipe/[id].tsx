@@ -26,7 +26,7 @@ export default function RecipeDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { byId, ensureRecipe, setFavorite, remove } = useRecipes();
-  const { items, itemById } = useInventory();
+  const { items } = useInventory();
   const { items: shoppingItems, add: addToShopping } = useShopping();
   const {
     accent: AMBER,
@@ -237,35 +237,6 @@ export default function RecipeDetail() {
           ))}
         </View>
 
-        {!!recipe.consumptionPlan?.length && (
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
-              AUTO-UPDATES INVENTORY WHEN MADE
-            </Text>
-            <View style={{ borderRadius: 8, backgroundColor: SURFACE2, overflow: "hidden" }}>
-              {recipe.consumptionPlan.map((entry, i) => (
-                <View
-                  key={i}
-                  style={{
-                    paddingVertical: 10,
-                    paddingHorizontal: 14,
-                    borderBottomWidth: i === recipe.consumptionPlan!.length - 1 ? 0 : 1,
-                    borderBottomColor: HAIRLINE,
-                  }}
-                >
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: INK }}>{entry.ingredient}</Text>
-                  <Text style={{ fontSize: 11.5, color: FAINT, marginTop: 2 }}>
-                    {describePlanAction(entry, entry.itemId ? itemById(entry.itemId)?.name : undefined)}
-                  </Text>
-                </View>
-              ))}
-            </View>
-            <Text style={{ fontSize: 11, color: FAINT, marginTop: 8, lineHeight: 15 }}>
-              Set up via the crew in Quick Chat - ask to change it there.
-            </Text>
-          </View>
-        )}
-
         <Pressable
           onPress={markMade}
           style={{
@@ -352,20 +323,4 @@ function IconBtn({
       <MaterialCommunityIcons name={icon} size={14} color={tint} />
     </Pressable>
   );
-}
-
-function describePlanAction(
-  entry: { action: "decrement" | "mark_opened" | "use_up" | "skip"; amount?: number },
-  itemName: string | undefined,
-): string {
-  if (entry.action === "skip") return "Not tracked in inventory.";
-  if (!itemName) return "Item no longer in your fridge - this step is skipped.";
-  switch (entry.action) {
-    case "decrement":
-      return `Reduces "${itemName}" by ${entry.amount ?? 1}.`;
-    case "mark_opened":
-      return `Marks "${itemName}" opened.`;
-    case "use_up":
-      return `Uses up "${itemName}" entirely.`;
-  }
 }

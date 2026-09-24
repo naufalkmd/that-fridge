@@ -47,7 +47,6 @@ class RecipeController extends Controller
             ->with([
                 'favoritedBy' => fn ($q) => $q->where('users.id', $user->id),
                 'user:id,name,username',
-                'consumptionPlans' => fn ($q) => $q->where('user_id', $user->id),
             ])
             ->orderBy('name')
             ->get();
@@ -63,10 +62,7 @@ class RecipeController extends Controller
     {
         $this->authorize('view', $recipe);
 
-        return new RecipeResource($recipe->load([
-            'user:id,name,username',
-            'consumptionPlans' => fn ($q) => $q->where('user_id', $request->user()->id),
-        ]));
+        return new RecipeResource($recipe->load(['user:id,name,username']));
     }
 
     public function store(Request $request, AgentService $agentService)

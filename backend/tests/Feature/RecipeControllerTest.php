@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Fridge;
 use App\Models\Recipe;
-use App\Models\RecipeConsumptionPlan;
 use App\Models\Section;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -347,49 +346,6 @@ class RecipeControllerTest extends TestCase
             'isMine' => false,
             'isFavorite' => false,
         ]]);
-    }
-
-    public function test_show_includes_the_current_users_consumption_plan_in_camel_case(): void
-    {
-        $user = User::factory()->create();
-        $other = User::factory()->create();
-        $recipe = $this->recipeFor($user, ['name' => 'Cookies']);
-        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
-        $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'Fridge']);
-        $flour = $section->items()->create(['name' => 'Flour', 'icon' => 'leftovers', 'quantity' => 2, 'location' => 'pantry']);
-
-        RecipeConsumptionPlan::create([
-            'user_id' => $user->id,
-            'recipe_id' => $recipe->id,
-            'plan' => [['ingredient' => '500g flour', 'action' => 'decrement', 'item_id' => $flour->id, 'amount' => 1]],
-        ]);
-        // A different user's plan on the same (curated-style) recipe must never leak into
-        // this response - this is exactly the scoping the whenLoaded/eager-load exists for.
-        RecipeConsumptionPlan::create([
-            'user_id' => $other->id,
-            'recipe_id' => $recipe->id,
-            'plan' => [['ingredient' => '500g flour', 'action' => 'skip']],
-        ]);
-
-        $response = $this->actingAs($user)->getJson("/api/recipes/{$recipe->id}");
-
-        $response->assertOk();
-        $response->assertJson(['data' => [
-            'consumptionPlan' => [
-                ['ingredient' => '500g flour', 'action' => 'decrement', 'itemId' => (string) $flour->id, 'amount' => 1],
-            ],
-        ]]);
-    }
-
-    public function test_show_returns_null_consumption_plan_when_none_is_set(): void
-    {
-        $user = User::factory()->create();
-        $recipe = $this->recipeFor($user);
-
-        $response = $this->actingAs($user)->getJson("/api/recipes/{$recipe->id}");
-
-        $response->assertOk();
-        $response->assertJson(['data' => ['consumptionPlan' => null]]);
     }
 
     public function test_show_requires_authentication(): void
