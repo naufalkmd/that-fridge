@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\RunMachine;
 use App\Models\Fridge;
+use App\Models\Item;
 use App\Models\Machine;
+use App\Models\Section;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class MachineControllerTest extends TestCase
@@ -186,6 +190,67 @@ class MachineControllerTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertSame(2, $machine->fresh()->version);
+    }
+
+    public function test_update_resets_threshold_met_when_trigger_changes(): void
+    {
+        $user = User::factory()->create();
+        $fridge = $this->fridgeFor($user);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'X',
+            'trigger_type' => 'threshold',
+            'trigger_config' => ['field' => 'quantity', 'custom_field_label' => null, 'unit' => null, 'filter' => [], 'op' => 'lt', 'value' => 2],
+            'threshold_met' => true,
+            'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+            'enabled' => true, 'version' => 1,
+        ]);
+
+        $this->actingAs($user)->patchJson("/api/machines/{$machine->id}", [
+            'trigger' => ['type' => 'threshold', 'config' => ['field' => 'quantity', 'op' => 'lt', 'value' => 5]],
+        ])->assertStatus(200);
+
+        $this->assertNull($machine->fresh()->threshold_met);
+    }
+
+    public function test_update_does_not_reset_threshold_met_when_only_steps_change(): void
+    {
+        $user = User::factory()->create();
+        $fridge = $this->fridgeFor($user);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'X',
+            'trigger_type' => 'threshold',
+            'trigger_config' => ['field' => 'quantity', 'custom_field_label' => null, 'unit' => null, 'filter' => [], 'op' => 'lt', 'value' => 2],
+            'threshold_met' => true,
+            'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+            'enabled' => true, 'version' => 1,
+        ]);
+
+        $this->actingAs($user)->patchJson("/api/machines/{$machine->id}", [
+            'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'bye']]],
+        ])->assertStatus(200);
+
+        $this->assertTrue($machine->fresh()->threshold_met);
+    }
+
+    public function test_update_dispatches_immediately_when_enabling_an_already_met_threshold_machine(): void
+    {
+        Queue::fake();
+        $user = User::factory()->create();
+        $fridge = $this->fridgeFor($user);
+        $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'Fridge']);
+        Item::create(['section_id' => $section->id, 'name' => 'Milk', 'icon' => 'milk', 'quantity' => 1, 'location' => 'fridge']);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'X',
+            'trigger_type' => 'threshold',
+            'trigger_config' => ['field' => 'quantity', 'custom_field_label' => null, 'unit' => null, 'filter' => [], 'op' => 'lt', 'value' => 2],
+            'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+
+        $this->actingAs($user)->patchJson("/api/machines/{$machine->id}", ['enabled' => true])->assertStatus(200);
+
+        Queue::assertPushed(RunMachine::class, fn ($job) => $job->machineId === $machine->id);
+        $this->assertTrue($machine->fresh()->threshold_met);
     }
 
     public function test_update_recomputes_next_run_at_when_enabling_a_long_disabled_machine(): void

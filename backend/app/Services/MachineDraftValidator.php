@@ -18,8 +18,6 @@ class MachineDraftValidator
 
     private const FREQUENCIES = ['daily', 'weekly'];
 
-    private const THRESHOLD_FIELDS = ['quantity', 'weight', 'calories'];
-
     private const THRESHOLD_OPS = ['lt', 'lte', 'gt', 'gte'];
 
     private const MAX_STEPS = 10;
@@ -129,8 +127,8 @@ class MachineDraftValidator
     private function validateThresholdTrigger(array $config, array &$errors): array
     {
         $field = $config['field'] ?? null;
-        if (! in_array($field, self::THRESHOLD_FIELDS, true)) {
-            $errors[] = 'trigger.config.field must be one of '.implode(', ', self::THRESHOLD_FIELDS).'.';
+        if (! in_array($field, AgentToolbox::FIELDS, true)) {
+            $errors[] = 'trigger.config.field must be one of '.implode(', ', AgentToolbox::FIELDS).'.';
         }
 
         $op = $config['op'] ?? null;
@@ -147,8 +145,14 @@ class MachineDraftValidator
             $errors[] = 'trigger.config.unit is required (one of '.implode(', ', ItemPayload::WEIGHT_UNITS).') when field is weight.';
         }
 
+        $customFieldLabel = trim((string) ($config['custom_field_label'] ?? ''));
+        if ($field === 'custom' && $customFieldLabel === '') {
+            $errors[] = 'trigger.config.custom_field_label is required when field is custom.';
+        }
+
         return ['type' => 'threshold', 'config' => [
             'field' => $field,
+            'custom_field_label' => $field === 'custom' ? $customFieldLabel : null,
             'unit' => $field === 'weight' ? $unit : null,
             'filter' => is_array($config['filter'] ?? null) ? $config['filter'] : [],
             'op' => $op,

@@ -3,16 +3,20 @@
 namespace App\Observers;
 
 use App\Models\Item;
+use App\Services\MachineTriggerService;
 use App\Services\Notifier;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Keeps the rest of a shared fridge's crew in the loop when someone adds or finishes an
- * item. Only fires for authenticated web/app requests - factory- or seeder-created items
- * (no logged-in user) stay silent.
+ * Keeps the rest of a shared fridge's crew in the loop when someone adds or finishes an item,
+ * and fires Machine triggers off the same writes. The Notifier calls stay gated to
+ * authenticated web/app requests (factory- or seeder-created items stay silent); Machine
+ * dispatch is split the same way for a reason - see itemAdded()/recheckThresholds() below.
  */
 class ItemObserver
 {
+    public function __construct(private MachineTriggerService $machines) {}
+
     /**
      * Stamps `opened_at` whenever `opened` flips, so ItemResource can count down the 3-day
      * "opened" window from the moment it actually happened instead of re-deriving a frozen
@@ -28,11 +32,19 @@ class ItemObserver
 
     public function created(Item $item): void
     {
+        $fridge = $item->section?->fridge;
+        if ($fridge) {
+            $this->machines->recheckThresholds($fridge);
+        }
+
         if (! Auth::check()) {
             return;
         }
 
-        $fridge = $item->section?->fridge;
+        if ($fridge) {
+            $this->machines->itemAdded($item, $fridge);
+        }
+
         if (! $fridge || $fridge->members()->count() < 2) {
             return;
         }
@@ -48,6 +60,11 @@ class ItemObserver
 
     public function updated(Item $item): void
     {
+        $fridge = $item->section?->fridge;
+        if ($fridge && $item->wasChanged(['quantity', 'weight', 'weight_unit', 'calories', 'custom_fields'])) {
+            $this->machines->recheckThresholds($fridge);
+        }
+
         if (! Auth::check()) {
             return;
         }
@@ -60,7 +77,6 @@ class ItemObserver
             return;
         }
 
-        $fridge = $item->section?->fridge;
         if (! $fridge || $fridge->members()->count() < 2) {
             return;
         }
@@ -72,5 +88,14 @@ class ItemObserver
             '@'.Auth::user()->username." used up {$item->name} in {$fridge->name}",
             $item,
         );
+    }
+
+    /** A delete can only ever move a threshold's totals down - no dirty-check needed. */
+    public function deleted(Item $item): void
+    {
+        $fridge = $item->section?->fridge;
+        if ($fridge) {
+            $this->machines->recheckThresholds($fridge);
+        }
     }
 }

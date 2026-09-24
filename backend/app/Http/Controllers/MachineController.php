@@ -7,6 +7,7 @@ use App\Models\Machine;
 use App\Services\AgentService;
 use App\Services\CreditService;
 use App\Services\MachineDraftValidator;
+use App\Services\MachineTriggerService;
 use App\Support\CreditCost;
 use App\Support\MachineSchedule;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class MachineController extends Controller
         protected AgentService $agent,
         protected MachineDraftValidator $validator,
         protected CreditService $credits,
+        protected MachineTriggerService $machines,
     ) {}
 
     /**
@@ -112,6 +114,7 @@ class MachineController extends Controller
 
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:60'],
+            'prompt' => ['sometimes', 'nullable', 'string', 'max:500'],
             'enabled' => ['sometimes', 'boolean'],
             'trigger' => ['sometimes', 'array'],
             'steps' => ['sometimes', 'array'],
@@ -138,6 +141,16 @@ class MachineController extends Controller
         if (isset($data['name'])) {
             $machine->name = trim($data['name']);
         }
+        if (array_key_exists('prompt', $data)) {
+            $machine->prompt = $data['prompt'];
+        }
+
+        // Whenever `trigger` changes, a threshold's prior met/not-met state no longer means
+        // anything - reset so the next check starts fresh instead of being wrongly suppressed
+        // (or wrongly firing) off a condition that no longer applies.
+        if (isset($data['trigger'])) {
+            $machine->threshold_met = null;
+        }
 
         // Re-derive next_run_at whenever the schedule itself changed, or whenever the Machine
         // is flipped on - otherwise enabling a Machine that's sat disabled for weeks would
@@ -154,6 +167,13 @@ class MachineController extends Controller
         }
 
         $machine->save();
+
+        // An already-met threshold should start working the moment it's switched on, not wait
+        // for the next unrelated item write on the fridge.
+        if ($wasEnabling && $machine->trigger_type === 'threshold') {
+            $this->machines->recheckThresholds($machine->fridge);
+            $machine->refresh();
+        }
 
         return new MachineResource($machine);
     }

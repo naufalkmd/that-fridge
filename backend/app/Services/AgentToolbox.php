@@ -15,6 +15,7 @@ use App\Support\ItemFreshness;
 use App\Support\ItemPayload;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
@@ -302,8 +303,9 @@ class AgentToolbox
             $fn('import_recipe_from_link', 'Read a recipe from a URL the user shared and return its name, ingredients and steps. Follow up with save_recipe if they want it kept. Only use a URL the user actually provided.', [
                 'url' => ['type' => 'string'],
             ], ['url']),
-            $fn('sum_item_field', "Compute a precise total across matching items - use this instead of adding up list_items' rows yourself. It exists because a Machine replaying this later has no model to eyeball a total with, so it needs deterministic math computed by the server, not by you reading numbers off a list. 'quantity' sums the plain unit count. 'weight' and 'calories' are MULTIPLIED BY QUANTITY - i.e. the total amount in stock, not per-unit (the opposite convention from list_items' per-unit display). A weight sum never mixes mass and volume: the target unit you pass decides which system it sums (g/kg/mg/oz/lb are mass, ml/l are volume) - items measured in the other system, or with no weight set, are excluded and reported as skipped, never estimated.", [
-                'field' => ['type' => 'string', 'enum' => ['quantity', 'weight', 'calories']],
+            $fn('sum_item_field', "Compute a precise total across matching items - use this instead of adding up list_items' rows yourself. It exists because a Machine replaying this later has no model to eyeball a total with, so it needs deterministic math computed by the server, not by you reading numbers off a list. 'quantity' sums the plain unit count. 'weight', 'calories', and 'custom' are MULTIPLIED BY QUANTITY - i.e. the total amount in stock, not per-unit (the opposite convention from list_items' per-unit display). 'custom' sums a user-defined custom field by label (custom_field_label, case-insensitive) - only items with that label set to a numeric value count, the rest are skipped. A weight sum never mixes mass and volume: the target unit you pass decides which system it sums (g/kg/mg/oz/lb are mass, ml/l are volume) - items measured in the other system, or with no weight set, are excluded and reported as skipped, never estimated.", [
+                'field' => ['type' => 'string', 'enum' => self::FIELDS],
+                'custom_field_label' => ['type' => 'string', 'description' => 'The custom field label to sum, case-insensitive (e.g. "Cost"). Required when field is custom.'],
                 'unit' => ['type' => 'string', 'enum' => ItemPayload::WEIGHT_UNITS, 'description' => 'Required when field is weight - the unit to sum into, e.g. "kg" totals every mass-measured matching item converted to kg. Ignored otherwise.'],
                 'expired_only' => ['type' => 'boolean', 'description' => 'Only items already past their date.'],
                 'expiring_within_days' => ['type' => 'integer', 'description' => 'Only items expiring within this many days (0 = today or overdue).'],
@@ -439,9 +441,9 @@ class AgentToolbox
      * across the whole matching set should pass null, since list_items' 200-row cap is
      * applied before these filters and an aggregation must not silently inherit that.
      *
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     * @return Collection<int, array<string, mixed>>
      */
-    private function filteredItems(User $user, array $args, ?int $limit): \Illuminate\Support\Collection
+    private function filteredItems(User $user, array $args, ?int $limit): Collection
     {
         $query = $this->items($user)->orderByDesc('created_at');
         if ($limit !== null) {
@@ -496,9 +498,13 @@ class AgentToolbox
     /** Trims trailing zeros so 500.000 reads as "500g" and 0.750 as "0.75kg". */
     private function formatWeight(float $weight, ?string $unit): string
     {
-        $formatted = rtrim(rtrim(number_format($weight, 3, '.', ''), '0'), '.');
+        return self::formatNumber($weight).($unit ?? '');
+    }
 
-        return $formatted.($unit ?? '');
+    /** Trims trailing zeros so 500.000 reads as "500" and 0.750 as "0.75". */
+    private static function formatNumber(float $n): string
+    {
+        return rtrim(rtrim(number_format($n, 3, '.', ''), '0'), '.');
     }
 
     /** Compact "label=value; label=value (+N more)" rendering, capped so one item with many
@@ -519,46 +525,110 @@ class AgentToolbox
         return ' · fields: '.implode('; ', $parts).($rest > 0 ? " (+{$rest} more)" : '');
     }
 
-    // Base units for weight conversion - mass and volume never mix (see sumItemField).
+    // Base units for weight conversion - mass and volume never mix (see computeFieldTotal).
     private const GRAMS_PER_UNIT = ['g' => 1, 'kg' => 1000, 'mg' => 0.001, 'oz' => 28.3495, 'lb' => 453.592];
 
     private const ML_PER_UNIT = ['ml' => 1, 'l' => 1000];
 
+    /** The whole set of summable fields - one source of truth for sum_item_field's schema,
+     *  this class's own runtime check, MachineDraftValidator's threshold field, and
+     *  AgentService's draft system prompt. */
+    public const FIELDS = ['quantity', 'weight', 'calories', 'custom'];
+
     private function sumItemField(User $user, array $args): string
     {
         $field = $args['field'] ?? null;
-        if (! in_array($field, ['quantity', 'weight', 'calories'], true)) {
-            return 'Error: field must be one of quantity, weight, calories.';
+        if (! in_array($field, self::FIELDS, true)) {
+            return 'Error: field must be one of '.implode(', ', self::FIELDS).'.';
+        }
+        if ($field === 'custom' && trim((string) ($args['custom_field_label'] ?? '')) === '') {
+            return 'Error: custom_field_label is required when field is custom.';
+        }
+        if ($field === 'weight' && ! in_array($args['unit'] ?? 'g', ItemPayload::WEIGHT_UNITS, true)) {
+            return 'Error: unit must be one of '.implode(', ', ItemPayload::WEIGHT_UNITS).' (required when field is weight).';
         }
 
+        $computed = $this->computeFieldTotal($user, $args);
+
+        if ($field === 'quantity') {
+            $total = (int) $computed['total'];
+            $this->value = (string) $total;
+
+            return "Total quantity: {$total} across {$computed['matched']} item".($computed['matched'] === 1 ? '' : 's').'.';
+        }
+
+        if ($field === 'calories') {
+            $total = (int) $computed['total'];
+            $this->value = "{$total} kcal";
+
+            return "Total calories: {$total} kcal across {$computed['matched']} item".($computed['matched'] === 1 ? '' : 's').
+                ($computed['skipped'] > 0 ? " ({$computed['skipped']} skipped: no calories set)" : '').'.';
+        }
+
+        if ($field === 'custom') {
+            $label = trim((string) $args['custom_field_label']);
+            $rendered = self::formatNumber($computed['total']);
+            $this->value = $rendered;
+
+            return "Total \"{$label}\": {$rendered} across {$computed['matched']} item".($computed['matched'] === 1 ? '' : 's').
+                ($computed['skipped'] > 0 ? " ({$computed['skipped']} skipped: no numeric \"{$label}\" set)" : '').'.';
+        }
+
+        // weight
+        $rendered = $this->formatWeight($computed['total'], $computed['unit']);
+        $this->value = $rendered;
+
+        return "Total weight: {$rendered} across {$computed['matched']} item".($computed['matched'] === 1 ? '' : 's').
+            ($computed['skipped'] > 0 ? " ({$computed['skipped']} skipped: no weight set, or measured in the other system - mass vs volume)" : '').'.';
+    }
+
+    /**
+     * Raw math shared by sumItemField() (formats this into a display string) and
+     * MachineTriggerService's threshold checker (only needs the float). Assumes $args is
+     * already valid - callers are responsible (sumItemField's own checks above, or a
+     * Machine's already-validated trigger_config).
+     *
+     * @return array{total: float, matched: int, skipped: int, unit: ?string}
+     */
+    private function computeFieldTotal(User $user, array $args): array
+    {
+        $field = $args['field'];
         // No row cap, unlike list_items (200) - an aggregation must see every matching item
         // or it silently under-counts.
         $items = $this->filteredItems($user, $args, null);
 
         if ($field === 'quantity') {
-            $total = (int) $items->sum('quantity');
-            $this->value = (string) $total;
-
-            return "Total quantity: {$total} across {$items->count()} item".($items->count() === 1 ? '' : 's').'.';
+            return ['total' => (float) $items->sum('quantity'), 'matched' => $items->count(), 'skipped' => 0, 'unit' => null];
         }
 
         if ($field === 'calories') {
             $matched = $items->filter(fn ($i) => $i['calories'] !== null);
-            $skipped = $items->count() - $matched->count();
+
             // Total in stock (per-unit x quantity) - the opposite of list_items' per-unit
             // display, since "how much is in stock" is what a Machine summing calories wants.
-            $total = (int) $matched->sum(fn ($i) => $i['calories'] * $i['quantity']);
-            $this->value = "{$total} kcal";
+            return [
+                'total' => (float) $matched->sum(fn ($i) => $i['calories'] * $i['quantity']),
+                'matched' => $matched->count(),
+                'skipped' => $items->count() - $matched->count(),
+                'unit' => null,
+            ];
+        }
 
-            return "Total calories: {$total} kcal across {$matched->count()} item".($matched->count() === 1 ? '' : 's').
-                ($skipped > 0 ? " ({$skipped} skipped: no calories set)" : '').'.';
+        if ($field === 'custom') {
+            $label = Str::lower(trim((string) $args['custom_field_label']));
+            $values = $items->map(function ($i) use ($label) {
+                $match = collect($i['custom_fields'])->first(fn ($f) => Str::lower(trim((string) ($f['label'] ?? ''))) === $label);
+                $value = $match['value'] ?? null;
+
+                return $value !== null && is_numeric($value) ? (float) $value * $i['quantity'] : null;
+            });
+            $matched = $values->filter(fn ($v) => $v !== null);
+
+            return ['total' => (float) $matched->sum(), 'matched' => $matched->count(), 'skipped' => $items->count() - $matched->count(), 'unit' => null];
         }
 
         // weight
         $unit = $args['unit'] ?? 'g';
-        if (! in_array($unit, ItemPayload::WEIGHT_UNITS, true)) {
-            return 'Error: unit must be one of '.implode(', ', ItemPayload::WEIGHT_UNITS).' (required when field is weight).';
-        }
         $unitIsMass = array_key_exists($unit, self::GRAMS_PER_UNIT);
 
         $matched = $items->filter(function ($i) use ($unitIsMass) {
@@ -568,16 +638,24 @@ class AgentToolbox
 
             return array_key_exists($i['weight_unit'], self::GRAMS_PER_UNIT) === $unitIsMass;
         });
-        $skipped = $items->count() - $matched->count();
 
         $baseTable = $unitIsMass ? self::GRAMS_PER_UNIT : self::ML_PER_UNIT;
         $totalBase = $matched->sum(fn ($i) => $baseTable[$i['weight_unit']] * $i['weight'] * $i['quantity']);
-        $total = $totalBase / $baseTable[$unit];
-        $rendered = $this->formatWeight($total, $unit);
-        $this->value = $rendered;
 
-        return "Total weight: {$rendered} across {$matched->count()} item".($matched->count() === 1 ? '' : 's').
-            ($skipped > 0 ? " ({$skipped} skipped: no weight set, or measured in the other system - mass vs volume)" : '').'.';
+        return [
+            'total' => $totalBase / $baseTable[$unit],
+            'matched' => $matched->count(),
+            'skipped' => $items->count() - $matched->count(),
+            'unit' => $unit,
+        ];
+    }
+
+    /** The raw total only - for MachineTriggerService's threshold comparison, which needs a
+     *  float to compare against trigger_config.value, not a formatted display string. Callers
+     *  must pass already-valid args (a threshold's trigger_config is validated at save time). */
+    public function fieldTotal(User $user, array $args): float
+    {
+        return $this->computeFieldTotal($user, $args)['total'];
     }
 
     private function listNotes(User $user): string

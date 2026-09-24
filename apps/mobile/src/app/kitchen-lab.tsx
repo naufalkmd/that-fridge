@@ -19,6 +19,7 @@ import {
   type MachineDraft,
   type MachineStep,
   type MachineTrigger,
+  type MachineUpdateInput,
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
@@ -49,10 +50,11 @@ function describeTrigger(trigger: MachineTrigger): string {
     if (location) return `When an item is added to the ${location}`;
     return "When an item is added";
   }
-  const { field, op, value, unit } = trigger.config;
+  const { field, op, value, unit, custom_field_label } = trigger.config;
   const opLabel = { lt: "drops below", lte: "drops to or below", gt: "goes above", gte: "goes to or above" }[op];
+  const label = field === "custom" ? (custom_field_label ?? "custom field") : field;
   const suffix = unit ? ` ${unit}` : field === "calories" ? " kcal" : "";
-  return `When total ${field} ${opLabel} ${value}${suffix}`;
+  return `When total ${label} ${opLabel} ${value}${suffix}`;
 }
 
 const TOOL_LABELS: Record<string, string> = {
@@ -69,7 +71,10 @@ const TOOL_LABELS: Record<string, string> = {
 
 function describeStep(step: MachineStep): string {
   if (step.tool === "sum_item_field" && typeof step.args.field === "string") {
-    return `Add up ${step.args.field} across items`;
+    const label = step.args.field === "custom" && typeof step.args.custom_field_label === "string"
+      ? step.args.custom_field_label
+      : step.args.field;
+    return `Add up ${label} across items`;
   }
   if (step.tool === "notify_user" && typeof step.args.message === "string") {
     return `Notify: "${step.args.message}"`;
@@ -98,6 +103,13 @@ export default function KitchenLab() {
   const [fridgeId, setFridgeId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [redrafted, setRedrafted] = useState(false);
+  // True for edit/duplicate (review opened directly from a card tap, no prompt step this
+  // session) - controls review's back destination and whether the fridge is a read-only
+  // label vs a picker. False for a fresh create, where review's back returns to prompt.
+  const [enteredDirectly, setEnteredDirectly] = useState(false);
+
   const load = useCallback(() => {
     api
       .listMachines()
@@ -119,7 +131,39 @@ export default function KitchenLab() {
     setPrompt("");
     setDraftMessage(null);
     setDraft(null);
+    setEditingId(null);
+    setRedrafted(false);
+    setEnteredDirectly(false);
     setMode("prompt");
+  }
+
+  /** Tapping an existing Machine - rename and/or redraft its trigger/steps with AI. Its
+   *  fridge can't change post-creation (see MachineController::update), so fridgeId is seeded
+   *  but never offered as a picker while editingId is set. */
+  function openEdit(machine: Machine) {
+    setEditingId(machine.id);
+    setRedrafted(false);
+    setEnteredDirectly(true);
+    setDraft({ name: machine.name, trigger: machine.trigger, steps: machine.steps });
+    setDraftName(machine.name);
+    setFridgeId(machine.fridgeId);
+    setPrompt(machine.prompt ?? "");
+    setDraftMessage(null);
+    setMode("review");
+  }
+
+  /** Copies an existing Machine's trigger/steps into a new unsaved draft - no AI call, Save
+   *  creates a separate Machine rather than editing this one. */
+  function openDuplicate(machine: Machine) {
+    setEditingId(null);
+    setRedrafted(false);
+    setEnteredDirectly(true);
+    setDraft({ name: machine.name, trigger: machine.trigger, steps: machine.steps });
+    setDraftName(`${machine.name} copy`.slice(0, 60));
+    setFridgeId(machine.fridgeId);
+    setPrompt(machine.prompt ?? "");
+    setDraftMessage(null);
+    setMode("review");
   }
 
   async function runDraft() {
@@ -135,6 +179,7 @@ export default function KitchenLab() {
       }
       setDraft(result.draft);
       setDraftName(result.draft.name);
+      if (editingId) setRedrafted(true);
       setMode("review");
     } catch (e) {
       setDraftMessage(describeError(e, "Couldn't draft a Machine right now."));
@@ -147,15 +192,33 @@ export default function KitchenLab() {
     if (!draft || !fridgeId) return;
     setSaving(true);
     try {
-      await api.createMachine({
-        name: draftName.trim() || draft.name,
-        prompt,
-        fridge_id: fridgeId,
-        trigger: draft.trigger,
-        steps: draft.steps,
-      });
+      if (editingId) {
+        const original = machines?.find((m) => m.id === editingId);
+        const trimmedName = draftName.trim() || draft.name;
+        const payload: MachineUpdateInput = {};
+        if (!original || trimmedName !== original.name) payload.name = trimmedName;
+        if (redrafted) {
+          payload.trigger = draft.trigger;
+          payload.steps = draft.steps;
+          payload.prompt = prompt;
+        }
+        if (Object.keys(payload).length > 0) {
+          await api.updateMachine(editingId, payload);
+        }
+      } else {
+        await api.createMachine({
+          name: draftName.trim() || draft.name,
+          prompt,
+          fridge_id: fridgeId,
+          trigger: draft.trigger,
+          steps: draft.steps,
+        });
+      }
       setMode("list");
       setDraft(null);
+      setEditingId(null);
+      setRedrafted(false);
+      setEnteredDirectly(false);
       load();
     } catch (e) {
       Alert.alert("Couldn't save", describeError(e, "Try again in a moment."));
@@ -202,7 +265,10 @@ export default function KitchenLab() {
   if (mode === "prompt") {
     return (
       <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-        <ComposeHeader title="New Machine" onBack={() => setMode("list")} />
+        <ComposeHeader
+          title={editingId ? "Redraft Machine" : "New Machine"}
+          onBack={() => setMode(draft ? "review" : "list")}
+        />
         <ScrollView contentContainerClassName="p-5 gap-4" keyboardShouldPersistTaps="handled">
           <Text className="text-[13px] leading-5 text-muted">
             Describe what you want automated. The crew drafts a trigger and steps for you to
@@ -241,7 +307,10 @@ export default function KitchenLab() {
   if (mode === "review" && draft) {
     return (
       <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-        <ComposeHeader title="Review Machine" onBack={() => setMode("prompt")} />
+        <ComposeHeader
+          title={editingId ? "Edit Machine" : "Review Machine"}
+          onBack={() => setMode(enteredDirectly ? "list" : "prompt")}
+        />
         <ScrollView contentContainerClassName="p-5 gap-5">
           <View className="gap-1.5">
             <Eyebrow color={colors.faint}>Name</Eyebrow>
@@ -277,30 +346,52 @@ export default function KitchenLab() {
             </View>
           </View>
 
-          {fridges.length > 1 && (
+          {enteredDirectly && (
+            <Pressable
+              onPress={() => setMode("prompt")}
+              className="items-center rounded-lg border border-hairline py-3 active:opacity-70"
+            >
+              <Text className="text-[13px] font-semibold text-ink">
+                Redraft trigger &amp; steps with AI · 2 credits
+              </Text>
+            </Pressable>
+          )}
+
+          {editingId ? (
             <View className="gap-1.5">
               <Eyebrow color={colors.faint}>Fridge</Eyebrow>
-              <View className="flex-row flex-wrap gap-2">
-                {fridges.map((f) => {
-                  const active = fridgeId === f.id;
-                  return (
-                    <Pressable
-                      key={f.id}
-                      onPress={() => setFridgeId(f.id)}
-                      className="rounded-lg px-3.5 py-2"
-                      style={{ backgroundColor: active ? colors.accent : colors.surface2 }}
-                    >
-                      <Text
-                        className="text-[12.5px] font-bold"
-                        style={{ color: active ? colors.canvas : colors.ink }}
-                      >
-                        {f.name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+              <View className="rounded-lg border border-hairline bg-surface px-3.5 py-3">
+                <Text className="text-[14px] text-ink">
+                  {fridges.find((f) => f.id === fridgeId)?.name ?? "—"}
+                </Text>
               </View>
             </View>
+          ) : (
+            fridges.length > 1 && (
+              <View className="gap-1.5">
+                <Eyebrow color={colors.faint}>Fridge</Eyebrow>
+                <View className="flex-row flex-wrap gap-2">
+                  {fridges.map((f) => {
+                    const active = fridgeId === f.id;
+                    return (
+                      <Pressable
+                        key={f.id}
+                        onPress={() => setFridgeId(f.id)}
+                        className="rounded-lg px-3.5 py-2"
+                        style={{ backgroundColor: active ? colors.accent : colors.surface2 }}
+                      >
+                        <Text
+                          className="text-[12.5px] font-bold"
+                          style={{ color: active ? colors.canvas : colors.ink }}
+                        >
+                          {f.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )
           )}
 
           <Pressable
@@ -311,12 +402,16 @@ export default function KitchenLab() {
             {saving ? (
               <ActivityIndicator color={colors.canvas} />
             ) : (
-              <Text className="font-bold uppercase tracking-wide text-on-accent">Save Machine</Text>
+              <Text className="font-bold uppercase tracking-wide text-on-accent">
+                {editingId ? "Save Changes" : "Save Machine"}
+              </Text>
             )}
           </Pressable>
-          <Text className="text-center text-[11.5px] text-faint">
-            Saved off, ready to switch on from the list. Nothing runs until you enable it.
-          </Text>
+          {!editingId && (
+            <Text className="text-center text-[11.5px] text-faint">
+              Saved off, ready to switch on from the list. Nothing runs until you enable it.
+            </Text>
+          )}
         </ScrollView>
       </SafeAreaView>
     );
@@ -350,7 +445,11 @@ export default function KitchenLab() {
       ) : (
         <ScrollView contentContainerClassName="gap-3 p-5">
           {machines.map((machine) => (
-            <View key={machine.id} className="rounded-xl border border-hairline bg-surface p-4">
+            <Pressable
+              key={machine.id}
+              onPress={() => openEdit(machine)}
+              className="rounded-xl border border-hairline bg-surface p-4 active:opacity-80"
+            >
               <View className="flex-row items-start justify-between gap-3">
                 <View className="flex-1 gap-1">
                   <Text className="text-[15px] font-bold text-ink">{machine.name}</Text>
@@ -370,11 +469,16 @@ export default function KitchenLab() {
                     ? `Last ran ${machine.lastRunStatus === "failed" ? "and failed" : "ok"} · ${machine.runCount} run${machine.runCount === 1 ? "" : "s"}`
                     : "Never run yet"}
                 </Text>
-                <Pressable onPress={() => confirmDelete(machine)} hitSlop={8} disabled={busyId === machine.id}>
-                  <Ionicons name="trash-outline" size={16} color={colors.faint} />
-                </Pressable>
+                <View className="flex-row items-center gap-4">
+                  <Pressable onPress={() => openDuplicate(machine)} hitSlop={8} disabled={busyId === machine.id}>
+                    <Ionicons name="copy-outline" size={16} color={colors.faint} />
+                  </Pressable>
+                  <Pressable onPress={() => confirmDelete(machine)} hitSlop={8} disabled={busyId === machine.id}>
+                    <Ionicons name="trash-outline" size={16} color={colors.faint} />
+                  </Pressable>
+                </View>
               </View>
-            </View>
+            </Pressable>
           ))}
         </ScrollView>
       )}

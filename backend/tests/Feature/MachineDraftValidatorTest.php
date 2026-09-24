@@ -122,6 +122,25 @@ class MachineDraftValidatorTest extends TestCase
         $this->assertSame('kg', $result['draft']['trigger_config']['unit']);
     }
 
+    public function test_threshold_trigger_requires_custom_field_label_when_field_is_custom(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'trigger' => ['type' => 'threshold', 'config' => ['field' => 'custom', 'op' => 'lt', 'value' => 10]],
+        ]), $this->user);
+
+        $this->assertFalse($result['valid']);
+    }
+
+    public function test_threshold_trigger_accepts_a_valid_custom_field_config(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'trigger' => ['type' => 'threshold', 'config' => ['field' => 'custom', 'custom_field_label' => 'Cost', 'op' => 'lt', 'value' => 10]],
+        ]), $this->user);
+
+        $this->assertTrue($result['valid']);
+        $this->assertSame('Cost', $result['draft']['trigger_config']['custom_field_label']);
+    }
+
     public function test_rejects_zero_steps(): void
     {
         $result = $this->validator->validate($this->validDraft(['steps' => []]), $this->user);

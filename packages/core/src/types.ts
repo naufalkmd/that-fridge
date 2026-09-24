@@ -339,7 +339,10 @@ export interface MachineItemAddedTrigger {
 export interface MachineThresholdTrigger {
   type: "threshold";
   config: {
-    field: "quantity" | "weight" | "calories";
+    field: "quantity" | "weight" | "calories" | "custom";
+    /** The custom field label to sum, case-insensitive - required (non-null) when field is
+     *  "custom", always null otherwise. */
+    custom_field_label: string | null;
     unit: WeightUnit | null;
     op: "lt" | "lte" | "gt" | "gte";
     value: number;
@@ -405,6 +408,7 @@ export interface MachineInput {
 // Machine's fridge is fixed at creation - but adds `enabled`, absent from MachineInput).
 export interface MachineUpdateInput {
   name?: string;
+  prompt?: string | null;
   enabled?: boolean;
   trigger?: MachineTrigger;
   steps?: MachineStep[];

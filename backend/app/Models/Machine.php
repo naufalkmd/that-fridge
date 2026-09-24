@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * trigger_config by trigger_type:
  *   schedule:    {"frequency": "daily"|"weekly", "time": "HH:MM", "weekday": 0-6, "timezone": "..."}
  *   item_added:  {"search": "..."|null, "location": "fridge"|"freezer"|"pantry"|null}
- *   threshold:   {"field": "quantity"|"weight"|"calories", "unit": "..."|null, "filter": {...sum_item_field filters...}, "op": "lt"|"lte"|"gt"|"gte", "value": number}
+ *   threshold:   {"field": "quantity"|"weight"|"calories"|"custom", "custom_field_label": "..."|null, "unit": "..."|null, "filter": {...sum_item_field filters...}, "op": "lt"|"lte"|"gt"|"gte", "value": number}
  *
  * steps: [{"tool": "sum_item_field", "args": {"field": "calories", "expiring_within_days": 3}},
  *          {"tool": "notify_user", "args": {"message": "Expiring soon: {step1}"}}]
@@ -24,7 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable([
     'user_id', 'fridge_id', 'name', 'prompt', 'trigger_type', 'trigger_config', 'steps',
-    'enabled', 'version', 'next_run_at', 'last_run_at', 'last_run_status', 'run_count',
+    'enabled', 'threshold_met', 'version', 'next_run_at', 'last_run_at', 'last_run_status', 'run_count',
 ])]
 class Machine extends Model
 {
@@ -34,6 +34,7 @@ class Machine extends Model
             'trigger_config' => 'array',
             'steps' => 'array',
             'enabled' => 'boolean',
+            'threshold_met' => 'boolean',
             'next_run_at' => 'datetime',
             'last_run_at' => 'datetime',
         ];

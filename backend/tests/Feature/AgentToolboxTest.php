@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\UserBadge;
 use App\Services\AgentToolbox;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class AgentToolboxTest extends TestCase
@@ -582,7 +583,7 @@ class AgentToolboxTest extends TestCase
     {
         $fields = [];
         for ($i = 1; $i <= 7; $i++) {
-            $fields[] = ['id' => (string) \Illuminate\Support\Str::uuid(), 'label' => "Field {$i}", 'value' => "Value {$i}"];
+            $fields[] = ['id' => (string) Str::uuid(), 'label' => "Field {$i}", 'value' => "Value {$i}"];
         }
         $this->item(['name' => 'Flour', 'custom_fields' => $fields]);
 
@@ -866,6 +867,55 @@ class AgentToolboxTest extends TestCase
         $out = $this->toolbox->run('sum_item_field', ['field' => 'quantity', 'expired_only' => true], $this->user, $this->fridge->id);
 
         $this->assertSame('1', $out['value']);
+    }
+
+    public function test_sum_item_field_sums_a_custom_field_multiplied_by_quantity(): void
+    {
+        $this->item(['name' => 'Flour', 'quantity' => 2, 'custom_fields' => [
+            ['id' => 'a', 'label' => 'Cost', 'value' => '2.50'],
+        ]]);
+        $this->item(['name' => 'Sugar', 'quantity' => 1, 'custom_fields' => [
+            ['id' => 'b', 'label' => 'Cost', 'value' => '1.00'],
+        ]]);
+        $this->item(['name' => 'No cost set', 'quantity' => 1]);
+
+        $out = $this->toolbox->run('sum_item_field', ['field' => 'custom', 'custom_field_label' => 'Cost'], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['ok']);
+        $this->assertSame('6', $out['value']); // 2 x 2.50 + 1 x 1.00
+        $this->assertStringContainsString('Total "Cost": 6 across 2 items', $out['content']);
+        $this->assertStringContainsString('1 skipped', $out['content']);
+    }
+
+    public function test_sum_item_field_custom_field_matches_the_label_case_insensitively(): void
+    {
+        $this->item(['name' => 'Flour', 'quantity' => 1, 'custom_fields' => [
+            ['id' => 'a', 'label' => 'cost', 'value' => '5'],
+        ]]);
+
+        $out = $this->toolbox->run('sum_item_field', ['field' => 'custom', 'custom_field_label' => 'Cost'], $this->user, $this->fridge->id);
+
+        $this->assertSame('5', $out['value']);
+    }
+
+    public function test_sum_item_field_custom_field_skips_non_numeric_values(): void
+    {
+        $this->item(['name' => 'Flour', 'quantity' => 1, 'custom_fields' => [
+            ['id' => 'a', 'label' => 'Cost', 'value' => 'unknown'],
+        ]]);
+
+        $out = $this->toolbox->run('sum_item_field', ['field' => 'custom', 'custom_field_label' => 'Cost'], $this->user, $this->fridge->id);
+
+        $this->assertSame('0', $out['value']);
+        $this->assertStringContainsString('1 skipped', $out['content']);
+    }
+
+    public function test_sum_item_field_rejects_custom_without_a_custom_field_label(): void
+    {
+        $out = $this->toolbox->run('sum_item_field', ['field' => 'custom'], $this->user, $this->fridge->id);
+
+        $this->assertFalse($out['ok']);
+        $this->assertStringStartsWith('Error:', $out['content']);
     }
 
     // ---- notify_user ------------------------------------------------------------------
