@@ -46,25 +46,27 @@ class AgentService
      * string to the multimodal `content` array format OpenRouterVisionService already uses
      * for the fridge-photo scan flow - same underlying model, just a different call shape.
      */
-    public function chat($message, $agent = 'Chef', $inventory = null, $usageHistory = null, $compact = false, $memory = null, $history = [], $streakContext = null, ?UploadedFile $image = null, ?User $user = null, ?int $fridgeId = null)
+    public function chat($message, $agent = 'Chef', $inventory = null, $usageHistory = null, $compact = false, $memory = null, $history = [], $streakContext = null, array $images = [], ?UploadedFile $pdf = null, ?User $user = null, ?int $fridgeId = null)
     {
         // Mock response if no API key (for testing)
         if (! $this->client->available()) {
             return $this->mockResponse($message, $agent, $inventory);
         }
 
+        $hasAttachment = $images !== [] || $pdf !== null;
+
         try {
-            $hasTools = $user !== null && ! $compact && ! $image;
+            $hasTools = $user !== null && ! $compact && ! $hasAttachment;
             $systemPrompt = $this->getSystemPrompt($agent, $inventory, $usageHistory, $compact, $memory, $streakContext, $hasTools);
 
             // Non-compact Chef replies can carry a trailing <<<RECIPE_SUGGESTION>>> JSON block
             // on top of the normal prose - give those a bit more room than the 1000-token
-            // default so a real recipe suggestion doesn't get truncated mid-JSON. A photo
-            // attachment also gets the larger budget - describing what's in an image runs
-            // longer than a plain-text reply.
-            $maxTokens = (! $compact && ($agent === 'Chef' || $image)) ? 1300 : 1000;
+            // default so a real recipe suggestion doesn't get truncated mid-JSON. An
+            // attachment also gets the larger budget - describing an image or a document
+            // runs longer than a plain-text reply.
+            $maxTokens = (! $compact && ($agent === 'Chef' || $hasAttachment)) ? 1300 : 1000;
 
-            $userContent = $image ? $this->buildImageContent($message, $image) : $message;
+            $userContent = $hasAttachment ? $this->buildAttachmentContent($message, $images, $pdf) : $message;
 
             $messages = [
                 ['role' => 'system', 'content' => $systemPrompt],
@@ -72,11 +74,12 @@ class AgentService
                 ['role' => 'user', 'content' => $userContent],
             ];
 
-            // Tools: a plain-text chat turn (no photo, not a compact tip-card call) gets the
-            // fetch_url browsing tool plus, when we know who's asking, the kitchen toolbox
-            // (list/add/remove items, notes, shopping, recipes). An image turn skips tools -
-            // the vision path doesn't combine with tool-use here and the model has the picture.
-            $result = $image || $compact
+            // Tools: a plain-text chat turn (no attachment, not a compact tip-card call) gets
+            // the fetch_url browsing tool plus, when we know who's asking, the kitchen
+            // toolbox (list/add/remove items, notes, shopping, recipes). An attachment turn
+            // skips tools - the vision/document path doesn't combine with tool-use here and
+            // the model has what was attached.
+            $result = $hasAttachment || $compact
                 ? $this->client->complete($messages, $maxTokens)
                 : $this->runWithTools($messages, $maxTokens, $user, $fridgeId);
 
@@ -125,18 +128,35 @@ class AgentService
     }
 
     /**
-     * Same data-URL shape OpenRouterVisionService::analyzeImage builds for the fridge-photo
-     * scan flow - inlined here rather than shared since that service's return contract
-     * (parsed JSON) doesn't fit a conversational chat reply.
+     * The multimodal content array for a turn with one or more images and/or a PDF. Image
+     * parts use the same data-URL shape OpenRouterVisionService::analyzeImage builds for the
+     * fridge-photo scan flow (inlined here rather than shared, since that service's return
+     * contract - parsed JSON - doesn't fit a conversational chat reply). The PDF part uses
+     * OpenRouter's own `file` content type (filename + a data-URL under file_data) - no
+     * engine is pinned in `plugins`, so OpenRouter picks its own default parser rather than
+     * this app committing to (and being billed for) a specific OCR engine.
      */
-    private function buildImageContent(string $message, UploadedFile $image): array
+    private function buildAttachmentContent(string $message, array $images, ?UploadedFile $pdf): array
     {
-        $dataUrl = 'data:'.$image->getMimeType().';base64,'.base64_encode(file_get_contents($image->getRealPath()));
+        $content = [['type' => 'text', 'text' => $message]];
 
-        return [
-            ['type' => 'text', 'text' => $message],
-            ['type' => 'image_url', 'image_url' => ['url' => $dataUrl]],
-        ];
+        foreach ($images as $image) {
+            $content[] = ['type' => 'image_url', 'image_url' => ['url' => $this->toDataUrl($image)]];
+        }
+
+        if ($pdf) {
+            $content[] = ['type' => 'file', 'file' => [
+                'filename' => $pdf->getClientOriginalName() ?: 'document.pdf',
+                'file_data' => $this->toDataUrl($pdf),
+            ]];
+        }
+
+        return $content;
+    }
+
+    private function toDataUrl(UploadedFile $file): string
+    {
+        return 'data:'.$file->getMimeType().';base64,'.base64_encode(file_get_contents($file->getRealPath()));
     }
 
     /**

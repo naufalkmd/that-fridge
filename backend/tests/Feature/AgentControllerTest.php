@@ -435,6 +435,128 @@ class AgentControllerTest extends TestCase
         $this->assertSame(10, $user->fresh()->ai_credits); // 3 charged, 3 refunded
     }
 
+    public function test_chat_accepts_multiple_images_and_sends_them_all_as_multimodal_content(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 10]);
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'Two photos of a fridge.']]],
+        ], 200)]);
+
+        $response = $this->actingAs($user)->post('/api/chat', [
+            'message' => 'What do you see?',
+            'agent' => 'Chef',
+            'images' => [UploadedFile::fake()->image('a.jpg'), UploadedFile::fake()->image('b.jpg')],
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertSame(6, $user->fresh()->ai_credits); // 10 - (CHAT_IMAGE 3 + 1 extra) = 6
+
+        Http::assertSent(function ($request) {
+            $content = collect($request->data()['messages'])->firstWhere('role', 'user')['content'];
+            $imageParts = collect($content)->where('type', 'image_url');
+
+            return $content[0]['type'] === 'text' && $imageParts->count() === 2;
+        });
+    }
+
+    public function test_chat_caps_the_number_of_images_accepted(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->post('/api/chat', [
+            'message' => 'hi',
+            'agent' => 'Chef',
+            'images' => array_fill(0, 5, UploadedFile::fake()->image('x.jpg')),
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('images');
+    }
+
+    public function test_chat_merges_the_legacy_image_field_with_the_new_images_field(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 10]);
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'ok']]],
+        ], 200)]);
+
+        $this->actingAs($user)->post('/api/chat', [
+            'message' => 'hi',
+            'agent' => 'Chef',
+            'image' => UploadedFile::fake()->image('legacy.jpg'),
+            'images' => [UploadedFile::fake()->image('new.jpg')],
+        ])->assertStatus(200);
+
+        $this->assertSame(6, $user->fresh()->ai_credits); // both counted: 3 + 1 = 4 spent
+
+        Http::assertSent(function ($request) {
+            $content = collect($request->data()['messages'])->firstWhere('role', 'user')['content'];
+
+            return collect($content)->where('type', 'image_url')->count() === 2;
+        });
+    }
+
+    public function test_chat_rejects_a_non_pdf_file_attachment(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->post('/api/chat', [
+            'message' => 'What is this?',
+            'agent' => 'Chef',
+            'pdf' => UploadedFile::fake()->create('notes.txt', 10, 'text/plain'),
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('pdf');
+    }
+
+    public function test_chat_sends_an_attached_pdf_to_the_model_as_a_file_content_part(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 10]);
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'That recipe looks great.']]],
+        ], 200)]);
+
+        $response = $this->actingAs($user)->post('/api/chat', [
+            'message' => 'Can you summarize this recipe?',
+            'agent' => 'Chef',
+            'pdf' => UploadedFile::fake()->create('recipe.pdf', 100, 'application/pdf'),
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertSame(5, $user->fresh()->ai_credits); // 10 - CHAT_PDF (5)
+
+        Http::assertSent(function ($request) {
+            $content = collect($request->data()['messages'])->firstWhere('role', 'user')['content'];
+            $filePart = collect($content)->firstWhere('type', 'file');
+
+            return $filePart
+                && $filePart['file']['filename'] === 'recipe.pdf'
+                && str_starts_with($filePart['file']['file_data'], 'data:application/pdf;base64,');
+        });
+    }
+
+    public function test_a_pdf_with_images_costs_the_pdf_rate_plus_each_image(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 10]);
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'ok']]],
+        ], 200)]);
+
+        $this->actingAs($user)->post('/api/chat', [
+            'message' => 'hi',
+            'agent' => 'Chef',
+            'pdf' => UploadedFile::fake()->create('doc.pdf', 100, 'application/pdf'),
+            'images' => [UploadedFile::fake()->image('a.jpg')],
+        ])->assertStatus(200);
+
+        $this->assertSame(4, $user->fresh()->ai_credits); // 10 - (CHAT_PDF 5 + 1 extra image) = 4
+    }
+
     public function test_history_only_returns_the_authenticated_users_latest_session(): void
     {
         $user = User::factory()->create();

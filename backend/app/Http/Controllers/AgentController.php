@@ -23,6 +23,15 @@ class AgentController extends Controller
 
     private const CHAT_CONTEXT_TURNS = 8;
 
+    /** Enough for a few fridge-shelf photos in one message; keeps vision cost/latency per
+     *  turn bounded rather than open-ended. */
+    private const MAX_CHAT_IMAGES = 4;
+
+    /** KB, matches Laravel's `max` validation unit. Comfortably above a multi-page scanned
+     *  document while staying well under the request body ceiling once base64-encoded for
+     *  the outbound model call. */
+    private const MAX_CHAT_PDF_KB = 10240;
+
     /**
      * Get the authenticated user's most recent chat session, oldest message first.
      * Used to restore "where you left off" on login/refresh - not the entire
@@ -178,10 +187,25 @@ class AgentController extends Controller
             // sentence and another a bolded, bulleted mini-essay.
             'compact' => 'nullable|boolean',
             // Quick Chat's photo-attach button - same constraints as PhotoController::scan.
-            // Not persisted (see AgentController::send's chatHistory()->create() below, which
-            // never writes it) - stateless, same as the fridge-photo scan flow.
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            // Kept alongside `images` (below) for an older app build still sending a single
+            // file under this field name - merged together below rather than rejected.
+            // Neither is persisted (see chatHistory()->create() below, which never writes
+            // them) - stateless, same as the fridge-photo scan flow.
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'images' => 'nullable|array|max:'.self::MAX_CHAT_IMAGES,
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'pdf' => 'nullable|file|mimes:pdf|max:'.self::MAX_CHAT_PDF_KB,
         ]);
+
+        // `image` (legacy, one file) and `images` (current, several) can both be present at
+        // once from an in-between app build - merge and cap rather than picking one and
+        // silently dropping the other.
+        $images = array_slice(
+            array_values(array_filter([$request->file('image'), ...($request->file('images') ?? [])])),
+            0,
+            self::MAX_CHAT_IMAGES,
+        );
+        $pdf = $request->file('pdf');
 
         $compact = $request->boolean('compact');
 
@@ -207,12 +231,12 @@ class AgentController extends Controller
             ], 200);
         }
 
-        // Metered in AI credits (real messages only). A photo makes it a vision call (~3-5x
-        // the cost); a tool surcharge is taken after the fact below. Throws a 402 with the
-        // shortfall when the balance is short.
-        $hasImage = $request->hasFile('image');
-        $baseCost = $hasImage ? CreditCost::CHAT_IMAGE : CreditCost::CHAT;
-        $baseReason = $hasImage ? 'chat_image' : 'chat';
+        // Metered in AI credits (real messages only). An attachment makes it a vision/
+        // document call, priced by CreditCost::chat() (more images and a PDF cost more); a
+        // tool surcharge is taken after the fact below. Throws a 402 with the shortfall when
+        // the balance is short.
+        $baseCost = CreditCost::chat(count($images), $pdf !== null);
+        $baseReason = $pdf !== null ? 'chat_pdf' : ($images !== [] ? 'chat_image' : 'chat');
 
         if (! $compact) {
             $this->credits->spend($request->user(), $baseCost, $baseReason);
@@ -233,7 +257,8 @@ class AgentController extends Controller
             $memory,
             $this->recentSessionHistory($request),
             $request->input('streak_context'),
-            $request->file('image'),
+            $images,
+            $pdf,
             $request->user(),
             $request->input('fridge_id') ? (int) $request->input('fridge_id') : null,
         );

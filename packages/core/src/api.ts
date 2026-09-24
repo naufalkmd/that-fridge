@@ -477,12 +477,15 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     opts: {
       inventory?: string;
       sessionId?: string | null;
-      /** A photo to attach — a real `Blob`/`File` on both RN and web. RN's own FormData
-       *  claims to accept the classic `{ uri, name, type }` placeholder too, but Expo's
-       *  fetch runtime rejects it (throws before the request is even sent, misreported by
-       *  the http client as "offline") — callers must read the picked photo into a Blob
+      /** Up to 4 photos to attach — real `Blob`/`File`s on both RN and web. RN's own
+       *  FormData claims to accept the classic `{ uri, name, type }` placeholder too, but
+       *  Expo's fetch runtime rejects it (throws before the request is even sent, misreported
+       *  by the http client as "offline") — callers must read each picked photo into a Blob
        *  first, same as scanReceipt/scanFridgePhoto/scanExpiryPhoto below. */
-      image?: Blob;
+      images?: Blob[];
+      /** A PDF to attach (one per message) — same Blob-not-placeholder requirement as
+       *  `images` above. `name` is shown back to the model as the document's filename. */
+      pdf?: { blob: Blob; name: string };
       /** One-shot crew tip fetch (Home tip cards / "Activate {agent}") - asks the server for
        * a short plain-text reply and skips saving it into chat history/sessions. Still counts
        * against the free weekly quota, same as a real Quick Chat message. */
@@ -492,7 +495,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       fridgeId?: string;
     } = {},
   ): Promise<SendChatResult> {
-    if (opts.image && typeof FormData !== "undefined") {
+    if ((opts.images?.length || opts.pdf) && typeof FormData !== "undefined") {
       const fd = new FormData();
       fd.append("message", message);
       fd.append("agent", agent);
@@ -500,7 +503,8 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       if (opts.sessionId) fd.append("session_id", opts.sessionId);
       if (opts.compact) fd.append("compact", "1");
       if (opts.fridgeId) fd.append("fridge_id", opts.fridgeId);
-      fd.append("image", opts.image as never, "photo.jpg");
+      opts.images?.forEach((image, i) => fd.append("images[]", image as never, `photo${i}.jpg`));
+      if (opts.pdf) fd.append("pdf", opts.pdf.blob as never, opts.pdf.name);
       return http.post<SendChatResult>("/chat", fd);
     }
     return http.post<SendChatResult>("/chat", {

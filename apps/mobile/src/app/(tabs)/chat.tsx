@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   ImageBackground,
   KeyboardAvoidingView,
@@ -18,6 +19,7 @@ import {
 } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import {
@@ -79,8 +81,18 @@ type Msg = {
   text: string;
   recipe?: RecipeSuggestionBlock | null;
   mocked?: boolean;
-  attachmentUri?: string;
+  attachmentUris?: string[];
+  attachmentPdfName?: string;
 };
+
+type Attachment =
+  | { kind: "image"; uri: string }
+  | { kind: "pdf"; uri: string; name: string };
+
+// Matches AgentController::send's MAX_CHAT_IMAGES - keeps vision cost/latency per message
+// bounded rather than open-ended. Only one PDF per message (a document already carries
+// several pages' worth of content on its own).
+const MAX_IMAGES = 4;
 
 export default function Chat() {
   const router = useRouter();
@@ -111,8 +123,10 @@ export default function Chat() {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [attachment, setAttachment] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const scrollRef = useRef<ScrollView>(null);
+  const imageCount = attachments.filter((a) => a.kind === "image").length;
+  const hasPdf = attachments.some((a) => a.kind === "pdf");
 
   // Voice dictation → fills the composer; the user still reviews and hits send.
   const dictationBase = useRef("");
@@ -168,39 +182,103 @@ export default function Chat() {
     void refreshCredits();
   }, [session, refreshCredits]);
 
-  async function pickImage() {
+  async function pickImages() {
+    const remaining = MAX_IMAGES - imageCount;
+    if (remaining <= 0) return;
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       quality: 0.7,
+      allowsMultipleSelection: true,
+      selectionLimit: remaining,
     });
-    if (!res.canceled && res.assets[0]) setAttachment(res.assets[0].uri);
+    if (res.canceled) return;
+    setAttachments((prev) => [
+      ...prev,
+      ...res.assets
+        .slice(0, remaining)
+        .map((a) => ({ kind: "image" as const, uri: a.uri })),
+    ]);
+  }
+
+  async function takePhoto() {
+    if (imageCount >= MAX_IMAGES) return;
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(
+        "Camera access needed",
+        "Allow camera access to take a photo, or attach one from your library instead.",
+      );
+      return;
+    }
+    const res = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      quality: 0.7,
+    });
+    if (res.canceled || !res.assets[0]) return;
+    setAttachments((prev) => [...prev, { kind: "image", uri: res.assets[0].uri }]);
+  }
+
+  async function pickPdf() {
+    if (hasPdf) return;
+    const res = await DocumentPicker.getDocumentAsync({ type: "application/pdf" });
+    if (res.canceled || !res.assets[0]) return;
+    const asset = res.assets[0];
+    setAttachments((prev) => [
+      ...prev,
+      { kind: "pdf", uri: asset.uri, name: asset.name || "document.pdf" },
+    ]);
+  }
+
+  function removeAttachment(index: number) {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function send(preset?: string) {
     if (voice.listening) voice.stop();
     const msg = (preset ?? text).trim();
-    if ((!msg && !attachment) || sending) return;
+    if ((!msg && attachments.length === 0) || sending) return;
     if (credits !== null && credits < 1) {
       router.push("/credits");
       return;
     }
-    const img = attachment;
+    const pending = attachments;
+    const pendingImages = pending.filter((a) => a.kind === "image");
+    const pendingPdf = pending.find((a) => a.kind === "pdf");
     if (!preset) setText("");
-    setAttachment(null);
+    setAttachments([]);
     setMessages((m) => [
       ...m,
-      { role: "user", text: msg, attachmentUri: img ?? undefined },
+      {
+        role: "user",
+        text: msg,
+        attachmentUris: pendingImages.length
+          ? pendingImages.map((a) => a.uri)
+          : undefined,
+        attachmentPdfName: pendingPdf?.name,
+      },
     ]);
     setSending(true);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
-    const messageForApi = msg || "What do you see in this photo?";
+    const messageForApi =
+      msg ||
+      (pendingPdf
+        ? "What's in this document?"
+        : "What do you see in this photo?");
     try {
       // Expo's fetch/FormData implementation needs a real Blob for a file part - it doesn't
       // support React Native's classic { uri, name, type } placeholder object, despite the
       // types still listing it as valid (see draft-item.tsx's expiry-scan photo for the same
       // fix). Without this, fetch() throws before the request is sent, which the shared http
       // client then misreports as "you're offline".
-      const imageBlob = img ? await (await fetch(img)).blob() : undefined;
+      const imageBlobs = await Promise.all(
+        pendingImages.map(async (a) => (await fetch(a.uri)).blob()),
+      );
+      const pdfPayload = pendingPdf
+        ? {
+            blob: await (await fetch(pendingPdf.uri)).blob(),
+            name: pendingPdf.name,
+          }
+        : undefined;
       const res = await api.sendChat(
         messageForApi,
         routeChatAgent(messageForApi),
@@ -208,7 +286,8 @@ export default function Chat() {
           inventory: inventorySummary,
           sessionId,
           fridgeId: scope === "all" ? undefined : scope,
-          image: imageBlob,
+          images: imageBlobs.length ? imageBlobs : undefined,
+          pdf: pdfPayload,
         },
       );
       if (res.session_id) setSessionId(res.session_id);
@@ -359,32 +438,63 @@ export default function Chat() {
               backgroundColor: `${SURFACE}e6`,
             }}
           >
-            {attachment && (
-              <View style={{ marginBottom: 8, width: 56, height: 56 }}>
-                <Image
-                  source={{ uri: attachment }}
-                  style={{ flex: 1, borderRadius: 6 }}
-                  contentFit="cover"
-                />
-                <Pressable
-                  onPress={() => setAttachment(null)}
-                  style={{
-                    position: "absolute",
-                    top: -6,
-                    right: -6,
-                    width: 18,
-                    height: 18,
-                    borderRadius: 9,
-                    backgroundColor: CANVAS,
-                    borderWidth: 1,
-                    borderColor: STRONG,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Ionicons name="close" size={11} color={INK} />
-                </Pressable>
-              </View>
+            {attachments.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginBottom: 8 }}
+              >
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  {attachments.map((a, i) => (
+                    <View key={i} style={{ width: 56, height: 56 }}>
+                      {a.kind === "image" ? (
+                        <Image
+                          source={{ uri: a.uri }}
+                          style={{ flex: 1, borderRadius: 6 }}
+                          contentFit="cover"
+                        />
+                      ) : (
+                        <View
+                          style={{
+                            flex: 1,
+                            borderRadius: 6,
+                            backgroundColor: SURFACE2,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            paddingHorizontal: 3,
+                          }}
+                        >
+                          <Ionicons name="document-text-outline" size={18} color={INK} />
+                          <Text
+                            numberOfLines={1}
+                            style={{ fontSize: 8, color: MUTED, marginTop: 2, maxWidth: 48 }}
+                          >
+                            {a.name}
+                          </Text>
+                        </View>
+                      )}
+                      <Pressable
+                        onPress={() => removeAttachment(i)}
+                        style={{
+                          position: "absolute",
+                          top: -6,
+                          right: -6,
+                          width: 18,
+                          height: 18,
+                          borderRadius: 9,
+                          backgroundColor: CANVAS,
+                          borderWidth: 1,
+                          borderColor: STRONG,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Ionicons name="close" size={11} color={INK} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
             )}
             {(voice.listening || voice.error) && (
               <View
@@ -417,20 +527,55 @@ export default function Chat() {
               </View>
             )}
             <View
-              style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}
+              style={{ flexDirection: "row", alignItems: "flex-end", gap: 6 }}
             >
               <Pressable
-                onPress={pickImage}
+                onPress={takePhoto}
+                disabled={imageCount >= MAX_IMAGES}
+                hitSlop={4}
                 style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 19,
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
                   backgroundColor: SURFACE2,
                   alignItems: "center",
                   justifyContent: "center",
+                  opacity: imageCount >= MAX_IMAGES ? 0.4 : 1,
                 }}
               >
-                <Ionicons name="image-outline" size={17} color={INK} />
+                <Ionicons name="camera-outline" size={16} color={INK} />
+              </Pressable>
+              <Pressable
+                onPress={pickImages}
+                disabled={imageCount >= MAX_IMAGES}
+                hitSlop={4}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  backgroundColor: SURFACE2,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: imageCount >= MAX_IMAGES ? 0.4 : 1,
+                }}
+              >
+                <Ionicons name="image-outline" size={16} color={INK} />
+              </Pressable>
+              <Pressable
+                onPress={pickPdf}
+                disabled={hasPdf}
+                hitSlop={4}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  backgroundColor: SURFACE2,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: hasPdf ? 0.4 : 1,
+                }}
+              >
+                <Ionicons name="document-attach-outline" size={16} color={INK} />
               </Pressable>
               <TextInput
                 value={text}
@@ -449,10 +594,10 @@ export default function Chat() {
                   color: INK,
                 }}
               />
-              {text.trim() || attachment || !voice.available ? (
+              {text.trim() || attachments.length > 0 || !voice.available ? (
                 <Pressable
                   onPress={() => send()}
-                  disabled={sending || (!text.trim() && !attachment)}
+                  disabled={sending || (!text.trim() && attachments.length === 0)}
                   style={{
                     width: 38,
                     height: 38,
@@ -460,7 +605,8 @@ export default function Chat() {
                     justifyContent: "center",
                     borderRadius: 19,
                     backgroundColor: AMBER,
-                    opacity: sending || (!text.trim() && !attachment) ? 0.5 : 1,
+                    opacity:
+                      sending || (!text.trim() && attachments.length === 0) ? 0.5 : 1,
                   }}
                 >
                   <Ionicons name="arrow-up" size={18} color={ONACCENT} />
@@ -669,14 +815,16 @@ function Bubble({ msg }: { msg: Msg }) {
     }
   }
 
+  const hasAttachment = !!(msg.attachmentUris?.length || msg.attachmentPdfName);
+
   return (
     <View style={{ alignItems: isUser ? "flex-end" : "flex-start" }}>
       <View
         style={{
           maxWidth: "85%",
-          padding: msg.attachmentUri ? 6 : undefined,
-          paddingHorizontal: msg.attachmentUri ? 6 : 14,
-          paddingVertical: msg.attachmentUri ? 6 : 11,
+          padding: hasAttachment ? 6 : undefined,
+          paddingHorizontal: hasAttachment ? 6 : 14,
+          paddingVertical: hasAttachment ? 6 : 11,
           backgroundColor: isUser ? colors.accent : colors.surface,
           borderWidth: isUser ? 0 : 1,
           borderColor: colors.hairline,
@@ -686,17 +834,57 @@ function Bubble({ msg }: { msg: Msg }) {
           borderBottomRightRadius: 16,
         }}
       >
-        {msg.attachmentUri && (
-          <Image
-            source={{ uri: msg.attachmentUri }}
+        {!!msg.attachmentUris?.length && (
+          <View
             style={{
-              width: 180,
-              height: 180,
-              borderRadius: 10,
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: 4,
               marginBottom: msg.text ? 6 : 0,
             }}
-            contentFit="cover"
-          />
+          >
+            {msg.attachmentUris.map((uri, i) => {
+              const size = msg.attachmentUris!.length > 1 ? 86 : 180;
+              return (
+                <Image
+                  key={i}
+                  source={{ uri }}
+                  style={{ width: size, height: size, borderRadius: 10 }}
+                  contentFit="cover"
+                />
+              );
+            })}
+          </View>
+        )}
+        {!!msg.attachmentPdfName && (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              backgroundColor: isUser ? "#ffffff26" : colors.surface2,
+              borderRadius: 8,
+              paddingHorizontal: 10,
+              paddingVertical: 8,
+              marginBottom: msg.text ? 6 : 0,
+            }}
+          >
+            <Ionicons
+              name="document-text-outline"
+              size={15}
+              color={isUser ? colors.onAccent : colors.ink}
+            />
+            <Text
+              numberOfLines={1}
+              style={{
+                fontSize: 12,
+                color: isUser ? colors.onAccent : colors.ink,
+                flexShrink: 1,
+              }}
+            >
+              {msg.attachmentPdfName}
+            </Text>
+          </View>
         )}
         {isUser ? (
           !!msg.text && (
@@ -706,8 +894,8 @@ function Bubble({ msg }: { msg: Msg }) {
                 fontSize: 13.5,
                 lineHeight: 20,
                 color: colors.onAccent,
-                paddingHorizontal: msg.attachmentUri ? 8 : 0,
-                paddingBottom: msg.attachmentUri ? 4 : 0,
+                paddingHorizontal: hasAttachment ? 8 : 0,
+                paddingBottom: hasAttachment ? 4 : 0,
               }}
             >
               {msg.text}
