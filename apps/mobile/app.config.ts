@@ -5,7 +5,7 @@ import type { ExpoConfig } from "expo/config";
 const config: ExpoConfig = {
   name: "ThatFridge",
   slug: "thatfridge",
-  version: "1.3.2",
+  version: "1.3.3",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "thatfridge",
@@ -38,7 +38,8 @@ const config: ExpoConfig = {
   },
   android: {
     package: "app.thatfridge",
-    playStoreUrl: "https://play.google.com/store/apps/details?id=app.thatfridge",
+    playStoreUrl:
+      "https://play.google.com/store/apps/details?id=app.thatfridge",
     adaptiveIcon: {
       foregroundImage: "./assets/images/android-icon-foreground.png",
       backgroundColor: "#26c6da",
@@ -89,7 +90,8 @@ const config: ExpoConfig = {
     [
       "expo-image-picker",
       {
-        photosPermission: "ThatFridge lets you attach a photo of your fridge or a receipt to a chat.",
+        photosPermission:
+          "ThatFridge lets you attach a photo of your fridge or a receipt to a chat.",
       },
     ],
     [
