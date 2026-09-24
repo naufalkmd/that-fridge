@@ -734,6 +734,8 @@ trigger.config by type:
 - threshold: {"field": "quantity"|"weight"|"calories"|"custom", "custom_field_label": required (any string) only when field is "custom" - the custom field label to sum, "unit": required (one of g/kg/mg/ml/l/oz/lb) only when field is "weight", "filter": optional sum_item_field-style filters, "op": "lt"|"lte"|"gt"|"gte", "value": a number}
 - recipe_made: {"recipe_id": null - always null, there's no way to look up a specific recipe id here}
 
+A step's args are fixed now and replayed unchanged every time the Machine runs, possibly weeks or months from now. For add_item/bulk_add_items steps, this means NEVER set expiry_date - an absolute date decided now would already be stale (or in the past) by the time the Machine actually fires. Always set shelf_life_days instead (your own estimate of typical days until it goes off, from ordinary food knowledge), since that gets recomputed relative to the real run time every time.
+
 A later step's string argument may reference an earlier step's result with {stepN} (1-based), e.g. {"message": "Expiring soon: {step1}"} - never reference the current step or a later one.
 
 A step may include "condition": {"step": N, "op": "lt"|"lte"|"gt"|"gte", "value": a number} to only run when an earlier step's computed number compares that way - e.g. only notify when a total drops below a line. N must be a sum_item_field step (the only tool that produces a number to compare), and must be earlier than the conditioned step. Omit condition entirely for a step that should always run.

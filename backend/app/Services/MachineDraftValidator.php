@@ -236,6 +236,18 @@ class MachineDraftValidator
                 $argErrors[] = "step {$n}: fridge_id doesn't belong to you.";
             }
 
+            // A Machine step's args are fixed at draft time and replayed unchanged on every
+            // future run - an absolute expiry_date would be stale (or already past) by the
+            // time a scheduled/event-driven Machine actually fires, sometimes on its very
+            // first run. shelf_life_days has no such problem: AgentToolbox::createItem()
+            // recomputes the actual expiry relative to each run's real "now".
+            if ($argErrors === []) {
+                $expiryDateError = $this->validateNoExpiryDate($tool, $args, $n);
+                if ($expiryDateError !== null) {
+                    $argErrors[] = $expiryDateError;
+                }
+            }
+
             // Same "mark everything used" guardrail AgentToolbox::hasItemFilter() enforces at
             // run time, checked here too so a filter-less draft never gets saved at all.
             if ($argErrors === [] && $tool === 'mark_items_used_matching'
@@ -359,6 +371,23 @@ class MachineDraftValidator
         }
 
         return $errors;
+    }
+
+    private function validateNoExpiryDate(string $tool, array $args, int $stepNumber): ?string
+    {
+        if ($tool === 'add_item' && isset($args['expiry_date'])) {
+            return "step {$stepNumber}: add_item can't use expiry_date in a Machine - it would be replayed unchanged on every future run and go stale. Use shelf_life_days instead.";
+        }
+
+        if ($tool === 'bulk_add_items') {
+            foreach ((array) ($args['items'] ?? []) as $item) {
+                if (is_array($item) && isset($item['expiry_date'])) {
+                    return "step {$stepNumber}: bulk_add_items can't use expiry_date on any item in a Machine - it would be replayed unchanged on every future run and go stale. Use shelf_life_days instead.";
+                }
+            }
+        }
+
+        return null;
     }
 
     private function matchesJsonType(mixed $value, string $type): bool

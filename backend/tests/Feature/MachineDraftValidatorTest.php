@@ -319,6 +319,58 @@ class MachineDraftValidatorTest extends TestCase
         $this->assertTrue($result['valid']);
     }
 
+    public function test_rejects_an_add_item_step_with_an_expiry_date(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'steps' => [
+                ['tool' => 'add_item', 'args' => ['name' => 'Milk', 'expiry_date' => '2026-10-01']],
+            ],
+        ]), $this->user);
+
+        $this->assertFalse($result['valid']);
+        $this->assertStringContainsString('expiry_date', $result['errors'][0]);
+    }
+
+    public function test_accepts_an_add_item_step_with_shelf_life_days(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'steps' => [
+                ['tool' => 'add_item', 'args' => ['name' => 'Milk', 'shelf_life_days' => 7]],
+            ],
+        ]), $this->user);
+
+        $this->assertTrue($result['valid']);
+    }
+
+    public function test_rejects_a_bulk_add_items_step_with_an_expiry_date_on_any_item(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'steps' => [
+                ['tool' => 'bulk_add_items', 'args' => ['items' => [
+                    ['name' => 'Milk', 'shelf_life_days' => 7],
+                    ['name' => 'Bread', 'expiry_date' => '2026-10-01'],
+                ]]],
+            ],
+        ]), $this->user);
+
+        $this->assertFalse($result['valid']);
+        $this->assertStringContainsString('expiry_date', $result['errors'][0]);
+    }
+
+    public function test_accepts_a_bulk_add_items_step_with_shelf_life_days(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'steps' => [
+                ['tool' => 'bulk_add_items', 'args' => ['items' => [
+                    ['name' => 'Milk', 'shelf_life_days' => 7],
+                    ['name' => 'Bread', 'shelf_life_days' => 5],
+                ]]],
+            ],
+        ]), $this->user);
+
+        $this->assertTrue($result['valid']);
+    }
+
     public function test_rejects_a_condition_referencing_a_later_or_same_step(): void
     {
         $result = $this->validator->validate($this->validDraft([
