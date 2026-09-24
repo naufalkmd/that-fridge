@@ -11,3 +11,4 @@ export { BestBeforeRow } from "./best-before-row";
 export { CaloriesRow } from "./calories-row";
 export { QuantityRow } from "./quantity-row";
 export { CustomFieldRows, AddCustomFieldRow } from "./custom-fields";
+export { AutofillCard } from "./autofill-card";

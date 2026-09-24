@@ -160,6 +160,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // slightly tighter than text (same 20/text vs. 15/vision split as everywhere else).
     Route::middleware('throttle:20,1')->post('/items/{item}/estimate-calories', [CalorieController::class, 'estimate']);
     Route::middleware('throttle:15,1')->post('/items/{item}/scan-label', [CalorieController::class, 'scanLabel']);
+    Route::middleware('throttle:20,1')->post('/items/{item}/autofill', [ItemController::class, 'autofill']);
 
     // Kitchen Lab Machines - draft hits an LLM (throttled like the AI routes above); the
     // rest are plain CRUD on the saved automation, no AI involved.

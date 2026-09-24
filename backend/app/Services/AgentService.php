@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Item;
 use App\Models\User;
+use App\Support\ItemPayload;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 
@@ -655,6 +657,120 @@ PROMPT;
         }
 
         return $this->fallbackCalorieEstimate($name, $weight, $weightUnit);
+    }
+
+    /**
+     * One-shot AI estimate for an existing item's weight, calories, shelf life, and food
+     * group, for the item detail page's "Autofill" button. A single call rather than driving
+     * suggestItemDetails + estimateCalories separately, so the calorie estimate is grounded in
+     * the SAME weight this call also proposes, not guessed independently of it. Returns an
+     * estimate for every field regardless of whether the item already has one - the caller
+     * (ItemController::autofill) decides which of these to actually offer, since "autofill"
+     * must never silently overwrite a value that's already set.
+     */
+    public function autofillItemDetails(Item $item): array
+    {
+        if (! $this->client->available()) {
+            return $this->fallbackAutofill($item);
+        }
+
+        try {
+            $weightLine = $item->weight !== null
+                ? "Stated weight: {$item->weight} {$item->weight_unit} (per single unit/package, already excluding quantity)."
+                : 'No weight recorded yet - estimate one typical retail unit/package for this food.';
+
+            $prompt = <<<PROMPT
+You are filling in missing inventory details for a single grocery item already in a home cook's kitchen tracker.
+
+Item name: "{$item->name}"
+Quantity in stock: {$item->quantity}
+Stored in: {$item->location}
+{$weightLine}
+Today's date is {$this->today()}.
+
+Return ONLY a JSON object (no prose, no markdown fences) with exactly these fields:
+- "weight": numeric weight/volume of ONE unit as typically sold (e.g. one carton, one loaf), or null if this food genuinely has no fixed unit weight (e.g. a bunch of loose herbs)
+- "weight_unit": one of g/kg/mg/ml/l/oz/lb - required whenever weight is not null, otherwise null
+- "calories": total kcal for ONE unit as stored (integer, 0-100000) - based on the weight above
+- "shelf_life_days": typical shelf life in days from today if stored properly (integer, 1-365)
+- "nutrition_category": the item's food group - one of "protein", "vegetables", "fruit", "grains", "dairy", "other_extras" (use "other_extras" for sauces, oils, snacks, drinks, condiments, desserts, and mixed/prepared dishes)
+PROMPT;
+
+            $result = $this->client->complete([
+                ['role' => 'user', 'content' => $prompt],
+            ], 150);
+
+            if ($result['ok']) {
+                $parsed = $this->parseJsonObject($result['content']);
+                if ($parsed) {
+                    return $this->normalizeAutofillEstimate($parsed, $item);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Item autofill failed', ['item_id' => $item->id, 'error' => $e->getMessage()]);
+        }
+
+        return $this->fallbackAutofill($item);
+    }
+
+    private function today(): string
+    {
+        return now()->toDateString();
+    }
+
+    private function normalizeAutofillEstimate(array $parsed, Item $item): array
+    {
+        $weightUnit = in_array($parsed['weight_unit'] ?? null, ItemPayload::WEIGHT_UNITS, true)
+            ? $parsed['weight_unit'] : null;
+        $weight = is_numeric($parsed['weight'] ?? null) && $weightUnit !== null
+            ? round(max(0.01, min(9999999, (float) $parsed['weight'])), 2)
+            : null;
+        if ($weight === null) {
+            $weightUnit = null;
+        }
+
+        $nutritionCategory = in_array($parsed['nutrition_category'] ?? null, self::NUTRITION_CATEGORIES, true)
+            ? $parsed['nutrition_category']
+            : ($this->guessNutritionCategory($item->name, $item->icon) ?? 'other_extras');
+
+        return [
+            'weight' => $weight,
+            'weight_unit' => $weightUnit,
+            'calories' => isset($parsed['calories']) && is_numeric($parsed['calories'])
+                ? max(0, min(100000, (int) $parsed['calories']))
+                : $this->fallbackCalorieEstimate($item->name, $weight ?? $item->weight, $weightUnit ?? $item->weight_unit)['calories'],
+            'shelf_life_days' => isset($parsed['shelf_life_days']) && is_numeric($parsed['shelf_life_days'])
+                ? max(1, min(365, (int) $parsed['shelf_life_days']))
+                : $this->fallbackItemSuggestion($item->name, $item->icon)['shelf_life_days'],
+            'nutrition_category' => $nutritionCategory,
+        ];
+    }
+
+    /** Typical grams for "one unit" of each food group, for the weight fallback when no AI
+     *  key is configured - same spirit as fallbackCalorieEstimate's flat 150g stand-in. */
+    private const TYPICAL_GRAMS_BY_GROUP = [
+        'protein' => 400, 'vegetables' => 300, 'fruit' => 150, 'grains' => 500, 'dairy' => 500, 'other_extras' => 250,
+    ];
+
+    private function fallbackAutofill(Item $item): array
+    {
+        $suggestion = $this->fallbackItemSuggestion($item->name, $item->icon);
+        $group = $suggestion['nutrition_category'] ?? 'other_extras';
+
+        $weight = $item->weight;
+        $weightUnit = $item->weight_unit;
+        if ($weight === null) {
+            $weight = (float) (self::TYPICAL_GRAMS_BY_GROUP[$group] ?? 150);
+            $weightUnit = 'g';
+        }
+
+        return [
+            'weight' => $weight,
+            'weight_unit' => $weightUnit,
+            'calories' => $this->fallbackCalorieEstimate($item->name, $weight, $weightUnit)['calories'],
+            'shelf_life_days' => $suggestion['shelf_life_days'],
+            'nutrition_category' => $group,
+        ];
     }
 
     /**

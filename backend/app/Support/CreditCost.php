@@ -29,7 +29,8 @@ final class CreditCost
     /** Vision: detect items from a fridge photo. */
     public const PHOTO_SCAN = 3;
 
-    /** Add-item "Auto-fill" shelf-life/location estimate. */
+    /** Add-item "Auto-fill" shelf-life/location estimate, and the item detail page's
+     *  "Autofill" (weight/calories/shelf-life/food group in one call). */
     public const AUTOFILL = 1;
 
     /** Text: estimate an item's calorie count from its name/weight. */

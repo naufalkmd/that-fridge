@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Resources\ItemResource;
 use App\Models\Item;
 use App\Models\Section;
+use App\Services\AgentService;
+use App\Services\CreditService;
+use App\Support\CreditCost;
 use App\Support\ItemPayload;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -18,6 +21,11 @@ class ItemController extends Controller
     // Alias so existing Rule::in(self::WEIGHT_UNITS) call sites below don't need to change -
     // the real list now lives in ItemPayload, shared with AgentToolbox's update_item tool.
     public const WEIGHT_UNITS = ItemPayload::WEIGHT_UNITS;
+
+    public function __construct(
+        protected AgentService $agent,
+        protected CreditService $credits,
+    ) {}
 
     public function store(Request $request, Section $section)
     {
@@ -90,6 +98,58 @@ class ItemController extends Controller
         $item->update(ItemPayload::normalize($data));
 
         return new ItemResource($item->load('product'));
+    }
+
+    /**
+     * AI "Autofill" for an existing item's still-empty weight, calories, shelf life, and food
+     * group, in one credit-metered call. Deliberately only ever proposes fields the item is
+     * missing - never a field it already has a value for, so pressing this can't silently
+     * overwrite something the user (or a scan) already set. The client applies the returned
+     * fields via a normal PATCH, same review-then-confirm shape as estimate-calories.
+     */
+    public function autofill(Request $request, Item $item)
+    {
+        $this->authorize('update', $item);
+
+        $needsWeight = $item->weight === null;
+        $needsCalories = $item->calories === null;
+        $needsShelfLife = $item->expiry_date === null;
+        $needsCategory = $item->nutrition_category === null;
+
+        if (! $needsWeight && ! $needsCalories && ! $needsShelfLife && ! $needsCategory) {
+            return response()->json(['fields' => (object) []], 200);
+        }
+
+        $this->credits->spend($request->user(), CreditCost::AUTOFILL, 'item_autofill');
+
+        $estimate = $this->agent->autofillItemDetails($item);
+
+        $fields = [];
+        if ($needsWeight && $estimate['weight'] !== null) {
+            $fields['weight'] = $estimate['weight'];
+            $fields['weight_unit'] = $estimate['weight_unit'];
+        }
+        if ($needsCalories) {
+            $fields['calories'] = $estimate['calories'];
+        }
+        if ($needsShelfLife) {
+            $fields['shelf_life_days'] = $estimate['shelf_life_days'];
+            $fields['expiry_date'] = now()->addDays($estimate['shelf_life_days'])->toDateString();
+        }
+        if ($needsCategory) {
+            $fields['nutrition_category'] = $estimate['nutrition_category'];
+        }
+
+        // Only weight can legitimately come back empty (a food with no sensible unit
+        // weight) - refund when that was the only thing this item needed, since the user
+        // got nothing for their credit, same precedent as CalorieController::scanLabel.
+        if ($fields === []) {
+            $this->credits->grant($request->user(), CreditCost::AUTOFILL, 'item_autofill_refund');
+
+            return response()->json(['fields' => (object) [], 'message' => "Couldn't confidently estimate anything new for this item."], 200);
+        }
+
+        return response()->json(['fields' => (object) $fields], 200);
     }
 
     public function destroy(Request $request, Item $item)

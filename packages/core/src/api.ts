@@ -634,6 +634,19 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.post(`/items/${itemId}/estimate-calories`, {});
   }
 
+  /**
+   * AI "Autofill" for an existing item's still-empty weight/calories/shelf-life/food group,
+   * in one call - the item detail page's Autofill button. `fields` only ever contains keys
+   * the item was actually missing; an empty object means everything's already filled in.
+   * Charges 1 credit only when there was something to estimate; 402 when short.
+   */
+  function autofillItem(itemId: string): Promise<{
+    fields: Partial<UpdateItemInput>;
+    message?: string;
+  }> {
+    return http.post(`/items/${itemId}/autofill`, {});
+  }
+
   /** Read the calorie figure off a nutrition-label photo. `found: false` when illegible. Charges credits; 402 when short. */
   function scanNutritionLabel(
     itemId: string,
@@ -1080,6 +1093,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     deleteGeneratedIcon,
     suggestItemDetails,
     estimateCalories,
+    autofillItem,
     scanNutritionLabel,
     listNotificationEvents,
     markNotification,

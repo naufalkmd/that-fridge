@@ -21,6 +21,7 @@ import { SheetHeader } from "@/components/sheet";
 import { useTheme } from "@/lib/theme";
 import {
   AddCustomFieldRow,
+  AutofillCard,
   BestBeforeRow,
   CaloriesRow,
   CustomFieldRows,
@@ -239,6 +240,8 @@ export default function ItemDetail() {
             {tip}
           </Text>
         </View>
+
+        <AutofillCard item={item} />
 
         <View style={{ marginBottom: 20 }}>
           <RowGroup>
