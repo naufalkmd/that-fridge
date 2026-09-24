@@ -6,6 +6,8 @@ use App\Jobs\RunMachine;
 use App\Models\Fridge;
 use App\Models\Item;
 use App\Models\Machine;
+use App\Models\Recipe;
+use App\Models\User;
 use Illuminate\Support\Str;
 
 /**
@@ -36,6 +38,29 @@ class MachineTriggerService
                     return;
                 }
                 if ($config['location'] && $config['location'] !== $item->location) {
+                    return;
+                }
+
+                RunMachine::dispatch($machine->id);
+            });
+    }
+
+    /**
+     * Only call this from an Auth::check()-gated path (see RecipeObserver::updated()) - same
+     * loop guard as itemAdded(), for the same reason. Scoped by the Machine's owning user, not
+     * a fridge - a recipe's made_count isn't fridge-bound (a curated recipe has no fridge at
+     * all), and "made" is inherently a personal action.
+     */
+    public function recipeMade(Recipe $recipe, User $actingUser): void
+    {
+        Machine::query()
+            ->where('user_id', $actingUser->id)
+            ->where('enabled', true)
+            ->where('trigger_type', 'recipe_made')
+            ->get()
+            ->each(function (Machine $machine) use ($recipe) {
+                $recipeId = $machine->trigger_config['recipe_id'] ?? null;
+                if ($recipeId !== null && (int) $recipeId !== $recipe->id) {
                     return;
                 }
 

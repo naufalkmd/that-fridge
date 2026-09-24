@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Recipe;
 use App\Models\User;
 use App\Support\ItemPayload;
 
@@ -14,7 +15,7 @@ use App\Support\ItemPayload;
  */
 class MachineDraftValidator
 {
-    private const TRIGGER_TYPES = ['schedule', 'item_added', 'threshold'];
+    private const TRIGGER_TYPES = ['schedule', 'item_added', 'threshold', 'recipe_made'];
 
     private const FREQUENCIES = ['daily', 'weekly'];
 
@@ -46,7 +47,7 @@ class MachineDraftValidator
             $name = mb_substr($name, 0, 60);
         }
 
-        $trigger = $this->validateTrigger($draft['trigger'] ?? null, $errors);
+        $trigger = $this->validateTrigger($draft['trigger'] ?? null, $errors, $user);
         $steps = $this->validateSteps($draft['steps'] ?? null, $errors, $user);
 
         if ($errors !== []) {
@@ -66,10 +67,10 @@ class MachineDraftValidator
     }
 
     /** @param  string[]  $errors */
-    private function validateTrigger(mixed $trigger, array &$errors): ?array
+    private function validateTrigger(mixed $trigger, array &$errors, User $user): ?array
     {
         if (! is_array($trigger) || ! isset($trigger['type'])) {
-            $errors[] = 'trigger is required, with a type of schedule, item_added, or threshold.';
+            $errors[] = 'trigger is required, with a type of schedule, item_added, threshold, or recipe_made.';
 
             return null;
         }
@@ -88,6 +89,7 @@ class MachineDraftValidator
             'schedule' => $this->validateScheduleTrigger($config, $errors),
             'item_added' => $this->validateItemAddedTrigger($config),
             'threshold' => $this->validateThresholdTrigger($config, $errors),
+            'recipe_made' => $this->validateRecipeMadeTrigger($config, $errors, $user),
         };
 
         return count($errors) > $before ? null : $result;
@@ -129,6 +131,23 @@ class MachineDraftValidator
         $location = in_array($config['location'] ?? null, ['fridge', 'freezer', 'pantry'], true) ? $config['location'] : null;
 
         return ['type' => 'item_added', 'config' => ['search' => $search, 'location' => $location]];
+    }
+
+    /** @param  string[]  $errors */
+    private function validateRecipeMadeTrigger(array $config, array &$errors, User $user): array
+    {
+        $recipeId = $config['recipe_id'] ?? null;
+        if ($recipeId !== null) {
+            $visible = Recipe::query()
+                ->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $user->id))
+                ->whereKey($recipeId)
+                ->exists();
+            if (! $visible) {
+                $errors[] = "trigger.config.recipe_id doesn't refer to a recipe you can see.";
+            }
+        }
+
+        return ['type' => 'recipe_made', 'config' => ['recipe_id' => $recipeId !== null ? (int) $recipeId : null]];
     }
 
     /** @param  string[]  $errors */

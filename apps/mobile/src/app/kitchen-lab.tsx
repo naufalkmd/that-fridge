@@ -52,6 +52,9 @@ function describeTrigger(trigger: MachineTrigger): string {
     if (location) return `When an item is added to the ${location}`;
     return "When an item is added";
   }
+  if (trigger.type === "recipe_made") {
+    return "When you mark a recipe made";
+  }
   const { field, op, value, unit, custom_field_label } = trigger.config;
   const label = field === "custom" ? (custom_field_label ?? "custom field") : field;
   const suffix = unit ? ` ${unit}` : field === "calories" ? " kcal" : "";
@@ -62,6 +65,7 @@ const PROMPT_EXAMPLES = [
   { label: "On a schedule", prompt: "Every day at 8am, tell me total calories expiring this week" },
   { label: "When an item's added", prompt: "When milk is added, notify me" },
   { label: "When stock runs low", prompt: "Notify me when stock drops below 2" },
+  { label: "When you cook something", prompt: "When I mark any recipe as made, notify me" },
 ];
 
 const TOOL_LABELS: Record<string, string> = {

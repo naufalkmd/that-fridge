@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Observers\RecipeObserver;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+#[ObservedBy([RecipeObserver::class])]
 #[Fillable(['user_id', 'name', 'minutes', 'category', 'icon', 'icon_url', 'ingredients', 'steps', 'attachments', 'meal_type', 'vibes', 'food_focus', 'made_count'])]
 class Recipe extends Model
 {

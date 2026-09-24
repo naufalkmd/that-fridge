@@ -722,7 +722,7 @@ Return ONLY a JSON object (no prose, no markdown fences) shaped exactly like thi
 {
   "name": "short Machine name, under 60 characters",
   "trigger": {
-    "type": "schedule" | "item_added" | "threshold",
+    "type": "schedule" | "item_added" | "threshold" | "recipe_made",
     "config": { ... depends on type - see below ... }
   },
   "steps": [ { "tool": "tool_name", "args": { ... }, "condition": optional - see below }, ... up to 10 steps ]
@@ -732,6 +732,7 @@ trigger.config by type:
 - schedule: {"frequency": "daily"|"weekly", "time": "HH:MM" (24-hour), "weekday": 0-6 (0=Sunday, required only when frequency is weekly), "timezone": an IANA name, default "UTC" if the user didn't say one}
 - item_added: {"search": a name substring, or null for any item, "location": "fridge"|"freezer"|"pantry", or null for any}
 - threshold: {"field": "quantity"|"weight"|"calories"|"custom", "custom_field_label": required (any string) only when field is "custom" - the custom field label to sum, "unit": required (one of g/kg/mg/ml/l/oz/lb) only when field is "weight", "filter": optional sum_item_field-style filters, "op": "lt"|"lte"|"gt"|"gte", "value": a number}
+- recipe_made: {"recipe_id": null - always null, there's no way to look up a specific recipe id here}
 
 A later step's string argument may reference an earlier step's result with {stepN} (1-based), e.g. {"message": "Expiring soon: {step1}"} - never reference the current step or a later one.
 

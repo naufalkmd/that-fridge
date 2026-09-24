@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *   schedule:    {"frequency": "daily"|"weekly", "time": "HH:MM", "weekday": 0-6, "timezone": "..."}
  *   item_added:  {"search": "..."|null, "location": "fridge"|"freezer"|"pantry"|null}
  *   threshold:   {"field": "quantity"|"weight"|"calories"|"custom", "custom_field_label": "..."|null, "unit": "..."|null, "filter": {...sum_item_field filters...}, "op": "lt"|"lte"|"gt"|"gte", "value": number}
+ *   recipe_made: {"recipe_id": int|null - null means any recipe}
  *
  * steps: [{"tool": "sum_item_field", "args": {"field": "calories", "expiring_within_days": 3}},
  *          {"tool": "notify_user", "args": {"message": "Expiring soon: {step1}"}, "condition": {"step": 1, "op": "gte", "value": 2000}}]

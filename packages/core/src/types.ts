@@ -305,7 +305,7 @@ export type NotificationKind =
 // Kitchen Lab "Machine" - a user-defined automation with a trigger and a fixed, editable list
 // of steps, authored once with AI help but replayed with zero AI involved afterward. Mirrors
 // App\Models\Machine's docblock on the backend.
-export type MachineTriggerType = "schedule" | "item_added" | "threshold";
+export type MachineTriggerType = "schedule" | "item_added" | "threshold" | "recipe_made";
 
 export interface MachineScheduleTrigger {
   type: "schedule";
@@ -338,10 +338,20 @@ export interface MachineThresholdTrigger {
   };
 }
 
+export interface MachineRecipeMadeTrigger {
+  type: "recipe_made";
+  config: {
+    /** null means any recipe - the AI drafter always emits null since it has no way to look
+     *  up a specific recipe id; a specific one is only reachable via hand-edit. */
+    recipe_id: number | null;
+  };
+}
+
 export type MachineTrigger =
   | MachineScheduleTrigger
   | MachineItemAddedTrigger
-  | MachineThresholdTrigger;
+  | MachineThresholdTrigger
+  | MachineRecipeMadeTrigger;
 
 // One AgentToolbox tool call - see AgentToolbox::MACHINE_TOOLS on the backend for which tools
 // are eligible. `args` is opaque here since each tool's shape differs; the mobile UI only

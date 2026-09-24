@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Fridge;
+use App\Models\Recipe;
 use App\Models\User;
 use App\Services\MachineDraftValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -101,6 +102,46 @@ class MachineDraftValidatorTest extends TestCase
 
         $this->assertTrue($result['valid']);
         $this->assertSame('milk', $result['draft']['trigger_config']['search']);
+    }
+
+    public function test_recipe_made_trigger_accepts_a_null_recipe_id(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'trigger' => ['type' => 'recipe_made', 'config' => ['recipe_id' => null]],
+        ]), $this->user);
+
+        $this->assertTrue($result['valid']);
+        $this->assertNull($result['draft']['trigger_config']['recipe_id']);
+    }
+
+    public function test_recipe_made_trigger_accepts_a_recipe_id_the_user_can_see(): void
+    {
+        $curated = Recipe::create([
+            'user_id' => null, 'name' => 'Soup', 'minutes' => 30,
+            'ingredients' => [['name' => 'stock', 'icon' => 'leftovers']], 'steps' => ['Simmer'], 'made_count' => 0,
+        ]);
+
+        $result = $this->validator->validate($this->validDraft([
+            'trigger' => ['type' => 'recipe_made', 'config' => ['recipe_id' => $curated->id]],
+        ]), $this->user);
+
+        $this->assertTrue($result['valid']);
+        $this->assertSame($curated->id, $result['draft']['trigger_config']['recipe_id']);
+    }
+
+    public function test_recipe_made_trigger_rejects_a_recipe_id_the_user_cannot_see(): void
+    {
+        $otherUser = User::factory()->create();
+        $notMine = Recipe::create([
+            'user_id' => $otherUser->id, 'name' => 'Soup', 'minutes' => 30,
+            'ingredients' => [['name' => 'stock', 'icon' => 'leftovers']], 'steps' => ['Simmer'], 'made_count' => 0,
+        ]);
+
+        $result = $this->validator->validate($this->validDraft([
+            'trigger' => ['type' => 'recipe_made', 'config' => ['recipe_id' => $notMine->id]],
+        ]), $this->user);
+
+        $this->assertFalse($result['valid']);
     }
 
     public function test_threshold_trigger_requires_a_unit_when_field_is_weight(): void
