@@ -36,6 +36,8 @@ function formatTime(time: string): string {
   return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
+const OP_LABELS = { lt: "drops below", lte: "drops to or below", gt: "goes above", gte: "goes to or above" } as const;
+
 function describeTrigger(trigger: MachineTrigger): string {
   if (trigger.type === "schedule") {
     const { frequency, time, weekday } = trigger.config;
@@ -51,10 +53,9 @@ function describeTrigger(trigger: MachineTrigger): string {
     return "When an item is added";
   }
   const { field, op, value, unit, custom_field_label } = trigger.config;
-  const opLabel = { lt: "drops below", lte: "drops to or below", gt: "goes above", gte: "goes to or above" }[op];
   const label = field === "custom" ? (custom_field_label ?? "custom field") : field;
   const suffix = unit ? ` ${unit}` : field === "calories" ? " kcal" : "";
-  return `When total ${label} ${opLabel} ${value}${suffix}`;
+  return `When total ${label} ${OP_LABELS[op]} ${value}${suffix}`;
 }
 
 const PROMPT_EXAMPLES = [
@@ -76,16 +77,22 @@ const TOOL_LABELS: Record<string, string> = {
 };
 
 function describeStep(step: MachineStep): string {
-  if (step.tool === "sum_item_field" && typeof step.args.field === "string") {
-    const label = step.args.field === "custom" && typeof step.args.custom_field_label === "string"
-      ? step.args.custom_field_label
-      : step.args.field;
-    return `Add up ${label} across items`;
-  }
-  if (step.tool === "notify_user" && typeof step.args.message === "string") {
-    return `Notify: "${step.args.message}"`;
-  }
-  return TOOL_LABELS[step.tool] ?? step.tool;
+  const base = (() => {
+    if (step.tool === "sum_item_field" && typeof step.args.field === "string") {
+      const label = step.args.field === "custom" && typeof step.args.custom_field_label === "string"
+        ? step.args.custom_field_label
+        : step.args.field;
+      return `Add up ${label} across items`;
+    }
+    if (step.tool === "notify_user" && typeof step.args.message === "string") {
+      return `Notify: "${step.args.message}"`;
+    }
+    return TOOL_LABELS[step.tool] ?? step.tool;
+  })();
+
+  if (!step.condition) return base;
+  const { step: refStep, op, value } = step.condition;
+  return `If step ${refStep}'s total ${OP_LABELS[op]} ${value}: ${base}`;
 }
 
 type Mode = "list" | "prompt" | "review";

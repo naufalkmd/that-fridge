@@ -70,6 +70,101 @@ class MachineRunnerTest extends TestCase
         $this->assertDatabaseHas('notification_events', ['kind' => 'machine', 'user_id' => $this->user->id]);
     }
 
+    public function test_a_step_whose_condition_is_met_runs_normally(): void
+    {
+        Item::create([
+            'section_id' => $this->section()->id, 'name' => 'Milk', 'icon' => 'milk', 'quantity' => 1,
+            'calories' => 3000, 'location' => 'fridge',
+        ]);
+        $machine = $this->machine([
+            'steps' => [
+                ['tool' => 'sum_item_field', 'args' => ['field' => 'calories']],
+                ['tool' => 'notify_user', 'args' => ['message' => 'High calories!'], 'condition' => ['step' => 1, 'op' => 'gte', 'value' => 2000]],
+            ],
+        ]);
+
+        $run = $this->runner->run($machine);
+
+        $this->assertSame('success', $run->status);
+        $this->assertFalse($run->steps_run[1]['skipped']);
+        $this->assertDatabaseHas('notification_events', ['kind' => 'machine']);
+    }
+
+    public function test_a_step_whose_condition_is_not_met_is_skipped_without_error(): void
+    {
+        Item::create([
+            'section_id' => $this->section()->id, 'name' => 'Milk', 'icon' => 'milk', 'quantity' => 1,
+            'calories' => 100, 'location' => 'fridge',
+        ]);
+        $machine = $this->machine([
+            'steps' => [
+                ['tool' => 'sum_item_field', 'args' => ['field' => 'calories']],
+                ['tool' => 'notify_user', 'args' => ['message' => 'High calories!'], 'condition' => ['step' => 1, 'op' => 'gte', 'value' => 2000]],
+            ],
+        ]);
+
+        $run = $this->runner->run($machine);
+
+        $this->assertSame('success', $run->status);
+        $this->assertTrue($run->steps_run[1]['skipped']);
+        $this->assertDatabaseMissing('notification_events', ['kind' => 'machine']);
+    }
+
+    public function test_a_skipped_step_does_not_abort_later_steps(): void
+    {
+        $machine = $this->machine([
+            'steps' => [
+                ['tool' => 'sum_item_field', 'args' => ['field' => 'quantity']],
+                ['tool' => 'notify_user', 'args' => ['message' => 'first'], 'condition' => ['step' => 1, 'op' => 'gte', 'value' => 999]],
+                ['tool' => 'notify_user', 'args' => ['message' => 'second']],
+            ],
+        ]);
+
+        $run = $this->runner->run($machine);
+
+        $this->assertSame('success', $run->status);
+        $this->assertTrue($run->steps_run[1]['skipped']);
+        $this->assertFalse($run->steps_run[2]['skipped']);
+        $this->assertDatabaseHas('notification_events', ['message' => 'second']);
+    }
+
+    public function test_a_skipped_steps_placeholder_falls_back_to_literal_text(): void
+    {
+        $machine = $this->machine([
+            'steps' => [
+                ['tool' => 'sum_item_field', 'args' => ['field' => 'quantity']],
+                ['tool' => 'sum_item_field', 'args' => ['field' => 'calories'], 'condition' => ['step' => 1, 'op' => 'gte', 'value' => 999]],
+                ['tool' => 'notify_user', 'args' => ['message' => 'Calories: {step2}']],
+            ],
+        ]);
+
+        $run = $this->runner->run($machine);
+
+        $this->assertSame('success', $run->status);
+        $this->assertSame('Calories: {step2}', $run->steps_run[2]['args']['message']);
+    }
+
+    public function test_condition_supports_every_operator(): void
+    {
+        Item::create([
+            'section_id' => $this->section()->id, 'name' => 'Milk', 'icon' => 'milk', 'quantity' => 5,
+            'location' => 'fridge',
+        ]);
+
+        foreach ([['lt', 10, true], ['lte', 5, true], ['gt', 1, true], ['gte', 5, true], ['gt', 100, false]] as [$op, $value, $shouldRun]) {
+            $machine = $this->machine([
+                'steps' => [
+                    ['tool' => 'sum_item_field', 'args' => ['field' => 'quantity']],
+                    ['tool' => 'notify_user', 'args' => ['message' => 'hi'], 'condition' => ['step' => 1, 'op' => $op, 'value' => $value]],
+                ],
+            ]);
+
+            $run = $this->runner->run($machine);
+
+            $this->assertSame(! $shouldRun, $run->steps_run[1]['skipped'], "op={$op} value={$value}");
+        }
+    }
+
     public function test_updates_the_machines_run_bookkeeping_and_advances_next_run_at(): void
     {
         $machine = $this->machine(['next_run_at' => now()->subMinute()]);

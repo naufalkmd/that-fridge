@@ -58,6 +58,19 @@ class MachineRunner
         $error = null;
 
         foreach ($machine->steps as $i => $step) {
+            if (isset($step['condition']) && ! $this->conditionMet($step['condition'], $results)) {
+                $stepsRun[] = [
+                    'tool' => $step['tool'],
+                    'args' => $step['args'] ?? [],
+                    'content' => 'Skipped - condition not met.',
+                    'ok' => true,
+                    'value' => null,
+                    'skipped' => true,
+                ];
+
+                continue;
+            }
+
             $args = $this->resolvePlaceholders($step['args'] ?? [], $results);
 
             $result = $this->toolbox->run($step['tool'], $args, $machine->user, $machine->fridge_id, 'machine');
@@ -69,6 +82,7 @@ class MachineRunner
                 'content' => $result['content'],
                 'ok' => $result['ok'],
                 'value' => $result['value'],
+                'skipped' => false,
             ];
 
             if (! $result['ok']) {
@@ -97,6 +111,24 @@ class MachineRunner
         $machine->save();
 
         return $run;
+    }
+
+    /**
+     * `(float)` casting a string reads its leading numeric prefix and ignores the rest, so
+     * this needs no special parsing across sum_item_field's different value formats - plain
+     * ("14"), kcal-suffixed ("150 kcal"), or unit-concatenated ("2kg") all cast correctly.
+     * A referenced step that never ran (itself skipped, or this is somehow stale) reads as 0.
+     */
+    private function conditionMet(array $condition, array $results): bool
+    {
+        $value = (float) ($results[$condition['step']]['value'] ?? 0);
+
+        return match ($condition['op']) {
+            'lt' => $value < $condition['value'],
+            'lte' => $value <= $condition['value'],
+            'gt' => $value > $condition['value'],
+            'gte' => $value >= $condition['value'],
+        };
     }
 
     /**

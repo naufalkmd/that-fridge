@@ -222,6 +222,76 @@ class MachineDraftValidatorTest extends TestCase
         $this->assertTrue($result['valid']);
     }
 
+    public function test_a_step_with_no_condition_still_validates_normally(): void
+    {
+        $result = $this->validator->validate($this->validDraft(), $this->user);
+
+        $this->assertTrue($result['valid']);
+        $this->assertArrayNotHasKey('condition', $result['draft']['steps'][0]);
+        $this->assertArrayNotHasKey('condition', $result['draft']['steps'][1]);
+    }
+
+    public function test_accepts_a_valid_condition(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'steps' => [
+                ['tool' => 'sum_item_field', 'args' => ['field' => 'calories']],
+                ['tool' => 'notify_user', 'args' => ['message' => 'High calories!'], 'condition' => ['step' => 1, 'op' => 'gte', 'value' => 2000]],
+            ],
+        ]), $this->user);
+
+        $this->assertTrue($result['valid']);
+        $this->assertSame(['step' => 1, 'op' => 'gte', 'value' => 2000.0], $result['draft']['steps'][1]['condition']);
+    }
+
+    public function test_rejects_a_condition_referencing_a_later_or_same_step(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'steps' => [
+                ['tool' => 'sum_item_field', 'args' => ['field' => 'calories'], 'condition' => ['step' => 1, 'op' => 'gte', 'value' => 0]],
+                ['tool' => 'notify_user', 'args' => ['message' => 'hi'], 'condition' => ['step' => 2, 'op' => 'gte', 'value' => 0]],
+            ],
+        ]), $this->user);
+
+        $this->assertFalse($result['valid']);
+    }
+
+    public function test_rejects_a_condition_referencing_a_non_sum_item_field_step(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'steps' => [
+                ['tool' => 'notify_user', 'args' => ['message' => 'first']],
+                ['tool' => 'notify_user', 'args' => ['message' => 'second'], 'condition' => ['step' => 1, 'op' => 'gte', 'value' => 0]],
+            ],
+        ]), $this->user);
+
+        $this->assertFalse($result['valid']);
+    }
+
+    public function test_rejects_a_condition_with_an_invalid_op(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'steps' => [
+                ['tool' => 'sum_item_field', 'args' => ['field' => 'calories']],
+                ['tool' => 'notify_user', 'args' => ['message' => 'hi'], 'condition' => ['step' => 1, 'op' => 'eq', 'value' => 0]],
+            ],
+        ]), $this->user);
+
+        $this->assertFalse($result['valid']);
+    }
+
+    public function test_rejects_a_condition_with_a_non_numeric_value(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'steps' => [
+                ['tool' => 'sum_item_field', 'args' => ['field' => 'calories']],
+                ['tool' => 'notify_user', 'args' => ['message' => 'hi'], 'condition' => ['step' => 1, 'op' => 'gte', 'value' => 'a lot']],
+            ],
+        ]), $this->user);
+
+        $this->assertFalse($result['valid']);
+    }
+
     public function test_rejects_a_fridge_id_that_does_not_belong_to_the_user(): void
     {
         $stranger = Fridge::create(['user_id' => User::factory()->create()->id, 'name' => 'Not Mine']);

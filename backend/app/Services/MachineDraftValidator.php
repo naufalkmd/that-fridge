@@ -179,6 +179,7 @@ class MachineDraftValidator
         $userFridgeIds = $user->memberFridges()->pluck('fridges.id');
 
         $clean = [];
+        $stepTools = [];
         foreach (array_values($steps) as $i => $step) {
             $n = $i + 1;
             if (! is_array($step) || ! isset($step['tool'])) {
@@ -188,6 +189,7 @@ class MachineDraftValidator
             }
 
             $tool = $step['tool'];
+            $stepTools[$n] = $tool;
             $schema = $schemasByName->get($tool);
             if (! $schema) {
                 $errors[] = "step {$n}: \"{$tool}\" isn't a tool a Machine can use.";
@@ -209,19 +211,70 @@ class MachineDraftValidator
 
             $placeholderError = $argErrors === [] ? $this->validatePlaceholders($args, $n) : null;
 
-            if ($argErrors !== [] || $placeholderError !== null) {
+            $condition = null;
+            $conditionError = null;
+            if ($argErrors === [] && $placeholderError === null && isset($step['condition'])) {
+                [$condition, $conditionError] = $this->validateCondition($step['condition'], $n, $stepTools);
+            }
+
+            if ($argErrors !== [] || $placeholderError !== null || $conditionError !== null) {
                 array_push($errors, ...$argErrors);
                 if ($placeholderError !== null) {
                     $errors[] = $placeholderError;
+                }
+                if ($conditionError !== null) {
+                    $errors[] = $conditionError;
                 }
 
                 continue;
             }
 
-            $clean[] = ['tool' => $tool, 'args' => $args];
+            $row = ['tool' => $tool, 'args' => $args];
+            if ($condition !== null) {
+                $row['condition'] = $condition;
+            }
+            $clean[] = $row;
         }
 
         return $errors === [] ? $clean : null;
+    }
+
+    /**
+     * A step may run conditionally on an earlier sum_item_field step's computed number - the
+     * only Machine-eligible tool that produces one (AgentToolbox::run()'s `value` is null for
+     * every other tool). Reuses the same lt/lte/gt/gte vocabulary a threshold trigger already
+     * has - deliberately a guard clause, not a general expression language.
+     *
+     * @return array{0: ?array, 1: ?string}
+     */
+    private function validateCondition(mixed $condition, int $stepNumber, array $stepTools): array
+    {
+        if (! is_array($condition)) {
+            return [null, "step {$stepNumber}: condition must be an object."];
+        }
+
+        $ref = $condition['step'] ?? null;
+        if (! is_numeric($ref)) {
+            return [null, "step {$stepNumber}: condition.step must be a step number."];
+        }
+        $ref = (int) $ref;
+        if ($ref < 1 || $ref >= $stepNumber) {
+            return [null, "step {$stepNumber}: condition.step must reference an earlier step."];
+        }
+        if (($stepTools[$ref] ?? null) !== 'sum_item_field') {
+            return [null, "step {$stepNumber}: condition.step must reference a sum_item_field step - that's the only tool with a number to compare."];
+        }
+
+        $op = $condition['op'] ?? null;
+        if (! in_array($op, self::THRESHOLD_OPS, true)) {
+            return [null, "step {$stepNumber}: condition.op must be one of ".implode(', ', self::THRESHOLD_OPS).'.'];
+        }
+
+        if (! is_numeric($condition['value'] ?? null)) {
+            return [null, "step {$stepNumber}: condition.value must be a number."];
+        }
+
+        return [['step' => $ref, 'op' => $op, 'value' => (float) $condition['value']], null];
     }
 
     /**

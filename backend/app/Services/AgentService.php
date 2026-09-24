@@ -718,7 +718,7 @@ Return ONLY a JSON object (no prose, no markdown fences) shaped exactly like thi
     "type": "schedule" | "item_added" | "threshold",
     "config": { ... depends on type - see below ... }
   },
-  "steps": [ { "tool": "tool_name", "args": { ... } }, ... up to 10 steps ]
+  "steps": [ { "tool": "tool_name", "args": { ... }, "condition": optional - see below }, ... up to 10 steps ]
 }
 
 trigger.config by type:
@@ -727,6 +727,8 @@ trigger.config by type:
 - threshold: {"field": "quantity"|"weight"|"calories"|"custom", "custom_field_label": required (any string) only when field is "custom" - the custom field label to sum, "unit": required (one of g/kg/mg/ml/l/oz/lb) only when field is "weight", "filter": optional sum_item_field-style filters, "op": "lt"|"lte"|"gt"|"gte", "value": a number}
 
 A later step's string argument may reference an earlier step's result with {stepN} (1-based), e.g. {"message": "Expiring soon: {step1}"} - never reference the current step or a later one.
+
+A step may include "condition": {"step": N, "op": "lt"|"lte"|"gt"|"gte", "value": a number} to only run when an earlier step's computed number compares that way - e.g. only notify when a total drops below a line. N must be a sum_item_field step (the only tool that produces a number to compare), and must be earlier than the conditioned step. Omit condition entirely for a step that should always run.
 PROMPT;
 
         $result = $this->client->complete([

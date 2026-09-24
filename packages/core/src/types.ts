@@ -350,6 +350,10 @@ export type MachineTrigger =
 export interface MachineStep {
   tool: string;
   args: Record<string, unknown>;
+  // Skips this step unless an earlier sum_item_field step's computed number compares this
+  // way - the only tool that produces a value to condition on. A guard, not a branch to a
+  // different path; omitted entirely for a step that should always run.
+  condition?: { step: number; op: "lt" | "lte" | "gt" | "gte"; value: number };
 }
 
 export interface Machine {
