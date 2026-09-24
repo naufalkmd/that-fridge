@@ -12,4 +12,17 @@ const nutritionFor = (label) => { const q = label.toLowerCase(); if (N_DAIRY.som
 const LABEL_OVERRIDES = {52:"rolled wrap",62:"cream soup bowl",63:"cream dip bowl",65:"herb sprig",72:"mixed salad plate",79:"cabbage",84:"sliced deli meat",90:"cucumber slice",92:"lettuce",93:"broccoli",94:"radish",95:"grapes",97:"lime",98:"eggplant"};
 const entries = manifest.filter((m) => !CURATED_MANIFEST_IDS.has(m.id)).map((m) => { const label = LABEL_OVERRIDES[m.id] ?? m.label; return { key: `icon${m.id}`, label: label.charAt(0).toUpperCase() + label.slice(1), file: m.file, keywords: deriveKeywords(label), nutritionCategory: nutritionFor(label) }; });
 fs.writeFileSync("packages/core/src/food-icons.generated.ts", `// GENERATED from food-icon-manifest.json by scripts/gen-food-icons.mjs — do not edit by hand.\n// The ~154 non-curated icons from the food-icons asset pack, with keywords + nutrition\n// category derived from each manifest label (mirrors apps/web/lib/thatfridge/data.ts).\nimport type { NutritionCategory } from "./types";\n\nexport interface ExtraIconEntry {\n  key: string;\n  label: string;\n  file: string;\n  keywords: string[];\n  nutritionCategory: NutritionCategory;\n}\n\nexport const EXTRA_ICON_ENTRIES: ExtraIconEntry[] = ${JSON.stringify(entries, null, 2)};\n`);
-console.log(`wrote ${entries.length} entries`);
+
+// Same entries, serialized as a PHP array literal - keeps AgentToolbox/BarcodeService/
+// ReceiptService/PhotoService (App\Support\FoodIconMatcher) matching against the exact same
+// keyword pack as the frontend's guessFoodIcon(), instead of a hand-copied, permanently-
+// drifting subset.
+const phpStr = (s) => `'${String(s).replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+const phpArr = (items) => `[${items.join(", ")}]`;
+const phpEntries = entries.map((e) => `    ${phpStr(e.key)} => ['keywords' => ${phpArr(e.keywords.map(phpStr))}, 'nutrition_category' => ${phpStr(e.nutritionCategory)}],`).join("\n");
+// Named FoodIconKeywords.php, NOT ...generated.php - PSR-4 autoloading requires the filename
+// to exactly match the class name, unlike the TS side's import-by-path. The header comment is
+// the "don't hand-edit" signal here instead (standard for generated PHP classes).
+fs.writeFileSync("backend/app/Support/FoodIconKeywords.php", `<?php\n\n// GENERATED from food-icon-manifest.json by scripts/gen-food-icons.mjs - do not edit by hand.\n// PHP mirror of packages/core/src/food-icons.generated.ts's EXTRA_ICON_ENTRIES - see\n// App\\Support\\FoodIconMatcher for the curated (hand-tuned, non-generated) 10 entries.\n\nnamespace App\\Support;\n\nclass FoodIconKeywords\n{\n    public const EXTRA = [\n${phpEntries}\n    ];\n}\n`);
+
+console.log(`wrote ${entries.length} entries (TS + PHP)`);

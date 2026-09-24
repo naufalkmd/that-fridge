@@ -62,14 +62,15 @@ class BarcodeServiceTest extends TestCase
         $this->assertSame('pantry', $cached->location);
     }
 
-    public function test_lookup_falls_back_to_the_keyword_table_without_an_api_key(): void
+    public function test_lookup_guesses_the_icon_from_the_product_name_without_an_api_key(): void
     {
         config(['services.openrouter.key' => null]);
         Http::fake([
             'world.openfoodfacts.org/*' => Http::response([
                 'product' => [
-                    'product_name' => 'Some Dairy Thing',
-                    'categories' => 'en:Dairy',
+                    'product_name' => 'Fresh Milk 2L',
+                    // Deliberately unrelated to the name, to prove icon comes from the name.
+                    'categories' => 'en:Beverages',
                     'code' => '999',
                 ],
             ], 200),
@@ -80,6 +81,26 @@ class BarcodeServiceTest extends TestCase
         $this->assertSame('milk', $result['icon']);
         $this->assertNotNull($result['default_shelf_life_days']);
         $this->assertNotNull($result['location']);
+    }
+
+    public function test_lookup_leaves_the_icon_blank_when_the_name_matches_nothing(): void
+    {
+        config(['services.openrouter.key' => null]);
+        Http::fake([
+            'world.openfoodfacts.org/*' => Http::response([
+                'product' => [
+                    'product_name' => 'Xyzzy Widget 9000',
+                    'categories' => null,
+                    'code' => '998',
+                ],
+            ], 200),
+        ]);
+
+        $result = app(BarcodeService::class)->lookup('998');
+
+        // Blank, not a fake real key like the old 'item' default - lets the frontend's own
+        // name-based re-guess run instead of a wrong answer blocking it.
+        $this->assertSame('', $result['icon']);
     }
 
     public function test_lookup_returns_null_when_the_barcode_is_not_found(): void

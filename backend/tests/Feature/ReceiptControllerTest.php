@@ -47,6 +47,24 @@ class ReceiptControllerTest extends TestCase
         $this->assertSame(7, $user->fresh()->ai_credits);
     }
 
+    public function test_detected_items_get_a_real_icon_key_guessed_from_the_parsed_name(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 10]);
+        $section = $this->sectionFor($user);
+        config(['services.openrouter.key' => null]); // forces the mock detection path
+
+        $response = $this->actingAs($user)->post("/api/sections/{$section->id}/items/receipt/scan", [
+            'image' => UploadedFile::fake()->image('receipt.jpg'),
+        ]);
+
+        $response->assertStatus(200);
+        $icons = collect($response->json('detected_items'))->pluck('icon');
+        $this->assertTrue($icons->contains('milk'));
+        $this->assertTrue($icons->contains('cheese'));
+        // "Bread" isn't a curated key at all - proves the guess reaches the generated pack.
+        $this->assertFalse($icons->contains(''));
+    }
+
     public function test_the_scan_image_is_written_to_the_configured_private_media_disk(): void
     {
         // Receipts can carry location/home context - must never land on the public disk.

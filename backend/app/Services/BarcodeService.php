@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Product;
+use App\Support\FoodIconMatcher;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -68,8 +69,8 @@ class BarcodeService
         }
 
         $name = $product['product_name'] ?? 'Unknown Product';
-        $icon = $this->getIconFromCategory($product['categories'] ?? null);
-        $suggestion = $this->agentService->suggestItemDetails($name, $icon);
+        $icon = FoodIconMatcher::guess($name) ?? '';
+        $suggestion = $this->agentService->suggestItemDetails($name, $icon ?: null);
 
         return [
             'name' => $name,
@@ -80,40 +81,5 @@ class BarcodeService
             'location' => $suggestion['location'],
             'image_url' => $product['image_url'] ?? null,
         ];
-    }
-
-    /**
-     * Map category to icon key (must match frontend)
-     */
-    private function getIconFromCategory($category)
-    {
-        if (! $category) {
-            return 'item';
-        }
-
-        $category = strtolower($category);
-
-        $icons = [
-            'dairy' => 'milk',
-            'milk' => 'milk',
-            'cheese' => 'cheese',
-            'yogurt' => 'yogurt',
-            'meat' => 'meat',
-            'chicken' => 'chicken',
-            'vegetable' => 'vegetable',
-            'fruit' => 'fruit',
-            'bread' => 'bread',
-            'beverage' => 'drink',
-            'juice' => 'drink',
-            'condiment' => 'condiment',
-        ];
-
-        foreach ($icons as $keyword => $icon) {
-            if (strpos($category, $keyword) !== false) {
-                return $icon;
-            }
-        }
-
-        return 'item';
     }
 }

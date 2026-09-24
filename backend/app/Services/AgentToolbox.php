@@ -10,6 +10,7 @@ use App\Models\Section;
 use App\Models\ShoppingItem;
 use App\Models\User;
 use App\Models\UserBadge;
+use App\Support\FoodIconMatcher;
 use App\Support\ItemFreshness;
 use App\Support\ItemPayload;
 use Illuminate\Database\Eloquent\Builder;
@@ -73,33 +74,6 @@ class AgentToolbox
 
     /** Offered ONLY on the 'machine' surface, never in chat - see the class docblock. */
     private const MACHINE_ONLY_TOOLS = ['notify_user'];
-
-    /**
-     * Name-keyword => curated icon key, ported from the 10 curated entries of
-     * packages/core/src/food-icons.ts. The full pack's keyword map lives only in the generated
-     * TS file, so add_item / save_recipe get a rough curated guess (or 'leftovers') and the
-     * user can retap the icon in the app. Longest keyword match wins.
-     */
-    private const CURATED_ICON_KEYWORDS = [
-        'milk' => ['milk'],
-        'yogurt' => ['yogurt', 'yoghurt'],
-        'cheese' => ['cheese', 'cheddar', 'mozzarella', 'parmesan', 'brie', 'feta'],
-        'eggs' => ['egg'],
-        'spinach' => ['spinach', 'kale', 'lettuce', 'greens', 'salad'],
-        'carrot' => ['carrot'],
-        'apple' => ['apple'],
-        'berries' => ['berry', 'berries', 'strawberr', 'blueberr', 'raspberr'],
-        'meat' => ['meat', 'pork', 'beef', 'steak', 'mince', 'chicken', 'sausage', 'bacon', 'ham'],
-        'leftovers' => ['leftover', 'soup', 'stew', 'casserole'],
-    ];
-
-    private const ICON_NUTRITION = [
-        'eggs' => 'protein', 'meat' => 'protein',
-        'milk' => 'dairy', 'yogurt' => 'dairy', 'cheese' => 'dairy',
-        'spinach' => 'vegetables', 'carrot' => 'vegetables',
-        'apple' => 'fruit', 'berries' => 'fruit',
-        'leftovers' => 'other_extras',
-    ];
 
     private const RECIPE_CATEGORIES = ['breakfast', 'lunch', 'dinner', 'dessert', 'snack', 'quick'];
 
@@ -1199,12 +1173,12 @@ class AgentToolbox
         }
 
         $section = $this->sectionFor($fridge, $spec['section'] ?? null, $location);
-        $icon = $this->guessIcon($name) ?? 'leftovers';
+        $icon = FoodIconMatcher::guess($name) ?? '';
 
         $item = $section->items()->create([
             'name' => Str::limit($name, 255, ''),
             'icon' => $icon,
-            'nutrition_category' => self::ICON_NUTRITION[$icon] ?? null,
+            'nutrition_category' => FoodIconMatcher::nutritionCategoryFor($icon ?: null),
             'location' => $location,
             'quantity' => isset($spec['quantity']) ? max(1, (int) $spec['quantity']) : 1,
             'expiry_date' => $expiry,
@@ -1389,7 +1363,7 @@ class AgentToolbox
             'name' => Str::limit($name, 255, ''),
             'minutes' => min(1440, $minutes),
             'category' => $category,
-            'ingredients' => array_map(fn ($i) => ['name' => $i, 'icon' => $this->guessIcon($i) ?? 'leftovers'], $ingredients),
+            'ingredients' => array_map(fn ($i) => ['name' => $i, 'icon' => FoodIconMatcher::guess($i) ?? ''], $ingredients),
             'steps' => $steps,
             'made_count' => 0,
         ]);
@@ -1475,28 +1449,6 @@ class AgentToolbox
             ?? $fridge->sections()->create(['name' => ucfirst($location)]);
     }
 
-    /** Rough curated-icon guess for a food name; null when nothing matches. */
-    private function guessIcon(string $name): ?string
-    {
-        $q = Str::lower(trim($name));
-        if ($q === '') {
-            return null;
-        }
-
-        $best = null;
-        $bestLen = 0;
-        foreach (self::CURATED_ICON_KEYWORDS as $key => $keywords) {
-            foreach ($keywords as $kw) {
-                if (strlen($kw) > $bestLen && str_contains($q, $kw)) {
-                    $best = $key;
-                    $bestLen = strlen($kw);
-                }
-            }
-        }
-
-        return $best;
-    }
-
     private function targetFridge(User $user, ?int $fridgeId): Fridge
     {
         if ($fridgeId && $this->fridgeIds($user)->contains($fridgeId)) {
@@ -1531,7 +1483,7 @@ class AgentToolbox
         $user->usageHistory()->create([
             'key' => $key,
             'name' => $name,
-            'icon' => $icon ?: 'leftovers',
+            'icon' => $icon ?: '',
             'count' => 1,
             'fresh_use_count' => $freshInc,
             'freshness_sum' => 0,

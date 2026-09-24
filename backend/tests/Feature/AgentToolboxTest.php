@@ -296,6 +296,19 @@ class AgentToolboxTest extends TestCase
         $this->assertDatabaseHas('sections', ['fridge_id' => $this->fridge->id, 'name' => 'Dairy']);
     }
 
+    public function test_add_item_matches_the_generated_non_curated_icon_pack(): void
+    {
+        // "Salmon fillet" isn't in any of the 10 curated keyword lists - proves the guess now
+        // reaches the full 164-icon pack instead of falling back to a generic curated guess.
+        $out = $this->toolbox->run('add_item', ['name' => 'Salmon fillet'], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $item = Item::where('name', 'Salmon fillet')->first();
+        $this->assertNotSame('', $item->icon);
+        $this->assertNotSame('leftovers', $item->icon);
+        $this->assertMatchesRegularExpression('/^icon\d+$/', $item->icon);
+    }
+
     public function test_bulk_add_items_adds_many_in_one_call(): void
     {
         $out = $this->toolbox->run('bulk_add_items', [
@@ -404,7 +417,9 @@ class AgentToolboxTest extends TestCase
         $this->assertTrue($out['mutated']);
         $item = Item::where('name', 'Mystery jar')->first();
         $this->assertSame($this->section->id, $item->section_id);
-        $this->assertSame('leftovers', $item->icon);
+        // No keyword anywhere matches "Mystery jar" - left blank (not a fake real key like
+        // 'leftovers') so the frontend's own name-based re-guess gets a chance to run.
+        $this->assertSame('', $item->icon);
     }
 
     public function test_move_item_changes_its_section(): void

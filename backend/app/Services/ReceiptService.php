@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\FoodIconMatcher;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -69,7 +70,6 @@ Return ONLY a JSON array (no prose, no markdown fences) where each element has e
 - "raw_text": the line as printed on the receipt (string)
 - "parsed_name": a clean, singular, human-readable product name, e.g. "Milk" not "MILK 2% 2L 4.99"
 - "parsed_quantity": quantity purchased as a whole number (integer, default 1 if unclear)
-- "icon": one lowercase category word for icon lookup, one of: milk, cheese, egg, bread, meat, fish, vegetable, fruit, drink, snack, item
 - "matched_product_id": always null
 - "confirmed": always false
 
@@ -91,14 +91,18 @@ PROMPT;
             return null;
         }
 
-        return array_values(array_map(fn ($item) => [
-            'raw_text' => $item['raw_text'] ?? '',
-            'parsed_name' => $item['parsed_name'] ?? 'Item',
-            'parsed_quantity' => max(1, (int) ($item['parsed_quantity'] ?? 1)),
-            'matched_product_id' => null,
-            'icon' => $item['icon'] ?? 'item',
-            'confirmed' => false,
-        ], $items));
+        return array_values(array_map(function ($item) {
+            $name = $item['parsed_name'] ?? 'Item';
+
+            return [
+                'raw_text' => $item['raw_text'] ?? '',
+                'parsed_name' => $name,
+                'parsed_quantity' => max(1, (int) ($item['parsed_quantity'] ?? 1)),
+                'matched_product_id' => null,
+                'icon' => FoodIconMatcher::guess($name) ?? '',
+                'confirmed' => false,
+            ];
+        }, $items));
     }
 
     /**
@@ -107,31 +111,17 @@ PROMPT;
      */
     private function mockOCR()
     {
-        return [
-            [
-                'raw_text' => 'Milk 2L x 1',
-                'parsed_name' => 'Milk',
-                'parsed_quantity' => 1,
-                'matched_product_id' => null,
-                'icon' => 'milk',
-                'confirmed' => false,
-            ],
-            [
-                'raw_text' => 'Cheese 200g x 2',
-                'parsed_name' => 'Cheese',
-                'parsed_quantity' => 2,
-                'matched_product_id' => null,
-                'icon' => 'cheese',
-                'confirmed' => false,
-            ],
-            [
-                'raw_text' => 'Bread x 1',
-                'parsed_name' => 'Bread',
-                'parsed_quantity' => 1,
-                'matched_product_id' => null,
-                'icon' => 'bread',
-                'confirmed' => false,
-            ],
+        $rows = [
+            ['raw_text' => 'Milk 2L x 1', 'parsed_name' => 'Milk', 'parsed_quantity' => 1],
+            ['raw_text' => 'Cheese 200g x 2', 'parsed_name' => 'Cheese', 'parsed_quantity' => 2],
+            ['raw_text' => 'Bread x 1', 'parsed_name' => 'Bread', 'parsed_quantity' => 1],
         ];
+
+        return array_map(fn ($r) => [
+            ...$r,
+            'matched_product_id' => null,
+            'icon' => FoodIconMatcher::guess($r['parsed_name']) ?? '',
+            'confirmed' => false,
+        ], $rows);
     }
 }

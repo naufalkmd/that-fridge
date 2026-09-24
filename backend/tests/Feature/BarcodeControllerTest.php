@@ -75,6 +75,31 @@ class BarcodeControllerTest extends TestCase
         ]);
     }
 
+    public function test_scan_guesses_the_icon_from_the_product_name(): void
+    {
+        $user = User::factory()->create();
+        $section = $this->sectionFor($user);
+        config(['services.openrouter.key' => null]); // exercise the offline suggestItemDetails fallback too
+        Http::fake([
+            'world.openfoodfacts.org/*' => Http::response([
+                'product' => [
+                    'product_name' => 'Cheddar Cheese Block',
+                    // Deliberately a category string that wouldn't have matched the old
+                    // bogus category map at all, to prove the icon comes from the name now.
+                    'categories' => 'en:Some unrelated category',
+                    'code' => '789',
+                ],
+            ], 200),
+        ]);
+
+        $response = $this->actingAs($user)->postJson("/api/sections/{$section->id}/items/barcode", [
+            'barcode' => '789',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['suggestion' => ['icon' => 'cheese']]);
+    }
+
     public function test_scan_returns_404_for_an_unknown_barcode(): void
     {
         $user = User::factory()->create();

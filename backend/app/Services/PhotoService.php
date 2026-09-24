@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\FoodIconMatcher;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -67,7 +68,6 @@ You are looking at a photo of the inside of a refrigerator, freezer, or pantry. 
 Return ONLY a JSON array (no prose, no markdown fences) where each element has exactly these fields:
 - "detected_name": what you actually see, in plain words, e.g. "milk bottle", "carton of eggs"
 - "parsed_name": a clean, singular, human-readable product name, e.g. "Milk"
-- "icon": one lowercase category word for icon lookup, one of: milk, cheese, egg, bread, meat, fish, vegetable, fruit, drink, snack, item
 - "matched_product_id": always null
 - "confidence": your confidence this item was correctly identified, from 0 to 1
 - "confirmed": always false
@@ -95,15 +95,19 @@ PROMPT;
             return null;
         }
 
-        return array_values(array_map(fn ($item) => [
-            'detected_name' => $item['detected_name'] ?? ($item['parsed_name'] ?? 'item'),
-            'parsed_name' => $item['parsed_name'] ?? 'Item',
-            'icon' => $item['icon'] ?? 'item',
-            'matched_product_id' => null,
-            'confidence' => is_numeric($item['confidence'] ?? null) ? (float) $item['confidence'] : 0.5,
-            'confirmed' => false,
-            'condition' => in_array($item['condition'] ?? null, ['vibrant', 'wilting', 'past_best'], true) ? $item['condition'] : null,
-        ], $items));
+        return array_values(array_map(function ($item) {
+            $name = $item['parsed_name'] ?? 'Item';
+
+            return [
+                'detected_name' => $item['detected_name'] ?? $name,
+                'parsed_name' => $name,
+                'icon' => FoodIconMatcher::guess($name) ?? '',
+                'matched_product_id' => null,
+                'confidence' => is_numeric($item['confidence'] ?? null) ? (float) $item['confidence'] : 0.5,
+                'confirmed' => false,
+                'condition' => in_array($item['condition'] ?? null, ['vibrant', 'wilting', 'past_best'], true) ? $item['condition'] : null,
+            ];
+        }, $items));
     }
 
     /**
@@ -112,52 +116,19 @@ PROMPT;
      */
     private function mockDetection()
     {
-        return [
-            [
-                'detected_name' => 'milk bottle',
-                'parsed_name' => 'Milk',
-                'icon' => 'milk',
-                'matched_product_id' => null,
-                'confidence' => 0.95,
-                'confirmed' => false,
-                'condition' => null,
-            ],
-            [
-                'detected_name' => 'yogurt container',
-                'parsed_name' => 'Yogurt',
-                'icon' => 'yogurt',
-                'matched_product_id' => null,
-                'confidence' => 0.88,
-                'confirmed' => false,
-                'condition' => null,
-            ],
-            [
-                'detected_name' => 'cheese package',
-                'parsed_name' => 'Cheese',
-                'icon' => 'cheese',
-                'matched_product_id' => null,
-                'confidence' => 0.82,
-                'confirmed' => false,
-                'condition' => null,
-            ],
-            [
-                'detected_name' => 'bread loaf',
-                'parsed_name' => 'Bread',
-                'icon' => 'bread',
-                'matched_product_id' => null,
-                'confidence' => 0.90,
-                'confirmed' => false,
-                'condition' => null,
-            ],
-            [
-                'detected_name' => 'bag of spinach, leaves visibly wilting',
-                'parsed_name' => 'Spinach',
-                'icon' => 'vegetable',
-                'matched_product_id' => null,
-                'confidence' => 0.85,
-                'confirmed' => false,
-                'condition' => 'wilting',
-            ],
+        $rows = [
+            ['detected_name' => 'milk bottle', 'parsed_name' => 'Milk', 'confidence' => 0.95, 'condition' => null],
+            ['detected_name' => 'yogurt container', 'parsed_name' => 'Yogurt', 'confidence' => 0.88, 'condition' => null],
+            ['detected_name' => 'cheese package', 'parsed_name' => 'Cheese', 'confidence' => 0.82, 'condition' => null],
+            ['detected_name' => 'bread loaf', 'parsed_name' => 'Bread', 'confidence' => 0.90, 'condition' => null],
+            ['detected_name' => 'bag of spinach, leaves visibly wilting', 'parsed_name' => 'Spinach', 'confidence' => 0.85, 'condition' => 'wilting'],
         ];
+
+        return array_map(fn ($r) => [
+            ...$r,
+            'icon' => FoodIconMatcher::guess($r['parsed_name']) ?? '',
+            'matched_product_id' => null,
+            'confirmed' => false,
+        ], $rows);
     }
 }

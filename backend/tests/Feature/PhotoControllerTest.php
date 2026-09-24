@@ -47,6 +47,28 @@ class PhotoControllerTest extends TestCase
         $this->assertSame(7, $user->fresh()->ai_credits);
     }
 
+    public function test_detected_items_get_a_real_icon_key_guessed_from_the_parsed_name(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 10]);
+        $section = $this->sectionFor($user);
+        config(['services.openrouter.key' => null]); // forces the mock detection path
+
+        $response = $this->actingAs($user)->post("/api/sections/{$section->id}/items/photo/scan", [
+            'image' => UploadedFile::fake()->image('fridge.jpg'),
+        ]);
+
+        $response->assertStatus(200);
+        $icons = collect($response->json('detected_items'))->pluck('icon');
+        $this->assertTrue($icons->contains('milk'));
+        $this->assertTrue($icons->contains('yogurt'));
+        $this->assertTrue($icons->contains('cheese'));
+        // Spinach is one of the 10 curated keys - proves the old bogus 'vegetable' key (not a
+        // real pack entry at all) is gone.
+        $this->assertTrue($icons->contains('spinach'));
+        $this->assertFalse($icons->contains('vegetable'));
+        $this->assertFalse($icons->contains(''));
+    }
+
     public function test_the_scan_image_is_written_to_the_configured_private_media_disk(): void
     {
         Storage::fake('s3');
