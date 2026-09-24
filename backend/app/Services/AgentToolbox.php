@@ -34,8 +34,11 @@ use Illuminate\Support\Str;
  * delete_recipe, remove_from_shopping, forget_fact) - confirm-then-wait is enforced only by
  * instruction to the model in getSystemPrompt, which means nothing when replayed with nobody
  * watching; (b) every tool that targets one saved item_id (update_item, move_item,
- * mark_item_used, check_off_shopping, update_note, mark_recipe_made) - a resolved id goes
- * stale the moment that stock item is used up and replaced; (c) fetch_url/
+ * mark_item_used, check_off_shopping, update_note) - a resolved id goes stale the moment
+ * that stock item is used up and replaced (mark_recipe_made is exempt from this bucket
+ * despite once being grouped here - it only ever resolves recipe_id, never an item_id, and
+ * hasn't touched inventory at all since the recipe consumption-plan feature was removed);
+ * (c) fetch_url/
  * import_recipe_from_link - an outbound request on a schedule is a fresh SSRF surface and a
  * result that differs run to run, the opposite of what a Machine promises; (d) everything
  * else with no automation value at replay time - pure-chat bookkeeping (remember_fact,
@@ -65,7 +68,7 @@ class AgentToolbox
     private const MACHINE_TOOLS = [
         'list_items', 'list_shopping', 'get_kitchen_score',
         'sum_item_field', 'notify_user',
-        'add_to_shopping', 'add_note', 'add_item', 'bulk_add_items',
+        'add_to_shopping', 'add_note', 'add_item', 'bulk_add_items', 'mark_recipe_made',
     ];
 
     /** Offered ONLY on the 'machine' surface, never in chat - see the class docblock. */

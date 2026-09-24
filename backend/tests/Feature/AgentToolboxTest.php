@@ -476,6 +476,19 @@ class AgentToolboxTest extends TestCase
         $this->assertStringContainsString('Logged that you made "Soup" (1x now).', $out['content']);
     }
 
+    public function test_mark_recipe_made_works_on_the_machine_surface(): void
+    {
+        $recipe = Recipe::create([
+            'user_id' => $this->user->id, 'name' => 'Soup', 'minutes' => 30,
+            'ingredients' => [['name' => 'stock', 'icon' => 'leftovers']], 'steps' => ['Simmer'], 'made_count' => 0,
+        ]);
+
+        $out = $this->toolbox->run('mark_recipe_made', ['recipe_id' => $recipe->id], $this->user, $this->fridge->id, 'machine');
+
+        $this->assertTrue($out['ok']);
+        $this->assertSame(1, $recipe->fresh()->made_count);
+    }
+
     // ---- weight / calories / custom_fields ------------------------------------------------
 
     public function test_list_items_shows_weight_and_calories_per_unit(): void
@@ -874,11 +887,11 @@ class AgentToolboxTest extends TestCase
     {
         $machineNames = collect($this->toolbox->schemas('machine'))->map(fn ($t) => $t['function']['name']);
 
-        foreach (['remove_item', 'remove_note', 'clear_expired_items', 'delete_recipe', 'remove_from_shopping', 'forget_fact', 'update_item', 'move_item', 'mark_item_used', 'mark_recipe_made', 'fetch_url', 'import_recipe_from_link'] as $excluded) {
+        foreach (['remove_item', 'remove_note', 'clear_expired_items', 'delete_recipe', 'remove_from_shopping', 'forget_fact', 'update_item', 'move_item', 'mark_item_used', 'fetch_url', 'import_recipe_from_link'] as $excluded) {
             $this->assertNotContains($excluded, $machineNames, "{$excluded} should not be Machine-eligible");
         }
 
-        foreach (['list_items', 'sum_item_field', 'notify_user', 'add_to_shopping', 'add_note', 'add_item', 'bulk_add_items', 'get_kitchen_score', 'list_shopping'] as $included) {
+        foreach (['list_items', 'sum_item_field', 'notify_user', 'add_to_shopping', 'add_note', 'add_item', 'bulk_add_items', 'get_kitchen_score', 'list_shopping', 'mark_recipe_made'] as $included) {
             $this->assertContains($included, $machineNames, "{$included} should be Machine-eligible");
         }
     }

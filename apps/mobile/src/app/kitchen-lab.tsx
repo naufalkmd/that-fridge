@@ -74,6 +74,7 @@ const TOOL_LABELS: Record<string, string> = {
   add_note: "Leave a note",
   add_item: "Add an item",
   bulk_add_items: "Add several items",
+  mark_recipe_made: "Mark a recipe made",
 };
 
 function describeStep(step: MachineStep): string {
