@@ -5,12 +5,14 @@ namespace Tests\Feature;
 use App\Models\Fridge;
 use App\Models\FridgeNote;
 use App\Models\Item;
+use App\Models\Machine;
 use App\Models\Recipe;
 use App\Models\Section;
 use App\Models\User;
 use App\Models\UserBadge;
 use App\Services\AgentToolbox;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -569,6 +571,56 @@ class AgentToolboxTest extends TestCase
         $this->assertSame(1, $recipe->fresh()->made_count);
     }
 
+    // ---- create_machine ---------------------------------------------------------------
+
+    public function test_create_machine_drafts_and_saves_a_disabled_machine(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => json_encode([
+                'name' => 'Daily calorie check',
+                'trigger' => ['type' => 'schedule', 'config' => ['frequency' => 'daily', 'time' => '08:00']],
+                'steps' => [
+                    ['tool' => 'sum_item_field', 'args' => ['field' => 'calories']],
+                    ['tool' => 'notify_user', 'args' => ['message' => 'Total: {step1}']],
+                ],
+            ])]]],
+        ], 200)]);
+
+        $out = $this->toolbox->run('create_machine', ['prompt' => 'every day at 8am tell me total calories'], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['ok']);
+        $this->assertTrue($out['mutated']);
+        $this->assertStringContainsString('Daily calorie check', $out['content']);
+        $this->assertStringContainsString('OFF by default', $out['content']);
+        $this->assertDatabaseHas('machines', [
+            'user_id' => $this->user->id,
+            'fridge_id' => $this->fridge->id,
+            'name' => 'Daily calorie check',
+            'trigger_type' => 'schedule',
+            'enabled' => false,
+        ]);
+    }
+
+    public function test_create_machine_requires_a_prompt(): void
+    {
+        $out = $this->toolbox->run('create_machine', [], $this->user, $this->fridge->id);
+
+        $this->assertFalse($out['ok']);
+        $this->assertFalse($out['mutated']);
+        $this->assertSame(0, Machine::count());
+    }
+
+    public function test_create_machine_reports_back_when_drafting_fails(): void
+    {
+        config(['services.openrouter.key' => null]);
+
+        $out = $this->toolbox->run('create_machine', ['prompt' => 'do something'], $this->user, $this->fridge->id);
+
+        $this->assertFalse($out['ok']);
+        $this->assertSame(0, Machine::count());
+    }
+
     // ---- weight / calories / custom_fields ------------------------------------------------
 
     public function test_list_items_shows_weight_and_calories_per_unit(): void
@@ -967,7 +1019,7 @@ class AgentToolboxTest extends TestCase
     {
         $machineNames = collect($this->toolbox->schemas('machine'))->map(fn ($t) => $t['function']['name']);
 
-        foreach (['remove_item', 'remove_note', 'clear_expired_items', 'delete_recipe', 'remove_from_shopping', 'forget_fact', 'update_item', 'move_item', 'mark_item_used', 'fetch_url', 'import_recipe_from_link'] as $excluded) {
+        foreach (['remove_item', 'remove_note', 'clear_expired_items', 'delete_recipe', 'remove_from_shopping', 'forget_fact', 'update_item', 'move_item', 'mark_item_used', 'fetch_url', 'import_recipe_from_link', 'create_machine'] as $excluded) {
             $this->assertNotContains($excluded, $machineNames, "{$excluded} should not be Machine-eligible");
         }
 

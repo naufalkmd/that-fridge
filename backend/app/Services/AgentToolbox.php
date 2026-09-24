@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Fridge;
 use App\Models\FridgeNote;
 use App\Models\Item;
+use App\Models\Machine;
 use App\Models\Recipe;
 use App\Models\Section;
 use App\Models\ShoppingItem;
@@ -13,6 +14,7 @@ use App\Models\UserBadge;
 use App\Support\FoodIconMatcher;
 use App\Support\ItemFreshness;
 use App\Support\ItemPayload;
+use App\Support\MachineSchedule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -48,7 +50,10 @@ use Illuminate\Support\Str;
  * get_credits_balance). notify_user is the mirror image - Machine-only, never offered in chat,
  * since the chat reply already IS the user-facing output there, and offering it in chat would
  * let a page read via fetch_url potentially prompt-inject push-notification spam through a
- * tool call.
+ * tool call. create_machine is chat-only for a sharper reason than (d) above: letting a
+ * Machine's own step create ANOTHER Machine is a runaway-automation risk (a chain of Machines
+ * each spawning the next), not just a low-value replay - excluded outright, not just
+ * uninteresting to replay.
  *
  * See AgentService::runWithTools for the loop that drives these.
  */
@@ -279,6 +284,9 @@ class AgentToolbox
                 'search' => ['type' => 'string', 'description' => 'Case-insensitive name substring.'],
                 'fridge_id' => ['type' => 'integer', 'description' => 'From list_fridges. Omit to include every fridge the user belongs to.'],
             ]),
+            $fn('create_machine', "Set up a Kitchen Lab \"Machine\" - a recurring automation with a trigger (a schedule, an item being added, a value crossing a threshold, or a recipe being marked made) and a fixed list of steps that run on their own after that, no chat involved. Use this whenever the user describes something they want to happen automatically or repeatedly (\"every morning tell me...\", \"whenever milk is added...\", \"when stock drops below...\", \"whenever I mark a recipe made...\") rather than something they want done right now. Pass their own description straight through in prompt - the trigger and steps are worked out automatically from it, same as Kitchen Lab's own \"AI draft\". The Machine is created OFF by default (same as building one in Kitchen Lab) - tell the user to review it and turn it on from Kitchen Lab when they're ready; it will not run until they do.", [
+                'prompt' => ['type' => 'string', 'description' => 'The automation described in the user\'s own words, e.g. "every Sunday at 9am, tell me total calories expiring this week".'],
+            ], ['prompt']),
             $fn('notify_user', "Send the user a push/in-app notification right now. This is the ONLY way for a Machine step to surface something to them outside of a live chat reply - never call it in chat itself, since the chat reply you're about to send already IS the output there.", [
                 'message' => ['type' => 'string', 'description' => 'Up to 240 characters. Can reference an earlier step\'s result, e.g. "Expiring soon: {step1}".'],
                 'title' => ['type' => 'string', 'description' => 'Up to 60 characters. Optional - defaults to a generic title.'],
@@ -350,6 +358,7 @@ class AgentToolbox
                 'import_recipe_from_link' => $this->importRecipeFromLink($args),
                 'sum_item_field' => $this->sumItemField($user, $args),
                 'notify_user' => $this->notifyUser($user, $fridgeId, $args),
+                'create_machine' => $this->createMachine($user, $fridgeId, $args),
                 default => "Error: unknown tool \"{$name}\".",
             };
         } catch (\Throwable $e) {
@@ -742,6 +751,58 @@ class AgentToolbox
         $this->mutated = true;
 
         return "Notified: \"{$message}\".";
+    }
+
+    /**
+     * Chat's entry point into Kitchen Lab: drafts and immediately saves a Machine from the
+     * user's own description, same drafting call (AgentService::draftMachine, including its
+     * validate-then-repair round trip) Kitchen Lab's own "AI draft" button uses - so the two
+     * paths can never silently diverge in what counts as a valid draft. Resolved lazily via
+     * the container rather than constructor-injected: AgentService already depends on this
+     * class (for schemas()/MACHINE_TOOLS), so injecting it back here would be circular.
+     * Always creates the Machine disabled, exactly like MachineController::store()'s own
+     * default - chat gets no extra trust to skip the "review before it goes live" step every
+     * other creation path already enforces.
+     */
+    private function createMachine(User $user, ?int $fridgeId, array $args): string
+    {
+        $prompt = trim((string) ($args['prompt'] ?? ''));
+        if ($prompt === '') {
+            return 'Error: describe what you want automated, e.g. "every day at 8am, tell me what\'s expiring this week".';
+        }
+        // Same cap MachineController::draft() validates - keeps the drafting call's own
+        // length/cost bounded regardless of which path a prompt arrives through.
+        $prompt = Str::limit($prompt, 500, '');
+
+        $result = app(AgentService::class)->draftMachine($user, $prompt);
+        if (! $result['ok']) {
+            return "Error: couldn't set that up automatically - {$result['message']}";
+        }
+
+        $draft = $result['draft'];
+        $fridge = $this->targetFridge($user, $fridgeId);
+
+        $machine = Machine::create([
+            'user_id' => $user->id,
+            'fridge_id' => $fridge->id,
+            'name' => $draft['name'],
+            'prompt' => $prompt,
+            'trigger_type' => $draft['trigger_type'],
+            'trigger_config' => $draft['trigger_config'],
+            'steps' => $draft['steps'],
+            'enabled' => false,
+            'version' => 1,
+            'next_run_at' => $draft['trigger_type'] === 'schedule'
+                ? MachineSchedule::nextRunAt($draft['trigger_config'], now())
+                : null,
+        ]);
+        $this->mutated = true;
+
+        $stepCount = count($draft['steps']);
+
+        return "Created Machine \"{$machine->name}\" with a {$draft['trigger_type']} trigger and {$stepCount} step".
+            ($stepCount === 1 ? '' : 's').
+            '. It is OFF by default - tell the user to open Kitchen Lab to review the details and turn it on before it will actually run.';
     }
 
     private function removeNote(User $user, array $args): string
