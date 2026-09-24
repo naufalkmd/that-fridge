@@ -134,6 +134,22 @@ class AgentToolboxTest extends TestCase
         $this->assertSame(2, $item->fresh()->quantity);
     }
 
+    public function test_update_item_expiry_date_re_derives_shelf_life_days(): void
+    {
+        // A stale shelf_life_days from before the edit would make ItemResource's freshness %
+        // (what the Guardian tab sorts by) compare the new date against the wrong total.
+        $item = $this->item(['expiry_date' => now()->addDay(), 'shelf_life_days' => 1]);
+
+        $this->toolbox->run('update_item', [
+            'item_id' => $item->id,
+            'expiry_date' => now()->addDays(30)->toDateString(),
+        ], $this->user, $this->fridge->id);
+
+        $item->refresh();
+        $this->assertSame(now()->addDays(30)->toDateString(), $item->expiry_date->toDateString());
+        $this->assertSame(30, $item->shelf_life_days);
+    }
+
     public function test_shop_urls_are_stored_listed_and_cleaned(): void
     {
         // add_to_shopping keeps a valid link, drops a bad one.
@@ -292,8 +308,23 @@ class AgentToolboxTest extends TestCase
         $this->assertTrue($out['mutated']);
         $this->assertDatabaseHas('items', [
             'name' => 'Cheddar cheese', 'icon' => 'cheese', 'nutrition_category' => 'dairy', 'quantity' => 2,
+            'shelf_life_days' => 14,
         ]);
         $this->assertDatabaseHas('sections', ['fridge_id' => $this->fridge->id, 'name' => 'Dairy']);
+    }
+
+    public function test_add_item_with_an_explicit_expiry_date_derives_shelf_life_days(): void
+    {
+        // shelf_life_days must actually be persisted (not just used to compute expiry_date and
+        // discarded), or ItemResource's freshness % - what the Guardian tab sorts by - can
+        // never be computed for this item, and it silently sorts as if it were the most urgent.
+        $out = $this->toolbox->run('add_item', [
+            'name' => 'Canned beans', 'expiry_date' => now()->addDays(300)->toDateString(),
+        ], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $item = Item::where('name', 'Canned beans')->first();
+        $this->assertSame(300, $item->shelf_life_days);
     }
 
     public function test_add_item_matches_the_generated_non_curated_icon_pack(): void

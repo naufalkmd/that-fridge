@@ -811,10 +811,15 @@ class AgentToolbox
         }
         if (isset($args['expiry_date'])) {
             try {
-                $data['expiry_date'] = Carbon::parse($args['expiry_date'])->toDateString();
+                $expiryDate = Carbon::parse($args['expiry_date'])->startOfDay();
             } catch (\Throwable) {
                 return 'Error: expiry_date must be a valid date like 2026-09-20.';
             }
+            $data['expiry_date'] = $expiryDate->toDateString();
+            // The old shelf_life_days no longer means anything once the date itself changed -
+            // re-derive from today-to-new-date so ItemResource's freshness % (what Guardian
+            // sorts by) stays meaningful instead of comparing `days` against a stale total.
+            $data['shelf_life_days'] = max(1, (int) Carbon::now()->startOfDay()->diffInDays($expiryDate, false));
         }
 
         if (array_key_exists('weight', $args)) {
@@ -1141,14 +1146,24 @@ class AgentToolbox
             ? $spec['location'] : 'fridge';
 
         $expiry = null;
+        $shelfLifeDays = null;
         if (isset($spec['expiry_date'])) {
             try {
-                $expiry = Carbon::parse($spec['expiry_date'])->toDateString();
+                $expiryDate = Carbon::parse($spec['expiry_date'])->startOfDay();
             } catch (\Throwable) {
                 return 'bad expiry_date';
             }
+            $expiry = $expiryDate->toDateString();
+            // ItemResource's freshness % (what the Guardian tab sorts by) needs a total-
+            // shelf-life denominator to compare `days` against, not just an expiry date - to
+            // derive it from today-to-expiry when the caller didn't also give an explicit
+            // shelf_life_days, same convention the manual/scan add paths already rely on.
+            $shelfLifeDays = isset($spec['shelf_life_days']) && (int) $spec['shelf_life_days'] >= 1
+                ? (int) $spec['shelf_life_days']
+                : max(1, (int) Carbon::now()->startOfDay()->diffInDays($expiryDate, false));
         } elseif (isset($spec['shelf_life_days']) && (int) $spec['shelf_life_days'] >= 1) {
-            $expiry = Carbon::now()->addDays((int) $spec['shelf_life_days'])->toDateString();
+            $shelfLifeDays = (int) $spec['shelf_life_days'];
+            $expiry = Carbon::now()->addDays($shelfLifeDays)->toDateString();
         }
 
         $weight = null;
@@ -1182,6 +1197,7 @@ class AgentToolbox
             'location' => $location,
             'quantity' => isset($spec['quantity']) ? max(1, (int) $spec['quantity']) : 1,
             'expiry_date' => $expiry,
+            'shelf_life_days' => $shelfLifeDays,
             'source' => 'manual',
             'weight' => $weight,
             'weight_unit' => $weightUnit,
