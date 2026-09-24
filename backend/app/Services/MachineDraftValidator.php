@@ -22,6 +22,14 @@ class MachineDraftValidator
 
     private const MAX_STEPS = 10;
 
+    /** Tools whose `value` a later step's condition may compare against - anything else has
+     *  no number to compare, so referencing it is an authoring mistake worth catching now. */
+    private const VALUE_PRODUCING_TOOLS = ['sum_item_field', 'mark_items_used_matching'];
+
+    /** Same filter keys AgentToolbox::ITEM_FILTER_KEYS accepts - mark_items_used_matching
+     *  must have at least one, so "mark everything used" can never be a silent default. */
+    private const ITEM_FILTER_KEYS = ['search', 'location', 'expired_only', 'expiring_within_days', 'fridge_id'];
+
     public function __construct(protected AgentToolbox $toolbox) {}
 
     /**
@@ -209,6 +217,13 @@ class MachineDraftValidator
                 $argErrors[] = "step {$n}: fridge_id doesn't belong to you.";
             }
 
+            // Same "mark everything used" guardrail AgentToolbox::hasItemFilter() enforces at
+            // run time, checked here too so a filter-less draft never gets saved at all.
+            if ($argErrors === [] && $tool === 'mark_items_used_matching'
+                && ! collect(self::ITEM_FILTER_KEYS)->contains(fn ($key) => isset($args[$key]) && $args[$key] !== '' && $args[$key] !== false)) {
+                $argErrors[] = "step {$n}: mark_items_used_matching needs at least one filter (search, location, expired_only, expiring_within_days, or fridge_id).";
+            }
+
             $placeholderError = $argErrors === [] ? $this->validatePlaceholders($args, $n) : null;
 
             $condition = null;
@@ -240,10 +255,10 @@ class MachineDraftValidator
     }
 
     /**
-     * A step may run conditionally on an earlier sum_item_field step's computed number - the
-     * only Machine-eligible tool that produces one (AgentToolbox::run()'s `value` is null for
-     * every other tool). Reuses the same lt/lte/gt/gte vocabulary a threshold trigger already
-     * has - deliberately a guard clause, not a general expression language.
+     * A step may run conditionally on an earlier step's computed number - only
+     * VALUE_PRODUCING_TOOLS ever set one (AgentToolbox::run()'s `value` is null for every
+     * other tool). Reuses the same lt/lte/gt/gte vocabulary a threshold trigger already has -
+     * deliberately a guard clause, not a general expression language.
      *
      * @return array{0: ?array, 1: ?string}
      */
@@ -261,8 +276,8 @@ class MachineDraftValidator
         if ($ref < 1 || $ref >= $stepNumber) {
             return [null, "step {$stepNumber}: condition.step must reference an earlier step."];
         }
-        if (($stepTools[$ref] ?? null) !== 'sum_item_field') {
-            return [null, "step {$stepNumber}: condition.step must reference a sum_item_field step - that's the only tool with a number to compare."];
+        if (! in_array($stepTools[$ref] ?? null, self::VALUE_PRODUCING_TOOLS, true)) {
+            return [null, "step {$stepNumber}: condition.step must reference one of ".implode(', ', self::VALUE_PRODUCING_TOOLS).' - those are the only tools with a number to compare.'];
         }
 
         $op = $condition['op'] ?? null;

@@ -70,6 +70,7 @@ class AgentToolbox
         'list_items', 'list_shopping', 'get_kitchen_score',
         'sum_item_field', 'notify_user',
         'add_to_shopping', 'add_note', 'add_item', 'bulk_add_items', 'mark_recipe_made',
+        'mark_items_used_matching',
     ];
 
     /** Offered ONLY on the 'machine' surface, never in chat - see the class docblock. */
@@ -271,6 +272,13 @@ class AgentToolbox
                 'search' => ['type' => 'string', 'description' => 'Case-insensitive name substring.'],
                 'fridge_id' => ['type' => 'integer', 'description' => 'From list_fridges. Omit to include every fridge the user belongs to.'],
             ], ['field']),
+            $fn('mark_items_used_matching', "Mark EVERY item matching a filter as used, logging each to usage history - the filter (same args as sum_item_field/list_items) is re-evaluated fresh every time this runs, so unlike mark_item_used it never references a stale saved item_id and is safe for unattended Kitchen Lab automation. Fully consumes each match (no partial quantities). You MUST pass at least one filter - this refuses to run with none, so 'mark everything used' can never happen by an empty filter falling through.", [
+                'expired_only' => ['type' => 'boolean', 'description' => 'Only items already past their date.'],
+                'expiring_within_days' => ['type' => 'integer', 'description' => 'Only items expiring within this many days (0 = today or overdue).'],
+                'location' => ['type' => 'string', 'enum' => ['fridge', 'freezer', 'pantry']],
+                'search' => ['type' => 'string', 'description' => 'Case-insensitive name substring.'],
+                'fridge_id' => ['type' => 'integer', 'description' => 'From list_fridges. Omit to include every fridge the user belongs to.'],
+            ]),
             $fn('notify_user', "Send the user a push/in-app notification right now. This is the ONLY way for a Machine step to surface something to them outside of a live chat reply - never call it in chat itself, since the chat reply you're about to send already IS the output there.", [
                 'message' => ['type' => 'string', 'description' => 'Up to 240 characters. Can reference an earlier step\'s result, e.g. "Expiring soon: {step1}".'],
                 'title' => ['type' => 'string', 'description' => 'Up to 60 characters. Optional - defaults to a generic title.'],
@@ -321,6 +329,7 @@ class AgentToolbox
                 'update_item' => $this->updateItem($user, $args),
                 'bulk_add_items' => $this->bulkAddItems($user, $fridgeId, $args),
                 'mark_item_used' => $this->markItemUsed($user, $args),
+                'mark_items_used_matching' => $this->markItemsUsedMatching($user, $args),
                 'remove_item' => $this->removeItem($user, $args),
                 'clear_expired_items' => $this->clearExpired($user, $fridgeId, $args),
                 'list_fridges' => $this->listFridges($user),
@@ -950,6 +959,58 @@ class AgentToolbox
         $item->decrement('quantity', $used);
 
         return "Used {$used} of \"{$item->name}\" ({$item->quantity} left) and logged it.";
+    }
+
+    /** The single filter key names sum_item_field/list_items already share - "at least one
+     *  of these" is mark_items_used_matching's safety guardrail against an accidental
+     *  match-everything sweep. */
+    private const ITEM_FILTER_KEYS = ['search', 'location', 'expired_only', 'expiring_within_days', 'fridge_id'];
+
+    private function hasItemFilter(array $args): bool
+    {
+        foreach (self::ITEM_FILTER_KEYS as $key) {
+            if (isset($args[$key]) && $args[$key] !== '' && $args[$key] !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The filter-based, safe-for-unattended-automation sibling of mark_item_used - re-resolves
+     * its filter fresh every run instead of a saved item_id, so it can never go stale the way
+     * mark_item_used would (see the class docblock's MACHINE_TOOLS exclusion reasoning).
+     */
+    private function markItemsUsedMatching(User $user, array $args): string
+    {
+        if (! $this->hasItemFilter($args)) {
+            return 'Error: pass at least one filter (search, location, expired_only, expiring_within_days, or fridge_id) - this cannot run against every item.';
+        }
+
+        $items = $this->filteredItems($user, $args, null);
+        if ($items->isEmpty()) {
+            $this->value = '0';
+
+            return 'No matching items to mark used.';
+        }
+
+        $names = [];
+        foreach ($items as $row) {
+            $item = $row['model'];
+            $days = ItemFreshness::daysUntilExpiry($item);
+            $this->recordUsage($user, $item->name, $item->icon, $days);
+            $names[] = $item->name;
+            $item->delete();
+        }
+        $this->mutated = true;
+        $this->value = (string) count($names);
+
+        $shown = array_slice($names, 0, 10);
+        $rest = count($names) - count($shown);
+
+        return 'Marked '.count($names).' item'.(count($names) === 1 ? '' : 's').' as used: '.
+            implode(', ', $shown).($rest > 0 ? " (+{$rest} more)" : '').'.';
     }
 
     // ---- destructive writes (confirm-first) ------------------------------------

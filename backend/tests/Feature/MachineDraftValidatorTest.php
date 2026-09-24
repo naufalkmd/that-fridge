@@ -244,6 +244,40 @@ class MachineDraftValidatorTest extends TestCase
         $this->assertSame(['step' => 1, 'op' => 'gte', 'value' => 2000.0], $result['draft']['steps'][1]['condition']);
     }
 
+    public function test_accepts_a_condition_referencing_a_mark_items_used_matching_step(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'steps' => [
+                ['tool' => 'mark_items_used_matching', 'args' => ['expired_only' => true]],
+                ['tool' => 'notify_user', 'args' => ['message' => 'Used up {step1}!'], 'condition' => ['step' => 1, 'op' => 'gt', 'value' => 0]],
+            ],
+        ]), $this->user);
+
+        $this->assertTrue($result['valid']);
+    }
+
+    public function test_rejects_a_mark_items_used_matching_step_with_no_filter(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'steps' => [
+                ['tool' => 'mark_items_used_matching', 'args' => []],
+            ],
+        ]), $this->user);
+
+        $this->assertFalse($result['valid']);
+    }
+
+    public function test_accepts_a_mark_items_used_matching_step_with_a_filter(): void
+    {
+        $result = $this->validator->validate($this->validDraft([
+            'steps' => [
+                ['tool' => 'mark_items_used_matching', 'args' => ['expired_only' => true]],
+            ],
+        ]), $this->user);
+
+        $this->assertTrue($result['valid']);
+    }
+
     public function test_rejects_a_condition_referencing_a_later_or_same_step(): void
     {
         $result = $this->validator->validate($this->validDraft([

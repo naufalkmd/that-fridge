@@ -165,6 +165,29 @@ class MachineRunnerTest extends TestCase
         }
     }
 
+    public function test_mark_items_used_matching_count_can_gate_a_later_step(): void
+    {
+        $section = $this->section();
+        Item::create(['section_id' => $section->id, 'name' => 'Yogurt', 'icon' => 'yogurt', 'quantity' => 1, 'expiry_date' => now()->addDay(), 'location' => 'fridge']);
+        Item::create(['section_id' => $section->id, 'name' => 'Cream', 'icon' => 'leftovers', 'quantity' => 1, 'expiry_date' => now()->addDay(), 'location' => 'fridge']);
+
+        $machine = $this->machine([
+            'steps' => [
+                ['tool' => 'mark_items_used_matching', 'args' => ['expiring_within_days' => 2]],
+                ['tool' => 'notify_user', 'args' => ['message' => 'Used up {step1} items'], 'condition' => ['step' => 1, 'op' => 'gt', 'value' => 1]],
+            ],
+        ]);
+
+        $run = $this->runner->run($machine);
+
+        $this->assertSame('success', $run->status);
+        $this->assertSame('2', $run->steps_run[0]['value']);
+        $this->assertFalse($run->steps_run[1]['skipped']);
+        $this->assertDatabaseMissing('items', ['name' => 'Yogurt']);
+        $this->assertDatabaseMissing('items', ['name' => 'Cream']);
+        $this->assertDatabaseHas('notification_events', ['message' => 'Used up 2 items']);
+    }
+
     public function test_updates_the_machines_run_bookkeeping_and_advances_next_run_at(): void
     {
         $machine = $this->machine(['next_run_at' => now()->subMinute()]);

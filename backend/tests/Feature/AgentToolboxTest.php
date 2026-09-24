@@ -195,6 +195,40 @@ class AgentToolboxTest extends TestCase
         $this->assertDatabaseHas('usage_history', ['user_id' => $this->user->id, 'count' => 1]);
     }
 
+    public function test_mark_items_used_matching_marks_every_match_and_logs_each(): void
+    {
+        $expiringSoon1 = $this->item(['name' => 'Yogurt', 'expiry_date' => now()->addDay()]);
+        $expiringSoon2 = $this->item(['name' => 'Cream', 'expiry_date' => now()->addDay()]);
+        $notExpiring = $this->item(['name' => 'Rice', 'expiry_date' => now()->addDays(300)]);
+
+        $out = $this->toolbox->run('mark_items_used_matching', ['expiring_within_days' => 2], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['mutated']);
+        $this->assertSame('2', $out['value']);
+        $this->assertDatabaseMissing('items', ['id' => $expiringSoon1->id]);
+        $this->assertDatabaseMissing('items', ['id' => $expiringSoon2->id]);
+        $this->assertDatabaseHas('items', ['id' => $notExpiring->id]);
+        $this->assertDatabaseHas('usage_history', ['user_id' => $this->user->id, 'key' => 'yogurt']);
+        $this->assertDatabaseHas('usage_history', ['user_id' => $this->user->id, 'key' => 'cream']);
+    }
+
+    public function test_mark_items_used_matching_rejects_a_call_with_no_filter(): void
+    {
+        $this->item(['name' => 'Yogurt']);
+
+        $out = $this->toolbox->run('mark_items_used_matching', [], $this->user, $this->fridge->id);
+
+        $this->assertFalse($out['ok']);
+        $this->assertDatabaseHas('items', ['name' => 'Yogurt']);
+    }
+
+    public function test_mark_items_used_matching_is_machine_eligible(): void
+    {
+        $names = collect($this->toolbox->schemas('machine'))->map(fn ($t) => $t['function']['name']);
+
+        $this->assertContains('mark_items_used_matching', $names);
+    }
+
     public function test_remove_item_previews_without_confirm_then_deletes_with_confirm(): void
     {
         $item = $this->item(['name' => 'Ketchup']);

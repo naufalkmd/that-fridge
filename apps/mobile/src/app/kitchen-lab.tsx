@@ -75,7 +75,18 @@ const TOOL_LABELS: Record<string, string> = {
   add_item: "Add an item",
   bulk_add_items: "Add several items",
   mark_recipe_made: "Mark a recipe made",
+  mark_items_used_matching: "Mark matching items as used",
 };
+
+/** Plain-English summary of a step's filter args - shared by sum_item_field and
+ *  mark_items_used_matching, the two tools that take this filter shape. */
+function describeFilter(args: MachineStep["args"]): string {
+  if (typeof args.search === "string") return `matching "${args.search}"`;
+  if (args.expired_only) return "already expired";
+  if (typeof args.expiring_within_days === "number") return `expiring within ${args.expiring_within_days}d`;
+  if (typeof args.location === "string") return `in the ${args.location}`;
+  return "across items";
+}
 
 function describeStep(step: MachineStep): string {
   const base = (() => {
@@ -83,7 +94,10 @@ function describeStep(step: MachineStep): string {
       const label = step.args.field === "custom" && typeof step.args.custom_field_label === "string"
         ? step.args.custom_field_label
         : step.args.field;
-      return `Add up ${label} across items`;
+      return `Add up ${label} ${describeFilter(step.args)}`;
+    }
+    if (step.tool === "mark_items_used_matching") {
+      return `Mark items ${describeFilter(step.args)} as used`;
     }
     if (step.tool === "notify_user" && typeof step.args.message === "string") {
       return `Notify: "${step.args.message}"`;
