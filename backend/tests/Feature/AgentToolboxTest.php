@@ -231,6 +231,219 @@ class AgentToolboxTest extends TestCase
         $this->assertContains('mark_items_used_matching', $names);
     }
 
+    // ---- preview() - Kitchen Lab's dry-run mode --------------------------------------------
+
+    public function test_preview_mark_items_used_matching_reports_matches_without_deleting_them(): void
+    {
+        $item = $this->item(['name' => 'Yogurt', 'expiry_date' => now()->addDay()]);
+
+        $out = $this->toolbox->preview('mark_items_used_matching', ['expiring_within_days' => 2], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['ok']);
+        $this->assertSame('1', $out['value']);
+        $this->assertStringContainsString('Would mark 1 item', $out['content']);
+        $this->assertStringContainsString('Yogurt', $out['content']);
+        $this->assertDatabaseHas('items', ['id' => $item->id]);
+        $this->assertDatabaseMissing('usage_history', ['user_id' => $this->user->id]);
+    }
+
+    public function test_preview_mark_items_used_matching_still_rejects_a_call_with_no_filter(): void
+    {
+        $out = $this->toolbox->preview('mark_items_used_matching', [], $this->user, $this->fridge->id);
+
+        $this->assertFalse($out['ok']);
+    }
+
+    public function test_preview_notify_user_never_creates_a_real_notification(): void
+    {
+        $out = $this->toolbox->preview('notify_user', ['message' => 'Milk is low'], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['ok']);
+        $this->assertStringContainsString('Would notify', $out['content']);
+        $this->assertStringContainsString('Milk is low', $out['content']);
+        $this->assertDatabaseMissing('notification_events', ['message' => 'Milk is low']);
+    }
+
+    public function test_preview_add_item_never_creates_the_item(): void
+    {
+        $out = $this->toolbox->preview('add_item', ['name' => 'Bread', 'shelf_life_days' => 5], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['ok']);
+        $this->assertStringContainsString('Would add "Bread"', $out['content']);
+        $this->assertDatabaseMissing('items', ['name' => 'Bread']);
+    }
+
+    public function test_preview_bulk_add_items_never_creates_any_item(): void
+    {
+        $out = $this->toolbox->preview(
+            'bulk_add_items',
+            ['items' => [['name' => 'Eggs'], ['name' => 'Cheese']]],
+            $this->user,
+            $this->fridge->id,
+        );
+
+        $this->assertTrue($out['ok']);
+        $this->assertStringContainsString('Eggs', $out['content']);
+        $this->assertStringContainsString('Cheese', $out['content']);
+        $this->assertDatabaseMissing('items', ['name' => 'Eggs']);
+        $this->assertDatabaseMissing('items', ['name' => 'Cheese']);
+    }
+
+    public function test_preview_add_to_shopping_never_creates_a_shopping_item(): void
+    {
+        $out = $this->toolbox->preview('add_to_shopping', ['name' => 'Butter'], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['ok']);
+        $this->assertStringContainsString('Would add "Butter"', $out['content']);
+        $this->assertDatabaseMissing('shopping_items', ['name' => 'Butter']);
+    }
+
+    public function test_preview_add_note_never_creates_a_note(): void
+    {
+        $out = $this->toolbox->preview('add_note', ['text' => 'Restock soon'], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['ok']);
+        $this->assertStringContainsString('Would leave a note', $out['content']);
+        $this->assertDatabaseMissing('fridge_notes', ['text' => 'Restock soon']);
+    }
+
+    public function test_preview_mark_recipe_made_never_increments_the_count(): void
+    {
+        $recipe = Recipe::create(['user_id' => $this->user->id, 'name' => 'Pancakes', 'minutes' => 15, 'ingredients' => [], 'steps' => [], 'made_count' => 2]);
+
+        $out = $this->toolbox->preview('mark_recipe_made', ['recipe_id' => $recipe->id], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['ok']);
+        $this->assertStringContainsString('Pancakes', $out['content']);
+        $this->assertSame(2, $recipe->fresh()->made_count);
+    }
+
+    public function test_preview_of_a_read_only_tool_runs_it_for_real(): void
+    {
+        $this->item(['name' => 'Cheese']);
+
+        $out = $this->toolbox->preview('list_items', [], $this->user, $this->fridge->id);
+
+        $this->assertTrue($out['ok']);
+        $this->assertStringContainsString('Cheese', $out['content']);
+    }
+
+    public function test_preview_is_not_available_on_the_chat_surface_tools(): void
+    {
+        // preview() is only ever meant to be called for a Machine step - toolAllowedOn()'s
+        // 'machine' gate still applies, e.g. a hypothetical chat-only tool would be rejected.
+        $out = $this->toolbox->preview('mark_item_used', ['item_id' => 1], $this->user, $this->fridge->id);
+
+        $this->assertFalse($out['ok']);
+        $this->assertStringContainsString("isn't available on the machine surface", $out['content']);
+    }
+
+    // ---- undo capture + undoStep() - Kitchen Lab action undo -------------------------------
+
+    public function test_run_captures_undo_data_for_add_item(): void
+    {
+        $out = $this->toolbox->run('add_item', ['name' => 'Bread', 'shelf_life_days' => 5], $this->user, $this->fridge->id, 'machine');
+
+        $this->assertSame('add_item', $out['undo']['tool']);
+        $itemId = $out['undo']['item_ids'][0];
+
+        $summary = $this->toolbox->undoStep($out['undo'], $this->user);
+
+        $this->assertStringContainsString('Removed 1 item', $summary);
+        $this->assertDatabaseMissing('items', ['id' => $itemId]);
+    }
+
+    public function test_run_captures_undo_data_for_bulk_add_items(): void
+    {
+        $out = $this->toolbox->run(
+            'bulk_add_items',
+            ['items' => [['name' => 'Eggs'], ['name' => 'Cheese']]],
+            $this->user,
+            $this->fridge->id,
+            'machine',
+        );
+
+        $this->assertSame('bulk_add_items', $out['undo']['tool']);
+        $this->assertCount(2, $out['undo']['item_ids']);
+
+        $summary = $this->toolbox->undoStep($out['undo'], $this->user);
+
+        $this->assertStringContainsString('Removed 2 items', $summary);
+        $this->assertDatabaseMissing('items', ['name' => 'Eggs']);
+        $this->assertDatabaseMissing('items', ['name' => 'Cheese']);
+    }
+
+    public function test_undo_add_to_shopping_removes_the_entry(): void
+    {
+        $out = $this->toolbox->run('add_to_shopping', ['name' => 'Butter'], $this->user, $this->fridge->id, 'machine');
+        $this->assertDatabaseHas('shopping_items', ['name' => 'Butter']);
+
+        $summary = $this->toolbox->undoStep($out['undo'], $this->user);
+
+        $this->assertStringContainsString('Removed', $summary);
+        $this->assertDatabaseMissing('shopping_items', ['name' => 'Butter']);
+    }
+
+    public function test_undo_add_note_removes_the_note(): void
+    {
+        $out = $this->toolbox->run('add_note', ['text' => 'Restock soon'], $this->user, $this->fridge->id, 'machine');
+        $this->assertDatabaseHas('fridge_notes', ['text' => 'Restock soon']);
+
+        $summary = $this->toolbox->undoStep($out['undo'], $this->user);
+
+        $this->assertStringContainsString('Removed', $summary);
+        $this->assertDatabaseMissing('fridge_notes', ['text' => 'Restock soon']);
+    }
+
+    public function test_undo_mark_items_used_matching_restores_items_and_reverts_usage_history(): void
+    {
+        $this->item(['name' => 'Yogurt', 'expiry_date' => now()->addDay(), 'quantity' => 3, 'location' => 'fridge']);
+
+        $out = $this->toolbox->run('mark_items_used_matching', ['expiring_within_days' => 2], $this->user, $this->fridge->id, 'machine');
+        $this->assertDatabaseMissing('items', ['name' => 'Yogurt']);
+        $this->assertDatabaseHas('usage_history', ['user_id' => $this->user->id, 'key' => 'yogurt', 'count' => 1]);
+
+        $summary = $this->toolbox->undoStep($out['undo'], $this->user);
+
+        $this->assertStringContainsString('Restored 1 item', $summary);
+        $this->assertDatabaseHas('items', ['name' => 'Yogurt', 'quantity' => 3, 'location' => 'fridge']);
+        // count dropped back to 0 - the whole usage_history row is removed, not left at 0.
+        $this->assertDatabaseMissing('usage_history', ['user_id' => $this->user->id, 'key' => 'yogurt']);
+    }
+
+    public function test_undo_mark_items_used_matching_only_reverts_its_own_delta(): void
+    {
+        // Two separate usages of the same food name: undoing only the first must leave the
+        // second's contribution to the shared usage_history aggregate intact.
+        $this->item(['name' => 'Yogurt', 'expiry_date' => now()->addDay()]);
+        $firstOut = $this->toolbox->run('mark_items_used_matching', ['search' => 'Yogurt'], $this->user, $this->fridge->id, 'machine');
+
+        $this->item(['name' => 'Yogurt', 'expiry_date' => now()->addDay()]);
+        $this->toolbox->run('mark_items_used_matching', ['search' => 'Yogurt'], $this->user, $this->fridge->id, 'machine');
+        $this->assertDatabaseHas('usage_history', ['user_id' => $this->user->id, 'key' => 'yogurt', 'count' => 2]);
+
+        $this->toolbox->undoStep($firstOut['undo'], $this->user);
+
+        $this->assertDatabaseHas('usage_history', ['user_id' => $this->user->id, 'key' => 'yogurt', 'count' => 1]);
+    }
+
+    public function test_undo_is_a_no_op_for_a_tool_with_no_undo_data(): void
+    {
+        $summary = $this->toolbox->undoStep(['tool' => 'notify_user'], $this->user);
+
+        $this->assertSame('Nothing to undo for this step.', $summary);
+    }
+
+    public function test_undo_add_item_is_best_effort_when_the_item_is_already_gone(): void
+    {
+        $out = $this->toolbox->run('add_item', ['name' => 'Bread'], $this->user, $this->fridge->id, 'machine');
+        Item::find($out['undo']['item_ids'][0])->delete();
+
+        $summary = $this->toolbox->undoStep($out['undo'], $this->user);
+
+        $this->assertSame('Nothing to undo - already gone.', $summary);
+    }
+
     public function test_remove_item_previews_without_confirm_then_deletes_with_confirm(): void
     {
         $item = $this->item(['name' => 'Ketchup']);

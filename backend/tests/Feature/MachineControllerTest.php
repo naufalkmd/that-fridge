@@ -6,6 +6,7 @@ use App\Jobs\RunMachine;
 use App\Models\Fridge;
 use App\Models\Item;
 use App\Models\Machine;
+use App\Models\MachineRun;
 use App\Models\Section;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -373,6 +374,226 @@ class MachineControllerTest extends TestCase
         ]);
 
         $this->actingAs($stranger)->postJson("/api/machines/{$machine->id}/run")->assertStatus(403);
+    }
+
+    // ---- runs (execution history) --------------------------------------------------------
+
+    public function test_runs_returns_run_history_newest_first(): void
+    {
+        $user = User::factory()->create();
+        $fridge = $this->fridgeFor($user);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'X',
+            'trigger_type' => 'schedule', 'trigger_config' => ['frequency' => 'daily', 'time' => '08:00', 'weekday' => null, 'timezone' => 'UTC'],
+            'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+        $older = MachineRun::create([
+            'machine_id' => $machine->id, 'machine_version' => 1, 'status' => 'success',
+            'steps_run' => [['tool' => 'notify_user', 'args' => ['message' => 'hi'], 'content' => 'Notified: "hi".', 'ok' => true, 'value' => null, 'skipped' => false]],
+        ]);
+        $older->created_at = now()->subDay();
+        $older->save();
+        $newer = MachineRun::create([
+            'machine_id' => $machine->id, 'machine_version' => 1, 'status' => 'failed',
+            'steps_run' => [['tool' => 'notify_user', 'args' => ['message' => 'hi'], 'content' => 'Error: message is required.', 'ok' => false, 'value' => null, 'skipped' => false]],
+            'error' => 'Error: message is required.',
+        ]);
+
+        $response = $this->actingAs($user)->getJson("/api/machines/{$machine->id}/runs");
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.0.id', (string) $newer->id);
+        $response->assertJsonPath('data.0.status', 'failed');
+        $response->assertJsonPath('data.0.error', 'Error: message is required.');
+        $response->assertJsonPath('data.0.steps.0.tool', 'notify_user');
+        $response->assertJsonPath('data.0.steps.0.ok', false);
+        $response->assertJsonPath('data.1.id', (string) $older->id);
+        $response->assertJsonPath('data.1.status', 'success');
+    }
+
+    public function test_run_creates_a_row_visible_via_runs(): void
+    {
+        $user = User::factory()->create();
+        $fridge = $this->fridgeFor($user);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'X',
+            'trigger_type' => 'schedule', 'trigger_config' => ['frequency' => 'daily', 'time' => '08:00', 'weekday' => null, 'timezone' => 'UTC'],
+            'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+
+        $this->actingAs($user)->postJson("/api/machines/{$machine->id}/run")->assertStatus(200);
+        $response = $this->actingAs($user)->getJson("/api/machines/{$machine->id}/runs");
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.status', 'success');
+    }
+
+    public function test_runs_is_forbidden_for_another_users_machine(): void
+    {
+        $owner = User::factory()->create();
+        $stranger = User::factory()->create();
+        $machine = Machine::create([
+            'user_id' => $owner->id, 'fridge_id' => $this->fridgeFor($owner)->id, 'name' => 'X',
+            'trigger_type' => 'schedule', 'trigger_config' => [], 'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+        ]);
+
+        $this->actingAs($stranger)->getJson("/api/machines/{$machine->id}/runs")->assertStatus(403);
+    }
+
+    // ---- dry-run (no-write test mode) ------------------------------------------------------
+
+    public function test_dry_run_reports_planned_actions_without_writing_anything_or_recording_a_run(): void
+    {
+        $user = User::factory()->create();
+        $fridge = $this->fridgeFor($user);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'X',
+            'trigger_type' => 'schedule', 'trigger_config' => ['frequency' => 'daily', 'time' => '08:00', 'weekday' => null, 'timezone' => 'UTC'],
+            'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+
+        $response = $this->actingAs($user)->postJson("/api/machines/{$machine->id}/dry-run");
+
+        $response->assertStatus(200);
+        $response->assertJson(['status' => 'success']);
+        $this->assertStringContainsString('Would notify', $response->json('steps.0.content'));
+        $this->assertDatabaseMissing('notification_events', ['fridge_id' => $fridge->id]);
+        $this->assertSame(0, $machine->fresh()->run_count);
+        $this->assertNull($machine->fresh()->last_run_at);
+
+        // The dry-run/runs history split is the whole point - a preview must never show up
+        // alongside real execution history.
+        $runsResponse = $this->actingAs($user)->getJson("/api/machines/{$machine->id}/runs");
+        $runsResponse->assertJsonCount(0, 'data');
+    }
+
+    public function test_dry_run_works_on_a_disabled_machine(): void
+    {
+        $user = User::factory()->create();
+        $fridge = $this->fridgeFor($user);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'X',
+            'trigger_type' => 'schedule', 'trigger_config' => [], 'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+
+        $this->actingAs($user)->postJson("/api/machines/{$machine->id}/dry-run")->assertStatus(200);
+    }
+
+    public function test_dry_run_is_forbidden_for_another_users_machine(): void
+    {
+        $owner = User::factory()->create();
+        $stranger = User::factory()->create();
+        $machine = Machine::create([
+            'user_id' => $owner->id, 'fridge_id' => $this->fridgeFor($owner)->id, 'name' => 'X',
+            'trigger_type' => 'schedule', 'trigger_config' => [], 'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+        ]);
+
+        $this->actingAs($stranger)->postJson("/api/machines/{$machine->id}/dry-run")->assertStatus(403);
+    }
+
+    // ---- undo (action rollback) ------------------------------------------------------------
+
+    public function test_undo_reverses_the_runs_undoable_steps_and_marks_it_undone(): void
+    {
+        $user = User::factory()->create();
+        $fridge = $this->fridgeFor($user);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'X',
+            'trigger_type' => 'schedule', 'trigger_config' => ['frequency' => 'daily', 'time' => '08:00', 'weekday' => null, 'timezone' => 'UTC'],
+            'steps' => [['tool' => 'add_note', 'args' => ['text' => 'Restock soon']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+        $this->actingAs($user)->postJson("/api/machines/{$machine->id}/run")->assertStatus(200);
+        $runId = MachineRun::where('machine_id', $machine->id)->first()->id;
+        $this->assertDatabaseHas('fridge_notes', ['text' => 'Restock soon']);
+
+        $response = $this->actingAs($user)->postJson("/api/machines/{$machine->id}/runs/{$runId}/undo");
+
+        $response->assertStatus(200);
+        $this->assertCount(1, $response->json('summaries'));
+        $this->assertDatabaseMissing('fridge_notes', ['text' => 'Restock soon']);
+        $this->assertNotNull(MachineRun::find($runId)->undone_at);
+
+        $runsResponse = $this->actingAs($user)->getJson("/api/machines/{$machine->id}/runs");
+        $runsResponse->assertJsonPath('data.0.undoable', false);
+        $this->assertNotNull($runsResponse->json('data.0.undoneAt'));
+    }
+
+    public function test_undo_returns_409_when_already_undone(): void
+    {
+        $user = User::factory()->create();
+        $fridge = $this->fridgeFor($user);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'X',
+            'trigger_type' => 'schedule', 'trigger_config' => ['frequency' => 'daily', 'time' => '08:00', 'weekday' => null, 'timezone' => 'UTC'],
+            'steps' => [['tool' => 'add_note', 'args' => ['text' => 'Restock soon']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+        $this->actingAs($user)->postJson("/api/machines/{$machine->id}/run")->assertStatus(200);
+        $runId = MachineRun::where('machine_id', $machine->id)->first()->id;
+
+        $this->actingAs($user)->postJson("/api/machines/{$machine->id}/runs/{$runId}/undo")->assertStatus(200);
+        $this->actingAs($user)->postJson("/api/machines/{$machine->id}/runs/{$runId}/undo")->assertStatus(409);
+    }
+
+    public function test_undo_returns_422_when_the_run_has_nothing_undoable(): void
+    {
+        $user = User::factory()->create();
+        $fridge = $this->fridgeFor($user);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'X',
+            'trigger_type' => 'schedule', 'trigger_config' => ['frequency' => 'daily', 'time' => '08:00', 'weekday' => null, 'timezone' => 'UTC'],
+            'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+        $this->actingAs($user)->postJson("/api/machines/{$machine->id}/run")->assertStatus(200);
+        $runId = MachineRun::where('machine_id', $machine->id)->first()->id;
+
+        $this->actingAs($user)->postJson("/api/machines/{$machine->id}/runs/{$runId}/undo")->assertStatus(422);
+    }
+
+    public function test_undo_is_forbidden_for_another_users_machine(): void
+    {
+        $owner = User::factory()->create();
+        $stranger = User::factory()->create();
+        $fridge = $this->fridgeFor($owner);
+        $machine = Machine::create([
+            'user_id' => $owner->id, 'fridge_id' => $fridge->id, 'name' => 'X',
+            'trigger_type' => 'schedule', 'trigger_config' => ['frequency' => 'daily', 'time' => '08:00', 'weekday' => null, 'timezone' => 'UTC'],
+            'steps' => [['tool' => 'add_note', 'args' => ['text' => 'hi']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+        $this->actingAs($owner)->postJson("/api/machines/{$machine->id}/run")->assertStatus(200);
+        $runId = MachineRun::where('machine_id', $machine->id)->first()->id;
+
+        $this->actingAs($stranger)->postJson("/api/machines/{$machine->id}/runs/{$runId}/undo")->assertStatus(403);
+    }
+
+    public function test_undo_404s_when_the_run_does_not_belong_to_the_machine(): void
+    {
+        $user = User::factory()->create();
+        $fridge = $this->fridgeFor($user);
+        $machineA = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'A',
+            'trigger_type' => 'schedule', 'trigger_config' => ['frequency' => 'daily', 'time' => '08:00', 'weekday' => null, 'timezone' => 'UTC'],
+            'steps' => [['tool' => 'add_note', 'args' => ['text' => 'hi']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+        $machineB = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $fridge->id, 'name' => 'B',
+            'trigger_type' => 'schedule', 'trigger_config' => ['frequency' => 'daily', 'time' => '08:00', 'weekday' => null, 'timezone' => 'UTC'],
+            'steps' => [['tool' => 'add_note', 'args' => ['text' => 'hi']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+        $this->actingAs($user)->postJson("/api/machines/{$machineA->id}/run")->assertStatus(200);
+        $runId = MachineRun::where('machine_id', $machineA->id)->first()->id;
+
+        $this->actingAs($user)->postJson("/api/machines/{$machineB->id}/runs/{$runId}/undo")->assertStatus(404);
     }
 
     public function test_destroy_removes_the_machine(): void

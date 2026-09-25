@@ -83,6 +83,7 @@ class MachineRunner
                 'ok' => $result['ok'],
                 'value' => $result['value'],
                 'skipped' => false,
+                'undo' => $result['undo'] ?? null,
             ];
 
             if (! $result['ok']) {
@@ -111,6 +112,92 @@ class MachineRunner
         $machine->save();
 
         return $run;
+    }
+
+    /**
+     * Evaluates a Machine's steps exactly like run() would - same condition/placeholder logic
+     * - but through AgentToolbox::preview() instead of run(), so a write tool never persists
+     * anything and notify_user never sends a real notification (see AgentToolbox::preview's
+     * own docblock for which tools that covers). Nothing about this call is recorded either -
+     * no MachineRun row, no last_run_at/run_count change - a dry run is explicitly a test, not
+     * an execution, and its steps must stay visibly distinct from a real MachineRun's history.
+     * Doesn't take run()'s per-machine lock: a dry run only reads, so it can safely run
+     * alongside (or during) a real run without contention. Ignores enabled/next_run_at
+     * entirely, same reasoning as run($force: true) - testing a not-yet-trusted Machine is the
+     * whole point.
+     *
+     * @return array{status: string, error: ?string, steps: array}
+     */
+    public function dryRun(Machine $machine): array
+    {
+        $results = [];
+        $stepsRun = [];
+        $error = null;
+
+        foreach ($machine->steps as $i => $step) {
+            if (isset($step['condition']) && ! $this->conditionMet($step['condition'], $results)) {
+                $stepsRun[] = [
+                    'tool' => $step['tool'],
+                    'content' => 'Skipped - condition not met.',
+                    'ok' => true,
+                    'skipped' => true,
+                ];
+
+                continue;
+            }
+
+            $args = $this->resolvePlaceholders($step['args'] ?? [], $results);
+
+            $result = $this->toolbox->preview($step['tool'], $args, $machine->user, $machine->fridge_id);
+
+            $results[$i + 1] = $result;
+            $stepsRun[] = [
+                'tool' => $step['tool'],
+                'content' => $result['content'],
+                'ok' => $result['ok'],
+                'skipped' => false,
+            ];
+
+            if (! $result['ok']) {
+                $error = $result['content'];
+                break;
+            }
+        }
+
+        return [
+            'status' => $error ? 'failed' : 'success',
+            'error' => $error,
+            'steps' => $stepsRun,
+        ];
+    }
+
+    /**
+     * Reverses a real MachineRun's undoable steps (added items, notes, and shopping entries;
+     * restoring what mark_items_used_matching deleted - see AgentToolbox::undoStep for exactly
+     * which tools that covers and why). Walks steps most-recent-first, since a later step
+     * could in principle depend on state an earlier one created - unwinding in the opposite
+     * order it was built is the safer default even though today's tools don't actually chain
+     * that way. Skips a step with no `undo` payload (a read, notify_user, mark_recipe_made -
+     * "start with rollback for destructive/bulk actions" scoped this to the tools named in the
+     * backlog, not full omni-undo) and a step that never actually ran (skipped by its own
+     * condition). Callers (MachineController::undoRun) are responsible for the "already
+     * undone" guard and for stamping `undone_at` - this method only performs the reversal.
+     *
+     * @return string[] one summary line per step actually undone
+     */
+    public function undo(MachineRun $run): array
+    {
+        $summaries = [];
+
+        foreach (array_reverse($run->steps_run) as $step) {
+            if (($step['skipped'] ?? false) || ! is_array($step['undo'] ?? null)) {
+                continue;
+            }
+
+            $summaries[] = $this->toolbox->undoStep($step['undo'], $run->machine->user);
+        }
+
+        return $summaries;
     }
 
     /**

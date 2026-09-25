@@ -67,6 +67,17 @@ class AgentToolbox
     private ?string $value = null;
 
     /**
+     * Set by a write tool that knows how to reverse itself - read back in run() and, for a
+     * Machine step, persisted into that step's MachineRun row so MachineRunner::undo() can
+     * replay it later. Shape is {"tool": <same tool name>, ...whatever that tool's own
+     * undoStep() branch expects}; null for anything not undoable (reads, notify_user,
+     * mark_recipe_made - see MachineRunner::undo's docblock for why those are out of scope).
+     * Only ever meaningful on the 'machine' surface - undo is a Kitchen Lab concept, chat has
+     * no equivalent "undo my last message" affordance to wire it into.
+     */
+    private ?array $undo = null;
+
+    /**
      * Tools a Machine may call unattended - see the class docblock for the exclusion
      * reasoning. Anything not listed here is refused on the 'machine' surface even if a
      * Machine's saved steps somehow name it (enforced in run(), not just schemas()).
@@ -319,9 +330,10 @@ class AgentToolbox
     {
         $this->mutated = false;
         $this->value = null;
+        $this->undo = null;
 
         if (! self::toolAllowedOn($name, $surface)) {
-            return ['content' => "Error: \"{$name}\" isn't available on the {$surface} surface.", 'mutated' => false, 'ok' => false, 'value' => null];
+            return ['content' => "Error: \"{$name}\" isn't available on the {$surface} surface.", 'mutated' => false, 'ok' => false, 'value' => null, 'undo' => null];
         }
 
         try {
@@ -362,7 +374,7 @@ class AgentToolbox
                 default => "Error: unknown tool \"{$name}\".",
             };
         } catch (\Throwable $e) {
-            return ['content' => 'Error running that tool: '.$e->getMessage(), 'mutated' => false, 'ok' => false, 'value' => null];
+            return ['content' => 'Error running that tool: '.$e->getMessage(), 'mutated' => false, 'ok' => false, 'value' => null, 'undo' => null];
         }
 
         return [
@@ -370,7 +382,271 @@ class AgentToolbox
             'mutated' => $this->mutated,
             'ok' => ! str_starts_with($content, 'Error'),
             'value' => $this->value,
+            'undo' => $this->undo,
         ];
+    }
+
+    /** Tools preview() never mutates for, even though run() would - the write half of
+     *  MACHINE_TOOLS. Reads (list_items/list_shopping/get_kitchen_score/sum_item_field)
+     *  aren't listed here: they already never write, so preview() just runs them for real
+     *  via run() rather than duplicating their logic. */
+    private const DRY_RUN_PREVIEWABLE = [
+        'notify_user', 'add_to_shopping', 'add_note', 'add_item', 'bulk_add_items',
+        'mark_recipe_made', 'mark_items_used_matching',
+    ];
+
+    /**
+     * MachineRunner's dry-run mode: evaluates one step the same way run() would - same
+     * validation, same filters, same lookups - but a write tool reports what it *would* do
+     * instead of doing it. Never touches the database for a write tool, never sends a real
+     * notification (see previewNotifyUser), and never mutates $this->mutated/$this->value,
+     * so a caller can't mistake a preview for a real result. Machine-only, same as run()'s
+     * 'machine' surface - a dry run only ever makes sense for a Machine's own steps.
+     */
+    public function preview(string $name, array $args, User $user, ?int $fridgeId): array
+    {
+        if (! self::toolAllowedOn($name, 'machine')) {
+            return ['content' => "Error: \"{$name}\" isn't available on the machine surface.", 'ok' => false, 'value' => null];
+        }
+
+        // Read-only tools never write, regardless of surface - run them for real (more
+        // accurate, and keeps their `value` correct for a later step's condition/placeholder
+        // to preview against) rather than duplicating their logic into a second, hand-kept
+        // "preview" implementation.
+        if (! in_array($name, self::DRY_RUN_PREVIEWABLE, true)) {
+            $result = $this->run($name, $args, $user, $fridgeId, 'machine');
+
+            return ['content' => $result['content'], 'ok' => $result['ok'], 'value' => $result['value']];
+        }
+
+        $this->value = null;
+
+        try {
+            $content = match ($name) {
+                'notify_user' => $this->previewNotifyUser($args),
+                'add_to_shopping' => $this->previewAddToShopping($args),
+                'add_note' => $this->previewAddNote($args),
+                'add_item' => $this->previewAddItem($args),
+                'bulk_add_items' => $this->previewBulkAddItems($args),
+                'mark_recipe_made' => $this->previewMarkRecipeMade($user, $args),
+                // The one previewable tool a later step's condition can reference (see
+                // MachineDraftValidator::VALUE_PRODUCING_TOOLS) - sets $this->value itself,
+                // same convention run()'s own mark_items_used_matching handler uses.
+                'mark_items_used_matching' => $this->previewMarkItemsUsedMatching($user, $args),
+            };
+        } catch (\Throwable $e) {
+            return ['content' => 'Error previewing that step: '.$e->getMessage(), 'ok' => false, 'value' => null];
+        }
+
+        return ['content' => $content, 'ok' => ! str_starts_with($content, 'Error'), 'value' => $this->value];
+    }
+
+    private function previewNotifyUser(array $args): string
+    {
+        $message = trim((string) ($args['message'] ?? ''));
+        if ($message === '') {
+            return 'Error: message is required.';
+        }
+
+        return 'Would notify: "'.Str::limit($message, 240, '').'".';
+    }
+
+    private function previewAddToShopping(array $args): string
+    {
+        $name = trim((string) ($args['name'] ?? ''));
+        if ($name === '') {
+            return 'Error: a name is required.';
+        }
+
+        return "Would add \"{$name}\" to the shopping list.";
+    }
+
+    private function previewAddNote(array $args): string
+    {
+        $text = trim((string) ($args['text'] ?? ''));
+        if ($text === '') {
+            return 'Error: note text is required.';
+        }
+
+        return 'Would leave a note: "'.Str::limit($text, 500, '').'".';
+    }
+
+    private function previewAddItem(array $args): string
+    {
+        $name = trim((string) ($args['name'] ?? ''));
+        if ($name === '') {
+            return 'Error: a name is required.';
+        }
+
+        $qty = max(1, (int) ($args['quantity'] ?? 1));
+        $location = in_array($args['location'] ?? null, ['fridge', 'freezer', 'pantry'], true)
+            ? $args['location'] : 'fridge';
+        $shelfLife = is_numeric($args['shelf_life_days'] ?? null) ? (int) $args['shelf_life_days'] : null;
+
+        return "Would add \"{$name}\" ({$qty}x) to the {$location}".
+            ($shelfLife !== null ? ", ~{$shelfLife}d shelf life" : '').'.';
+    }
+
+    private function previewBulkAddItems(array $args): string
+    {
+        $specs = is_array($args['items'] ?? null) ? $args['items'] : [];
+        $names = [];
+        foreach (array_slice($specs, 0, 30) as $spec) {
+            if (is_array($spec) && trim((string) ($spec['name'] ?? '')) !== '') {
+                $names[] = trim($spec['name']);
+            }
+        }
+
+        if ($names === []) {
+            return 'Error: pass an "items" array, each entry with at least a name.';
+        }
+
+        return 'Would add: '.implode(', ', $names).'.';
+    }
+
+    private function previewMarkRecipeMade(User $user, array $args): string
+    {
+        $recipe = $this->recipesFor($user)->find($args['recipe_id'] ?? null);
+        if (! $recipe) {
+            return 'Error: no recipe with that id. Call list_recipes for valid ids.';
+        }
+
+        return "Would log \"{$recipe->name}\" as made ({$recipe->made_count}x \u{2192} ".($recipe->made_count + 1).'x).';
+    }
+
+    /** Mirrors markItemsUsedMatching's own filter-and-guard logic exactly, but stops right
+     *  before the delete()/recordUsage() loop - the one MACHINE_TOOLS entry a dry run most
+     *  needs to protect against, since it's an unattended-automation-safe bulk delete. */
+    private function previewMarkItemsUsedMatching(User $user, array $args): string
+    {
+        if (! $this->hasItemFilter($args)) {
+            return 'Error: pass at least one filter (search, location, expired_only, expiring_within_days, or fridge_id) - this cannot run against every item.';
+        }
+
+        $items = $this->filteredItems($user, $args, null);
+        if ($items->isEmpty()) {
+            $this->value = '0';
+
+            return 'Would mark 0 items as used - nothing currently matches this filter.';
+        }
+
+        $names = $items->map(fn ($row) => $row['model']->name)->all();
+        $this->value = (string) count($names);
+        $shown = array_slice($names, 0, 10);
+        $rest = count($names) - count($shown);
+
+        return 'Would mark '.count($names).' item'.(count($names) === 1 ? '' : 's').' as used: '.
+            implode(', ', $shown).($rest > 0 ? " (+{$rest} more)" : '').'.';
+    }
+
+    /**
+     * Reverses one step's recorded undo payload - the shape each tool writes into $this->undo
+     * (see that property's docblock). Called by MachineRunner::undo() for each undoable step
+     * in a saved run, most-recent-first. Best-effort throughout: something already gone
+     * (deleted since, moved to a fridge the user no longer belongs to) is skipped rather than
+     * failing the whole undo - a partial rollback still beats none.
+     */
+    public function undoStep(array $undo, User $user): string
+    {
+        return match ($undo['tool'] ?? null) {
+            'add_item', 'bulk_add_items' => $this->undoAddItem($undo, $user),
+            'add_to_shopping' => $this->undoAddToShopping($undo, $user),
+            'add_note' => $this->undoAddNote($undo, $user),
+            'mark_items_used_matching' => $this->undoMarkItemsUsedMatching($undo, $user),
+            default => 'Nothing to undo for this step.',
+        };
+    }
+
+    private function undoAddItem(array $undo, User $user): string
+    {
+        $ids = is_array($undo['item_ids'] ?? null) ? $undo['item_ids'] : [];
+        $removed = 0;
+        foreach ($ids as $id) {
+            $item = $this->items($user)->find($id);
+            if ($item) {
+                $item->delete();
+                $removed++;
+            }
+        }
+
+        return $removed > 0
+            ? 'Removed '.$removed.' item'.($removed === 1 ? '' : 's').' this run added.'
+            : 'Nothing to undo - already gone.';
+    }
+
+    private function undoAddToShopping(array $undo, User $user): string
+    {
+        $id = $undo['shopping_id'] ?? null;
+        $item = $id ? ShoppingItem::whereIn('fridge_id', $this->fridgeIds($user))->find($id) : null;
+        if (! $item) {
+            return 'Nothing to undo - already gone.';
+        }
+
+        $name = $item->name;
+        $item->delete();
+
+        return "Removed \"{$name}\" from the shopping list.";
+    }
+
+    private function undoAddNote(array $undo, User $user): string
+    {
+        $id = $undo['note_id'] ?? null;
+        $note = $id ? FridgeNote::whereIn('fridge_id', $this->fridgeIds($user))->find($id) : null;
+        if (! $note) {
+            return 'Nothing to undo - already gone.';
+        }
+
+        $note->delete();
+
+        return 'Removed the note this run left.';
+    }
+
+    /**
+     * Recreates each deleted item from its saved snapshot (a fresh row - a hard-deleted
+     * primary key can't be reused) and decrements usage_history by exactly the delta this run
+     * added, floored at zero and the row dropped entirely once its count reaches zero - so an
+     * undo can't leave a usage entry showing a use that never really counted, but also can't
+     * push it negative if the same food was genuinely used again for real since this run.
+     */
+    private function undoMarkItemsUsedMatching(array $undo, User $user): string
+    {
+        $snapshots = is_array($undo['items'] ?? null) ? $undo['items'] : [];
+        $userSectionIds = Section::whereHas('fridge.members', fn ($q) => $q->where('users.id', $user->id))->pluck('id');
+
+        $restored = 0;
+        foreach ($snapshots as $snapshot) {
+            if (! is_array($snapshot) || ! $userSectionIds->contains((int) ($snapshot['section_id'] ?? null))) {
+                continue;
+            }
+            try {
+                Item::create($snapshot);
+                $restored++;
+            } catch (\Throwable) {
+                // Best-effort - the section/category/product it referenced may be gone.
+            }
+        }
+
+        $deltas = is_array($undo['usage_deltas'] ?? null) ? $undo['usage_deltas'] : [];
+        foreach ($deltas as $key => $delta) {
+            $entry = $user->usageHistory()->where('key', $key)->first();
+            if (! $entry) {
+                continue;
+            }
+            $newCount = max(0, $entry->count - (int) ($delta['count'] ?? 0));
+            if ($newCount === 0) {
+                $entry->delete();
+
+                continue;
+            }
+            $entry->update([
+                'count' => $newCount,
+                'fresh_use_count' => max(0, $entry->fresh_use_count - (int) ($delta['fresh'] ?? 0)),
+            ]);
+        }
+
+        return $restored > 0
+            ? "Restored {$restored} item".($restored === 1 ? '' : 's').' this run marked used.'
+            : 'Nothing to undo - already gone.';
     }
 
     // ---- reads ---------------------------------------------------------------
@@ -692,13 +968,14 @@ class AgentToolbox
 
         $url = $this->cleanUrl($args['shop_url'] ?? null);
 
-        $fridge->shoppingItems()->create([
+        $shoppingItem = $fridge->shoppingItems()->create([
             'name' => Str::limit($name, 255, ''),
             'section' => Str::limit(trim((string) ($args['section'] ?? 'other')) ?: 'other', 255, ''),
             'checked' => false,
             'shop_url' => $url,
         ]);
         $this->mutated = true;
+        $this->undo = ['tool' => 'add_to_shopping', 'shopping_id' => $shoppingItem->id];
 
         return "Added \"{$name}\" to the shopping list on {$fridge->name}".($url ? ' with a buy link' : '').'.';
     }
@@ -727,8 +1004,9 @@ class AgentToolbox
         }
         $color = in_array($args['color'] ?? null, FridgeNote::COLORS, true) ? $args['color'] : 'amber';
 
-        $fridge->notes()->create(['text' => Str::limit($text, 500, ''), 'color' => $color, 'user_id' => $user->id]);
+        $note = $fridge->notes()->create(['text' => Str::limit($text, 500, ''), 'color' => $color, 'user_id' => $user->id]);
         $this->mutated = true;
+        $this->undo = ['tool' => 'add_note', 'note_id' => $note->id];
 
         return "Left a note on {$fridge->name}: \"{$text}\".";
     }
@@ -1057,15 +1335,38 @@ class AgentToolbox
         }
 
         $names = [];
+        $snapshots = [];
+        $usageDeltas = [];
         foreach ($items as $row) {
             $item = $row['model'];
             $days = ItemFreshness::daysUntilExpiry($item);
             $this->recordUsage($user, $item->name, $item->icon, $days);
             $names[] = $item->name;
+
+            // Same normalization recordUsage() applies - tallied here too so undoStep() can
+            // decrement usage_history back by exactly what this run added, not guess at it.
+            $key = Str::lower(trim($item->name));
+            $usageDeltas[$key] ??= ['count' => 0, 'fresh' => 0];
+            $usageDeltas[$key]['count']++;
+            if ($days !== null && $days >= 0) {
+                $usageDeltas[$key]['fresh']++;
+            }
+
+            // Enough of the item's own fields to recreate it on undo - a fresh row, not the
+            // same id (a hard-deleted primary key can't be reused safely), but otherwise a
+            // faithful restore.
+            $snapshots[] = $item->only([
+                'section_id', 'product_id', 'category_id', 'name', 'icon', 'icon_url',
+                'nutrition_category', 'location', 'quantity', 'weight', 'weight_unit',
+                'expiry_date', 'shelf_life_days', 'opened', 'note', 'source', 'shop_url',
+                'calories', 'custom_fields',
+            ]);
+
             $item->delete();
         }
         $this->mutated = true;
         $this->value = (string) count($names);
+        $this->undo = ['tool' => 'mark_items_used_matching', 'items' => $snapshots, 'usage_deltas' => $usageDeltas];
 
         $shown = array_slice($names, 0, 10);
         $rest = count($names) - count($shown);
@@ -1208,6 +1509,7 @@ class AgentToolbox
         if (is_string($item)) {
             return 'Error: '.$item;
         }
+        $this->undo = ['tool' => 'add_item', 'item_ids' => [$item->id]];
 
         return "Added \"{$item->name}\" ({$item->quantity}x) to {$item->section->name} in {$fridge->name}".
             ($item->expiry_date ? ' · expires '.$item->expiry_date->toDateString() : '').
@@ -1225,6 +1527,7 @@ class AgentToolbox
         $fridge = $this->targetFridge($user, $this->wantedFridgeId($user, $args['fridge_id'] ?? null, $fridgeId));
 
         $added = [];
+        $addedIds = [];
         $skipped = [];
         foreach (array_slice($specs, 0, 30) as $spec) {
             if (! is_array($spec) || trim((string) ($spec['name'] ?? '')) === '') {
@@ -1235,12 +1538,14 @@ class AgentToolbox
                 $skipped[] = trim($spec['name']).' ('.$r.')';
             } else {
                 $added[] = "{$r->name} ({$r->quantity}x)";
+                $addedIds[] = $r->id;
             }
         }
 
         if ($added === []) {
             return 'Nothing was added. '.implode('; ', $skipped);
         }
+        $this->undo = ['tool' => 'bulk_add_items', 'item_ids' => $addedIds];
 
         return "Added to {$fridge->name}: ".implode(', ', $added).'.'.
             ($skipped ? ' Skipped: '.implode('; ', $skipped).'.' : '');

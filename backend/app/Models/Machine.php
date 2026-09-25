@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A Kitchen Lab "Machine" - see the create_machines_table migration for the full shape and
@@ -54,5 +55,10 @@ class Machine extends Model
     public function fridge(): BelongsTo
     {
         return $this->belongsTo(Fridge::class);
+    }
+
+    public function runs(): HasMany
+    {
+        return $this->hasMany(MachineRun::class);
     }
 }

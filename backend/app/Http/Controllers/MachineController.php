@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\MachineResource;
+use App\Http\Resources\MachineRunResource;
 use App\Models\Machine;
+use App\Models\MachineRun;
 use App\Services\AgentService;
 use App\Services\CreditService;
 use App\Services\MachineDraftValidator;
@@ -195,6 +197,61 @@ class MachineController extends Controller
         }
 
         return new MachineResource($machine->fresh());
+    }
+
+    /** No-write test mode: evaluates the Machine's steps and shows what they'd do without
+     *  actually doing any of it - a write tool reports its planned action instead of
+     *  persisting it, and notify_user never sends a real notification (see
+     *  AgentToolbox::preview). Nothing is recorded either: no MachineRun row, no
+     *  last_run_at/run_count change - `runs()` above must never show a dry run mixed in with
+     *  real execution history. */
+    public function dryRun(Request $request, Machine $machine)
+    {
+        $this->authorize('view', $machine);
+
+        return response()->json($this->runner->dryRun($machine));
+    }
+
+    /** The Machine's most recent runs, newest first - the audit trail Kitchen Lab's detail
+     *  screen shows so a user can see what a Machine actually did, not just its last-run
+     *  summary on MachineResource. Capped rather than paginated; nothing here needs more than
+     *  a scroll-back of recent activity. */
+    public function runs(Request $request, Machine $machine)
+    {
+        $this->authorize('view', $machine);
+
+        return MachineRunResource::collection(
+            $machine->runs()->orderByDesc('created_at')->limit(20)->get()
+        );
+    }
+
+    /**
+     * Rolls back one run's undoable steps (added items, notes, and shopping entries;
+     * restoring what mark_items_used_matching deleted) - see MachineRunner::undo and
+     * AgentToolbox::undoStep for exactly what that covers. A run can only be undone once;
+     * `undoable` on MachineRunResource already reflects that, this is the server-side guard
+     * against a stale client retrying.
+     */
+    public function undoRun(Request $request, Machine $machine, MachineRun $run)
+    {
+        $this->authorize('update', $machine);
+
+        if ($run->machine_id !== $machine->id) {
+            abort(404);
+        }
+        if ($run->undone_at !== null) {
+            return response()->json(['error' => 'already_undone'], 409);
+        }
+
+        $summaries = $this->runner->undo($run);
+        if ($summaries === []) {
+            return response()->json(['error' => 'nothing_to_undo'], 422);
+        }
+
+        $run->undone_at = now();
+        $run->save();
+
+        return response()->json(['summaries' => $summaries]);
     }
 
     public function destroy(Request $request, Machine $machine)

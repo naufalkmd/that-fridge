@@ -12,11 +12,15 @@ import {
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import {
   describeError,
+  timeAgo,
   type Machine,
   type MachineDraft,
+  type MachineDryRunResult,
+  type MachineRun,
   type MachineStep,
   type MachineTrigger,
   type MachineUpdateInput,
@@ -25,6 +29,9 @@ import { api } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
 import { useInventory } from "@/lib/inventory";
 import { useScope } from "@/lib/scope";
+import { MACHINE_TEMPLATES, type MachineTemplate } from "@/lib/machineTemplates";
+import { getDeviceTimezone } from "@/lib/timezone";
+import { findOverlappingMachine } from "@/lib/machineOverlap";
 import { PageHeader, Eyebrow } from "@/components/ui";
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -119,7 +126,7 @@ type Mode = "list" | "prompt" | "review";
 export default function KitchenLab() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { fridges } = useInventory();
+  const { fridges, refresh: refreshInventory } = useInventory();
   const { scope } = useScope();
 
   const [mode, setMode] = useState<Mode>("list");
@@ -138,6 +145,10 @@ export default function KitchenLab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [redrafted, setRedrafted] = useState(false);
   const [running, setRunning] = useState(false);
+  const [runs, setRuns] = useState<MachineRun[] | null>(null);
+  const [dryRunning, setDryRunning] = useState(false);
+  const [dryRunResult, setDryRunResult] = useState<MachineDryRunResult | null>(null);
+  const [undoingRunId, setUndoingRunId] = useState<string | null>(null);
   // True for edit/duplicate (review opened directly from a card tap, no prompt step this
   // session) - controls review's back destination and whether the fridge is a read-only
   // label vs a picker. False for a fresh create, where review's back returns to prompt.
@@ -160,11 +171,24 @@ export default function KitchenLab() {
     }
   }, [mode, scope, fridges, fridgeId]);
 
+  /** Fetches a Machine's execution history for the review screen. Only meaningful for an
+   *  already-saved Machine (editingId set) - a fresh/duplicated/template draft has no runs
+   *  yet, so those paths just clear it instead of fetching. */
+  function loadRuns(machineId: string) {
+    setRuns(null);
+    api
+      .listMachineRuns(machineId)
+      .then(setRuns)
+      .catch(() => setRuns([]));
+  }
+
   function openCompose() {
     setPrompt("");
     setDraftMessage(null);
     setDraft(null);
     setEditingId(null);
+    setRuns(null);
+    setDryRunResult(null);
     setRedrafted(false);
     setEnteredDirectly(false);
     setMode("prompt");
@@ -182,13 +206,17 @@ export default function KitchenLab() {
     setFridgeId(machine.fridgeId);
     setPrompt(machine.prompt ?? "");
     setDraftMessage(null);
+    setDryRunResult(null);
     setMode("review");
+    loadRuns(machine.id);
   }
 
   /** Copies an existing Machine's trigger/steps into a new unsaved draft - no AI call, Save
    *  creates a separate Machine rather than editing this one. */
   function openDuplicate(machine: Machine) {
     setEditingId(null);
+    setRuns(null);
+    setDryRunResult(null);
     setRedrafted(false);
     setEnteredDirectly(true);
     setDraft({ name: machine.name, trigger: machine.trigger, steps: machine.steps });
@@ -197,6 +225,46 @@ export default function KitchenLab() {
     setPrompt(machine.prompt ?? "");
     setDraftMessage(null);
     setMode("review");
+  }
+
+  /** Jumps a curated template straight to review - no draftMachine() call, so no credit
+   *  spent, same as edit/duplicate above. Redrafting with AI is still offered from review.
+   *  Goes straight to "review", skipping the "prompt" step whose effect normally seeds
+   *  fridgeId - seed it here the same way so a single-fridge user isn't left with Save
+   *  disabled by a still-null fridgeId. */
+  function openTemplate(template: MachineTemplate) {
+    const built = template.build();
+    setEditingId(null);
+    setRuns(null);
+    setDryRunResult(null);
+    setRedrafted(false);
+    setEnteredDirectly(true);
+    setDraft(built);
+    setDraftName(built.name);
+    setFridgeId(scope !== "all" ? scope : (fridges[0]?.id ?? null));
+    setPrompt("");
+    setDraftMessage(null);
+    setMode("review");
+  }
+
+  /** Confirms/edits a schedule trigger's timezone in place - the only field on the review
+   *  screen that isn't already covered by name/trigger-description/steps editing. */
+  function updateScheduleTimezone(timezone: string) {
+    setDraft((d) => {
+      if (!d || d.trigger.type !== "schedule") return d;
+      return { ...d, trigger: { ...d.trigger, config: { ...d.trigger.config, timezone } } };
+    });
+  }
+
+  /** The AI drafter has no notion of the user's actual timezone, so a fresh schedule draft
+   *  lands with whatever the server defaulted to (UTC) - swap that placeholder for the
+   *  device's own zone as a convenient starting point, still editable before saving. Never
+   *  overrides a zone someone has already deliberately confirmed. */
+  function withDeviceTimezoneDefault(d: MachineDraft): MachineDraft {
+    if (d.trigger.type !== "schedule") return d;
+    const tz = d.trigger.config.timezone;
+    if (tz && tz !== "UTC") return d;
+    return { ...d, trigger: { ...d.trigger, config: { ...d.trigger.config, timezone: getDeviceTimezone() } } };
   }
 
   async function runDraft() {
@@ -210,9 +278,15 @@ export default function KitchenLab() {
         setDraftMessage(result.message ?? "Couldn't draft a Machine from that - try describing it differently.");
         return;
       }
-      setDraft(result.draft);
-      setDraftName(result.draft.name);
-      if (editingId) setRedrafted(true);
+      const normalizedDraft = withDeviceTimezoneDefault(result.draft);
+      setDraft(normalizedDraft);
+      setDraftName(normalizedDraft.name);
+      if (editingId) {
+        setRedrafted(true);
+        // The saved Machine's steps haven't changed yet, but a stale preview of them next to
+        // a freshly-redrafted (different, unsaved) set of steps would be confusing either way.
+        setDryRunResult(null);
+      }
       setMode("review");
     } catch (e) {
       setDraftMessage(describeError(e, "Couldn't draft a Machine right now."));
@@ -221,7 +295,33 @@ export default function KitchenLab() {
     }
   }
 
-  async function saveMachine() {
+  /** A saved Machine's enabled state never changes here (see MachineController::update -
+   *  `enabled` is a separate, opt-in field this screen never sends), so the only moment a
+   *  save could newly create a live duplicate is redrafting an already-*enabled* Machine's
+   *  trigger. Same reviewable Cancel / Save anyway treatment as toggleEnabled. */
+  function saveMachine() {
+    if (!draft || !fridgeId) return;
+    if (editingId && redrafted) {
+      const original = machines?.find((m) => m.id === editingId);
+      if (original?.enabled) {
+        const overlap = findOverlappingMachine(machines ?? [], draft.trigger, original.fridgeId, editingId);
+        if (overlap) {
+          Alert.alert(
+            "Possible duplicate",
+            `"${overlap.name}" already runs on the same trigger — ${describeTrigger(overlap.trigger)}. Since this Machine is on too, that could send duplicate notifications.`,
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Save anyway", onPress: () => commitSaveMachine() },
+            ],
+          );
+          return;
+        }
+      }
+    }
+    commitSaveMachine();
+  }
+
+  async function commitSaveMachine() {
     if (!draft || !fridgeId) return;
     setSaving(true);
     try {
@@ -273,6 +373,7 @@ export default function KitchenLab() {
         updated.lastRunStatus === "failed" ? (updated.lastRunError ?? "No error details.") : "Check Notifications for the result.",
       );
       load();
+      loadRuns(editingId);
     } catch (e) {
       Alert.alert("Couldn't run", describeError(e, "Try again in a moment."));
     } finally {
@@ -280,9 +381,54 @@ export default function KitchenLab() {
     }
   }
 
-  async function toggleEnabled(machine: Machine) {
+  /** No-write test mode - shows what the *saved* Machine's steps would do without doing any
+   *  of it (see AgentToolbox::preview / MachineRunner::dryRun). Only offered alongside "Run
+   *  now" for the same reason: it tests what's actually saved, not an unsaved redraft. */
+  async function runDryRun() {
+    if (!editingId) return;
+    setDryRunning(true);
+    setDryRunResult(null);
+    try {
+      setDryRunResult(await api.dryRunMachine(editingId));
+    } catch (e) {
+      Alert.alert("Couldn't preview", describeError(e, "Try again in a moment."));
+    } finally {
+      setDryRunning(false);
+    }
+  }
+
+  /** Reverses one run's undoable steps (added items/notes/shopping entries, restored items a
+   *  mark_items_used_matching step deleted) - see AgentToolbox::undoStep for exactly what's
+   *  covered. Explicit confirm first since this touches real inventory data, same treatment
+   *  as confirmDelete below. */
+  function confirmUndoRun(run: MachineRun) {
+    Alert.alert(
+      "Undo this run?",
+      "This reverses what it added or restores what it marked used. It can't be undone twice.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Undo", style: "destructive", onPress: () => undoRun(run) },
+      ],
+    );
+  }
+
+  async function undoRun(run: MachineRun) {
+    if (!editingId) return;
+    setUndoingRunId(run.id);
+    try {
+      const { summaries } = await api.undoMachineRun(editingId, run.id);
+      Alert.alert("Undone", summaries.join("\n"));
+      loadRuns(editingId);
+      refreshInventory();
+    } catch (e) {
+      Alert.alert("Couldn't undo", describeError(e, "Try again in a moment."));
+    } finally {
+      setUndoingRunId(null);
+    }
+  }
+
+  async function applyToggleEnabled(machine: Machine, next: boolean) {
     setBusyId(machine.id);
-    const next = !machine.enabled;
     setMachines((prev) => prev?.map((m) => (m.id === machine.id ? { ...m, enabled: next } : m)) ?? null);
     try {
       await api.updateMachine(machine.id, { enabled: next });
@@ -292,6 +438,27 @@ export default function KitchenLab() {
     } finally {
       setBusyId(null);
     }
+  }
+
+  /** Detects an overlapping already-enabled Machine before turning this one on too -
+   *  reviewable (Cancel / Enable anyway), never silently blocked, merged, or deleted. */
+  function toggleEnabled(machine: Machine) {
+    const next = !machine.enabled;
+    if (next) {
+      const overlap = findOverlappingMachine(machines ?? [], machine.trigger, machine.fridgeId, machine.id);
+      if (overlap) {
+        Alert.alert(
+          "Possible duplicate",
+          `"${overlap.name}" already runs on the same trigger — ${describeTrigger(overlap.trigger)}. Turning both on could send duplicate notifications.`,
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Enable anyway", onPress: () => applyToggleEnabled(machine, next) },
+          ],
+        );
+        return;
+      }
+    }
+    applyToggleEnabled(machine, next);
   }
 
   function confirmDelete(machine: Machine) {
@@ -323,8 +490,16 @@ export default function KitchenLab() {
           onBack={() => setMode(draft ? "review" : "list")}
         />
         <ScrollView contentContainerClassName="p-5 gap-4" keyboardShouldPersistTaps="handled">
+          {!editingId && (
+            <View className="gap-2">
+              <Eyebrow color={colors.faint}>Start from a template · no credits</Eyebrow>
+              {MACHINE_TEMPLATES.map((template) => (
+                <TemplateCard key={template.id} template={template} onPress={() => openTemplate(template)} />
+              ))}
+            </View>
+          )}
           <Text className="text-[13px] leading-5 text-muted">
-            Describe what you want automated. The crew drafts a trigger and steps for you to
+            Or describe what you want automated. The crew drafts a trigger and steps for you to
             review before anything is saved.
           </Text>
           <View className="flex-row flex-wrap gap-2">
@@ -394,6 +569,29 @@ export default function KitchenLab() {
             </View>
           </View>
 
+          {draft.trigger.type === "schedule" && (
+            <View className="gap-1.5">
+              <Eyebrow color={colors.faint}>Timezone</Eyebrow>
+              <View className="flex-row items-center gap-2 rounded-lg border border-hairline bg-surface px-3.5 py-1">
+                <TextInput
+                  value={draft.trigger.config.timezone}
+                  onChangeText={updateScheduleTimezone}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder="e.g. Asia/Kuala_Lumpur"
+                  placeholderTextColor={colors.faint}
+                  className="flex-1 py-2 text-[13.5px] text-ink"
+                />
+                <Pressable onPress={() => updateScheduleTimezone(getDeviceTimezone())} hitSlop={6}>
+                  <Text className="text-[11.5px] font-bold text-accent">Use device</Text>
+                </Pressable>
+              </View>
+              <Text className="text-[11px] text-faint">
+                This schedule runs in this timezone - confirm it's right before saving.
+              </Text>
+            </View>
+          )}
+
           <View className="gap-1.5">
             <Eyebrow color={colors.faint}>Steps</Eyebrow>
             <View className="overflow-hidden rounded-lg border border-hairline bg-surface">
@@ -412,20 +610,73 @@ export default function KitchenLab() {
           </View>
 
           {editingId && !redrafted && (
-            <Pressable
-              onPress={runNow}
-              disabled={running}
-              className="flex-row items-center justify-center gap-2 rounded-lg border border-hairline py-3 active:opacity-70 disabled:opacity-50"
-            >
-              {running ? (
-                <ActivityIndicator color={colors.accent} />
-              ) : (
-                <>
-                  <Ionicons name="play" size={14} color={colors.accent} />
-                  <Text className="text-[13px] font-semibold text-ink">Run now</Text>
-                </>
+            <View className="flex-row gap-2.5">
+              <Pressable
+                onPress={runNow}
+                disabled={running}
+                className="flex-1 flex-row items-center justify-center gap-2 rounded-lg border border-hairline py-3 active:opacity-70 disabled:opacity-50"
+              >
+                {running ? (
+                  <ActivityIndicator color={colors.accent} />
+                ) : (
+                  <>
+                    <Ionicons name="play" size={14} color={colors.accent} />
+                    <Text className="text-[13px] font-semibold text-ink">Run now</Text>
+                  </>
+                )}
+              </Pressable>
+              <Pressable
+                onPress={runDryRun}
+                disabled={dryRunning}
+                className="flex-1 flex-row items-center justify-center gap-2 rounded-lg border border-hairline py-3 active:opacity-70 disabled:opacity-50"
+              >
+                {dryRunning ? (
+                  <ActivityIndicator color={colors.accent} />
+                ) : (
+                  <>
+                    <Ionicons name="eye-outline" size={14} color={colors.accent} />
+                    <Text className="text-[13px] font-semibold text-ink">Dry run</Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          )}
+
+          {dryRunResult && (
+            <View className="gap-1.5">
+              <View className="flex-row items-center justify-between">
+                <Eyebrow color={colors.faint}>Dry run preview</Eyebrow>
+                <Pressable onPress={() => setDryRunResult(null)} hitSlop={8}>
+                  <Ionicons name="close" size={16} color={colors.faint} />
+                </Pressable>
+              </View>
+              <Text className="text-[11px] text-faint">
+                A preview only - nothing was saved and no notification was sent.
+              </Text>
+              <View
+                className="overflow-hidden rounded-lg border border-dashed bg-surface"
+                style={{ borderColor: colors.accent }}
+              >
+                {dryRunResult.steps.map((step, i) => (
+                  <View
+                    key={i}
+                    className={`gap-1 px-3.5 py-3 ${i < dryRunResult.steps.length - 1 ? "border-b border-hairline" : ""}`}
+                  >
+                    <Text
+                      className="text-[12px]"
+                      style={{ color: step.skipped ? colors.faint : step.ok ? colors.ink : colors.bad }}
+                      numberOfLines={3}
+                    >
+                      {step.skipped ? "○" : step.ok ? "✓" : "✕"} {TOOL_LABELS[step.tool] ?? step.tool}
+                      {step.content ? ` — ${step.content}` : ""}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              {dryRunResult.status === "failed" && dryRunResult.error && (
+                <Text className="text-[11.5px] text-bad">{dryRunResult.error}</Text>
               )}
-            </Pressable>
+            </View>
           )}
 
           {enteredDirectly && (
@@ -437,6 +688,78 @@ export default function KitchenLab() {
                 Redraft trigger &amp; steps with AI · 2 credits
               </Text>
             </Pressable>
+          )}
+
+          {editingId && (
+            <View className="gap-1.5">
+              <View className="flex-row items-center justify-between">
+                <Eyebrow color={colors.faint}>Execution history</Eyebrow>
+                <Pressable onPress={() => router.push("/notifications")} hitSlop={8}>
+                  <Text className="text-[11.5px] font-bold text-accent">View notifications</Text>
+                </Pressable>
+              </View>
+              {runs === null ? (
+                <ActivityIndicator color={colors.accent} style={{ marginTop: 8 }} />
+              ) : runs.length === 0 ? (
+                <Text className="text-[12.5px] text-faint">
+                  No runs yet - enable this Machine or tap Run now to see history here.
+                </Text>
+              ) : (
+                <View className="overflow-hidden rounded-lg border border-hairline bg-surface">
+                  {runs.map((run, i) => (
+                    <View
+                      key={run.id}
+                      className={`gap-1.5 px-3.5 py-3 ${i < runs.length - 1 ? "border-b border-hairline" : ""}`}
+                    >
+                      <View className="flex-row items-center justify-between gap-2">
+                        <View className="flex-row items-center gap-2">
+                          <Ionicons
+                            name={run.status === "failed" ? "close-circle" : "checkmark-circle"}
+                            size={14}
+                            color={run.status === "failed" ? colors.bad : colors.good}
+                          />
+                          <Text className="text-[12.5px] font-bold text-ink">
+                            {run.status === "failed" ? "Failed" : "Ran successfully"}
+                          </Text>
+                          <Text className="text-[11px] text-faint">{timeAgo(new Date(run.startedAt).getTime())}</Text>
+                        </View>
+                        {run.undoable ? (
+                          <Pressable
+                            onPress={() => confirmUndoRun(run)}
+                            disabled={undoingRunId === run.id}
+                            hitSlop={8}
+                          >
+                            {undoingRunId === run.id ? (
+                              <ActivityIndicator size="small" color={colors.bad} />
+                            ) : (
+                              <Text className="text-[11px] font-bold text-bad">Undo</Text>
+                            )}
+                          </Pressable>
+                        ) : (
+                          run.undoneAt && <Text className="text-[11px] text-faint">Undone</Text>
+                        )}
+                      </View>
+                      {run.error && (
+                        <Text className="text-[11.5px] text-bad" numberOfLines={2}>
+                          {run.error}
+                        </Text>
+                      )}
+                      {run.steps.map((step, si) => (
+                        <Text
+                          key={si}
+                          className="text-[11.5px]"
+                          style={{ color: step.skipped ? colors.faint : step.ok ? colors.muted : colors.bad }}
+                          numberOfLines={2}
+                        >
+                          {step.skipped ? "○" : step.ok ? "✓" : "✕"} {TOOL_LABELS[step.tool] ?? step.tool}
+                          {step.content ? ` — ${step.content}` : ""}
+                        </Text>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
           )}
 
           {editingId ? (
@@ -514,8 +837,8 @@ export default function KitchenLab() {
         <View className="flex-1 items-center justify-center gap-3 px-10">
           <Ionicons name="flask-outline" size={40} color={colors.faint} />
           <Text className="text-center text-[13.5px] leading-5 text-muted">
-            No Machines yet. Describe an automation in plain English and the crew builds it —
-            you just switch it on.
+            No Machines yet. Pick a template or describe an automation in plain English and the
+            crew builds it — you just switch it on.
           </Text>
           <Pressable
             onPress={openCompose}
@@ -584,5 +907,28 @@ function ComposeHeader({ title, onBack }: { title: string; onBack: () => void })
       </Pressable>
       <Text className="text-[15px] font-bold text-ink">{title}</Text>
     </View>
+  );
+}
+
+function TemplateCard({ template, onPress }: { template: MachineTemplate; onPress: () => void }) {
+  const { colors } = useTheme();
+  const color = template.color(colors);
+  return (
+    <Pressable
+      onPress={onPress}
+      className="flex-row items-center gap-3 rounded-lg border border-hairline bg-surface p-3.5 active:opacity-80"
+    >
+      <View
+        className="h-9 w-9 items-center justify-center rounded-md"
+        style={{ backgroundColor: `${color}1a` }}
+      >
+        <MaterialCommunityIcons name={template.icon} size={17} color={color} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-[13.5px] font-bold text-ink">{template.label}</Text>
+        <Text className="text-[11.5px] text-faint">{template.description}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={15} color={colors.faint} />
+    </Pressable>
   );
 }

@@ -383,6 +383,41 @@ export interface Machine {
   createdAt: string;
 }
 
+// One MachineRunner execution - what GET /machines/{id}/runs returns, newest first. Mirrors
+// App\Http\Resources\MachineRunResource; `steps` is the per-step outcome, not the Machine's
+// current step *definitions* (MachineStep above) - a run replayed an older `machineVersion`'s
+// steps, which may since have been edited.
+export interface MachineRunStepOutcome {
+  tool: string;
+  content: string;
+  ok: boolean;
+  skipped: boolean;
+}
+
+export interface MachineRun {
+  id: string;
+  machineVersion: number;
+  status: "success" | "failed";
+  error: string | null;
+  steps: MachineRunStepOutcome[];
+  startedAt: string;
+  /** True when at least one step recorded reversible undo data and the run hasn't already
+   *  been undone - see AgentToolbox::undoStep for exactly which tools that covers (added
+   *  items/notes/shopping entries, and mark_items_used_matching's deletes). */
+  undoable: boolean;
+  undoneAt: string | null;
+}
+
+// What POST /machines/{id}/dry-run returns - a no-write simulation of the Machine's saved
+// steps (see MachineRunner::dryRun). Deliberately a different, unpersisted shape from
+// MachineRun above (no `id`/`machineVersion`/`startedAt`) - a dry run is a preview, never
+// recorded, so there's nothing to key it by and it must never be mistaken for a real run.
+export interface MachineDryRunResult {
+  status: "success" | "failed";
+  error: string | null;
+  steps: MachineRunStepOutcome[];
+}
+
 // What POST /machines/draft returns - already reshaped server-side to the same {trigger:
 // {type, config}} shape store()/update() accept, so a draft can be posted back unmodified.
 export interface MachineDraft {

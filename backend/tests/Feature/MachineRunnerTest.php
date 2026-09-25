@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Fridge;
 use App\Models\Item;
 use App\Models\Machine;
+use App\Models\MachineRun;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\MachineRunner;
@@ -285,5 +286,162 @@ class MachineRunnerTest extends TestCase
 
         $this->assertDatabaseHas('notification_events', ['fridge_id' => $this->fridge->id, 'kind' => 'machine']);
         $this->assertDatabaseMissing('notification_events', ['fridge_id' => $otherFridge->id, 'kind' => 'machine']);
+    }
+
+    // ---- execution stays AI-free (Kitchen Lab cost transparency invariant) ----------------
+
+    /**
+     * Only drafting a Machine spends AI credits (MachineController::draft) - replaying its
+     * steps never should, no matter how many of the Machine-eligible tools a run exercises.
+     * Regression guard for "keep Machine execution AI-free unless a future tool explicitly
+     * opts into a metered model call."
+     */
+    public function test_running_a_machine_never_spends_ai_credits(): void
+    {
+        $before = $this->user->fresh()->ai_credits;
+        $section = $this->section();
+        Item::create(['section_id' => $section->id, 'name' => 'Milk', 'icon' => 'milk', 'quantity' => 2, 'calories' => 100]);
+        $machine = $this->machine([
+            'steps' => [
+                ['tool' => 'list_items', 'args' => []],
+                ['tool' => 'list_shopping', 'args' => []],
+                ['tool' => 'get_kitchen_score', 'args' => []],
+                ['tool' => 'sum_item_field', 'args' => ['field' => 'calories']],
+                ['tool' => 'add_to_shopping', 'args' => ['name' => 'Eggs']],
+                ['tool' => 'add_note', 'args' => ['text' => 'Restock soon']],
+                ['tool' => 'add_item', 'args' => ['name' => 'Bread', 'shelf_life_days' => 5]],
+                ['tool' => 'notify_user', 'args' => ['message' => 'Weekly check done: {step4}']],
+            ],
+        ]);
+
+        $run = $this->runner->run($machine);
+
+        $this->assertSame('success', $run->status);
+        $this->assertSame($before, $this->user->fresh()->ai_credits);
+        $this->assertDatabaseMissing('ai_credit_ledger', ['user_id' => $this->user->id]);
+    }
+
+    // ---- dryRun() - no-write test mode -----------------------------------------------------
+
+    public function test_dry_run_reports_planned_actions_without_writing_anything(): void
+    {
+        $item = Item::create([
+            'section_id' => $this->section()->id, 'name' => 'Yogurt', 'icon' => 'yogurt',
+            'quantity' => 1, 'expiry_date' => now()->addDay(),
+        ]);
+        $machine = $this->machine([
+            'steps' => [
+                ['tool' => 'mark_items_used_matching', 'args' => ['expiring_within_days' => 2]],
+                ['tool' => 'notify_user', 'args' => ['message' => 'Used {step1} item(s)']],
+            ],
+        ]);
+
+        $result = $this->runner->dryRun($machine);
+
+        $this->assertSame('success', $result['status']);
+        $this->assertNull($result['error']);
+        $this->assertStringContainsString('Would mark 1 item', $result['steps'][0]['content']);
+        $this->assertStringContainsString('Used 1 item(s)', $result['steps'][1]['content']);
+        $this->assertStringContainsString('Would notify', $result['steps'][1]['content']);
+        // The actual writes a real run would have made never happened.
+        $this->assertDatabaseHas('items', ['id' => $item->id]);
+        $this->assertDatabaseMissing('notification_events', ['fridge_id' => $this->fridge->id]);
+    }
+
+    public function test_dry_run_leaves_no_trace_in_run_history_or_the_machines_own_stats(): void
+    {
+        $machine = $this->machine();
+        $countBefore = $machine->fresh()->run_count;
+
+        $this->runner->dryRun($machine);
+
+        $this->assertSame(0, MachineRun::where('machine_id', $machine->id)->count());
+        $this->assertSame($countBefore, $machine->fresh()->run_count);
+        $this->assertNull($machine->fresh()->last_run_at);
+    }
+
+    public function test_dry_run_still_honours_a_steps_condition(): void
+    {
+        $machine = $this->machine([
+            'steps' => [
+                ['tool' => 'sum_item_field', 'args' => ['field' => 'quantity']],
+                [
+                    'tool' => 'notify_user',
+                    'args' => ['message' => 'should not fire'],
+                    'condition' => ['step' => 1, 'op' => 'gt', 'value' => 999],
+                ],
+            ],
+        ]);
+
+        $result = $this->runner->dryRun($machine);
+
+        $this->assertTrue($result['steps'][1]['skipped']);
+        $this->assertSame('success', $result['status']);
+    }
+
+    public function test_dry_run_works_on_a_disabled_machine(): void
+    {
+        $machine = $this->machine(['enabled' => false, 'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]]]);
+
+        $result = $this->runner->dryRun($machine);
+
+        $this->assertSame('success', $result['status']);
+    }
+
+    // ---- undo() - action rollback -----------------------------------------------------------
+
+    public function test_undo_reverses_each_undoable_step_and_reports_a_summary_per_step(): void
+    {
+        $machine = $this->machine([
+            'steps' => [
+                ['tool' => 'add_note', 'args' => ['text' => 'Restock soon']],
+                ['tool' => 'add_to_shopping', 'args' => ['name' => 'Butter']],
+            ],
+        ]);
+        $run = $this->runner->run($machine);
+        $this->assertDatabaseHas('fridge_notes', ['text' => 'Restock soon']);
+        $this->assertDatabaseHas('shopping_items', ['name' => 'Butter']);
+
+        $summaries = $this->runner->undo($run);
+
+        $this->assertCount(2, $summaries);
+        $this->assertDatabaseMissing('fridge_notes', ['text' => 'Restock soon']);
+        $this->assertDatabaseMissing('shopping_items', ['name' => 'Butter']);
+    }
+
+    public function test_undo_skips_a_step_with_no_undo_data(): void
+    {
+        $machine = $this->machine([
+            'steps' => [
+                ['tool' => 'notify_user', 'args' => ['message' => 'hi']],
+                ['tool' => 'add_note', 'args' => ['text' => 'Restock soon']],
+            ],
+        ]);
+        $run = $this->runner->run($machine);
+
+        $summaries = $this->runner->undo($run);
+
+        // Only add_note is undoable - notify_user contributes nothing to the summary list.
+        $this->assertCount(1, $summaries);
+        $this->assertDatabaseMissing('fridge_notes', ['text' => 'Restock soon']);
+    }
+
+    public function test_undo_skips_a_step_that_never_ran(): void
+    {
+        $machine = $this->machine([
+            'steps' => [
+                ['tool' => 'sum_item_field', 'args' => ['field' => 'quantity']],
+                [
+                    'tool' => 'add_note',
+                    'args' => ['text' => 'should not fire'],
+                    'condition' => ['step' => 1, 'op' => 'gt', 'value' => 999],
+                ],
+            ],
+        ]);
+        $run = $this->runner->run($machine);
+
+        $summaries = $this->runner->undo($run);
+
+        $this->assertSame([], $summaries);
     }
 }

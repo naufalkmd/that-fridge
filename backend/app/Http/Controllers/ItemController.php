@@ -8,6 +8,7 @@ use App\Models\Section;
 use App\Services\AgentService;
 use App\Services\CreditService;
 use App\Support\CreditCost;
+use App\Support\FoodGroupClassifier;
 use App\Support\ItemPayload;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -120,11 +121,28 @@ class ItemController extends Controller
             return response()->json(['fields' => (object) []], 200);
         }
 
+        $fields = [];
+
+        // Deterministic food-group classification first (keyword rules, then a cache of
+        // previously AI-resolved names - see FoodGroupClassifier) - a confident hit here
+        // never needs an AI call. When category was the ONLY thing this item needed, that
+        // means skipping the AI call - and its credit - entirely.
+        if ($needsCategory) {
+            $localCategory = FoodGroupClassifier::resolve($item->name, $item->icon);
+            if ($localCategory !== null) {
+                $fields['nutrition_category'] = $localCategory;
+                $needsCategory = false;
+            }
+        }
+
+        if (! $needsWeight && ! $needsCalories && ! $needsShelfLife && ! $needsCategory) {
+            return response()->json(['fields' => (object) $fields], 200);
+        }
+
         $this->credits->spend($request->user(), CreditCost::AUTOFILL, 'item_autofill');
 
         $estimate = $this->agent->autofillItemDetails($item);
 
-        $fields = [];
         if ($needsWeight && $estimate['weight'] !== null) {
             $fields['weight'] = $estimate['weight'];
             $fields['weight_unit'] = $estimate['weight_unit'];
@@ -136,13 +154,17 @@ class ItemController extends Controller
             $fields['shelf_life_days'] = $estimate['shelf_life_days'];
             $fields['expiry_date'] = now()->addDays($estimate['shelf_life_days'])->toDateString();
         }
-        if ($needsCategory) {
+        // Left out entirely (not even a null field) when even the AI couldn't confidently
+        // classify it - leaving nutrition_category blank beats forcing a wrong bucket, see
+        // FoodGroupClassifier's docblock.
+        if ($needsCategory && $estimate['nutrition_category'] !== null) {
             $fields['nutrition_category'] = $estimate['nutrition_category'];
         }
 
-        // Only weight can legitimately come back empty (a food with no sensible unit
-        // weight) - refund when that was the only thing this item needed, since the user
-        // got nothing for their credit, same precedent as CalorieController::scanLabel.
+        // Only weight and category can legitimately come back empty (no sensible unit
+        // weight, or a name nothing could confidently classify) - refund when that left
+        // nothing new at all, since the user got nothing for their credit, same precedent as
+        // CalorieController::scanLabel.
         if ($fields === []) {
             $this->credits->grant($request->user(), CreditCost::AUTOFILL, 'item_autofill_refund');
 

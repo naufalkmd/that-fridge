@@ -22,7 +22,6 @@ import DateTimePicker, {
 import {
   FOOD_ICON_KEYS,
   ICON_LABELS,
-  NUTRITION_CATEGORIES,
   STORAGE_LOCATIONS,
   ApiError,
   describeError,
@@ -300,7 +299,6 @@ export function ItemCard({
   refetchLibrary: () => void;
 }) {
   const [iconOpen, setIconOpen] = useState(false);
-  const [catOpen, setCatOpen] = useState(false);
   const [genPrompt, setGenPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const {
@@ -314,7 +312,6 @@ export function ItemCard({
     faint: FAINT,
     blue: BLUE,
     warn: WARN,
-    canvas: CANVAS,
   } = useTheme().colors;
 
   async function generate() {
@@ -524,31 +521,11 @@ export function ItemCard({
         </View>
       )}
 
-      {/* food group + quantity */}
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <Pressable
-          onPress={() => setCatOpen((v) => !v)}
-          style={{
-            flex: 1,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            backgroundColor: SURFACE2,
-            borderRadius: 6,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-          }}
-        >
-          <Text style={{ fontSize: 13, color: item.category ? INK : FAINT }}>
-            {NUTRITION_CATEGORIES.find((c) => c.key === item.category)?.label ??
-              "Food group"}
-          </Text>
-          <MaterialCommunityIcons
-            name={catOpen ? "chevron-up" : "chevron-down"}
-            size={16}
-            color={FAINT}
-          />
-        </Pressable>
+      {/* quantity - food group no longer has a control here (Phase 3 "remove food-group
+          friction"): auto-fill/scans can still supply item.category (see AutoFillButton and
+          toCreatePayload below), it's just not manually editable until the item exists, on
+          the item detail page's storage row. */}
+      <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
         <View
           style={{
             flexDirection: "row",
@@ -586,48 +563,6 @@ export function ItemCard({
           </Pressable>
         </View>
       </View>
-
-      {catOpen && (
-        <View
-          style={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            gap: 6,
-            backgroundColor: SURFACE2,
-            borderRadius: 6,
-            padding: 8,
-          }}
-        >
-          {NUTRITION_CATEGORIES.map((c) => {
-            const on = item.category === c.key;
-            return (
-              <Pressable
-                key={c.key}
-                onPress={() => {
-                  onChange({ category: on ? null : c.key });
-                  setCatOpen(false);
-                }}
-                style={{
-                  paddingHorizontal: 11,
-                  paddingVertical: 6,
-                  borderRadius: 6,
-                  backgroundColor: on ? AMBER : SURFACE,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 11.5,
-                    fontWeight: "700",
-                    color: on ? CANVAS : INK,
-                  }}
-                >
-                  {c.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
 
       {/* date + camera + auto-fill */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>

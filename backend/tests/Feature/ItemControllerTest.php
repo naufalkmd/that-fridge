@@ -7,6 +7,7 @@ use App\Models\Item;
 use App\Models\Section;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class ItemControllerTest extends TestCase
@@ -356,5 +357,123 @@ class ItemControllerTest extends TestCase
         $response->assertStatus(201);
         $response->assertJson(['data' => ['weight' => 500, 'weight_unit' => 'g', 'calories' => 180]]);
         $this->assertCount(1, $response->json('data.custom_fields'));
+    }
+
+    // ---- autofill: local food-group classification --------------------------------------
+
+    public function test_autofill_resolves_category_locally_without_spending_a_credit_when_its_the_only_missing_field(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 5]);
+        $section = $this->sectionFor($user);
+        $item = Item::create([
+            'section_id' => $section->id, 'name' => 'Whole milk', 'icon' => 'milk', 'quantity' => 1,
+            'weight' => 1, 'weight_unit' => 'l', 'calories' => 500, 'expiry_date' => now()->addDays(7),
+        ]);
+        Http::fake();
+
+        $response = $this->actingAs($user)->postJson("/api/items/{$item->id}/autofill");
+
+        $response->assertStatus(200);
+        $response->assertJson(['fields' => ['nutrition_category' => 'dairy']]);
+        Http::assertNothingSent();
+        $this->assertSame(5, $user->fresh()->ai_credits);
+    }
+
+    public function test_autofill_spends_a_credit_and_uses_the_ai_answer_when_category_cant_be_classified_locally(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 5]);
+        $section = $this->sectionFor($user);
+        // Not classifiable by any local rule, and weight/calories/expiry are all missing too
+        // - the combined AI call is unavoidable, and since local genuinely couldn't resolve
+        // category, the AI's own valid answer for it is used, same as every other field.
+        $item = Item::create(['section_id' => $section->id, 'name' => 'Blorpaccino Deluxe', 'icon' => 'placeholder', 'quantity' => 1]);
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => json_encode([
+                'weight' => 1, 'weight_unit' => 'l', 'calories' => 300,
+                'shelf_life_days' => 10, 'nutrition_category' => 'other_extras',
+            ])]]],
+        ], 200)]);
+
+        $response = $this->actingAs($user)->postJson("/api/items/{$item->id}/autofill");
+
+        $response->assertStatus(200);
+        $response->assertJson(['fields' => [
+            'weight' => 1.0, 'weight_unit' => 'l', 'calories' => 300, 'nutrition_category' => 'other_extras',
+        ]]);
+        $this->assertSame(4, $user->fresh()->ai_credits);
+    }
+
+    public function test_autofill_does_not_let_a_locally_resolved_category_be_overridden_by_the_ai(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 5]);
+        $section = $this->sectionFor($user);
+        // "Oat milk" resolves locally to other_extras; weight/calories/expiry are still
+        // missing so the AI call happens anyway (for those), but its own (deliberately
+        // different) category guess must be ignored since local already resolved this field.
+        $item = Item::create(['section_id' => $section->id, 'name' => 'Oat milk', 'icon' => 'placeholder', 'quantity' => 1]);
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => json_encode([
+                'weight' => 1, 'weight_unit' => 'l', 'calories' => 300,
+                'shelf_life_days' => 10, 'nutrition_category' => 'dairy',
+            ])]]],
+        ], 200)]);
+
+        $response = $this->actingAs($user)->postJson("/api/items/{$item->id}/autofill");
+
+        $response->assertStatus(200);
+        $response->assertJson(['fields' => ['nutrition_category' => 'other_extras']]);
+        $this->assertSame(4, $user->fresh()->ai_credits);
+    }
+
+    public function test_autofill_refunds_when_nothing_can_be_classified_and_nothing_else_is_needed(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 5]);
+        $section = $this->sectionFor($user);
+        $item = Item::create([
+            'section_id' => $section->id, 'name' => 'Xyzzy Widget 9000', 'icon' => 'placeholder', 'quantity' => 1,
+            'weight' => 1, 'weight_unit' => 'kg', 'calories' => 100, 'expiry_date' => now()->addDays(7),
+        ]);
+        config(['services.openrouter.key' => null]);
+        Http::fake();
+
+        $response = $this->actingAs($user)->postJson("/api/items/{$item->id}/autofill");
+
+        $response->assertStatus(200);
+        $response->assertJson(['fields' => []]);
+        $this->assertNotNull($response->json('message'));
+        $this->assertSame(5, $user->fresh()->ai_credits);
+    }
+
+    public function test_autofill_caches_an_ai_resolved_category_for_a_later_item_with_the_same_name(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 5]);
+        $section = $this->sectionFor($user);
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => json_encode([
+                'weight' => 1, 'weight_unit' => 'kg', 'calories' => 50,
+                'shelf_life_days' => 5, 'nutrition_category' => 'other_extras',
+            ])]]],
+        ], 200)]);
+        $first = Item::create(['section_id' => $section->id, 'name' => 'Zorbnik Flavor Cubes', 'icon' => 'placeholder', 'quantity' => 1]);
+
+        $this->actingAs($user)->postJson("/api/items/{$first->id}/autofill")->assertStatus(200);
+        $this->assertSame(4, $user->fresh()->ai_credits);
+
+        // Same name, but this item only needs its food group - no AI key configured this
+        // time, so a fresh AI call would fail outright were the cache not consulted first.
+        config(['services.openrouter.key' => null]);
+        $second = Item::create([
+            'section_id' => $section->id, 'name' => 'Zorbnik Flavor Cubes', 'icon' => 'placeholder', 'quantity' => 1,
+            'weight' => 1, 'weight_unit' => 'kg', 'calories' => 50, 'expiry_date' => now()->addDays(5),
+        ]);
+
+        $response = $this->actingAs($user)->postJson("/api/items/{$second->id}/autofill");
+
+        $response->assertStatus(200);
+        $response->assertJson(['fields' => ['nutrition_category' => 'other_extras']]);
+        $this->assertSame(4, $user->fresh()->ai_credits);
     }
 }

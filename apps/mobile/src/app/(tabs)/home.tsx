@@ -48,6 +48,9 @@ import { KitchenScore } from "@/components/home/KitchenScore";
 import { GettingStarted } from "@/components/home/GettingStarted";
 import { CrewScene } from "@/components/home/CrewScene";
 import { FridgeNotes } from "@/components/home/FridgeNotes";
+import { SwipeRow } from "@/components/swipe-row";
+import { NotificationRow } from "@/components/notification-row";
+import { NotificationUndoSnackbar } from "@/components/notification-undo-snackbar";
 
 const PRO_PURPLE = "#a78bfa";
 
@@ -65,7 +68,7 @@ export default function Home() {
   const router = useRouter();
   const { user } = useAuth();
   const { items, fridges, loading, refresh } = useInventory();
-  const { events, unread } = useNotifications();
+  const { events, unread, requestRemove } = useNotifications();
   const { items: shoppingItems } = useShopping();
   const { scope, setScope } = useScope();
   const { usageHistory, organizerTally, scoreSnapshots } = useKitchenScore();
@@ -156,6 +159,8 @@ export default function Home() {
     }
     return acc;
   }, [events]);
+
+  const recentEvents = useMemo(() => events.slice(0, 3), [events]);
 
   async function onRefresh() {
     setRefreshing(true);
@@ -494,6 +499,31 @@ export default function Home() {
             <CrewScene pendingByKind={pendingByKind} scoreByKey={scoreByKey} />
           </View>
 
+          {/* small notifications preview — same NotificationsProvider state (and swipe-delete
+              row) as the full /notifications screen, not a second feed */}
+          {recentEvents.length > 0 && (
+            <View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 11,
+                }}
+              >
+                <SectionHeader>Notifications</SectionHeader>
+                <Pressable onPress={() => router.push("/notifications")} hitSlop={8}>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: BLUE }}>See all</Text>
+                </Pressable>
+              </View>
+              {recentEvents.map((e) => (
+                <SwipeRow key={e.id} onDelete={() => requestRemove(e.id)}>
+                  <NotificationRow event={e} onClear={() => requestRemove(e.id)} />
+                </SwipeRow>
+              ))}
+            </View>
+          )}
+
           {/* crew tips — real one-shot agent insights, with a data fallback */}
           {guardian && !dismissed.guardian && (
             <CrewTip
@@ -561,6 +591,7 @@ export default function Home() {
           {/* fridge notes — read-only squares; compose/edit lives on the Organizer tab */}
           <FridgeNotes variant="grid" />
         </ScrollView>
+        <NotificationUndoSnackbar bottom={90} />
       </SafeAreaView>
     </GestureDetector>
   );

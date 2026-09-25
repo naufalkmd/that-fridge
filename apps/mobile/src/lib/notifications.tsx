@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import * as Notifications from "expo-notifications";
 import {
@@ -11,6 +11,10 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { registerForPush } from "@/lib/push";
 
+// How long a swiped-away notification stays undoable before the delete actually commits to
+// the server - long enough to catch an accidental swipe, short enough not to feel stuck.
+const UNDO_MS = 4000;
+
 interface NotificationsContextValue {
   events: NotificationEvent[];
   unread: number;
@@ -19,7 +23,13 @@ interface NotificationsContextValue {
   error: string | null;
   refresh: () => Promise<void>;
   markDone: (id: string, done: boolean) => Promise<void>;
-  remove: (id: string) => Promise<void>;
+  /** Hides the event immediately and schedules the real delete after UNDO_MS - call
+   *  undoRemove() before it fires to bring the event back and skip the delete entirely. */
+  requestRemove: (id: string) => void;
+  /** The event most recently hidden by requestRemove, still within its undo window - drives
+   *  the undo snackbar. Null once the window has passed or undoRemove was called. */
+  pendingRemoval: NotificationEvent | null;
+  undoRemove: () => void;
   clearAll: () => Promise<void>;
   togglePref: (key: keyof NotificationPrefs) => Promise<void>;
 }
@@ -91,20 +101,62 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }
   }, []);
 
-  const remove = useCallback(async (id: string) => {
-    let removed: NotificationEvent | undefined;
-    setEvents((prev) => {
-      removed = prev.find((e) => e.id === id);
-      return prev.filter((e) => e.id !== id);
-    });
+  const pendingRef = useRef<{ event: NotificationEvent; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<NotificationEvent | null>(null);
+
+  const commitRemoval = useCallback(async (event: NotificationEvent) => {
     try {
-      await api.deleteNotificationEvent(id);
+      await api.deleteNotificationEvent(event.id);
     } catch {
-      if (removed) setEvents((prev) => [removed!, ...prev]);
+      // Best-effort - if this fails the event just reappears on the next refresh().
     }
   }, []);
 
+  // Commits whatever's currently pending (if anything) right away, without waiting out its
+  // undo window - used both by the window's own timeout and whenever a new swipe needs to
+  // supersede an still-undoable one (only one row is undoable at a time).
+  const finalizePending = useCallback(() => {
+    const pending = pendingRef.current;
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    pendingRef.current = null;
+    setPendingRemoval(null);
+    commitRemoval(pending.event);
+  }, [commitRemoval]);
+
+  const requestRemove = useCallback(
+    (id: string) => {
+      finalizePending();
+      const event = events.find((e) => e.id === id);
+      if (!event) return;
+      setEvents((prev) => prev.filter((e) => e.id !== id));
+      const timer = setTimeout(finalizePending, UNDO_MS);
+      pendingRef.current = { event, timer };
+      setPendingRemoval(event);
+    },
+    [events, finalizePending],
+  );
+
+  const undoRemove = useCallback(() => {
+    const pending = pendingRef.current;
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    pendingRef.current = null;
+    setPendingRemoval(null);
+    setEvents((prev) => [pending.event, ...prev].sort((a, b) => b.createdAt - a.createdAt));
+  }, []);
+
+  // Sign-out (or unmount) shouldn't leave a delete timer running against a session that's
+  // gone - commit or drop it deterministically instead.
+  useEffect(() => {
+    if (status === "signedOut") finalizePending();
+  }, [status, finalizePending]);
+  useEffect(() => () => finalizePending(), [finalizePending]);
+
   const clearAll = useCallback(async () => {
+    // "Clear all" is an explicit, already-confirmed bulk action (see the Alert in
+    // notifications.tsx) - it commits straight away rather than joining the undo window.
+    finalizePending();
     const snapshot = events;
     setEvents([]);
     try {
@@ -112,7 +164,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     } catch {
       setEvents(snapshot);
     }
-  }, [events]);
+  }, [events, finalizePending]);
 
   const togglePref = useCallback(
     async (key: keyof NotificationPrefs) => {
@@ -139,11 +191,26 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       error,
       refresh: load,
       markDone,
-      remove,
+      requestRemove,
+      pendingRemoval,
+      undoRemove,
       clearAll,
       togglePref,
     }),
-    [events, unread, prefs, loading, error, load, markDone, remove, clearAll, togglePref],
+    [
+      events,
+      unread,
+      prefs,
+      loading,
+      error,
+      load,
+      markDone,
+      requestRemove,
+      pendingRemoval,
+      undoRemove,
+      clearAll,
+      togglePref,
+    ],
   );
 
   return (

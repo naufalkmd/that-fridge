@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Item;
 use App\Models\User;
+use App\Support\FoodGroupClassifier;
 use App\Support\ItemPayload;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
@@ -617,9 +618,7 @@ PROMPT;
                         'location' => in_array($parsed['location'], ['fridge', 'freezer', 'pantry'], true)
                             ? $parsed['location']
                             : 'fridge',
-                        'nutrition_category' => in_array($parsed['nutrition_category'] ?? null, self::NUTRITION_CATEGORIES, true)
-                            ? $parsed['nutrition_category']
-                            : $this->guessNutritionCategory($name, $icon),
+                        'nutrition_category' => $this->resolveNutritionCategory($name, $parsed['nutrition_category'] ?? null, $icon),
                     ];
                 }
             }
@@ -749,9 +748,7 @@ PROMPT;
             $weightUnit = null;
         }
 
-        $nutritionCategory = in_array($parsed['nutrition_category'] ?? null, self::NUTRITION_CATEGORIES, true)
-            ? $parsed['nutrition_category']
-            : ($this->guessNutritionCategory($item->name, $item->icon) ?? 'other_extras');
+        $nutritionCategory = $this->resolveNutritionCategory($item->name, $parsed['nutrition_category'] ?? null, $item->icon);
 
         return [
             'weight' => $weight,
@@ -766,6 +763,28 @@ PROMPT;
         ];
     }
 
+    /**
+     * Reconciles an AI-returned nutrition_category guess against the deterministic
+     * classifier. Deciding whether to spend an AI call on category at all is
+     * ItemController::autofill's job (it tries FoodGroupClassifier first and skips the AI
+     * entirely when that's confident) - once the AI HAS been asked, its own valid answer is
+     * trusted and used as-is, same as every other field it returns. The classifier only steps
+     * in here as a fallback for an invalid/missing AI answer, and a still-unclassifiable item
+     * comes back null rather than forced into "other_extras" (see FoodGroupClassifier's
+     * docblock). A used AI answer is cached by name so the next item with this exact name -
+     * any user - can skip asking again via FoodGroupClassifier::resolve().
+     */
+    private function resolveNutritionCategory(string $name, mixed $aiAnswer, ?string $icon = null): ?string
+    {
+        if (in_array($aiAnswer, self::NUTRITION_CATEGORIES, true)) {
+            FoodGroupClassifier::remember($name, $aiAnswer);
+
+            return $aiAnswer;
+        }
+
+        return FoodGroupClassifier::classify($name, $icon);
+    }
+
     /** Typical grams for "one unit" of each food group, for the weight fallback when no AI
      *  key is configured - same spirit as fallbackCalorieEstimate's flat 150g stand-in. */
     private const TYPICAL_GRAMS_BY_GROUP = [
@@ -775,12 +794,15 @@ PROMPT;
     private function fallbackAutofill(Item $item): array
     {
         $suggestion = $this->fallbackItemSuggestion($item->name, $item->icon);
-        $group = $suggestion['nutrition_category'] ?? 'other_extras';
+        // A forced default here is fine - it's only ever used to pick a typical-grams
+        // lookup below, never returned as the item's actual nutrition_category (that stays
+        // whatever $suggestion resolved, including null - see FoodGroupClassifier).
+        $weightLookupGroup = $suggestion['nutrition_category'] ?? 'other_extras';
 
         $weight = $item->weight;
         $weightUnit = $item->weight_unit;
         if ($weight === null) {
-            $weight = (float) (self::TYPICAL_GRAMS_BY_GROUP[$group] ?? 150);
+            $weight = (float) (self::TYPICAL_GRAMS_BY_GROUP[$weightLookupGroup] ?? 150);
             $weightUnit = 'g';
         }
 
@@ -789,7 +811,7 @@ PROMPT;
             'weight_unit' => $weightUnit,
             'calories' => $this->fallbackCalorieEstimate($item->name, $weight, $weightUnit)['calories'],
             'shelf_life_days' => $suggestion['shelf_life_days'],
-            'nutrition_category' => $group,
+            'nutrition_category' => $suggestion['nutrition_category'],
         ];
     }
 
@@ -947,7 +969,7 @@ PROMPT;
         return [
             'shelf_life_days' => $defaultShelfLifeDays[$icon] ?? 7,
             'location' => $location,
-            'nutrition_category' => $this->guessNutritionCategory($name, $icon),
+            'nutrition_category' => FoodGroupClassifier::classify($name, $icon),
         ];
     }
 
@@ -958,41 +980,11 @@ PROMPT;
     private const NUTRITION_CATEGORIES = ['protein', 'vegetables', 'fruit', 'grains', 'dairy', 'other_extras'];
 
     /**
-     * Keyword guess for the item's food group, matched against the name and the pixel-icon
-     * key. Returns null when nothing matches rather than forcing a wrong bucket — the model
-     * path above is the real source; this only has to be reasonable offline.
-     *
-     * @return 'protein'|'vegetables'|'fruit'|'grains'|'dairy'|'other_extras'|null
-     */
-    private function guessNutritionCategory(string $name, ?string $icon): ?string
-    {
-        $groups = [
-            'dairy' => ['milk', 'cheese', 'yogurt', 'yoghurt', 'butter', 'cream', 'kefir'],
-            'protein' => ['egg', 'meat', 'chicken', 'beef', 'pork', 'fish', 'salmon', 'tuna', 'tofu', 'bean', 'lentil', 'turkey', 'shrimp', 'prawn', 'bacon', 'sausage', 'ham', 'nuts', 'peanut', 'almond'],
-            'vegetables' => ['spinach', 'carrot', 'broccoli', 'lettuce', 'tomato', 'pepper', 'onion', 'potato', 'cucumber', 'celery', 'kale', 'cabbage', 'mushroom', 'zucchini', 'courgette', 'pea', 'corn', 'garlic', 'veg'],
-            'fruit' => ['apple', 'banana', 'orange', 'berr', 'grape', 'melon', 'mango', 'peach', 'pear', 'lemon', 'lime', 'strawberr', 'blueberr', 'pineapple', 'kiwi', 'cherry', 'plum', 'avocado'],
-            'grains' => ['bread', 'rice', 'pasta', 'noodle', 'cereal', 'oat', 'flour', 'tortilla', 'cracker', 'bagel', 'quinoa', 'granola', 'couscous', 'bun'],
-            'other_extras' => ['sauce', 'oil', 'juice', 'soda', 'chips', 'candy', 'chocolate', 'cookie', 'ice cream', 'jam', 'jelly', 'dressing', 'snack', 'cake', 'vinegar', 'syrup', 'condiment', 'leftover'],
-        ];
-
-        $haystack = strtolower(trim($name)).' '.strtolower((string) $icon);
-
-        foreach ($groups as $category => $keywords) {
-            foreach ($keywords as $keyword) {
-                if (str_contains($haystack, $keyword)) {
-                    return $category;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Rough kcal-per-100g by food group, keyed off the same buckets guessNutritionCategory
-     * already classifies into - deliberately reuses that keyword table rather than keeping a
-     * second one in sync. Coarse on purpose: this only runs when no AI key is configured, so
-     * local dev/demoing still produces a usable number instead of failing outright.
+     * Rough kcal-per-100g by food group, keyed off the same buckets FoodGroupClassifier
+     * already classifies into - deliberately reuses that classifier rather than keeping a
+     * second keyword table in sync. Coarse on purpose: this only runs when no AI key is
+     * configured, so local dev/demoing still produces a usable number instead of failing
+     * outright.
      */
     private const CALORIES_PER_100G_BY_GROUP = [
         'protein' => 200,
@@ -1005,8 +997,8 @@ PROMPT;
 
     private function fallbackCalorieEstimate(string $name, ?float $weight, ?string $weightUnit): array
     {
-        $group = $this->guessNutritionCategory($name, null);
-        $per100g = self::CALORIES_PER_100G_BY_GROUP[$group] ?? 120;
+        $group = FoodGroupClassifier::classify($name);
+        $per100g = $group !== null ? (self::CALORIES_PER_100G_BY_GROUP[$group] ?? 120) : 120;
 
         $grams = $this->normalizeWeightToGrams($weight, $weightUnit);
         // No weight given - 150g is a stand-in for "one typical retail unit/portion", the

@@ -347,7 +347,7 @@ Backs the Add-item form's "Auto-fill" button. Stateless — the item doesn't nee
 
 `nutrition_category` is one of the six `Item` food groups (`protein`, `vegetables`, `fruit`, `grains`, `dairy`, `other_extras`) or **null** when it can't be guessed — the app fills the food-group chips with it.
 
-Calls the same OpenRouter model as `/chat`. Without `OPENROUTER_API_KEY` configured, or if the call fails, falls back to a small static keyword lookup server-side (see `AgentService::fallbackItemSuggestion` / `guessNutritionCategory`) so the button still does something reasonable offline.
+Calls the same OpenRouter model as `/chat`. Without `OPENROUTER_API_KEY` configured, or if the call fails, falls back to a small static keyword lookup server-side (see `AgentService::fallbackItemSuggestion` / `App\Support\FoodGroupClassifier`) so the button still does something reasonable offline. `nutrition_category` is resolved by `FoodGroupClassifier` before any AI call is trusted - a confident local keyword match always wins over the model's own guess, and a still-unclassifiable name is cached from the model's answer (or left null) rather than forced into `other_extras`.
 
 ---
 

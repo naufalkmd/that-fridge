@@ -16,6 +16,12 @@ import { useSocial } from "@/lib/social";
 import { useRecipes } from "@/lib/recipes";
 import { useTheme } from "@/lib/theme";
 import { PixelText } from "@/components/brand";
+import {
+  clearFriendSearchHistory,
+  getFriendSearchHistory,
+  recordFriendSearchSelection,
+  removeFriendSearchHistoryEntry,
+} from "@/lib/friendSearchHistory";
 
 export default function FindFriend() {
   const router = useRouter();
@@ -39,6 +45,11 @@ export default function FindFriend() {
   const [profile, setProfile] = useState<FriendProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [requested, setRequested] = useState<Record<string, boolean>>({});
+  const [history, setHistory] = useState<string[]>([]);
+
+  useEffect(() => {
+    getFriendSearchHistory().then(setHistory);
+  }, []);
 
   useEffect(() => {
     const q = query.trim();
@@ -61,11 +72,18 @@ export default function FindFriend() {
     setLoadingProfile(true);
     try {
       setProfile(await api.getFriendProfile(username));
+      setHistory(await recordFriendSearchSelection(username));
     } catch (e) {
       Alert.alert("Error", describeError(e, "Couldn't load that profile."));
+      setHistory(await removeFriendSearchHistoryEntry(username));
     } finally {
       setLoadingProfile(false);
     }
+  }
+
+  async function clearHistory() {
+    await clearFriendSearchHistory();
+    setHistory([]);
   }
 
   async function toggleRecipeFav(recipe: Recipe) {
@@ -103,6 +121,7 @@ export default function FindFriend() {
     Linking.openURL(
       `mailto:support@thatfridge.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
     );
+    removeFriendSearchHistoryEntry(profile.username).then(setHistory);
   }
 
   async function setBlocked(blocked: boolean) {
@@ -110,6 +129,7 @@ export default function FindFriend() {
     try {
       if (blocked) {
         await api.blockUser(profile.username);
+        setHistory(await removeFriendSearchHistoryEntry(profile.username));
       } else {
         await api.unblockUser(profile.username);
       }
@@ -325,6 +345,46 @@ export default function FindFriend() {
                       <MaterialCommunityIcons name="close" size={16} color={FAINT} />
                     </Pressable>
                   </View>
+                ))}
+              </View>
+            </>
+          )}
+
+          {query.trim().length === 0 && history.length > 0 && (
+            <>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <Label>RECENT SEARCHES</Label>
+                <Pressable onPress={clearHistory} hitSlop={8}>
+                  <Text style={{ fontSize: 11.5, fontWeight: "700", color: BLUE }}>Clear</Text>
+                </Pressable>
+              </View>
+              <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
+                {history.map((username, i) => (
+                  <Pressable
+                    key={username}
+                    onPress={() => openProfile(username)}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: 13,
+                      borderBottomWidth: i === history.length - 1 ? 0 : 1,
+                      borderBottomColor: HAIRLINE,
+                    }}
+                  >
+                    <MaterialCommunityIcons name="history" size={17} color={FAINT} />
+                    <Text style={{ flex: 1, fontSize: 13.5, fontWeight: "700", color: INK }}>
+                      @{username}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={FAINT} />
+                  </Pressable>
                 ))}
               </View>
             </>

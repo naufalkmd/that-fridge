@@ -13,46 +13,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { timeAgo, type NotificationEvent, type NotificationKind } from "@thatfridge/core";
+import { timeAgo } from "@thatfridge/core";
 import { useNotifications } from "@/lib/notifications";
 import { useSocial } from "@/lib/social";
 import { PixelText } from "@/components/brand";
-import { useTheme, type ThemeColors } from "@/lib/theme";
-
-// Same shape as kindMeta's per-kind entries - used for a `kind` this build doesn't recognize
-// yet (an older, not-yet-updated install receiving a notification kind added after it
-// shipped), so the row degrades to a generic bell instead of crashing the whole list.
-function fallbackMeta(colors: ThemeColors): { color: string; icon: keyof typeof MaterialCommunityIcons.glyphMap } {
-  return { color: colors.faint, icon: "bell-outline" };
-}
-
-function kindMeta(
-  colors: ThemeColors,
-): Record<NotificationKind, { color: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }> {
-  return {
-    expiring: { color: colors.agentGuardian, icon: "timer-sand" },
-    lowStock: { color: colors.agentShopkeeper, icon: "cart-outline" },
-    recipe: { color: colors.agentChef, icon: "chef-hat" },
-    invite: { color: colors.blue, icon: "email-outline" },
-    joinRequest: { color: colors.blue, icon: "account-plus-outline" },
-    requestApproved: { color: colors.good, icon: "check-circle-outline" },
-    requestDeclined: { color: colors.faint, icon: "close-circle-outline" },
-    inviteAccepted: { color: colors.good, icon: "account-check-outline" },
-    inviteDeclined: { color: colors.faint, icon: "account-cancel-outline" },
-    memberLeft: { color: colors.faint, icon: "account-arrow-right-outline" },
-    removed: { color: colors.agentGuardian, icon: "account-remove-outline" },
-    itemAdded: { color: colors.agentOrganizer, icon: "package-variant-closed" },
-    itemUsed: { color: colors.agentOrganizer, icon: "package-variant" },
-    note: { color: colors.agentOrganizer, icon: "note-text-outline" },
-    // Accent (the brand cyan, not one of the four crew-agent colors) - a Machine is
-    // cross-cutting, not owned by any one agent. See Kitchen Lab's Machine concept.
-    machine: { color: colors.accent, icon: "cog-outline" },
-  };
-}
+import { SwipeRow } from "@/components/swipe-row";
+import { NotificationUndoSnackbar } from "@/components/notification-undo-snackbar";
+import { NotificationRow } from "@/components/notification-row";
+import { useTheme } from "@/lib/theme";
 
 export default function Notifications() {
   const router = useRouter();
-  const { events, loading, error, refresh, remove, clearAll } = useNotifications();
+  const { events, loading, error, refresh, requestRemove, clearAll } = useNotifications();
   const { myInvites, myJoinRequests, acceptInvite, declineInvite, approveRequest, declineRequest } =
     useSocial();
   const [refreshing, setRefreshing] = useState(false);
@@ -103,7 +75,7 @@ export default function Notifications() {
           <View>
             <PixelText style={{ fontSize: 14, color: INK }}>Notifications</PixelText>
             <Text style={{ fontSize: 11.5, color: FAINT, marginTop: 3 }}>
-              Tap Clear to remove one
+              Swipe left to remove one
             </Text>
           </View>
         </View>
@@ -182,10 +154,14 @@ export default function Notifications() {
           </Text>
         ) : (
           events.map((e) => (
-            <Row key={e.id} event={e} onClear={() => remove(e.id)} />
+            <SwipeRow key={e.id} onDelete={() => requestRemove(e.id)}>
+              <NotificationRow event={e} onClear={() => requestRemove(e.id)} />
+            </SwipeRow>
           ))
         )}
       </ScrollView>
+
+      <NotificationUndoSnackbar />
     </SafeAreaView>
   );
 }
@@ -237,71 +213,6 @@ function PendingRow({
       </Pressable>
       <Pressable onPress={onDecline} hitSlop={6} style={{ padding: 4 }}>
         <MaterialCommunityIcons name="close" size={16} color={FAINT} />
-      </Pressable>
-    </View>
-  );
-}
-
-function Row({
-  event,
-  onClear,
-}: {
-  event: NotificationEvent;
-  onClear: () => void;
-}) {
-  const colors = useTheme().colors;
-  const {
-    surface: SURFACE,
-    hairline: HAIRLINE,
-    ink: INK,
-    faint: FAINT,
-    blue: BLUE,
-  } = colors;
-  // `event.kind` is a string from the server, not a compile-time-checked union - guard
-  // against a kind this build doesn't know yet (see fallbackMeta above) rather than crashing.
-  const meta = kindMeta(colors)[event.kind] ?? fallbackMeta(colors);
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        padding: 13,
-        marginBottom: 10,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: HAIRLINE,
-        backgroundColor: SURFACE,
-      }}
-    >
-      <View
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 6,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: `${meta.color}1a`,
-        }}
-      >
-        <MaterialCommunityIcons name={meta.icon} size={17} color={meta.color} />
-      </View>
-
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: INK, marginBottom: 2 }}>
-          {event.message}
-        </Text>
-        <Text style={{ fontSize: 11, color: FAINT }}>
-          {event.fridgeName} · {timeAgo(event.createdAt)}
-        </Text>
-      </View>
-
-      <Pressable
-        onPress={onClear}
-        hitSlop={8}
-        style={{ paddingHorizontal: 4, paddingVertical: 6 }}
-      >
-        <Text style={{ fontSize: 11.5, fontWeight: "700", color: BLUE }}>Clear</Text>
       </Pressable>
     </View>
   );

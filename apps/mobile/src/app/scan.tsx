@@ -15,7 +15,7 @@ import * as Haptics from "expo-haptics";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Animated, { FadeIn } from "react-native-reanimated";
 
-import { ApiError, guessFoodIcon } from "@thatfridge/core";
+import { ApiError, guessFoodIcon, type NutritionCategory } from "@thatfridge/core";
 import { useInventory } from "@/lib/inventory";
 import { FoodIcon } from "@/components/food-icon";
 import {
@@ -105,6 +105,10 @@ export default function Scan() {
             expiryDate: s.default_shelf_life_days
               ? isoInDays(s.default_shelf_life_days)
               : null,
+            // Barcode lookup already classifies a food group server-side (see
+            // BarcodeService::suggestItemDetails) - preserve it even though there's no
+            // manual food-group control on this screen anymore, see draft-item.tsx.
+            category: (s.category as NutritionCategory | null) ?? null,
             categoryId: categoryId ?? null,
           }),
         );

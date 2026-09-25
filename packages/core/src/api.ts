@@ -18,7 +18,9 @@ import type {
   Item,
   Machine,
   MachineDraftResult,
+  MachineDryRunResult,
   MachineInput,
+  MachineRun,
   MachineUpdateInput,
   MealType,
   MyInvite,
@@ -876,6 +878,21 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   function runMachine(id: string): Promise<Machine> {
     return http.post<Machine>(`/machines/${id}/run`);
   }
+  /** The Machine's most recent runs, newest first - capped server-side, not paginated. */
+  function listMachineRuns(id: string): Promise<MachineRun[]> {
+    return http.get<MachineRun[]>(`/machines/${id}/runs`);
+  }
+  /** No-write test mode - evaluates the saved Machine's steps and reports what they'd do,
+   *  without doing any of it (no item/note/shopping writes, no real notification). Nothing is
+   *  recorded server-side either, so this never shows up in listMachineRuns(). */
+  function dryRunMachine(id: string): Promise<MachineDryRunResult> {
+    return http.post<MachineDryRunResult>(`/machines/${id}/dry-run`);
+  }
+  /** Reverses one run's undoable steps (see MachineRun.undoable) - throws (ApiError, status
+   *  409) if it was already undone, or 422 if it turns out nothing on it was undoable. */
+  function undoMachineRun(machineId: string, runId: string): Promise<{ summaries: string[] }> {
+    return http.post<{ summaries: string[] }>(`/machines/${machineId}/runs/${runId}/undo`);
+  }
 
   // ---- fridge management -------------------------------------------------------
   function updateFridge(
@@ -1124,6 +1141,9 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     updateMachine,
     deleteMachine,
     runMachine,
+    listMachineRuns,
+    dryRunMachine,
+    undoMachineRun,
     getUsageHistory,
     getOrganizerTally,
     getScoreSnapshots,
