@@ -32,6 +32,8 @@ import { useScope } from "@/lib/scope";
 import { MACHINE_TEMPLATES, type MachineTemplate } from "@/lib/machineTemplates";
 import { getDeviceTimezone } from "@/lib/timezone";
 import { findOverlappingMachine } from "@/lib/machineOverlap";
+import { describeMachineError, setStepArg, type ArgPath } from "@/lib/machineEdit";
+import { StepValuesEditor, TriggerValuesEditor } from "@/components/machine-editor";
 import { PageHeader, Eyebrow } from "@/components/ui";
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -149,6 +151,8 @@ export default function KitchenLab() {
   const [dryRunning, setDryRunning] = useState(false);
   const [dryRunResult, setDryRunResult] = useState<MachineDryRunResult | null>(null);
   const [undoingRunId, setUndoingRunId] = useState<string | null>(null);
+  const [editingTrigger, setEditingTrigger] = useState(false);
+  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
   // True for edit/duplicate (review opened directly from a card tap, no prompt step this
   // session) - controls review's back destination and whether the fridge is a read-only
   // label vs a picker. False for a fresh create, where review's back returns to prompt.
@@ -164,6 +168,12 @@ export default function KitchenLab() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Collapse the value editors whenever a different Machine/draft (or screen) is opened.
+  useEffect(() => {
+    setEditingTrigger(false);
+    setEditingStepIndex(null);
+  }, [mode, editingId]);
 
   useEffect(() => {
     if (mode === "prompt" && fridgeId === null) {
@@ -245,6 +255,29 @@ export default function KitchenLab() {
     setPrompt("");
     setDraftMessage(null);
     setMode("review");
+  }
+
+  /** A hand-edit to a saved Machine's trigger/steps is saved the same way a redraft is (see
+   *  commitSaveMachine) and, like one, means "Run now"/"Dry run" would test the old saved
+   *  version rather than what's on screen - so it flips the same flag and drops any preview. */
+  function markStructureEdited() {
+    if (editingId) setRedrafted(true);
+    setDryRunResult(null);
+  }
+
+  function editTrigger(trigger: MachineTrigger) {
+    setDraft((d) => (d ? { ...d, trigger } : d));
+    markStructureEdited();
+  }
+
+  function editSteps(steps: MachineStep[]) {
+    setDraft((d) => (d ? { ...d, steps } : d));
+    markStructureEdited();
+  }
+
+  function editStepArg(stepIndex: number, path: ArgPath, value: unknown) {
+    setDraft((d) => (d ? { ...d, steps: setStepArg(d.steps, stepIndex, path, value) } : d));
+    markStructureEdited();
   }
 
   /** Confirms/edits a schedule trigger's timezone in place - the only field on the review
@@ -354,7 +387,7 @@ export default function KitchenLab() {
       setEnteredDirectly(false);
       load();
     } catch (e) {
-      Alert.alert("Couldn't save", describeError(e, "Try again in a moment."));
+      Alert.alert("Couldn't save", describeMachineError(e, "Try again in a moment."));
     } finally {
       setSaving(false);
     }
@@ -565,7 +598,15 @@ export default function KitchenLab() {
           <View className="gap-1.5">
             <Eyebrow color={colors.faint}>Trigger</Eyebrow>
             <View className="rounded-lg border border-hairline bg-surface px-3.5 py-3">
-              <Text className="text-[14px] text-ink">{describeTrigger(draft.trigger)}</Text>
+              <View className="flex-row items-center justify-between gap-3">
+                <Text className="flex-1 text-[14px] text-ink">{describeTrigger(draft.trigger)}</Text>
+                {draft.trigger.type !== "recipe_made" && (
+                  <Pressable onPress={() => setEditingTrigger((v) => !v)} hitSlop={8}>
+                    <Text className="text-[12px] font-bold text-accent">{editingTrigger ? "Done" : "Edit"}</Text>
+                  </Pressable>
+                )}
+              </View>
+              {editingTrigger && <TriggerValuesEditor trigger={draft.trigger} onChange={editTrigger} />}
             </View>
           </View>
 
@@ -598,12 +639,28 @@ export default function KitchenLab() {
               {draft.steps.map((step, i) => (
                 <View
                   key={i}
-                  className={`flex-row gap-2.5 px-3.5 py-3 ${
-                    i < draft.steps.length - 1 ? "border-b border-hairline" : ""
-                  }`}
+                  className={`px-3.5 py-3 ${i < draft.steps.length - 1 ? "border-b border-hairline" : ""}`}
                 >
-                  <Text className="text-[13px] font-bold text-accent">{i + 1}</Text>
-                  <Text className="flex-1 text-[13.5px] text-ink">{describeStep(step)}</Text>
+                  <View className="flex-row gap-2.5">
+                    <Text className="text-[13px] font-bold text-accent">{i + 1}</Text>
+                    <Text className="flex-1 text-[13.5px] text-ink">{describeStep(step)}</Text>
+                    {(Object.keys(step.args).length > 0 || step.condition) && (
+                      <Pressable onPress={() => setEditingStepIndex((cur) => (cur === i ? null : i))} hitSlop={8}>
+                        <Text className="text-[12px] font-bold text-accent">
+                          {editingStepIndex === i ? "Done" : "Edit"}
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
+                  {editingStepIndex === i && (
+                    <StepValuesEditor
+                      step={step}
+                      index={i}
+                      steps={draft.steps}
+                      onSetArg={editStepArg}
+                      onChangeSteps={editSteps}
+                    />
+                  )}
                 </View>
               ))}
             </View>
