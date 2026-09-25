@@ -18,7 +18,7 @@ echo "pre-push: running web tests..."
 
 if [ -f "$repo_root/apps/mobile/package.json" ]; then
   echo "pre-push: running mobile tests..."
-  (cd "$repo_root/apps/mobile" && pnpm test --if-present)
+  (cd "$repo_root/apps/mobile" && pnpm run --if-present test)
 fi
 
 echo "pre-push: all tests passed."
