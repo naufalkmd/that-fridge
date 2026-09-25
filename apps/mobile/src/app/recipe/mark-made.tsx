@@ -92,17 +92,7 @@ export default function MarkRecipeMade() {
           if (!it.opened) await patchItem(itemId, { opened: true }).catch(() => {});
           continue;
         }
-        await api
-          .recordItemUsage({
-            name: it.name,
-            icon: it.icon,
-            daysRemaining: it.days,
-            freshness: it.freshness,
-            category: it.nutritionCategory ?? null,
-          })
-          .catch(() => {});
-        if (it.days >= 0 && it.days <= 3) api.postBadgeProgress("rescued_10", 1).catch(() => {});
-        await removeItem(itemId).catch(() => {});
+        await removeItem(itemId, "recipe_used").catch(() => {});
       }
 
       refreshScore();

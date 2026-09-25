@@ -13,6 +13,10 @@ final class AdminCacheKeys
 
     public const ONBOARDING_FUNNEL = 'admin:funnel:14';
 
+    public const ALGORITHM_INSIGHTS = 'admin:algorithm-insights:30';
+
+    public const ALGORITHM_GAPS = 'admin:algorithm-gaps:180';
+
     public const FEEDBACK_BADGE = 'admin:badge:feedback';
 
     public const FAILED_JOBS_BADGE = 'admin:badge:failed-jobs';

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Fridge;
 use App\Models\FridgeNote;
 use App\Models\Item;
+use App\Models\ItemOutcome;
 use App\Models\Machine;
 use App\Models\Recipe;
 use App\Models\Section;
@@ -12,9 +13,11 @@ use App\Models\ShoppingItem;
 use App\Models\User;
 use App\Models\UserBadge;
 use App\Support\FoodIconMatcher;
+use App\Support\ItemFeedback;
 use App\Support\ItemFreshness;
 use App\Support\ItemPayload;
 use App\Support\MachineSchedule;
+use App\Support\OpenedShelfLife;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -111,6 +114,7 @@ class AgentToolbox
         protected KitchenScoreService $kitchenScore,
         protected RecipeLinkImportService $recipeImport,
         protected CreditService $credits,
+        protected ItemRemovalService $removals,
     ) {}
 
     /**
@@ -210,11 +214,11 @@ class AgentToolbox
                 'text' => ['type' => 'string'],
                 'color' => ['type' => 'string', 'enum' => FridgeNote::COLORS],
             ], ['note_id']),
-            $fn('mark_item_used', 'Record that the user used up an item (or some of it) while it was still good. This removes it (or lowers the quantity) AND logs it to their usage history, which feeds their Kitchen Score and the Shopkeeper. Use this for "I used the last of the milk", NOT for throwing something away - that is remove_item.', [
+            $fn('mark_item_used', 'Record that the user used up an item (or some of it). This removes it (or lowers the quantity) and logs it to usage history. Use this for "I used the last of the milk".', [
                 'item_id' => ['type' => 'integer'],
                 'quantity_used' => ['type' => 'integer', 'description' => 'How many units were used. Omit to use up the whole item.'],
             ], ['item_id']),
-            $fn('remove_item', 'Delete an item from the fridge - for something thrown away, or added by mistake. Call once with confirm:false to preview, tell the user exactly what will be removed, then call again with confirm:true only after they agree.', [
+            $fn('remove_item', 'Remove an item from the fridge. The app classifies it as used, wasted or an entry mistake from its age and expiry. Call once with confirm:false to preview, then again with confirm:true only after the user agrees.', [
                 'item_id' => ['type' => 'integer'],
                 'confirm' => ['type' => 'boolean', 'description' => 'Must be true to actually delete. Never set true without explicit user agreement in the conversation.'],
             ], ['item_id']),
@@ -564,7 +568,7 @@ class AgentToolbox
         foreach ($ids as $id) {
             $item = $this->items($user)->find($id);
             if ($item) {
-                $item->delete();
+                $this->removals->remove($user, $item, 'undo_add');
                 $removed++;
             }
         }
@@ -610,6 +614,26 @@ class AgentToolbox
      */
     private function undoMarkItemsUsedMatching(array $undo, User $user): string
     {
+        if (isset($undo['outcome_ids']) && is_array($undo['outcome_ids'])) {
+            $restored = 0;
+            foreach ($undo['outcome_ids'] as $id) {
+                $outcome = ItemOutcome::where('user_id', $user->id)->find($id);
+                if (! $outcome || $outcome->undone_at) {
+                    continue;
+                }
+                try {
+                    $this->removals->undo($user, $outcome, true);
+                    $restored++;
+                } catch (\Throwable) {
+                    // A deleted section or product can make one restoration impossible.
+                }
+            }
+
+            return $restored > 0
+                ? "Restored {$restored} item".($restored === 1 ? '' : 's').' this run marked used.'
+                : 'Nothing to undo - already gone.';
+        }
+
         $snapshots = is_array($undo['items'] ?? null) ? $undo['items'] : [];
         $userSectionIds = Section::whereHas('fridge.members', fn ($q) => $q->where('users.id', $user->id))->pluck('id');
 
@@ -1213,8 +1237,22 @@ class AgentToolbox
             return 'Error: nothing to change - pass at least one of name, quantity, opened, location, category, expiry_date, note, shop_url, weight, calories, set_custom_fields.';
         }
 
+        if (($data['opened'] ?? false) && ! $item->opened) {
+            $opening = OpenedShelfLife::resolve(
+                $data['name'] ?? $item->name, $item->icon,
+                $data['location'] ?? $item->location,
+                $data['nutrition_category'] ?? $item->nutrition_category,
+                $item->shelf_life_days,
+            );
+            if (! $opening['openable']) {
+                return "Error: {$item->name} has no opening date. Use its printed expiry or change the food name instead.";
+            }
+        }
+
+        $before = ItemFeedback::snapshot($item);
         $data = ItemPayload::normalize($data);
         $item->update($data);
+        ItemFeedback::updated($user, $item, $before);
         $this->mutated = true;
 
         return "Updated \"{$item->name}\": ".$this->describeItemChanges($data).'.';
@@ -1285,16 +1323,16 @@ class AgentToolbox
         $used = isset($args['quantity_used']) ? max(1, (int) $args['quantity_used']) : $item->quantity;
         $usedUp = $used >= $item->quantity;
 
-        $days = ItemFreshness::daysUntilExpiry($item);
-        $this->recordUsage($user, $item->name, $item->icon, $days);
         $this->mutated = true;
 
         if ($usedUp) {
-            $item->delete();
+            $this->removals->remove($user, $item, 'chat_used');
 
             return "Marked \"{$item->name}\" as used up and logged it to your usage history.";
         }
 
+        $days = ItemFreshness::effectiveDaysUntilExpiry($item);
+        $this->recordUsage($user, $item->name, $item->icon, $days);
         $item->decrement('quantity', $used);
 
         return "Used {$used} of \"{$item->name}\" ({$item->quantity} left) and logged it.";
@@ -1335,38 +1373,15 @@ class AgentToolbox
         }
 
         $names = [];
-        $snapshots = [];
-        $usageDeltas = [];
+        $outcomeIds = [];
         foreach ($items as $row) {
             $item = $row['model'];
-            $days = ItemFreshness::daysUntilExpiry($item);
-            $this->recordUsage($user, $item->name, $item->icon, $days);
             $names[] = $item->name;
-
-            // Same normalization recordUsage() applies - tallied here too so undoStep() can
-            // decrement usage_history back by exactly what this run added, not guess at it.
-            $key = Str::lower(trim($item->name));
-            $usageDeltas[$key] ??= ['count' => 0, 'fresh' => 0];
-            $usageDeltas[$key]['count']++;
-            if ($days !== null && $days >= 0) {
-                $usageDeltas[$key]['fresh']++;
-            }
-
-            // Enough of the item's own fields to recreate it on undo - a fresh row, not the
-            // same id (a hard-deleted primary key can't be reused safely), but otherwise a
-            // faithful restore.
-            $snapshots[] = $item->only([
-                'section_id', 'product_id', 'category_id', 'name', 'icon', 'icon_url',
-                'nutrition_category', 'location', 'quantity', 'weight', 'weight_unit',
-                'expiry_date', 'shelf_life_days', 'opened', 'note', 'source', 'shop_url',
-                'calories', 'custom_fields',
-            ]);
-
-            $item->delete();
+            $outcomeIds[] = $this->removals->remove($user, $item, 'machine_used')->id;
         }
         $this->mutated = true;
         $this->value = (string) count($names);
-        $this->undo = ['tool' => 'mark_items_used_matching', 'items' => $snapshots, 'usage_deltas' => $usageDeltas];
+        $this->undo = ['tool' => 'mark_items_used_matching', 'outcome_ids' => $outcomeIds];
 
         $shown = array_slice($names, 0, 10);
         $rest = count($names) - count($shown);
@@ -1390,10 +1405,10 @@ class AgentToolbox
         }
 
         $name = $item->name;
-        $item->delete();
+        $outcome = $this->removals->remove($user, $item);
         $this->mutated = true;
 
-        return "Removed \"{$name}\".";
+        return "Removed \"{$name}\" (counted as {$outcome->outcome}).";
     }
 
     private function clearExpired(User $user, ?int $fridgeId, array $args): string
@@ -1401,20 +1416,22 @@ class AgentToolbox
         $expired = $this->items($user)
             ->when($fridgeId, fn ($q) => $q->whereHas('section', fn ($s) => $s->where('fridge_id', $fridgeId)))
             ->get()
-            ->filter(fn ($i) => ($d = ItemFreshness::daysUntilExpiry($i)) !== null && $d < 0);
+            ->filter(fn ($i) => ($d = ItemFreshness::effectiveDaysUntilExpiry($i)) !== null && $d < 0);
 
         if ($expired->isEmpty()) {
             return 'Nothing is past its date - nothing to clear.';
         }
 
-        $list = $expired->map(fn ($i) => "\"{$i->name}\" (".abs(ItemFreshness::daysUntilExpiry($i)).'d overdue)')->implode(', ');
+        $list = $expired->map(fn ($i) => "\"{$i->name}\" (".abs(ItemFreshness::effectiveDaysUntilExpiry($i)).'d overdue)')->implode(', ');
 
         if (empty($args['confirm'])) {
             return "Not removed yet. {$expired->count()} item(s) are past their date: {$list}. ".
                 'Read this list back to the user and ask them to confirm, then call clear_expired_items again with confirm:true.';
         }
 
-        Item::whereIn('id', $expired->pluck('id'))->delete();
+        foreach ($expired as $item) {
+            $this->removals->remove($user, $item, 'clear_expired');
+        }
         $this->mutated = true;
 
         return "Removed {$expired->count()} expired item(s): {$list}.";
@@ -1505,7 +1522,7 @@ class AgentToolbox
         }
 
         $fridge = $this->targetFridge($user, $this->wantedFridgeId($user, $args['fridge_id'] ?? null, $fridgeId));
-        $item = $this->createItem($fridge, $args);
+        $item = $this->createItem($user, $fridge, $args);
         if (is_string($item)) {
             return 'Error: '.$item;
         }
@@ -1533,7 +1550,7 @@ class AgentToolbox
             if (! is_array($spec) || trim((string) ($spec['name'] ?? '')) === '') {
                 continue;
             }
-            $r = $this->createItem($fridge, $spec);
+            $r = $this->createItem($user, $fridge, $spec);
             if (is_string($r)) {
                 $skipped[] = trim($spec['name']).' ('.$r.')';
             } else {
@@ -1562,7 +1579,7 @@ class AgentToolbox
      * Create one item in the given fridge from a loose spec (name required). Returns the
      * created Item with its `section` relation set, or an error string.
      */
-    private function createItem(Fridge $fridge, array $spec): Item|string
+    private function createItem(User $user, Fridge $fridge, array $spec): Item|string
     {
         $name = trim((string) ($spec['name'] ?? ''));
         if ($name === '') {
@@ -1625,11 +1642,12 @@ class AgentToolbox
             'quantity' => isset($spec['quantity']) ? max(1, (int) $spec['quantity']) : 1,
             'expiry_date' => $expiry,
             'shelf_life_days' => $shelfLifeDays,
-            'source' => 'manual',
+            'source' => 'chat',
             'weight' => $weight,
             'weight_unit' => $weightUnit,
             'calories' => $calories,
         ]);
+        ItemFeedback::created($user, $item);
         $this->mutated = true;
 
         return $item->setRelation('section', $section);
@@ -1660,7 +1678,12 @@ class AgentToolbox
             return 'Error: pass a section and/or a location to move it to.';
         }
 
+        $before = ItemFeedback::snapshot($item);
+        // The section assignment above has already changed the model, but snapshot() only
+        // captures feedback-relevant fields. Capture the original location explicitly.
+        $before['location'] = $item->getOriginal('location');
         $item->save();
+        ItemFeedback::updated($user, $item, $before);
         $this->mutated = true;
 
         return "Moved \"{$item->name}\": ".implode(', ', $changes).'.';

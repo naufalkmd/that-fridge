@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ChatHistory;
 use App\Services\AgentService;
 use App\Services\CreditService;
+use App\Support\AlgoFeedback;
 use App\Support\CreditCost;
+use App\Support\ItemSuggestionToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -51,7 +54,7 @@ class AgentController extends Controller
             ->where('session_id', $latestSessionId)
             ->orderBy('created_at')
             ->limit(self::HISTORY_LIMIT)
-            ->get(['id', 'agent', 'user_message', 'agent_response', 'recipe_suggestion', 'created_at']);
+            ->get(['id', 'agent', 'user_message', 'agent_response', 'recipe_suggestion', 'feedback_rating', 'feedback_reason', 'created_at']);
 
         return response()->json([
             'messages' => $messages,
@@ -87,7 +90,7 @@ class AgentController extends Controller
             ->where('session_id', $sessionId)
             ->orderBy('created_at')
             ->limit(self::HISTORY_LIMIT)
-            ->get(['id', 'agent', 'user_message', 'agent_response', 'recipe_suggestion', 'created_at']);
+            ->get(['id', 'agent', 'user_message', 'agent_response', 'recipe_suggestion', 'feedback_rating', 'feedback_reason', 'created_at']);
 
         if ($messages->isEmpty()) {
             return response()->json(['error' => 'Session not found'], 404);
@@ -124,6 +127,27 @@ class AgentController extends Controller
         $deleted = $request->user()->chatHistory()->delete();
 
         return response()->json(['deleted' => $deleted], 200);
+    }
+
+    /** Keep only a structured rating; chat text stays in its existing history row. */
+    public function rateReply(Request $request, ChatHistory $chatHistory)
+    {
+        abort_unless($chatHistory->user_id === $request->user()->id && $chatHistory->agent_response, 404);
+        $data = $request->validate([
+            'rating' => ['required', 'in:up,down'],
+            'reason' => ['nullable', 'in:wrong_info,ignored_fridge,too_slow,other'],
+        ]);
+        $reason = $data['rating'] === 'down' ? ($data['reason'] ?? null) : null;
+        if ($chatHistory->feedback_rating !== $data['rating'] || $chatHistory->feedback_reason !== $reason) {
+            $chatHistory->update(['feedback_rating' => $data['rating'], 'feedback_reason' => $reason]);
+            AlgoFeedback::record($request->user(), 'chat', [
+                'kind' => 'rated', 'class' => $chatHistory->agent,
+                'guess' => $chatHistory->agent, 'final' => $data['rating'],
+                'source' => $reason ?? 'none', 'outcome' => $data['rating'],
+            ]);
+        }
+
+        return response()->json(['rating' => $chatHistory->feedback_rating, 'reason' => $chatHistory->feedback_reason]);
     }
 
     /**
@@ -338,6 +362,8 @@ class AgentController extends Controller
         $this->credits->spend($request->user(), CreditCost::AUTOFILL, 'autofill');
 
         $suggestion = $this->agentService->suggestItemDetails($data['name'], $data['icon'] ?? null);
+
+        $suggestion['feedback_token'] = ItemSuggestionToken::issue($request->user(), $data['name'], $suggestion);
 
         return response()->json($suggestion, 200);
     }

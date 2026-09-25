@@ -90,6 +90,14 @@ Revokes the token used to make this request. No body.
 
 `streak` is a daily "opened the app" streak, not tied to any score. `User::recordDailyOpen()` runs on every authenticated round trip that returns a user payload (register/login/social-sign-in/me/profile updates) and compares UTC calendar dates against `last_active_on`: same day is a no-op, yesterday increments, anything older resets to 1.
 
+### `PATCH /me/improvement-preferences` · `DELETE /me/improvement-data` 🔒
+
+`PATCH` accepts `{ "helpImprove": false }` and/or `{ "noticeSeen": true }`.
+Sharing defaults to on, and the API only writes structured algorithm feedback after
+`ALGO_FEEDBACK_ENABLED=true` is set on a server with the updated privacy notice published.
+`DELETE` removes this user's raw `algo_feedback_events`; it does not alter functional item
+outcomes or already anonymous daily aggregates.
+
 ---
 
 ## Fridges
@@ -276,19 +284,43 @@ Always created/modified under a parent section. **This is the contract Track B's
 | `expiry_date` | no | `YYYY-MM-DD` |
 | `shelf_life_days` | no | used with `expiry_date` to compute `freshness` |
 | `note` | no | |
-| `source` | no | `manual` \| `barcode` \| `receipt` \| `photo` \| `voice` |
+| `source` | no | `manual` \| `barcode` \| `receipt` \| `photo` \| `voice` \| `chat` |
+| `barcode_miss` | no | barcode from a scanner lookup that returned 404; saved with the typed item name as a structured product gap only when improvement sharing is enabled |
+| `add_started_at` | no | client draft start time; elapsed seconds are recorded only if between 0 and 24 hours, with improvement sharing enabled |
 
 **201** — item object (same shape as nested items above, with computed `freshness`/`days`).
 
 ### `PATCH /items/{item}` 🔒
 
-**Body** — any subset of the fields above.
+**Body** — any subset of the fields above, plus `opened` and
+`opened_shelf_life_days` (1–365). Opening stamps a saved estimate and date. Foods without
+an opening event return 422. The estimate can be shortened; only shelf-stable foods and
+freezer items can be lengthened. Setting `opened: false` clears the opening snapshot.
 
-**200** — updated item.
+**200** — updated item, including `openable`, `opened_shelf_life_days`,
+`opened_shelf_life_source`, and effective `days`.
 
 ### `DELETE /items/{item}` 🔒
 
-**204**
+**200** — `{ "id": "<outcome id>", "outcome": "used|wasted|entry_mistake",
+"confidence": "high|medium|low" }`. A new item removed within about ten minutes is
+treated as an entry mistake; otherwise the effective expiry determines the default. The
+optional `?context=recipe_used` explicitly marks a recipe ingredient used.
+
+### `PATCH /item-outcomes/{id}` · `POST /item-outcomes/{id}/undo` 🔒
+
+`PATCH` accepts `{ "outcome": "used|wasted" }` while the short-lived Undo snapshot is
+available, reverses or adds usage credit, and records the correction. `POST .../undo`
+restores the original item and reverses any usage credit within ten minutes. Only the
+user who removed the item can correct or undo it.
+
+### `PATCH /chat/{chatHistory}/feedback` 🔒
+
+Rate one saved assistant reply with `{ "rating": "up" }` or
+`{ "rating": "down", "reason": "wrong_info|ignored_fridge|too_slow|other" }`.
+The reason is optional. Only the owner of that chat turn can rate it. Repeating the same
+rating is idempotent. Improvement feedback records the agent, rating, and reason without
+the message text, subject to the user's sharing preference.
 
 ### `PATCH /items/bulk-category` 🔒
 

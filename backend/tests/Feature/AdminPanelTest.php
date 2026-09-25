@@ -69,6 +69,7 @@ class AdminPanelTest extends TestCase
             '/admin/generated-icons',
             '/admin/admin-audit-logs',
             '/admin/analytics-events',
+            '/admin/algorithm-insights',
             '/admin/failed-jobs',
         ] as $url) {
             $this->assertSame(200, $this->get($url)->status(), $url);

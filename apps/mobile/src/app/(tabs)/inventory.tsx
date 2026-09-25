@@ -49,6 +49,7 @@ import { CategoryTag, LocationTag } from "@/components/tags";
 import { FoodIcon } from "@/components/food-icon";
 import { SkeletonList } from "@/components/ui";
 import { useTheme } from "@/lib/theme";
+import { useToast } from "@/lib/toast";
 
 const UNCATEGORIZED = "__uncat__";
 
@@ -66,7 +67,8 @@ const SORT_OPTIONS: { key: Sort; label: string }[] = [
 export default function Inventory() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { items, loading, error, refresh, removeManyItems } = useInventory();
+  const { items, loading, error, refresh, removeManyItems, undoRemoval } = useInventory();
+  const toast = useToast();
   const { categories, assign } = useCategories();
   const { scope } = useScope();
   const {
@@ -373,32 +375,18 @@ export default function Inventory() {
   function deleteSelected() {
     const ids = [...selected];
     if (ids.length === 0) return;
-    Alert.alert(
-      `Delete ${ids.length} item${ids.length === 1 ? "" : "s"}?`,
-      "This removes them from your fridge. It can't be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            setSelected(new Set());
-            setSelectMode(false);
-            try {
-              await removeManyItems(ids);
-              void Haptics.notificationAsync(
-                Haptics.NotificationFeedbackType.Success,
-              );
-            } catch (e) {
-              Alert.alert(
-                "Error",
-                e instanceof Error ? e.message : "Couldn't delete those items.",
-              );
-            }
-          },
-        },
-      ],
-    );
+    setSelected(new Set());
+    setSelectMode(false);
+    void removeManyItems(ids).then((outcomes) => {
+      if (outcomes.length > 0) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        toast.show(`Removed ${outcomes.length} item${outcomes.length === 1 ? "" : "s"}`, {
+          actionLabel: "Undo",
+          onAction: () => { void Promise.allSettled(outcomes.map((o) => undoRemoval(o.id))).then(refresh); },
+        });
+      }
+      if (outcomes.length < ids.length) Alert.alert("Some items weren't removed", "Please try again.");
+    }).catch((e) => Alert.alert("Error", e instanceof Error ? e.message : "Couldn't remove those items."));
   }
 
   return (

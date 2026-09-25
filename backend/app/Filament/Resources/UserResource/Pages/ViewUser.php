@@ -5,13 +5,16 @@ namespace App\Filament\Resources\UserResource\Pages;
 use App\Exceptions\InsufficientCreditsException;
 use App\Filament\Resources\UserResource;
 use App\Models\AdminAuditLog;
+use App\Models\AlgoFeedbackEvent;
 use App\Models\User;
 use App\Services\CreditService;
+use App\Support\AdminCacheKeys;
 use Filament\Actions;
 use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Support\Facades\Cache;
 
 class ViewUser extends ViewRecord
 {
@@ -21,6 +24,19 @@ class ViewUser extends ViewRecord
     {
         return [
             Actions\EditAction::make(),
+            Actions\Action::make('improvementFeedback')
+                ->label('Improvement feedback')
+                ->icon('heroicon-o-chart-bar-square')
+                ->mountUsing(fn (User $record) => AdminAuditLog::record('viewed_user_improvement_feedback', $record))
+                ->modalHeading('Improvement feedback')
+                ->modalDescription('Raw structured events for this account from the last 180 days.')
+                ->modalContent(fn (User $record) => view('filament.user-improvement-feedback', [
+                    'events' => AlgoFeedbackEvent::where('user_id', $record->id)
+                        ->where('occurred_at', '>=', now()->subDays(180))
+                        ->latest('occurred_at')->limit(100)->get(),
+                ]))
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Close'),
             $this->adjustCreditsAction(),
             Actions\ActionGroup::make([
                 $this->signOutEverywhereAction(),
@@ -118,6 +134,8 @@ class ViewUser extends ViewRecord
                     ->in(fn (User $record) => [$record->email]),
             ])
             ->action(function (User $record) {
+                AlgoFeedbackEvent::where('user_id', $record->id)->delete();
+                Cache::forget(AdminCacheKeys::ALGORITHM_GAPS);
                 $record->tokens()->delete();
                 $record->delete();
                 AdminAuditLog::record('deleted_account', $record, ['email' => $record->email, 'name' => $record->name]);

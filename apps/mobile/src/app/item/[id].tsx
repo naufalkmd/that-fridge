@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -37,7 +38,7 @@ import {
 export default function ItemDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { itemById, removeItem, restoreItem, patchItem } = useInventory();
+  const { itemById, removeItem, undoRemoval, patchItem } = useInventory();
   const { items: shoppingItems, add: addToShopping } = useShopping();
   const { refresh: refreshScore } = useKitchenScore();
   const toast = useToast();
@@ -57,6 +58,8 @@ export default function ItemDetail() {
   } = useTheme().colors;
 
   const [busy, setBusy] = useState(false);
+  const [editingOpening, setEditingOpening] = useState(false);
+  const [openingInput, setOpeningInput] = useState("");
   // One row open at a time across the whole screen - "storage" | "best-before" | "note" |
   // "shop-link" | "weight" | "calories" | `custom:${id}` | "add-custom" | null.
   const [openRow, setOpenRow] = useState<string | null>(null);
@@ -93,27 +96,35 @@ export default function ItemDetail() {
         ? `Plan to use ${item.name.toLowerCase()} within the next couple of days.`
         : `${item.name} is holding up well — no action needed.`;
 
-  async function usedItUp() {
+  async function remove() {
     const snap = item!;
     setBusy(true);
     try {
-      await api
-        .recordItemUsage({
-          name: snap.name,
-          icon: snap.icon,
-          daysRemaining: snap.days,
-          freshness: snap.freshness,
-          category: snap.nutritionCategory ?? null,
-        })
-        .catch(() => {});
-      // "Rescued" — used up while still in date, with little time to spare.
-      if (snap.days >= 0 && snap.days <= 3) {
-        api.postBadgeProgress("rescued_10", 1).catch(() => {});
-      }
-      await removeItem(snap.id);
+      const result = await removeItem(snap.id);
       refreshScore();
       router.back();
-      toast.show(`Used up ${snap.name}`);
+      const label = result.outcome === "entry_mistake" ? "Removed" :
+        result.outcome === "used" ? "Counted as used" : "Counted as thrown out";
+      const corrected = result.outcome === "used" ? "wasted" : "used";
+      toast.show(`${label} · ${snap.name}`, {
+        actionLabel: "Undo",
+        onAction: () => {
+          void undoRemoval(result.id).then(refreshScore).catch((e) =>
+            Alert.alert("Couldn't undo", describeError(e, "Please try again.")));
+        },
+        ...(result.outcome !== "entry_mistake" ? {
+          secondaryActionLabel: result.outcome === "used" ? "Thrown out" : "Used it",
+          onSecondaryAction: () => {
+            void api.correctItemOutcome(result.id, corrected).then(() => {
+              refreshScore();
+              toast.show(corrected === "used" ? "Counted as used" : "Counted as thrown out", {
+                actionLabel: "Undo",
+                onAction: () => { void undoRemoval(result.id).then(refreshScore); },
+              });
+            }).catch((e) => Alert.alert("Couldn't change outcome", describeError(e, "Please try again.")));
+          },
+        } : {}),
+      });
     } catch (e) {
       setBusy(false);
       Alert.alert("Error", describeError(e, "Couldn't update that item."));
@@ -134,36 +145,37 @@ export default function ItemDetail() {
     }
   }
 
-  function throwAway() {
-    const snap = item!;
-    Alert.alert(
-      "Throw away",
-      `Bin "${snap.name}"? This doesn't count toward your scores.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Throw away",
-          style: "destructive",
-          onPress: async () => {
-            setBusy(true);
-            try {
-              await removeItem(snap.id);
-              router.back();
-              toast.show(`Removed ${snap.name}`, {
-                actionLabel: "Undo",
-                onAction: () => restoreItem(snap),
-              });
-            } catch (e) {
-              setBusy(false);
-              Alert.alert(
-                "Error",
-                e instanceof Error ? e.message : "Failed to remove.",
-              );
-            }
-          },
-        },
-      ],
-    );
+  async function saveOpeningDays() {
+    const days = Number(openingInput);
+    if (!Number.isInteger(days) || days < 1 || days > 365) {
+      Alert.alert("Choose a number of days", "Enter a whole number from 1 to 365.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await patchItem(item!.id, { opened_shelf_life_days: days });
+      refreshScore();
+      setEditingOpening(false);
+      toast.show(`Opening duration set to ${days} days`);
+    } catch (e) {
+      Alert.alert("Couldn't save opening duration", describeError(e, "Please try again."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function markSealed() {
+    setBusy(true);
+    try {
+      await patchItem(item!.id, { opened: false });
+      refreshScore();
+      setEditingOpening(false);
+      toast.show(`${item!.name} marked sealed again`);
+    } catch (e) {
+      Alert.alert("Couldn't mark sealed", describeError(e, "Please try again."));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -294,40 +306,44 @@ export default function ItemDetail() {
           </Pressable>
         </View>
 
-        <Pressable
-          onPress={markOpened}
-          disabled={busy || item.opened}
-          style={{
-            alignItems: "center",
-            paddingVertical: 11,
-            borderRadius: 6,
-            marginBottom: 10,
-            backgroundColor: SURFACE2,
-            borderWidth: 1,
-            borderColor: HAIRLINE,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <MaterialCommunityIcons
-              name={item.opened ? "package-variant" : "package-variant-closed"}
-              size={14}
-              color={item.opened ? FAINT : BLUE}
-            />
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: "700",
-                color: item.opened ? FAINT : BLUE,
-              }}
-            >
-              {item.opened ? "Opened — going bad sooner" : "Opened it"}
-            </Text>
+        {item.openable !== false && (
+          <View style={{ marginBottom: 10, borderRadius: 6, backgroundColor: SURFACE2, borderWidth: 1, borderColor: HAIRLINE }}>
+            {!item.opened ? (
+              <Pressable onPress={markOpened} disabled={busy} style={{ alignItems: "center", paddingVertical: 11 }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: BLUE }}>Opened it</Text>
+              </Pressable>
+            ) : (
+              <View style={{ padding: 11, gap: 10 }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: INK }}>
+                  Opened · ~{item.openedShelfLifeDays ?? 3} days {item.openedShelfLifeSource === "user" ? "(you set)" : "(estimated)"}
+                </Text>
+                {editingOpening ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <TextInput
+                      value={openingInput}
+                      onChangeText={setOpeningInput}
+                      keyboardType="number-pad"
+                      accessibilityLabel="Days after opening"
+                      style={{ flex: 1, borderWidth: 1, borderColor: HAIRLINE, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 7, color: INK }}
+                    />
+                    <Pressable onPress={saveOpeningDays} disabled={busy}><Text style={{ color: BLUE, fontWeight: "700" }}>Save</Text></Pressable>
+                  </View>
+                ) : (
+                  <Pressable onPress={() => { setOpeningInput(String(item.openedShelfLifeDays ?? 3)); setEditingOpening(true); }} disabled={busy}>
+                    <Text style={{ color: BLUE, fontSize: 12, fontWeight: "700" }}>Edit days</Text>
+                  </Pressable>
+                )}
+                <Pressable onPress={markSealed} disabled={busy}>
+                  <Text style={{ color: FAINT, fontSize: 12, fontWeight: "700" }}>Mark as sealed again</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
-        </Pressable>
+        )}
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <Pressable
-            onPress={usedItUp}
+            onPress={remove}
             disabled={busy}
             style={{
               flex: 1,
@@ -346,24 +362,7 @@ export default function ItemDetail() {
                 color: CANVAS,
               }}
             >
-              Used it up
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={throwAway}
-            disabled={busy}
-            style={{
-              flex: 1,
-              alignItems: "center",
-              paddingVertical: 13,
-              borderRadius: 6,
-              backgroundColor: SURFACE,
-              borderWidth: 1,
-              borderColor: `${BAD}66`,
-            }}
-          >
-            <Text style={{ fontSize: 13.5, fontWeight: "700", color: BAD }}>
-              Throw away
+              Remove
             </Text>
           </Pressable>
         </View>

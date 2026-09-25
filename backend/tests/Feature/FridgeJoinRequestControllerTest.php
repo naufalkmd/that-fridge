@@ -441,7 +441,8 @@ class FridgeJoinRequestControllerTest extends TestCase
         $itemId = $createResponse->json('data.id');
 
         $this->actingAs($requester)->patchJson("/api/items/{$itemId}", ['name' => 'Oat Milk'])->assertStatus(200);
-        $this->actingAs($requester)->deleteJson("/api/items/{$itemId}")->assertStatus(204);
+        $this->actingAs($requester)->deleteJson("/api/items/{$itemId}")->assertOk()
+            ->assertJsonPath('outcome', 'entry_mistake');
     }
 
     public function test_inviting_someone_is_rejected_when_the_owner_is_not_on_pro(): void

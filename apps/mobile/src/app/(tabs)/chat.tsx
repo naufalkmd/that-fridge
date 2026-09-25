@@ -19,7 +19,6 @@ import {
 } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import * as DocumentPicker from "expo-document-picker";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import {
@@ -42,6 +41,16 @@ import { useVoiceDictation } from "@/lib/voice";
 import { MarkdownText } from "@/components/markdown-text";
 import { RecipeSuggestionCard } from "@/components/recipe-suggestion-card";
 import { useTheme } from "@/lib/theme";
+
+// Older builds on this OTA channel may not contain ExpoDocumentPicker. Its entry point
+// loads the native module at import time, so a static import crashes the entire chat tab.
+let documentPicker: typeof import("expo-document-picker") | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  documentPicker = require("expo-document-picker");
+} catch {
+  documentPicker = null;
+}
 
 const WALLPAPER = require("../../../assets/images/thatfridge/chat-wallpaper.png");
 
@@ -79,6 +88,8 @@ const SUGGESTIONS: { icon: keyof typeof Ionicons.glyphMap; label: string; prompt
 type Msg = {
   role: "user" | "agent";
   text: string;
+  feedbackId?: number;
+  feedbackRating?: "up" | "down" | null;
   recipe?: RecipeSuggestionBlock | null;
   mocked?: boolean;
   attachmentUris?: string[];
@@ -169,6 +180,8 @@ export default function Chat() {
               role: "agent",
               text: row.agent_response,
               recipe: row.recipe_suggestion,
+              feedbackId: row.id,
+              feedbackRating: row.feedback_rating,
             });
           return out;
         });
@@ -219,14 +232,18 @@ export default function Chat() {
   }
 
   async function pickPdf() {
-    if (hasPdf) return;
-    const res = await DocumentPicker.getDocumentAsync({ type: "application/pdf" });
-    if (res.canceled || !res.assets[0]) return;
-    const asset = res.assets[0];
-    setAttachments((prev) => [
-      ...prev,
-      { kind: "pdf", uri: asset.uri, name: asset.name || "document.pdf" },
-    ]);
+    if (hasPdf || !documentPicker) return;
+    try {
+      const res = await documentPicker.getDocumentAsync({ type: "application/pdf" });
+      if (res.canceled || !res.assets[0]) return;
+      const asset = res.assets[0];
+      setAttachments((prev) => [
+        ...prev,
+        { kind: "pdf", uri: asset.uri, name: asset.name || "document.pdf" },
+      ]);
+    } catch {
+      Alert.alert("Couldn't open documents", "Please try again or use a photo instead.");
+    }
   }
 
   function removeAttachment(index: number) {
@@ -305,6 +322,7 @@ export default function Chat() {
           text: res.agent_response,
           recipe: res.recipe_suggestion,
           mocked: res.mocked,
+          feedbackId: res.id,
         },
       ]);
       if (typeof res.credits === "number") setCredits(res.credits);
@@ -561,22 +579,24 @@ export default function Chat() {
               >
                 <Ionicons name="image-outline" size={16} color={INK} />
               </Pressable>
-              <Pressable
-                onPress={pickPdf}
-                disabled={hasPdf}
-                hitSlop={4}
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 17,
-                  backgroundColor: SURFACE2,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: hasPdf ? 0.4 : 1,
-                }}
-              >
-                <Ionicons name="document-attach-outline" size={16} color={INK} />
-              </Pressable>
+              {documentPicker && (
+                <Pressable
+                  onPress={pickPdf}
+                  disabled={hasPdf}
+                  hitSlop={4}
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 17,
+                    backgroundColor: SURFACE2,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: hasPdf ? 0.4 : 1,
+                  }}
+                >
+                  <Ionicons name="document-attach-outline" size={16} color={INK} />
+                </Pressable>
+              )}
               <TextInput
                 value={text}
                 onChangeText={setText}
@@ -783,6 +803,23 @@ function Bubble({ msg }: { msg: Msg }) {
   const [added, setAdded] = useState(false);
   const [adding, setAdding] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState<"up" | "down" | null>(msg.feedbackRating ?? null);
+  const [choosingReason, setChoosingReason] = useState(false);
+  const [ratingBusy, setRatingBusy] = useState(false);
+
+  async function rateReply(rating: "up" | "down", reason?: "wrong_info" | "ignored_fridge" | "too_slow" | "other") {
+    if (!msg.feedbackId || ratingBusy) return;
+    setRatingBusy(true);
+    try {
+      await api.rateChatReply(msg.feedbackId, rating, reason);
+      setFeedbackRating(rating);
+      setChoosingReason(false);
+    } catch (e) {
+      Alert.alert("Couldn't save rating", describeError(e, "Please try again."));
+    } finally {
+      setRatingBusy(false);
+    }
+  }
   const alreadyInBook =
     !!msg.recipe &&
     recipes.some(
@@ -921,6 +958,33 @@ function Bubble({ msg }: { msg: Msg }) {
           </>
         )}
       </View>
+      {!isUser && msg.feedbackId && (
+        <View style={{ alignItems: "flex-start", marginTop: 4, marginBottom: 5 }}>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable accessibilityLabel="Helpful answer" disabled={ratingBusy} onPress={() => { void rateReply("up"); }}>
+              <Ionicons name={feedbackRating === "up" ? "thumbs-up" : "thumbs-up-outline"} size={15} color={feedbackRating === "up" ? colors.accent : colors.muted} />
+            </Pressable>
+            <Pressable accessibilityLabel="Unhelpful answer" disabled={ratingBusy} onPress={() => setChoosingReason((v) => !v)}>
+              <Ionicons name={feedbackRating === "down" ? "thumbs-down" : "thumbs-down-outline"} size={15} color={feedbackRating === "down" ? colors.bad : colors.muted} />
+            </Pressable>
+          </View>
+          {choosingReason && (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }}>
+              {([
+                ["wrong_info", "Wrong info"], ["ignored_fridge", "Ignored my fridge"],
+                ["too_slow", "Too slow"], ["other", "Other"],
+              ] as const).map(([reason, label]) => (
+                <Pressable key={reason} disabled={ratingBusy} onPress={() => { void rateReply("down", reason); }} style={{ padding: 6, borderRadius: 6, backgroundColor: colors.surface2 }}>
+                  <Text style={{ color: colors.muted, fontSize: 11 }}>{label}</Text>
+                </Pressable>
+              ))}
+              <Pressable disabled={ratingBusy} onPress={() => { void rateReply("down"); }} style={{ padding: 6 }}>
+                <Text style={{ color: colors.muted, fontSize: 11 }}>No reason</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      )}
       {msg.recipe && !dismissed && (
         <RecipeSuggestionCard
           suggestion={msg.recipe}

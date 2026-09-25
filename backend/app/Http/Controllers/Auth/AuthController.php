@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\AlgoFeedbackEvent;
+use App\Models\ItemOutcome;
 use App\Models\User;
 use App\Services\OAuth\OAuthIdentity;
 use App\Services\OAuth\OAuthVerifier;
+use App\Support\AdminCacheKeys;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
@@ -236,10 +240,43 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
+        AlgoFeedbackEvent::where('user_id', $user->id)->delete();
+        Cache::forget(AdminCacheKeys::ALGORITHM_GAPS);
         $user->tokens()->delete();
         $user->delete();
 
         return response()->json(['message' => 'Account deleted.']);
+    }
+
+    /** Set the product-improvement sharing switch and acknowledge the one-time notice. */
+    public function updateImprovementPreferences(Request $request)
+    {
+        $data = $request->validate([
+            'helpImprove' => ['sometimes', 'required', 'boolean'],
+            'noticeSeen' => ['sometimes', 'required', 'boolean'],
+        ]);
+
+        $user = $request->user();
+        $prefs = $user->preferences ?? [];
+        if (array_key_exists('helpImprove', $data)) {
+            $prefs['help_improve'] = $data['helpImprove'];
+        }
+        if (array_key_exists('noticeSeen', $data)) {
+            $prefs['help_improve_notice_seen'] = $data['noticeSeen'];
+        }
+        $user->preferences = $prefs;
+        $user->save();
+
+        return response()->json(['user' => $this->userPayload($user)]);
+    }
+
+    public function deleteImprovementData(Request $request)
+    {
+        $deleted = AlgoFeedbackEvent::where('user_id', $request->user()->id)->delete();
+        ItemOutcome::where('user_id', $request->user()->id)->update(['name_key' => null]);
+        Cache::forget(AdminCacheKeys::ALGORITHM_GAPS);
+
+        return response()->json(['deleted' => $deleted]);
     }
 
     /**

@@ -110,6 +110,7 @@ export default function Scan() {
             // manual food-group control on this screen anymore, see draft-item.tsx.
             category: (s.category as NutritionCategory | null) ?? null,
             categoryId: categoryId ?? null,
+            source: "barcode",
           }),
         );
         showResult({ kind: "ok", code: data, name: s.name });
@@ -119,7 +120,7 @@ export default function Scan() {
             Haptics.NotificationFeedbackType.Warning,
           );
           codesRef.current.add(data);
-          drafts.append(blankDraft({ name: "", categoryId: categoryId ?? null }));
+          drafts.append(blankDraft({ name: "", categoryId: categoryId ?? null, barcodeMiss: data, source: "barcode" }));
           showResult({ kind: "unknown", code: data });
         } else {
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 interface ToastOptions {
   actionLabel?: string;
   onAction?: () => void;
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
   duration?: number;
 }
 
@@ -73,6 +75,18 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 className="px-2 py-1"
               >
                 <Text className="text-[13px] font-extrabold text-accent">{toast.actionLabel}</Text>
+              </Pressable>
+            )}
+            {toast.secondaryActionLabel && (
+              <Pressable
+                onPress={() => {
+                  toast.onSecondaryAction?.();
+                  dismiss();
+                }}
+                hitSlop={8}
+                className="px-2 py-1"
+              >
+                <Text className="text-[13px] font-extrabold text-accent">{toast.secondaryActionLabel}</Text>
               </Pressable>
             )}
           </View>

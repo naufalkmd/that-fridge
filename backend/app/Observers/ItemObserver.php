@@ -5,7 +5,9 @@ namespace App\Observers;
 use App\Models\Item;
 use App\Services\MachineTriggerService;
 use App\Services\Notifier;
+use App\Support\OpenedShelfLife;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Keeps the rest of a shared fridge's crew in the loop when someone adds or finishes an item,
@@ -17,16 +19,29 @@ class ItemObserver
 {
     public function __construct(private MachineTriggerService $machines) {}
 
-    /**
-     * Stamps `opened_at` whenever `opened` flips, so ItemResource can count down the 3-day
-     * "opened" window from the moment it actually happened instead of re-deriving a frozen
-     * cap from today's date on every request. Not client-settable - this is the only place
-     * it's written.
-     */
+    /** Stamp the opening date and estimate together so later rules cannot move the date. */
     public function saving(Item $item): void
     {
         if ($item->isDirty('opened')) {
-            $item->opened_at = $item->opened ? now() : null;
+            if ($item->opened) {
+                $override = $item->isDirty('opened_shelf_life_days') ? $item->opened_shelf_life_days : null;
+                $resolved = OpenedShelfLife::resolve(
+                    $item->name, $item->icon, $item->location, $item->nutrition_category,
+                    $item->shelf_life_days, $override,
+                );
+                if (! $resolved['openable']) {
+                    throw ValidationException::withMessages(['opened' => ["This item doesn't have an opening date."]]);
+                }
+                $item->opened_at = now();
+                $item->opened_shelf_life_days = $resolved['days'];
+                $item->opened_shelf_life_source = $resolved['source'];
+            } else {
+                $item->opened_at = null;
+                $item->opened_shelf_life_days = null;
+                $item->opened_shelf_life_source = null;
+            }
+        } elseif ($item->opened && $item->isDirty('opened_shelf_life_days')) {
+            $item->opened_shelf_life_source = 'user';
         }
     }
 

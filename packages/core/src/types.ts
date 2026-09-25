@@ -47,6 +47,9 @@ export interface Item {
   note: string;
   qty: number;
   opened?: boolean;
+  openable?: boolean;
+  openedShelfLifeDays?: number | null;
+  openedShelfLifeSource?: "rule" | "user" | "ai" | "default" | null;
   location?: StorageLocation;
   shopUrl: string | null;
   /** Weight/volume of a single unit as stored; always paired with weightUnit. */
@@ -522,6 +525,8 @@ export interface OnboardingPrefs {
   goal?: OnboardingGoal;
   waste_frequency?: "weekly" | "monthly" | "rarely";
   household?: "solo" | "partner" | "household" | "roommates";
+  help_improve?: boolean;
+  help_improve_notice_seen?: boolean;
 }
 
 /** One event for the first-party analytics ingest (`POST /events`). */

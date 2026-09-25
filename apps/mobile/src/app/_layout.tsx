@@ -1,7 +1,7 @@
 import "../global.css";
 
-import { Fragment, useEffect } from "react";
-import { View } from "react-native";
+import { Fragment, useEffect, useRef } from "react";
+import { Alert, Platform, View } from "react-native";
 import { Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
@@ -91,6 +91,7 @@ function AppShell({
                               <RecipesProvider>
                                 <NotesProvider>
                                   <ExpiryReminderSync />
+                                  <ImprovementNotice />
                                   <AuthGuard />
                                   <StatusBar style={scheme === "light" ? "dark" : "light"} />
                                   <Stack
@@ -334,6 +335,26 @@ function AppShell({
 function AccountBoundary({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   return <Fragment key={user?.id ?? "signed-out"}>{children}</Fragment>;
+}
+
+function ImprovementNotice() {
+  const { status, user, updateImprovementPreferences } = useAuth();
+  const shownFor = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS === "web" || status !== "signedIn" || !user ||
+        user.preferences?.help_improve_notice_seen || shownFor.current === user.id) return;
+    shownFor.current = user.id;
+    Alert.alert(
+      "Improving food suggestions",
+      "ThatFridge shares structured corrections and outcomes by default to improve its suggestions. You can turn this off or delete past improvement data in Profile. We don't include notes, photos or chat text.",
+      [{ text: "Got it", onPress: () => {
+        void updateImprovementPreferences({ noticeSeen: true }).catch(() => {});
+      } }],
+    );
+  }, [status, user, updateImprovementPreferences]);
+
+  return null;
 }
 
 // Routes reachable while signed out. Every other route in this Stack renders account data

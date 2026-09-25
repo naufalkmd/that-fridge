@@ -55,6 +55,20 @@ class CheckItemFreshnessTest extends TestCase
         $this->assertDatabaseMissing('notification_events', ['item_id' => $item->id]);
     }
 
+    public function test_opened_expiry_alerts_are_a_separate_release_switch(): void
+    {
+        $item = $this->itemExpiringIn(30);
+        $item->update(['opened' => true]);
+        $item->forceFill(['opened_at' => now()->subDays(5)])->saveQuietly();
+
+        $this->artisan('app:check-item-freshness');
+        $this->assertDatabaseMissing('notification_events', ['item_id' => $item->id]);
+
+        config(['app.opened_expiry_alerts_enabled' => true]);
+        $this->artisan('app:check-item-freshness');
+        $this->assertDatabaseHas('notification_events', ['item_id' => $item->id, 'kind' => 'expiring']);
+    }
+
     public function test_it_does_not_duplicate_a_notification_on_a_second_run(): void
     {
         $item = $this->itemExpiringIn(1);

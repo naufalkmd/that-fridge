@@ -19,6 +19,7 @@ use App\Http\Controllers\FridgeNoteController;
 use App\Http\Controllers\IconController;
 use App\Http\Controllers\IngestionController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\ItemOutcomeController;
 use App\Http\Controllers\MachineController;
 use App\Http\Controllers\MemoryController;
 use App\Http\Controllers\NotificationEventController;
@@ -64,6 +65,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/me/credits', [CreditController::class, 'show']);
+    Route::patch('/me/improvement-preferences', [AuthController::class, 'updateImprovementPreferences']);
+    Route::delete('/me/improvement-data', [AuthController::class, 'deleteImprovementData']);
+    Route::patch('/item-outcomes/{itemOutcome}', [ItemOutcomeController::class, 'correct']);
+    Route::post('/item-outcomes/{itemOutcome}/undo', [ItemOutcomeController::class, 'undo']);
     Route::post('/me/onboarding', [AuthController::class, 'onboarding']);
     // Name / username edits are rate-limited per rolling 30 days in the controller; the
     // throttle here is just an anti-hammering floor.
@@ -92,6 +97,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Same reasoning as /icons/generate's throttle - protects against a script hammering
         // the endpoint directly, not meant to replace the client-side weekly quota (chatQuota.ts).
         Route::middleware('throttle:15,1')->post('/', [AgentController::class, 'send']);
+        Route::patch('/{chatHistory}/feedback', [AgentController::class, 'rateReply']);
         Route::get('/sessions', [AgentController::class, 'sessions']);
         Route::get('/sessions/{sessionId}', [AgentController::class, 'sessionMessages']);
         Route::delete('/sessions', [AgentController::class, 'deleteAllSessions']);

@@ -357,6 +357,7 @@ function ScanFlow({
             qty: Math.max(1, d.parsed_quantity ?? 1),
             condition: d.condition ?? null,
             categoryId,
+            source: mode,
           }),
         ),
       );
@@ -755,4 +756,3 @@ function DuplicateNotice({ names }: { names: string[] }) {
     </View>
   );
 }
-

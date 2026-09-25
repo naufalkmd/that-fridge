@@ -16,6 +16,7 @@ class JobHeartbeat
         'app:check-item-freshness' => ['label' => 'Freshness check', 'every' => 'Daily 07:00'],
         'app:snapshot-kitchen-scores' => ['label' => 'Kitchen score snapshot', 'every' => 'Mondays 07:30'],
         'app:prune-stale-data' => ['label' => 'Prune stale data', 'every' => 'Daily 04:00'],
+        'app:rollup-algo-stats' => ['label' => 'Algorithm stats rollup', 'every' => 'Daily 04:30'],
         'app:grant-monthly-credits' => ['label' => 'Monthly credit grant', 'every' => '1st of month 00:15'],
     ];
 

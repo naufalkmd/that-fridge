@@ -88,6 +88,13 @@ export type Draft = {
   expiryDate: string | null;
   condition: "vibrant" | "wilting" | "past_best" | null;
   checked: boolean;
+  source: "manual" | "barcode" | "receipt" | "photo";
+  startedAt: number;
+  suggested?: {
+    name: string;
+    token: string;
+  } | null;
+  barcodeMiss?: string | null;
 };
 
 export const blankDraft = (over: Partial<Draft> = {}): Draft => ({
@@ -102,6 +109,8 @@ export const blankDraft = (over: Partial<Draft> = {}): Draft => ({
   expiryDate: null,
   condition: null,
   checked: true,
+  source: "manual",
+  startedAt: Date.now(),
   ...over,
 });
 
@@ -122,6 +131,10 @@ export const toCreatePayload = (d: Draft) => ({
   ...(d.expiryDate
     ? { expiry_date: d.expiryDate, shelf_life_days: daysUntil(d.expiryDate) }
     : {}),
+  ...(d.suggested?.name === d.name.trim() ? { suggestion_token: d.suggested.token } : {}),
+  ...(d.barcodeMiss ? { barcode_miss: d.barcodeMiss } : {}),
+  source: d.source,
+  add_started_at: new Date(d.startedAt).toISOString(),
 });
 
 
@@ -158,6 +171,7 @@ export function useDraftItems(initial: () => Draft[]) {
   const suggest = useCallback(async (d: Draft) => {
     const s = await api.suggestItemDetails(d.name.trim(), d.icon);
     return {
+      suggested: s.feedback_token ? { name: d.name.trim(), token: s.feedback_token } : null,
       ...(s.location ? { location: s.location } : {}),
       ...(s.shelf_life_days
         ? { expiryDate: isoInDays(s.shelf_life_days) }

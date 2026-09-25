@@ -138,4 +138,8 @@ return [
         explode(',', (string) env('ADMIN_EMAILS', ''))
     ))),
 
+    // Enable only after the updated privacy policy and PDPA notice are live.
+    'algo_feedback_enabled' => (bool) env('ALGO_FEEDBACK_ENABLED', false),
+    'opened_expiry_alerts_enabled' => (bool) env('OPENED_EXPIRY_ALERTS_ENABLED', false),
+
 ];

@@ -113,7 +113,7 @@ class KitchenScoreService
      */
     private function daysFor(Item $item): int
     {
-        return ItemFreshness::daysUntilExpiry($item) ?? 0;
+        return ItemFreshness::effectiveDaysUntilExpiry($item) ?? 0;
     }
 
     private function wasteSaverScore(User $user, int $itemCount, $usageHistory, float $overdueRatio): ?int

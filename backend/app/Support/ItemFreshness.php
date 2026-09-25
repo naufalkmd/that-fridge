@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Item;
+use Illuminate\Support\Carbon;
 
 /**
  * Same computation as ItemResource's `days` field - shared so KitchenScoreService and
@@ -21,25 +22,44 @@ class ItemFreshness
         return (int) now()->startOfDay()->diffInDays($item->expiry_date->copy()->startOfDay(), false);
     }
 
-    /**
-     * Same as daysUntilExpiry(), but capped for an opened item - "opened" items are treated as
-     * going bad within 3 days of being opened. The cap counts down from opened_at (3, 2, 1, 0,
-     * expired) rather than pinning at a flat 3 on every call, so an item with a long shelf life
-     * left doesn't freeze on the same number for weeks. A missing opened_at (item opened before
-     * that column existed) falls back to "just opened".
-     */
+    /** The printed date and the saved opening estimate share one countdown. */
     public static function effectiveDaysUntilExpiry(Item $item): ?int
     {
-        $days = self::daysUntilExpiry($item);
+        $date = self::effectiveExpiry($item);
 
-        if (! $item->opened || $days === null) {
-            return $days;
+        return $date ? (int) now()->startOfDay()->diffInDays($date, false) : null;
+    }
+
+    /** The printed date is always a hard ceiling on the opened-item estimate. */
+    public static function effectiveExpiry(Item $item): ?Carbon
+    {
+        $printed = $item->expiry_date?->copy()->startOfDay();
+        if (! $item->opened) {
+            return $printed;
         }
 
-        $daysSinceOpened = $item->opened_at
-            ? $item->opened_at->copy()->startOfDay()->diffInDays(now()->startOfDay(), false)
-            : 0;
+        $override = $item->opened_shelf_life_source === 'user' ? $item->opened_shelf_life_days : null;
+        $resolved = OpenedShelfLife::resolve(
+            $item->name, $item->icon, $item->location, $item->nutrition_category,
+            $item->shelf_life_days, $override,
+        );
+        if (! $resolved['openable']) {
+            return $printed;
+        }
 
-        return min($days, 3 - $daysSinceOpened);
+        // Pre-snapshot opened rows are resolved exactly once, without triggering item
+        // observers or moving an existing opening date.
+        if ($item->opened_shelf_life_days === null || $item->opened_at === null) {
+            $item->forceFill([
+                'opened_shelf_life_days' => $item->opened_shelf_life_days ?? $resolved['days'],
+                'opened_shelf_life_source' => $item->opened_shelf_life_source ?? $resolved['source'],
+                'opened_at' => $item->opened_at ?? now(),
+            ])->saveQuietly();
+        }
+
+        $cap = $item->opened_at->copy()->startOfDay()
+            ->addDays($item->opened_shelf_life_days ?? $resolved['days']);
+
+        return $printed === null || $cap->lessThan($printed) ? $cap : $printed;
     }
 }

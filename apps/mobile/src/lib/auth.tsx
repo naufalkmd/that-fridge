@@ -34,6 +34,7 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   updateProfile: (fields: ProfileFields) => Promise<void>;
+  updateImprovementPreferences: (fields: { helpImprove?: boolean; noticeSeen?: boolean }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -147,6 +148,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(await api.updateProfile(fields));
   }, []);
 
+  const updateImprovementPreferences = useCallback(async (fields: { helpImprove?: boolean; noticeSeen?: boolean }) => {
+    setUser(await api.updateImprovementPreferences(fields));
+  }, []);
+
   const deleteAccount = useCallback(async () => {
     await unregisterPush().catch(() => {});
     await api.deleteAccount(); // must succeed — the account is really being deleted
@@ -166,6 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut,
       deleteAccount,
       updateProfile,
+      updateImprovementPreferences,
     }),
     [
       status,
@@ -178,6 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut,
       deleteAccount,
       updateProfile,
+      updateImprovementPreferences,
     ],
   );
 

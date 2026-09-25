@@ -258,12 +258,11 @@ class RecipeController extends Controller
     {
         $items = Item::query()
             ->whereHas('section.fridge.members', fn ($q) => $q->where('users.id', $user->id))
-            ->whereNotNull('expiry_date')
             ->get();
 
         $byIcon = [];
         foreach ($items as $item) {
-            $days = ItemFreshness::daysUntilExpiry($item);
+            $days = ItemFreshness::effectiveDaysUntilExpiry($item);
             if ($days === null) {
                 continue;
             }

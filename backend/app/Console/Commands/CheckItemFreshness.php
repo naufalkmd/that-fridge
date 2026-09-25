@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Item;
 use App\Models\NotificationEvent;
+use App\Support\ItemFreshness;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -34,9 +35,14 @@ class CheckItemFreshness extends Command
 
     private function checkExpiring(): void
     {
+        $openedAlerts = config('app.opened_expiry_alerts_enabled');
         $items = Item::query()
-            ->whereNotNull('expiry_date')
-            ->where('expiry_date', '<=', now()->addDays(self::WARNING_WINDOW_DAYS)->toDateString())
+            ->where(function ($query) use ($openedAlerts) {
+                $query->where('expiry_date', '<=', now()->addDays(self::WARNING_WINDOW_DAYS)->toDateString());
+                if ($openedAlerts) {
+                    $query->orWhere('opened', true);
+                }
+            })
             ->with('section.fridge.user.notificationPref')
             ->get();
 
@@ -49,9 +55,11 @@ class CheckItemFreshness extends Command
         $created = 0;
 
         foreach ($items as $item) {
-            $daysLeft = (int) now()->startOfDay()->diffInDays($item->expiry_date->copy()->startOfDay(), false);
+            $daysLeft = $openedAlerts
+                ? ItemFreshness::effectiveDaysUntilExpiry($item)
+                : ItemFreshness::daysUntilExpiry($item);
 
-            if ($daysLeft > self::WARNING_WINDOW_DAYS) {
+            if ($daysLeft === null || $daysLeft > self::WARNING_WINDOW_DAYS) {
                 continue;
             }
 

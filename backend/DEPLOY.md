@@ -357,6 +357,18 @@ to object storage) — a backup only on the same server isn't a backup.
 
 ## 12. Deploying an update later
 
+For the algorithm feedback release, publish the updated English and Malay privacy notices
+before enabling collection. Deploy the database migrations first, leave
+`ALGO_FEEDBACK_ENABLED=false` until the notice is live, and then enable it in the server
+environment and rebuild config cache. The scheduler runs `app:rollup-algo-stats` nightly;
+`app:prune-stale-data` removes raw feedback after 180 days. Keep the production app's
+runtime version aligned with its native packages: `expo-document-picker` requires a new
+native build before any OTA that imports it. Device QA and owner approval are required
+before pushing the mobile release.
+The separate `OPENED_EXPIRY_ALERTS_ENABLED` switch defaults to false. Enable it only after
+checking that opened-food reminders should follow the new effective expiry date; it can
+make milk reminders earlier than the printed date.
+
 Run the deploy script as `deploy` on the server:
 
 ```bash

@@ -33,7 +33,7 @@ class ThatFridgeAdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
-            ->navigationGroups(['Users', 'Content', 'Fridge data', 'System'])
+            ->navigationGroups(['Insights', 'Users', 'Content', 'Fridge data', 'System'])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([

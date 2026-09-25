@@ -158,10 +158,7 @@ class ItemControllerTest extends TestCase
 
     public function test_an_opened_items_days_left_counts_down_instead_of_freezing(): void
     {
-        // Regression test for a bug where an opened item's "days left" was recomputed as
-        // min(realDaysLeft, 3) on every request with no anchor to when it was opened - so an
-        // item with more than 3 days of real shelf life left showed a frozen "3 days left" for
-        // as long as that remained true, instead of counting down 3, 2, 1, 0.
+        // Opening duration is anchored to opened_at rather than recalculated on every read.
         $user = User::factory()->create();
         $section = $this->sectionFor($user);
         $item = $section->items()->create([
@@ -178,7 +175,7 @@ class ItemControllerTest extends TestCase
         // to get ItemResource's computed `days` back over the API.
         $response = $this->actingAs($user)->patchJson("/api/items/{$item->id}", ['note' => 'checked']);
 
-        $this->assertSame(1, $response->json('data.days'));
+        $this->assertSame(28, $response->json('data.days'));
     }
 
     public function test_clearing_opened_also_clears_opened_at(): void

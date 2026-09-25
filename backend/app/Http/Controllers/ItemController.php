@@ -4,12 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\ItemResource;
 use App\Models\Item;
+use App\Models\Product;
 use App\Models\Section;
 use App\Services\AgentService;
 use App\Services\CreditService;
+use App\Services\ItemRemovalService;
+use App\Support\AlgoFeedback;
 use App\Support\CreditCost;
 use App\Support\FoodGroupClassifier;
+use App\Support\ItemFeedback;
 use App\Support\ItemPayload;
+use App\Support\ItemSuggestionToken;
+use App\Support\OpenedShelfLife;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -46,16 +52,29 @@ class ItemController extends Controller
             'expiry_date' => ['nullable', 'date'],
             'shelf_life_days' => ['nullable', 'integer', 'min:1'],
             'note' => ['nullable', 'string', 'max:255'],
-            'source' => ['nullable', 'string', 'in:manual,barcode,receipt,photo,voice'],
+            'source' => ['nullable', 'string', 'in:manual,barcode,receipt,photo,voice,chat'],
             'shop_url' => ['nullable', 'string', 'max:2048', 'url'],
             'calories' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'custom_fields' => ['nullable', 'array', 'max:20'],
             'custom_fields.*.id' => ['nullable', 'string', 'max:36'],
             'custom_fields.*.label' => ['required', 'string', 'max:40'],
             'custom_fields.*.value' => ['nullable', 'string', 'max:255'],
+            'suggestion_token' => ['sometimes', 'string', 'max:2048'],
+            'barcode_miss' => ['sometimes', 'string', 'max:64', 'regex:/^[A-Za-z0-9-]+$/'],
+            'add_started_at' => ['sometimes', 'date'],
         ]);
 
-        $item = $section->items()->create(ItemPayload::normalize($data));
+        $suggested = ItemSuggestionToken::read($request->user(), $data['name'], $data['suggestion_token'] ?? null);
+        $itemData = array_diff_key($data, ['suggestion_token' => true, 'barcode_miss' => true, 'add_started_at' => true]);
+        $item = $section->items()->create(ItemPayload::normalize($itemData));
+        ItemFeedback::created($request->user(), $item, $suggested, $data['add_started_at'] ?? null);
+        if (isset($data['barcode_miss']) && ! Product::where('barcode', $data['barcode_miss'])->exists()) {
+            AlgoFeedback::record($request->user(), 'barcode', [
+                'kind' => 'miss_named', 'name' => $item->name,
+                'guess' => $data['barcode_miss'], 'source' => 'scanner',
+                'outcome' => 'submitted',
+            ]);
+        }
 
         return new ItemResource($item->load('product'));
     }
@@ -86,8 +105,9 @@ class ItemController extends Controller
             'expiry_date' => ['sometimes', 'nullable', 'date'],
             'shelf_life_days' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'opened' => ['sometimes', 'boolean'],
+            'opened_shelf_life_days' => ['sometimes', 'integer', 'min:1', 'max:365'],
             'note' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'source' => ['sometimes', 'nullable', 'string', 'in:manual,barcode,receipt,photo,voice'],
+            'source' => ['sometimes', 'nullable', 'string', 'in:manual,barcode,receipt,photo,voice,chat'],
             'shop_url' => ['sometimes', 'nullable', 'string', 'max:2048', 'url'],
             'calories' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100000'],
             'custom_fields' => ['sometimes', 'array', 'max:20'],
@@ -96,7 +116,26 @@ class ItemController extends Controller
             'custom_fields.*.value' => ['nullable', 'string', 'max:255'],
         ]);
 
+        if (isset($data['opened_shelf_life_days'])) {
+            abort_unless((bool) ($data['opened'] ?? $item->opened), 422, 'Mark the item opened before setting its opening duration.');
+            $baseline = OpenedShelfLife::resolve(
+                $data['name'] ?? $item->name,
+                $data['icon'] ?? $item->icon,
+                $data['location'] ?? $item->location,
+                $data['nutrition_category'] ?? $item->nutrition_category,
+                $data['shelf_life_days'] ?? $item->shelf_life_days,
+            );
+            abort_if(
+                $data['opened_shelf_life_days'] > ($baseline['days'] ?? 3) &&
+                ! OpenedShelfLife::canLengthen($data['name'] ?? $item->name, $data['location'] ?? $item->location),
+                422,
+                'Opening estimates for this food can only be shortened.',
+            );
+        }
+
+        $before = ItemFeedback::snapshot($item);
         $item->update(ItemPayload::normalize($data));
+        ItemFeedback::updated($request->user(), $item, $before);
 
         return new ItemResource($item->load('product'));
     }
@@ -178,9 +217,15 @@ class ItemController extends Controller
     {
         $this->authorize('delete', $item);
 
-        $item->delete();
+        $context = $request->query('context');
+        abort_if($context !== null && ! in_array($context, ['recipe_used'], true), 422);
+        $outcome = app(ItemRemovalService::class)->remove($request->user(), $item, $context);
 
-        return response()->noContent();
+        return response()->json([
+            'id' => (string) $outcome->id,
+            'outcome' => $outcome->outcome,
+            'confidence' => $outcome->confidence,
+        ]);
     }
 
     /**

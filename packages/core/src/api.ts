@@ -68,6 +68,9 @@ interface RawItem {
   days: number | null;
   added?: string | null;
   opened?: boolean;
+  openable?: boolean;
+  opened_shelf_life_days?: number | null;
+  opened_shelf_life_source?: "rule" | "user" | "ai" | "default" | null;
   note: string | null;
   location: StorageLocation | null;
   quantity: number | null;
@@ -108,6 +111,9 @@ function toItem(raw: RawItem): Item {
     note: raw.note ?? "",
     qty: raw.quantity ?? 1,
     opened: raw.opened ?? false,
+    openable: raw.openable ?? true,
+    openedShelfLifeDays: raw.opened_shelf_life_days ?? null,
+    openedShelfLifeSource: raw.opened_shelf_life_source ?? null,
     location: raw.location ?? undefined,
     shopUrl: raw.shop_url ?? null,
     weight: raw.weight ?? null,
@@ -149,6 +155,10 @@ export interface CreateItemInput {
   shop_url?: string | null;
   calories?: number | null;
   custom_fields?: { id?: string; label: string; value: string }[];
+  suggestion_token?: string;
+  barcode_miss?: string;
+  source?: "manual" | "barcode" | "receipt" | "photo" | "voice" | "chat";
+  add_started_at?: string;
 }
 
 export interface UpdateItemInput {
@@ -164,10 +174,17 @@ export interface UpdateItemInput {
   expiry_date?: string;
   shelf_life_days?: number;
   opened?: boolean;
+  opened_shelf_life_days?: number;
   note?: string;
   shop_url?: string | null;
   calories?: number | null;
   custom_fields?: { id?: string; label: string; value: string }[];
+}
+
+export interface ItemRemovalResult {
+  id: string;
+  outcome: "used" | "wasted" | "entry_mistake";
+  confidence: "high" | "medium" | "low";
 }
 
 export interface WhatToEatResult {
@@ -202,6 +219,7 @@ export interface CreditsResult {
 }
 
 export interface SendChatResult {
+  id?: number;
   agent: ChatAgentName;
   user_message: string;
   agent_response: string;
@@ -221,6 +239,8 @@ export interface ChatHistoryRow {
   user_message: string;
   agent_response: string | null;
   recipe_suggestion: RecipeSuggestionBlock | null;
+  feedback_rating?: "up" | "down" | null;
+  feedback_reason?: "wrong_info" | "ignored_fridge" | "too_slow" | "other" | null;
   created_at: string;
 }
 
@@ -440,6 +460,19 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return res.user;
   }
 
+  async function updateImprovementPreferences(fields: {
+    helpImprove?: boolean;
+    noticeSeen?: boolean;
+  }): Promise<CurrentUser> {
+    const res = await http.patch<{ user: CurrentUser }>("/me/improvement-preferences", fields);
+    return res.user;
+  }
+
+  async function deleteImprovementData(): Promise<number> {
+    const res = await http.del<{ deleted: number }>("/me/improvement-data");
+    return res.deleted;
+  }
+
   /** The user's AI-credit balance + recent ledger movements (`/me/credits`). */
   function getCredits(): Promise<CreditsResult> {
     return http.get<CreditsResult>("/me/credits");
@@ -519,6 +552,14 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     });
   }
 
+  function rateChatReply(
+    id: number,
+    rating: "up" | "down",
+    reason?: "wrong_info" | "ignored_fridge" | "too_slow" | "other",
+  ): Promise<{ rating: "up" | "down"; reason: string | null }> {
+    return http.patch(`/chat/${id}/feedback`, { rating, reason });
+  }
+
   async function listFridges(): Promise<Fridge[]> {
     const raw = await http.get<RawFridge[]>("/fridges");
     return raw.map(toFridge);
@@ -550,8 +591,16 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return toItem(raw);
   }
 
-  async function deleteItem(id: string): Promise<void> {
-    await http.del(`/items/${id}`);
+  function deleteItem(id: string, context?: "recipe_used"): Promise<ItemRemovalResult> {
+    return http.del<ItemRemovalResult>(`/items/${id}${context ? `?context=${context}` : ""}`);
+  }
+
+  function correctItemOutcome(id: string, outcome: "used" | "wasted"): Promise<{ id: string; outcome: "used" | "wasted" }> {
+    return http.patch(`/item-outcomes/${id}`, { outcome });
+  }
+
+  async function undoItemOutcome(id: string): Promise<Item> {
+    return toItem(await http.post<RawItem>(`/item-outcomes/${id}/undo`));
   }
 
   async function scanBarcode(
@@ -629,6 +678,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     shelf_life_days: number;
     location: StorageLocation;
     nutrition_category: NutritionCategory | null;
+    feedback_token?: string;
   }> {
     return http.post("/items/suggest-details", { name, icon });
   }
@@ -1094,16 +1144,21 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     logout,
     me,
     updateProfile,
+    updateImprovementPreferences,
+    deleteImprovementData,
     getCredits,
     deleteAccount,
     getChatHistory,
     sendChat,
+    rateChatReply,
     listFridges,
     createFridge,
     createSection,
     createItem,
     updateItem,
     deleteItem,
+    correctItemOutcome,
+    undoItemOutcome,
     scanBarcode,
     scanReceipt,
     scanFridgePhoto,

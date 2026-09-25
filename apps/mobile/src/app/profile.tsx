@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
@@ -13,13 +13,14 @@ import { useOnboarding } from "@/lib/onboarding";
 import { useScope } from "@/lib/scope";
 import { usePro } from "@/lib/pro";
 import { useCredits } from "@/lib/credits";
+import { api } from "@/lib/api";
 import { openStoreReviewPage } from "@/lib/rate";
 import { PixelText } from "@/components/brand";
 import { Eyebrow, SectionHeader } from "@/components/ui";
 
 export default function Profile() {
   const router = useRouter();
-  const { user, signOut, deleteAccount } = useAuth();
+  const { user, signOut, deleteAccount, updateImprovementPreferences } = useAuth();
   const { mode, setMode, colors } = useTheme();
   const { isPro, available, restore, openCustomerCenter } = usePro();
   const { balance: credits } = useCredits();
@@ -27,6 +28,43 @@ export default function Profile() {
   const { replayOnboarding } = useOnboarding();
   const { scope, setScope } = useScope();
   const [working, setWorking] = useState(false);
+  const [improvementWorking, setImprovementWorking] = useState(false);
+
+  async function setImprovementSharing(value: boolean) {
+    setImprovementWorking(true);
+    try {
+      await updateImprovementPreferences({ helpImprove: value });
+    } catch (e) {
+      Alert.alert("Couldn't save preference", describeError(e, "Please try again."));
+    } finally {
+      setImprovementWorking(false);
+    }
+  }
+
+  function confirmDeleteImprovementData() {
+    Alert.alert(
+      "Delete improvement data?",
+      "This deletes the feedback records linked to your account. Anonymous combined statistics may remain.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete data",
+          style: "destructive",
+          onPress: async () => {
+            setImprovementWorking(true);
+            try {
+              await api.deleteImprovementData();
+              Alert.alert("Deleted", "Your improvement data has been deleted.");
+            } catch (e) {
+              Alert.alert("Couldn't delete data", describeError(e, "Please try again."));
+            } finally {
+              setImprovementWorking(false);
+            }
+          },
+        },
+      ],
+    );
+  }
 
   async function replayIntro() {
     // Bring back the Home spotlight / tour / checklist, then walk the full pre-sign-in
@@ -249,6 +287,33 @@ export default function Profile() {
             onPress={() => router.push("/about")}
             last
           />
+        </View>
+      </View>
+
+      <View>
+        <SectionHeader>Privacy</SectionHeader>
+        <View className="rounded-xl border border-hairline bg-surface p-4">
+          <View className="flex-row items-center gap-3">
+            <View className="flex-1">
+              <Text className="text-[14px] font-semibold text-ink">Help improve ThatFridge&apos;s suggestions</Text>
+              <Text className="mt-1 text-[12px] leading-5 text-muted">
+                Share structured corrections and outcomes. No notes, photos or chat text.
+              </Text>
+            </View>
+            <Switch
+              accessibilityLabel="Help improve ThatFridge's suggestions"
+              value={user?.preferences?.help_improve !== false}
+              onValueChange={setImprovementSharing}
+              disabled={improvementWorking}
+            />
+          </View>
+          <Pressable
+            onPress={confirmDeleteImprovementData}
+            disabled={improvementWorking}
+            className="mt-4 border-t border-hairline pt-3 active:opacity-70"
+          >
+            <Text className="text-[13px] font-semibold text-bad">Delete my improvement data</Text>
+          </Pressable>
         </View>
       </View>
 

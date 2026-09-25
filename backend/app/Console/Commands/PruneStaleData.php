@@ -2,9 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Models\AlgoFeedbackEvent;
 use App\Models\AnalyticsEvent;
 use App\Models\FridgeJoinRequest;
 use App\Models\GeneratedIcon;
+use App\Models\ItemOutcome;
 use App\Models\NotificationEvent;
 use App\Models\Recipe;
 use Illuminate\Console\Attributes\Description;
@@ -54,6 +56,28 @@ class PruneStaleData extends Command
             AnalyticsEvent::where('created_at', '<', $now->copy()->subDays(self::ANALYTICS_RETENTION_DAYS)),
             $dry,
         );
+
+        $this->pruneRows(
+            'algo_feedback_events',
+            AlgoFeedbackEvent::where('occurred_at', '<', $now->copy()->subDays(self::ANALYTICS_RETENTION_DAYS)),
+            $dry,
+        );
+
+        $this->pruneRows(
+            'item_outcomes',
+            ItemOutcome::where('created_at', '<', $now->copy()->subDays(self::ANALYTICS_RETENTION_DAYS)),
+            $dry,
+        );
+
+        $staleSnapshots = ItemOutcome::whereNotNull('snapshot')->where('context', '!=', 'machine_used')
+            ->where('created_at', '<', $now->copy()->subDay());
+        $snapshotCount = (clone $staleSnapshots)->count();
+        if ($dry) {
+            $this->warn("  item_outcome undo snapshots: would clear {$snapshotCount} row(s)");
+        } else {
+            $staleSnapshots->update(['snapshot' => null]);
+            $this->info("  item_outcome undo snapshots: cleared {$snapshotCount} row(s)");
+        }
 
         $this->pruneRows(
             'notification_events (done)',

@@ -16,6 +16,7 @@ use App\Filament\Widgets\ScheduledJobs;
 use App\Filament\Widgets\SignupsChart;
 use App\Filament\Widgets\StatsOverview;
 use App\Models\AdminAuditLog;
+use App\Models\AlgoFeedbackEvent;
 use App\Models\AnalyticsEvent;
 use App\Models\Feedback;
 use App\Models\GeneratedIcon;
@@ -111,6 +112,25 @@ class AdminPanelActionsTest extends TestCase
     {
         Livewire::test(ViewUser::class, ['record' => $this->admin->getRouteKey()])
             ->assertActionHidden('deleteAccount');
+    }
+
+    public function test_viewing_a_users_improvement_feedback_is_audited(): void
+    {
+        $user = User::factory()->create();
+        AlgoFeedbackEvent::create([
+            'user_id' => $user->id, 'algo' => 'icon', 'kind' => 'corrected',
+            'rules_v' => 1, 'class' => 'milk', 'guess' => 'carton', 'final' => 'milk',
+            'occurred_at' => now(),
+        ]);
+
+        Livewire::test(ViewUser::class, ['record' => $user->getRouteKey()])
+            ->mountAction('improvementFeedback')
+            ->assertSee('carton');
+
+        $this->assertDatabaseHas('admin_audit_logs', [
+            'action' => 'viewed_user_improvement_feedback',
+            'subject_id' => $user->id,
+        ]);
     }
 
     public function test_feedback_can_be_resolved_and_reopened(): void

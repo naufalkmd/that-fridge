@@ -5,6 +5,7 @@ import {
   type BarcodeSuggestion,
   type CreateItemInput,
   type FlatItem,
+  type ItemRemovalResult,
   type Fridge,
   type NutritionCategory,
   type UpdateItemInput,
@@ -34,6 +35,10 @@ interface InventoryContextValue {
       category_id?: string | null;
       expiry_date?: string;
       shelf_life_days?: number;
+      suggestion_token?: string;
+      barcode_miss?: string;
+      source?: "manual" | "barcode" | "receipt" | "photo";
+      add_started_at?: string;
     }[],
   ) => Promise<number>;
   lookupBarcode: (barcode: string) => Promise<BarcodeSuggestion>;
@@ -41,9 +46,9 @@ interface InventoryContextValue {
   ensureSectionId: () => Promise<string>;
   setItemQty: (itemId: string, qty: number) => Promise<void>;
   patchItem: (itemId: string, data: UpdateItemInput) => Promise<void>;
-  removeItem: (itemId: string) => Promise<void>;
-  removeManyItems: (itemIds: string[]) => Promise<void>;
-  restoreItem: (item: FlatItem) => Promise<void>;
+  removeItem: (itemId: string, context?: "recipe_used") => Promise<ItemRemovalResult>;
+  removeManyItems: (itemIds: string[]) => Promise<ItemRemovalResult[]>;
+  undoRemoval: (outcomeId: string) => Promise<void>;
   itemById: (itemId: string) => FlatItem | undefined;
 }
 
@@ -162,6 +167,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
             ...(d.nutrition_category ? { nutrition_category: d.nutrition_category } : {}),
             ...(d.category_id ? { category_id: d.category_id } : {}),
             ...(d.expiry_date ? { expiry_date: d.expiry_date, shelf_life_days: d.shelf_life_days } : {}),
+            ...(d.suggestion_token ? { suggestion_token: d.suggestion_token } : {}),
+            ...(d.barcode_miss ? { barcode_miss: d.barcode_miss } : {}),
+            ...(d.source ? { source: d.source } : {}),
+            ...(d.add_started_at ? { add_started_at: d.add_started_at } : {}),
             note: "Just added",
           }),
         ),
@@ -197,7 +206,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   );
 
   const removeItem = useCallback(
-    async (itemId: string) => {
+    async (itemId: string, context?: "recipe_used") => {
       const snapshot = fridges;
       setFridges((prev) =>
         prev.map((f) => ({
@@ -209,7 +218,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         })),
       );
       try {
-        await api.deleteItem(itemId);
+        return await api.deleteItem(itemId, context);
       } catch {
         setFridges(snapshot); // roll back
         throw new Error("Couldn't delete that item.");
@@ -220,9 +229,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   const removeManyItems = useCallback(
     async (itemIds: string[]) => {
-      if (itemIds.length === 0) return;
+      if (itemIds.length === 0) return [];
       const ids = new Set(itemIds);
-      const snapshot = fridges;
       setFridges((prev) =>
         prev.map((f) => ({
           ...f,
@@ -236,26 +244,16 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         itemIds.map((id) => api.deleteItem(id)),
       );
       if (results.some((r) => r.status === "rejected")) {
-        // Some deletes failed — restore and let the caller surface it. A reload would
-        // also work but this keeps whatever succeeded from flashing back.
-        setFridges(snapshot);
+        // Reconcile any failures while keeping successful removals removed.
         await load();
-        throw new Error("Couldn't delete some of those items.");
       }
+      return results.flatMap((r) => r.status === "fulfilled" ? [r.value] : []);
     },
-    [fridges, load],
+    [load],
   );
 
-  // Re-create a just-deleted item (undo). A fresh row/id — the API has no un-delete.
-  const restoreItem = useCallback(async (item: FlatItem) => {
-    await api.createItem(item.sectionId, {
-      name: item.name,
-      icon: item.icon || "generic",
-      nutrition_category: item.nutritionCategory ?? null,
-      location: item.location,
-      quantity: item.qty,
-      note: item.note || undefined,
-    });
+  const undoRemoval = useCallback(async (outcomeId: string) => {
+    await api.undoItemOutcome(outcomeId);
     await load();
   }, [load]);
 
@@ -278,7 +276,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       patchItem,
       removeItem,
       removeManyItems,
-      restoreItem,
+      undoRemoval,
       itemById,
     }),
     [
@@ -294,7 +292,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       resolveTarget,
       setItemQty,
       patchItem,
-      restoreItem,
+      undoRemoval,
       removeItem,
       removeManyItems,
       itemById,

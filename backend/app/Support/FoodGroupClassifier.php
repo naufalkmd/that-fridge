@@ -101,12 +101,25 @@ class FoodGroupClassifier
      */
     public static function classify(string $name, ?string $icon = null): ?string
     {
-        $q = trim(Str::lower($name));
+        return self::classifyWithSource($name, $icon)['category'];
+    }
 
-        return self::matchSpecificTerm($q)
-            ?? FoodIconMatcher::nutritionCategoryFor($icon)
-            ?? self::matchKeyword($q)
-            ?? FoodIconMatcher::nutritionCategoryFor(FoodIconMatcher::guess($q));
+    /** @return array{category: ?string, source: ?string} */
+    public static function classifyWithSource(string $name, ?string $icon = null): array
+    {
+        $q = trim(Str::lower($name));
+        foreach ([
+            'specific' => self::matchSpecificTerm($q),
+            'icon' => FoodIconMatcher::nutritionCategoryFor($icon),
+            'keyword' => self::matchKeyword($q),
+            'icon_guess' => FoodIconMatcher::nutritionCategoryFor(FoodIconMatcher::guess($q)),
+        ] as $source => $category) {
+            if ($category !== null) {
+                return ['category' => $category, 'source' => $source];
+            }
+        }
+
+        return ['category' => null, 'source' => null];
     }
 
     /** classify() first, then the cross-user AI-result cache - the two "don't spend an AI
