@@ -1,9 +1,8 @@
 # In-app calendar — plan
 
-Status: **phases 1 and 2 built and committed, not yet published** (2026-09-26): `GET /api/calendar`,
+Status: **phases 1 and 2 built and published via OTA `0a92e78c`, not yet device-checked** (2026-09-26): `GET /api/calendar`,
 the calendar screen and Home button, and the meal plan / recipe log (`meal_entries`, sharing rules,
-slot templates, reminders, "Add to plan", mark-made logging, privacy policy). Phase 3 not started. Publish only after a device check -
-an OTA near the Sep 30 deadline needs QA first.
+slot templates, reminders, "Add to plan", mark-made logging, privacy policy). Phase 3 not started.
 Decided 2026-09-26. Everything below ships over OTA — no native module, no permission, no rebuild.
 
 One calendar screen inside the app showing everything ThatFridge knows about time: expiry dates,

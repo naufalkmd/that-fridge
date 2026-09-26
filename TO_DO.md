@@ -105,11 +105,12 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   Product, icon requests), unified Remove, opened-item shelf life, privacy wording, and
   server-side signals for alerts, scans, autofill, notification toggles, recipe rank and Kitchen Lab
   authoring.
-- **Live OTA (production, runtime 1.3.3, latest group `609c5f4a-9192-4816-90ee-998596529ba8`, commit
-  `4498c81`)** carries everything since `bbff2c2`. The earlier batch was verified on a device; the
+- **Live OTA (production, runtime 1.3.3, latest group `0a92e78c-d2e6-4cd1-85e4-fa98f7688dcd`, commit
+  `e0396ca`)** carries everything since `bbff2c2`. The earlier batch was verified on a device; the
   latest changes have **not** been device-checked yet: scan `parsed_name`, Home tip taps/dismissals
   (`/tip-feedback`), fridge-scoped Home bell dot, Profile → Privacy as list rows, and the bulk-remove
-  toast summary + Kitchen Score refresh, and the app following server-side Pro (admin-granted Pro).
+  toast summary + Kitchen Score refresh, and the app following server-side Pro (admin-granted Pro), and the in-app calendar
+  (phases 1-2).
   Rollback: `eas update:rollback`.
 
 ### Execution queue (post-launch product work; details in "Product backlog")
@@ -214,7 +215,7 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
   other members of a Pro-owned fridge without ever saying "household" in the UI; meal slots are
   user-defined with suggested templates; AI weekly planner later (after the credit audit). All
   OTA — no native rebuild, no Apple/Google Calendar. **Phases 1 (read-only calendar) and 2 (meal plan + recipe log) are
-  built and committed but NOT published** — device-check before an OTA: Home button under the bell,
+  PUBLISHED (OTA `0a92e78c`) but not device-checked yet** — check on a phone: Home button under the bell,
   tap days incl. empty ones, filters, month arrows, plan / edit / delete / tick a meal, first-time slot
   templates, a reminder time, "Add to plan" on a recipe, and the sharing rule with a second account
   (Pro-owned fridge shares, free-owned stays personal). Phase 3 (AI/automation hooks) not started.
