@@ -290,7 +290,22 @@ class AuthControllerTest extends TestCase
 
         $regular = User::factory()->create();
         $this->assertFalse($regular->isPro());
-        $this->actingAs($regular)->getJson('/api/me')->assertJson(['user' => ['isDemo' => false]]);
+        $this->actingAs($regular)->getJson('/api/me')->assertJson(['user' => ['isDemo' => false, 'isPro' => false, 'proGranted' => false]]);
+    }
+
+    public function test_me_reports_server_side_pro_so_an_admin_grant_reaches_the_app(): void
+    {
+        $granted = User::factory()->create();
+        $granted->forceFill(['pro_granted' => true])->save();
+        $this->actingAs($granted)->getJson('/api/me')
+            ->assertJson(['user' => ['isPro' => true, 'proGranted' => true, 'isDemo' => false]]);
+
+        $subscriber = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
+        $this->actingAs($subscriber)->getJson('/api/me')
+            ->assertJson(['user' => ['isPro' => true, 'proGranted' => false]]);
+
+        $demoOnly = User::factory()->create(['is_demo' => true]);
+        $this->actingAs($demoOnly)->getJson('/api/me')->assertJson(['user' => ['isDemo' => true, 'isPro' => false]]);
     }
 
     public function test_delete_me_removes_the_user_their_tokens_and_owned_fridges(): void

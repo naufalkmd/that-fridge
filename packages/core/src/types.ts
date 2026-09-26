@@ -500,8 +500,12 @@ export interface CurrentUser {
   /** Consecutive-day "opened the app" streak, computed server-side (User::recordDailyOpen)
    *  on every authenticated round trip. Not related to any Kitchen Score. */
   streak?: number;
-  /** Managed demo / App Review account — always treated as Pro, name/username locked. */
+  /** Managed demo / App Review account — isolated from real users, name/username locked. Not Pro by itself. */
   isDemo?: boolean;
+  /** Server-side Pro (User::isPro): an active subscription or an admin grant. */
+  isPro?: boolean;
+  /** Pro granted by an admin (no subscription behind it). */
+  proGranted?: boolean;
   /**
    * Per-field budget for name / username edits on a rolling 30-day window. Lets the
    * edit-profile screen show "1 change left" and, once spent, when the field unlocks.

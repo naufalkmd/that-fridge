@@ -161,10 +161,12 @@ export default function Profile() {
         <Eyebrow color={colors.faint}>Subscription</Eyebrow>
         <Text className="mt-1.5 text-[15px] font-semibold text-ink">
           {user?.isDemo
-            ? "ThatFridge Pro — demo account"
-            : isPro
-              ? "ThatFridge Pro — active"
-              : "Free plan"}
+            ? `${isPro ? "ThatFridge Pro" : "Free plan"} — demo account`
+            : user?.proGranted
+              ? "ThatFridge Pro — granted"
+              : isPro
+                ? "ThatFridge Pro — active"
+                : "Free plan"}
         </Text>
         {user?.isDemo ? (
           <Pressable
@@ -173,7 +175,7 @@ export default function Profile() {
           >
             <Text className="font-semibold text-ink">View plans</Text>
           </Pressable>
-        ) : isPro && available ? (
+        ) : isPro && available && !user?.proGranted ? (
           <Pressable
             onPress={openCustomerCenter}
             className="mt-3 items-center rounded-lg border border-hairline py-2.5 active:opacity-70"

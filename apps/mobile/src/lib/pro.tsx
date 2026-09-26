@@ -154,10 +154,11 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
     await refresh();
   }, [refresh]);
 
-  // Demo / App Review accounts are Pro server-side (User::isPro) regardless of any purchase,
-  // so the app's Pro state must agree - otherwise the paywall / "Go Pro" shows to a reviewer
-  // who already has full access.
-  const effectiveIsPro = isPro || user?.isDemo === true;
+  // The server is the authority on Pro (User::isPro): besides a RevenueCat subscription it
+  // includes an admin grant (comped users, demo / App Review accounts granted Pro), which
+  // RevenueCat knows nothing about. The app's Pro state must agree, otherwise the paywall /
+  // "Go Pro" shows to someone who already has full access.
+  const effectiveIsPro = isPro || user?.isPro === true;
 
   const value = useMemo(
     () => ({

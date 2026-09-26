@@ -404,6 +404,9 @@ class AuthController extends Controller
             'credits' => (int) $user->ai_credits,
             'streak' => (int) $user->current_streak,
             'isDemo' => (bool) $user->is_demo,
+            // Server-side Pro (subscription or admin-granted) - the app can't see admin grants via RevenueCat.
+            'isPro' => $user->isPro(),
+            'proGranted' => (bool) $user->pro_granted,
             'profileChanges' => $user->is_demo ? null : collect(User::PROFILE_CHANGE_LIMITS)
                 ->mapWithKeys(fn ($limit, $field) => [$field => [
                     'limit' => $limit,
