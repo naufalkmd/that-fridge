@@ -191,6 +191,11 @@ php artisan filament:optimize # caches the admin panel's components + icons
 > The migration also seeds the **To-do** list (Insights → To-do, and the top of the dashboard)
 > with the launch checklist; tick items off there instead of in `TO_DO.md`.
 
+> **Content studios (`/admin` → Content):** *Recipe studio* has Chef write a recipe from a description, lets you edit the draft, then
+> saves it as a curated recipe (optionally with a generated icon and a place in Explore). *Icon studio* generates pixel-art food icons
+> and adds the good ones to the shared pack. Both need `OPENROUTER_API_KEY` / `FAL_KEY`, spend no user credits, and appear on the AI
+> cost dashboard as "Admin studio: …".
+
 > Change the seeded reviewer password from the default before submitting, and put the real
 > credentials in the App Review notes + your password manager.
 

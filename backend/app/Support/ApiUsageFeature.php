@@ -38,16 +38,21 @@ final class ApiUsageFeature
 
     public static function resolve(): string
     {
-        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 12) as $frame) {
-            $class = isset($frame['class']) ? class_basename($frame['class']) : null;
-            if ($class === null || in_array($class, self::PLUMBING, true)) {
+        $label = null;
+        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 14) as $frame) {
+            $fullClass = $frame['class'] ?? '';
+            // Our own team generating from the admin studios, not a user spending credits: keep the two apart on the dashboard.
+            if (str_starts_with($fullClass, 'App\\Filament\\Pages\\')) {
+                return 'Admin studio: '.($label ?? class_basename($fullClass));
+            }
+            $class = $fullClass !== '' ? class_basename($fullClass) : null;
+            if ($label !== null || $class === null || in_array($class, self::PLUMBING, true)) {
                 continue;
             }
             $method = $frame['function'] ?? '';
-
-            return self::LABELS["{$class}::{$method}"] ?? self::LABELS[$class] ?? $class;
+            $label = self::LABELS["{$class}::{$method}"] ?? self::LABELS[$class] ?? $class;
         }
 
-        return 'Other';
+        return $label ?? 'Other';
     }
 }

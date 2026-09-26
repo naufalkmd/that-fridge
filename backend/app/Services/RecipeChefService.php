@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Log;
 /**
  * "Ask Chef" for the recipe form: turns what the user typed ("high-protein vegetarian dinner under 30 minutes")
  * into a recipe draft, optionally leaning on what is in their fridge. Returns the same `{found, recipe}` shape as
- * the link import so the form fills itself the same way; nothing is saved here. The controller owns the credit charge.
+ * the link import so the form fills itself the same way; nothing is saved here. The controller owns the credit charge. The admin
+ * Recipe studio calls it with no user (no fridge to lean on, no credits spent).
  */
 class RecipeChefService
 {
@@ -23,11 +24,11 @@ class RecipeChefService
     }
 
     /** @return array{found: bool, recipe?: array<string, mixed>, reason?: string} */
-    public function draft(User $user, string $request, bool $useFridge): array
+    public function draft(?User $user, string $request, bool $useFridge): array
     {
         try {
             $result = $this->client->complete(
-                [['role' => 'user', 'content' => $this->prompt($request, $useFridge ? $this->pantry($user) : [])]],
+                [['role' => 'user', 'content' => $this->prompt($request, $useFridge && $user ? $this->pantry($user) : [])]],
                 1200,
             );
             if (! ($result['ok'] ?? false)) {
