@@ -124,7 +124,7 @@ export function AutofillCard({ item }: { item: FlatItem }) {
           justifyContent: "center",
           gap: 8,
           paddingVertical: 12,
-          borderRadius: 8,
+          borderRadius: 12,
           marginBottom: 14,
           backgroundColor: `${AUTOFILL}1f`,
           borderWidth: 1,
@@ -148,7 +148,7 @@ export function AutofillCard({ item }: { item: FlatItem }) {
           justifyContent: "center",
           gap: 8,
           paddingVertical: 14,
-          borderRadius: 8,
+          borderRadius: 12,
           marginBottom: 14,
           backgroundColor: `${AUTOFILL}14`,
         }}
@@ -168,7 +168,7 @@ export function AutofillCard({ item }: { item: FlatItem }) {
     <View
       style={{
         padding: 14,
-        borderRadius: 8,
+        borderRadius: 12,
         marginBottom: 14,
         backgroundColor: `${AUTOFILL}1a`,
         borderWidth: 1,
@@ -202,7 +202,7 @@ export function AutofillCard({ item }: { item: FlatItem }) {
             flex: 1,
             alignItems: "center",
             paddingVertical: 9,
-            borderRadius: 6,
+            borderRadius: 10,
             backgroundColor: AUTOFILL,
           }}
         >
@@ -219,7 +219,7 @@ export function AutofillCard({ item }: { item: FlatItem }) {
             flex: 1,
             alignItems: "center",
             paddingVertical: 9,
-            borderRadius: 6,
+            borderRadius: 10,
             borderWidth: 1,
             borderColor: `${AUTOFILL}66`,
           }}

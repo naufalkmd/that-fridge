@@ -12,7 +12,7 @@ export function RowGroup({ children }: { children: ReactNode }) {
         backgroundColor: SURFACE,
         borderWidth: 1,
         borderColor: HAIRLINE,
-        borderRadius: 8,
+        borderRadius: 12,
         overflow: "hidden",
       }}
     >

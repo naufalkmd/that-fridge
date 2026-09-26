@@ -12,3 +12,6 @@ export { CaloriesRow } from "./calories-row";
 export { QuantityRow } from "./quantity-row";
 export { CustomFieldRows, AddCustomFieldRow } from "./custom-fields";
 export { AutofillCard } from "./autofill-card";
+export { StatusCard } from "./status-card";
+export { DetailSection } from "./detail-section";
+export { OpenedRow } from "./opened-row";

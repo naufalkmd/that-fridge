@@ -201,69 +201,49 @@ export default function Profile() {
         </View>
       )}
 
-      <View>
-        <SectionHeader>Settings</SectionHeader>
-        <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
-          <LinkRow icon="calendar-number-outline" label="Calendar" badge="NEW" onPress={() => router.push("/calendar")} />
-          <LinkRow icon="calendar-outline" label="Meal plan" onPress={() => router.push("/meal-plan")} />
-          <LinkRow icon="compass-outline" label="Explore" badge="NEW" onPress={() => router.push("/explore")} />
-          <LinkRow icon="speedometer-outline" label="Crew score" onPress={() => router.push("/crew-score")} />
-          <LinkRow icon="stats-chart-outline" label="Insights" badge="NEW" onPress={() => router.push("/insights")} />
-          <LinkRow icon="ribbon-outline" label="Badges" onPress={() => router.push("/badges")} />
-          <LinkRow
-            icon="flask-outline"
-            label="Kitchen Lab"
-            badge="NEW"
-            onPress={() => router.push("/kitchen-lab")}
-          />
-          <LinkRow icon="shield-checkmark-outline" label="Privacy & data" onPress={() => router.push("/privacy")} />
-          <LinkRow
-            icon="notifications-outline"
-            label="Notification settings"
-            onPress={() => router.push("/notification-settings")}
-          />
-          <LinkRow
-            icon="contrast-outline"
-            label="Appearance"
-            value={THEME_LABELS[mode]}
-            onPress={() =>
-              Alert.alert(
-                "Appearance",
-                "Choose how ThatFridge looks.",
-                [
-                  { text: "Light", onPress: () => setMode("light") },
-                  { text: "Dark", onPress: () => setMode("dark") },
-                  { text: "System", onPress: () => setMode("system") },
-                  // Android shows at most three buttons (it dismisses on outside tap instead); iOS keeps Cancel.
-                  ...(Platform.OS === "ios" ? [{ text: "Cancel", style: "cancel" as const }] : []),
-                ],
-                { cancelable: true },
-              )
-            }
-          />
-          <LinkRow
-            icon="refresh-outline"
-            label="Replay intro & tips"
-            onPress={replayIntro}
-          />
-          <LinkRow
-            icon="star-outline"
-            label="Rate ThatFridge"
-            onPress={openStoreReviewPage}
-          />
-          <LinkRow
-            icon="chatbubble-ellipses-outline"
-            label="Send feedback"
-            onPress={() => router.push("/feedback")}
-          />
-          <LinkRow
-            icon="information-circle-outline"
-            label="About ThatFridge"
-            onPress={() => router.push("/about")}
-            last
-          />
-        </View>
-      </View>
+      <SettingsGroup title="Plan & discover">
+        <LinkRow icon="calendar-number-outline" label="Calendar" badge="NEW" onPress={() => router.push("/calendar")} />
+        <LinkRow icon="calendar-outline" label="Meal plan" onPress={() => router.push("/meal-plan")} />
+        <LinkRow icon="compass-outline" label="Explore" badge="NEW" onPress={() => router.push("/explore")} last />
+      </SettingsGroup>
+
+      <SettingsGroup title="Your progress">
+        <LinkRow icon="speedometer-outline" label="Crew score" onPress={() => router.push("/crew-score")} />
+        <LinkRow icon="stats-chart-outline" label="Insights" badge="NEW" onPress={() => router.push("/insights")} />
+        <LinkRow icon="ribbon-outline" label="Badges" onPress={() => router.push("/badges")} last />
+      </SettingsGroup>
+
+      <SettingsGroup title="Tools & data">
+        <LinkRow icon="flask-outline" label="Kitchen Lab" badge="NEW" onPress={() => router.push("/kitchen-lab")} />
+        <LinkRow icon="notifications-outline" label="Notification settings" onPress={() => router.push("/notification-settings")} />
+        <LinkRow icon="shield-checkmark-outline" label="Privacy & data" onPress={() => router.push("/privacy")} last />
+      </SettingsGroup>
+
+      <SettingsGroup title="App">
+        <LinkRow
+          icon="contrast-outline"
+          label="Appearance"
+          value={THEME_LABELS[mode]}
+          onPress={() =>
+            Alert.alert(
+              "Appearance",
+              "Choose how ThatFridge looks.",
+              [
+                { text: "Light", onPress: () => setMode("light") },
+                { text: "Dark", onPress: () => setMode("dark") },
+                { text: "System", onPress: () => setMode("system") },
+                // Android shows at most three buttons (it dismisses on outside tap instead); iOS keeps Cancel.
+                ...(Platform.OS === "ios" ? [{ text: "Cancel", style: "cancel" as const }] : []),
+              ],
+              { cancelable: true },
+            )
+          }
+        />
+        <LinkRow icon="refresh-outline" label="Replay intro & tips" onPress={replayIntro} />
+        <LinkRow icon="star-outline" label="Rate ThatFridge" onPress={openStoreReviewPage} />
+        <LinkRow icon="chatbubble-ellipses-outline" label="Send feedback" onPress={() => router.push("/feedback")} />
+        <LinkRow icon="information-circle-outline" label="About ThatFridge" onPress={() => router.push("/about")} last />
+      </SettingsGroup>
 
       <View>
         <SectionHeader>Account</SectionHeader>
@@ -287,6 +267,16 @@ export default function Profile() {
         )}
       </View>
     </ScrollView>
+  );
+}
+
+/** A titled, bordered list of settings rows: the profile's Settings, split into short groups so it reads in chunks. */
+function SettingsGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View>
+      <SectionHeader>{title}</SectionHeader>
+      <View className="overflow-hidden rounded-xl border border-hairline bg-surface">{children}</View>
+    </View>
   );
 }
 

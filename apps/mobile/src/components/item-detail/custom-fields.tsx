@@ -84,7 +84,7 @@ function CustomFieldRow({
     >
       <Text style={{ fontSize: 10, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 5 }}>LABEL</Text>
       <TextInput value={labelDraft} onChangeText={setLabelDraft} style={[inputStyle, { marginBottom: 10 }]} />
-      <Text style={{ fontSize: 10, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 5 }}>NOTE</Text>
+      <Text style={{ fontSize: 10, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 5 }}>VALUE</Text>
       <TextInput value={valueDraft} onChangeText={setValueDraft} style={[inputStyle, { marginBottom: 12 }]} />
       <View style={{ flexDirection: "row", gap: 8 }}>
         <Pressable
@@ -204,7 +204,7 @@ export function AddCustomFieldRow({
         autoFocus
         style={[inputStyle, { marginBottom: 10 }]}
       />
-      <Text style={{ fontSize: 10, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 5 }}>NOTE (OPTIONAL)</Text>
+      <Text style={{ fontSize: 10, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 5 }}>VALUE (OPTIONAL)</Text>
       <TextInput
         value={valueDraft}
         onChangeText={setValueDraft}
