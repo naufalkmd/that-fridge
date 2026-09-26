@@ -133,7 +133,9 @@ Open owner decisions: waste in Waste Saver score, "wasted this month" stat, no-e
 git log around `37e21a7` if ever needed again.)
 
 - [ ] `v1.3.2` — App Store rating (Settings row + native review prompt), swipe-right-to-profile,
-  light/dark theme — submitted for review 2026-09-18, awaiting Apple's decision.
+  light/dark theme — submitted for review 2026-09-18, awaiting Apple's decision. **Verify status
+  in App Store Connect** (can't be checked from the repo): a `v1.3.3` build also reached TestFlight
+  on 2026-09-24, so confirm what is live vs in review and whether 1.3.3 needs submitting.
 
 ### Android — Play Store
 
@@ -149,14 +151,19 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
   cannot be set up in --non-interactive mode." Needs running `eas credentials` (interactive,
   can't be done from here) → Android → production → Google Service Account → set up, using the
   **Release manager**-role service account JSON (separate from RevenueCat's). Until then, every
-  build needs a manual `.aab` upload to Play Console.
+  build needs a manual `.aab` upload to Play Console. Evidence (2026-09-26): `google-play.yml`
+  **failed on the `v1.3.1` and `v1.3.2` tags** (2026-09-18) and never ran for `v1.3.3` (TestFlight
+  did) — commit `37e21a7`'s "service account is set up" was premature; RevenueCat's own Play
+  credentials *are* configured (separate thing).
 - [ ] **Google Play Payments Profile is incomplete** (pay.google.com/business/console) — this is
   the likely root cause of persistent, differently-coded "unexpected error" failures when
   creating the `credits_100` product specifically. Needs the banking/payout + tax (W-8BEN) form
   there completed before retrying.
 - [ ] **`credits_100` product still not created** in Play Console — blocked on the above. The
   other 4 products (`thatfridge_pro_monthly` $2.99/mo, `thatfridge_pro_yearly` $19.99/yr,
-  `credits_500` $7.99, `credits_1500` $19.99) exist and are already attached to RevenueCat;
+  `credits_500` $7.99, `credits_1500` $19.99) exist and are already attached to RevenueCat
+  (verified via the RevenueCat API 2026-09-26: the Play app has exactly those 4; the App Store app
+  has all 3 credit packs plus both subscriptions);
   attach `credits_100` the same way once it's created.
 - [ ] **Closed testing must clear before Play Console allows creating the remaining IAP
   product** — track created and running (started 2026-09-16); check Play Console for the exact
@@ -185,11 +192,6 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 
 ### Product backlog
 
-Phases 1–3 of the old backlog (notifications swipe/undo, Find a Friend history, Kitchen Lab
-templates/timezone/history/dry-run/undo/duplicate warning, food-group classifier, Add-item
-food-group removal, credits-ledger labels, mobile jest runner) are **shipped** — see git log
-`91188bf`, `bbff2c2`. Not repeated here.
-
 **Pending verification**
 
 - [ ] **Device QA of the live OTA** — never run on a device, and an OTA crashed once already. Check:
@@ -213,11 +215,11 @@ food-group removal, credits-ledger labels, mobile jest runner) are **shipped** �
   `php artisan migrate` fails locally (tests unaffected — in-memory SQLite). Confirm which
   port is intended before changing either.
 
-**Algorithm insights — what's left** (P0 logger/flag/rollup/scoreboard, removal, food-group,
-shelf-life, icon, opened events, barcode-miss capture, add-flow and chat 👍/👎 are shipped)
+**Algorithm insights — what's left**
 
 - [ ] **P1 signals not yet emitted:** receipt/photo scan edit stats (`parsed_name` → final name),
-  autofill per-field accept/partly/dismiss (`AutofillCard`), expiry-alert action rate (alert sent →
+  autofill per-field accept/partly/dismiss (only a per-item `autofill_used` / `no_autofill` outcome
+  is logged today, in `add_flow`), expiry-alert action rate (alert sent →
   used/removed/nothing within 24h), notification toggles turned off, low-stock tip shown → added to
   shopping / restock cadence.
 - [ ] **P2 signals:** recipe suggestion rank of the recipe marked made, Kitchen Lab drafting
@@ -227,18 +229,19 @@ shelf-life, icon, opened events, barcode-miss capture, add-flow and chat 👍/�
   tabs with accuracy tables, rule-suggestions queue (copy/export only, never auto-applied), one-click
   "create Product" from the unknown-barcodes queue, icon-requests → `SharedIcon`, outcome metrics
   (waste rate, items rescued, alert action rate, add time per item), data-health widget
-  (volume drops, null rates, rollup last-run), CSV export of the gaps tables, read-only opened
-  columns on `ItemResource`. Keep `MIN_USERS` hiding; act on patterns only with ≥5 users.
+  (event-volume drops, null rates — the rollup's last-run already shows in Scheduled jobs), and
+  read-only opened snapshot columns on `ItemResource` (only the `opened` flag is shown). Keep `MIN_USERS` hiding; act on patterns only with ≥5 users.
 - **Later:** per-user personalisation and automatic rule learning (needs volume).
 
 **Opened-item shelf life — leftovers**
 
-- [ ] **Consumer-parity check + test** — resource, `CheckItemFreshness`, Kitchen Score and chat tools
-  already use the effective date; verify recipe "use it up" scoring and usage-freshness credit
-  do too, then add the parity test (all agree on one item).
-- [ ] **Alert-timing change** — confirm `CheckItemFreshness` on the effective date behaves as
-  intended (opened milk alerts earlier, opened jam stops alerting at 3d, Waste Saver may shift);
-  owner OK'd? Ask before assuming.
+- [ ] **Consumer-parity test** — every consumer (resource, recipe "use it up", Kitchen Score, chat
+  tools, removal outcome/usage freshness) already reads `effectiveDaysUntilExpiry`; what's missing
+  is one test asserting they all agree on the same opened item.
+- [ ] **Flip the alert-timing switch** — `CheckItemFreshness` on the effective date is built but
+  gated behind `OPENED_EXPIRY_ALERTS_ENABLED` (default `false`, see `backend/DEPLOY.md`). Enabling it
+  means opened milk alerts earlier, opened jam stops alerting at 3d, Waste Saver may shift —
+  owner's call.
 - [ ] Later, only if people actually correct values often: per-name learning store, AI estimate for
   `default` items (piggyback on the autofill call, cached by name like the food-group answers).
 - [ ] Open question: which specific items besides eggs looked wrong (become first test cases).
