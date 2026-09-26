@@ -16,7 +16,7 @@ category Food & Drink. Treat the rest of that report with caution: it listed fit
 | **Subtitle** (recommended) | 30 | `Meal Plan, Pantry & Recipes` | 27 |
 | Subtitle, alternative | 30 | `AI Chef, Meals & Less Waste` | 27 |
 | **Keywords** (with the recommended title + subtitle) | 100 | `expiry,tracker,ai,chef,grocery,inventory,leftovers,waste,shopping,calories,nutrition,freezer,barcode` | 100 |
-| Keywords, if you use the alternative subtitle | 100 | `expiry,tracker,pantry,recipes,grocery,inventory,leftovers,shopping,calories,nutrition,freezer,barcode` | 101 |
+| Keywords, if you use the alternative subtitle | 100 | `expiry,tracker,pantry,recipes,grocery,inventory,leftovers,shopping,calories,nutrition,freezer,food` | 98 |
 | **Promotional text** (editable any time, not indexed) | 170 | `Know what's in your fridge, use it before it expires, and plan meals from it. Scan, get reminders, ask Chef, and waste less food with your household.` | 149 |
 
 The title and subtitle are deliberately broad. ThatFridge is now an inventory, meal planner, recipe book, AI chef and
