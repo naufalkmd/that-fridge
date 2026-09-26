@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\AiBalances;
 use App\Filament\Resources\AdminTodoResource\Pages\CreateAdminTodo;
 use App\Filament\Resources\AdminTodoResource\Pages\ListAdminTodos;
 use App\Filament\Widgets\AiProviderStats;
@@ -13,9 +14,11 @@ use App\Filament\Widgets\OnboardingFunnelWidget;
 use App\Filament\Widgets\SignupsChart;
 use App\Filament\Widgets\StatsOverview;
 use App\Models\AdminTodo;
+use App\Models\AiBalanceCheckpoint;
 use App\Models\AiCreditLedger;
 use App\Models\ApiUsageLog;
 use App\Models\User;
+use App\Services\AiProviderBalance;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -222,5 +225,64 @@ class AdminDashboardTest extends TestCase
 
         $this->assertDatabaseHas('admin_todos', ['title' => 'Call the bank', 'priority' => 'high']);
         $this->assertDatabaseHas('admin_audit_logs', ['action' => 'created', 'subject_type' => 'AdminTodo']);
+    }
+
+    // ---- fal.ai balance ----------------------------------------------------------------------------
+
+    public function test_the_fal_balance_arrives_seeded_with_11_46(): void
+    {
+        $fal = app(AiProviderBalance::class)->fal();
+
+        $this->assertSame(11.46, $fal['balance']);
+        $this->assertSame(11.46, $fal['remaining']);
+        Livewire::test(AiProviderStats::class)->assertSee('fal.ai balance (estimate)')->assertSee('$11.46 left');
+    }
+
+    public function test_the_fal_balance_is_the_latest_reading_minus_spend_logged_since(): void
+    {
+        AiBalanceCheckpoint::query()->delete();
+        AiBalanceCheckpoint::create(['provider' => 'fal', 'balance_usd' => 10, 'recorded_at' => now()->subDay()]);
+        $this->usage('fal', 'Icon generation', 5); // before the reading: already in the balance
+        ApiUsageLog::query()->update(['created_at' => now()->subDays(3)]);
+        $this->usage('fal', 'Icon generation', 0.5);
+
+        $fal = app(AiProviderBalance::class)->fal();
+
+        $this->assertSame(0.5, $fal['spent_since']);
+        $this->assertSame(9.5, $fal['remaining']);
+    }
+
+    public function test_the_fal_balance_never_goes_negative_and_flags_when_low(): void
+    {
+        AiBalanceCheckpoint::query()->delete();
+        AiBalanceCheckpoint::create(['provider' => 'fal', 'balance_usd' => 1, 'recorded_at' => now()->subDay()]);
+        $this->usage('fal', 'Icon generation', 3);
+
+        $this->assertSame(0.0, app(AiProviderBalance::class)->fal()['remaining']);
+        Livewire::test(AiProviderStats::class)->assertSee('top up soon');
+    }
+
+    public function test_without_a_reading_the_stat_asks_for_one(): void
+    {
+        AiBalanceCheckpoint::query()->delete();
+
+        $this->assertNull(app(AiProviderBalance::class)->fal());
+        Livewire::test(AiProviderStats::class)->assertSee('fal.ai balance')->assertSee('Not set');
+    }
+
+    public function test_the_operator_can_update_the_fal_balance_and_it_is_audited(): void
+    {
+        Livewire::test(AiBalances::class)->assertFormSet(['fal' => 11.46])
+            ->fillForm(['fal' => 20.5])->call('save')->assertHasNoFormErrors();
+
+        $this->assertSame(20.5, app(AiProviderBalance::class)->fal()['balance']);
+        $this->assertSame(2, AiBalanceCheckpoint::where('provider', 'fal')->count());
+        $this->assertDatabaseHas('admin_audit_logs', ['subject_type' => 'AiBalanceCheckpoint', 'action' => 'created']);
+    }
+
+    public function test_the_balance_form_rejects_blank_and_negative_amounts(): void
+    {
+        Livewire::test(AiBalances::class)->fillForm(['fal' => -1])->call('save')->assertHasFormErrors(['fal']);
+        Livewire::test(AiBalances::class)->fillForm(['fal' => null])->call('save')->assertHasFormErrors(['fal' => 'required']);
     }
 }

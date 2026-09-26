@@ -2,12 +2,14 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Pages\AiBalances;
 use App\Services\AdminStats;
 use App\Services\AiProviderBalance;
 use App\Support\AdminCacheKeys;
 use App\Support\Money;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -27,7 +29,7 @@ class AiProviderStats extends StatsOverviewWidget
 
     protected function getColumns(): int
     {
-        return 4;
+        return 3;
     }
 
     protected function getStats(): array
@@ -60,6 +62,7 @@ class AiProviderStats extends StatsOverviewWidget
                 ->color('info')
                 ->chart(array_map(fn ($v) => (float) $v, $byDay['fal'])),
             $this->balanceStat($account),
+            $this->falBalanceStat(app(AiProviderBalance::class)->fal()),
             Stat::make('AI cost per credit', $perCredit === null ? '–' : Money::usd($perCredit))
                 ->description($perCredit === null
                     ? 'No credits spent yet'
@@ -91,6 +94,25 @@ class AiProviderStats extends StatsOverviewWidget
             ->description('No spend limit is set on this key')
             ->descriptionIcon('heroicon-m-banknotes')
             ->color('gray');
+    }
+
+    /** @param  array{balance: float, remaining: float, spent_since: float, as_of: Carbon}|null  $fal */
+    private function falBalanceStat(?array $fal): Stat
+    {
+        if ($fal === null) {
+            return Stat::make('fal.ai balance', 'Not set')
+                ->description('Enter it from fal.ai/dashboard')
+                ->descriptionIcon('heroicon-m-question-mark-circle')
+                ->color('gray')
+                ->url(AiBalances::getUrl());
+        }
+        $low = $fal['remaining'] < 2.0;
+
+        return Stat::make('fal.ai balance (estimate)', '≈ '.Money::usd($fal['remaining']).' left')
+            ->description(($low ? 'top up soon · ' : '').Money::usd($fal['balance']).' on '.$fal['as_of']->format('j M').', minus '.Money::usd($fal['spent_since']).' since')
+            ->descriptionIcon($low ? 'heroicon-m-exclamation-triangle' : 'heroicon-m-banknotes')
+            ->color($low ? 'danger' : 'success')
+            ->url(AiBalances::getUrl());
     }
 
     private static function tokens(int $n): string

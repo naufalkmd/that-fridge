@@ -2,13 +2,17 @@
 
 namespace App\Services;
 
+use App\Models\AiBalanceCheckpoint;
+use App\Models\ApiUsageLog;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 /**
  * The live account figures OpenRouter will tell us with the API key we already have: how much has been used, and (when a spend limit
  * or purchased credit balance is visible) how much is left. Cached for ten minutes so the dashboard never waits on it, and any
- * failure is just "unavailable". fal.ai offers no such endpoint for a normal key, so its numbers come from our own logs only.
+ * failure is just "unavailable". fal.ai offers no such endpoint for a normal key, so its balance is the last one the operator entered (AiBalanceCheckpoint) minus the
+ * estimated fal.ai spend logged since.
  */
 class AiProviderBalance
 {
@@ -23,6 +27,25 @@ class AiProviderBalance
         }
 
         return Cache::remember(self::CACHE_KEY, 600, fn () => $this->fetch((string) $key)) ?: null;
+    }
+
+    /**
+     * @return array{balance: float, remaining: float, spent_since: float, as_of: Carbon}|null null until a balance has been entered
+     */
+    public function fal(): ?array
+    {
+        $checkpoint = AiBalanceCheckpoint::where('provider', 'fal')->orderByDesc('recorded_at')->orderByDesc('id')->first();
+        if (! $checkpoint) {
+            return null;
+        }
+        $spent = (float) ApiUsageLog::where('provider', 'fal')->where('created_at', '>=', $checkpoint->recorded_at)->sum('cost_usd');
+
+        return [
+            'balance' => $checkpoint->balance_usd,
+            'remaining' => max(0.0, round($checkpoint->balance_usd - $spent, 4)),
+            'spent_since' => round($spent, 4),
+            'as_of' => $checkpoint->recorded_at,
+        ];
     }
 
     /** @return array{used: ?float, remaining: ?float, limit: ?float}|false */
