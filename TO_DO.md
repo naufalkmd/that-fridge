@@ -105,8 +105,8 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   Product, icon requests), unified Remove, opened-item shelf life, privacy wording, and
   server-side signals for alerts, scans, autofill, notification toggles, recipe rank and Kitchen Lab
   authoring.
-- **Live OTA (production, runtime 1.3.3, latest group `0a92e78c-d2e6-4cd1-85e4-fa98f7688dcd`, commit
-  `e0396ca`)** carries everything since `bbff2c2`. The earlier batch was verified on a device; the
+- **Live OTA (production, runtime 1.3.3, latest group `b1402ef0-135f-4f79-8225-f6b104ce0e3e`, commit
+  `1f95d31`)** carries everything since `bbff2c2`. The earlier batch was verified on a device; the
   latest changes have **not** been device-checked yet: scan `parsed_name`, Home tip taps/dismissals
   (`/tip-feedback`), fridge-scoped Home bell dot, Profile → Privacy as list rows, and the bulk-remove
   toast summary + Kitchen Score refresh, and the app following server-side Pro (admin-granted Pro), and the in-app calendar
@@ -178,12 +178,12 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
 
 ### Product backlog
 
-- [ ] **Recipe calories — built, not deployed** (committed, unpushed). Every recipe gets `calories`
+- [ ] **Recipe calories — deployed (API `1f95d31`) and in the OTA; not yet verified on a device.** Every recipe gets `calories`
   per serving from `RecipeCalories`/`NutritionTable` (table first; the model only when < 70% of the
-  ingredients are recognised). After the deploy: spot-check a few real recipes against expectations,
-  and run `php artisan app:fill-recipe-calories` once on the server so the model refines the
-  stop-gaps (the nightly sweep does 50/day). Recipes have no quantities, so it is "one typical
-  serving" by design; the table values are estimates. Needs an OTA for the app to show the number.
+  ingredients are recognised). Spot-check a few real recipes against expectations, and run
+  `php artisan app:fill-recipe-calories` once on the server so the model refines the stop-gaps
+  (the nightly sweep does 50/day). Recipes have no quantities, so it is "one typical
+  serving" by design; the table values are estimates.
 
 **Algorithm insights — what's left**
 
@@ -223,7 +223,7 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
   user-defined with suggested templates; AI weekly planner later (after the credit audit). All
   OTA — no native rebuild, no Apple/Google Calendar. **Phases 1 (read-only calendar) and 2 (meal plan + recipe log) are
   PUBLISHED (OTA `0a92e78c`); a first device pass found the meal form hidden by the keyboard —
-  fixed in the next OTA (sheet now rides above the keyboard, name field first, calories added).** Still to check on a phone: Home button under the bell,
+  fixed in OTA `b1402ef0` (sheet now rides above the keyboard, name field first, calories on meals).** Still to check on a phone: Home button under the bell,
   tap days incl. empty ones, filters, month arrows, plan / edit / delete / tick a meal, first-time slot
   templates, a reminder time, "Add to plan" on a recipe, and the sharing rule with a second account
   (Pro-owned fridge shares, free-owned stays personal). Phase 3 (AI/automation hooks) not started.
