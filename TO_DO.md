@@ -194,6 +194,12 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 
 **Pending verification**
 
+- [ ] **Turn feedback collection ON in prod** — `ALGO_FEEDBACK_ENABLED` defaults to `false`
+  (`backend/config/app.php`; `.env.production.example`), so **no feedback rows are being written
+  yet**. The updated privacy notices are deployed; set `ALGO_FEEDBACK_ENABLED=true` in the
+  server `.env` and rebuild the config cache (`backend/DEPLOY.md`). Until then every signal, the
+  rollup and the admin page stay empty; events can't be backfilled, so flip it soon. Also
+  re-check the store privacy labels first (item below).
 - [ ] **Device QA of the live OTA** — never run on a device, and an OTA crashed once already. Check:
   Home (one card style; tips swipe/Clear; switching fridge hides other fridges' events, All Fridges
   shows all), Add item (card layout, wand Auto-fill, camera date scan, qty stepper; also the barcode
@@ -219,8 +225,7 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 
 - [ ] **P1 signals not yet emitted:** receipt/photo scan edit stats (`parsed_name` → final name),
   autofill per-field accept/partly/dismiss (only a per-item `autofill_used` / `no_autofill` outcome
-  is logged today, in `add_flow`), expiry-alert action rate (alert sent →
-  used/removed/nothing within 24h), notification toggles turned off, low-stock tip shown → added to
+  is logged today, in `add_flow`), notification toggles turned off, low-stock tip shown → added to
   shopping / restock cadence.
 - [ ] **P2 signals:** recipe suggestion rank of the recipe marked made, Kitchen Lab drafting
   (saved as-is / edited / redrafted / discarded, validation failures, dry run before enabling),
@@ -235,9 +240,6 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 
 **Opened-item shelf life — leftovers**
 
-- [ ] **Consumer-parity test** — every consumer (resource, recipe "use it up", Kitchen Score, chat
-  tools, removal outcome/usage freshness) already reads `effectiveDaysUntilExpiry`; what's missing
-  is one test asserting they all agree on the same opened item.
 - [ ] **Flip the alert-timing switch** — `CheckItemFreshness` on the effective date is built but
   gated behind `OPENED_EXPIRY_ALERTS_ENABLED` (default `false`, see `backend/DEPLOY.md`). Enabling it
   means opened milk alerts earlier, opened jam stops alerting at 3d, Waste Saver may shift —

@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\Item;
 use App\Models\NotificationEvent;
+use App\Support\AlgoFeedback;
+use App\Support\FoodGroupClassifier;
 use App\Support\ItemFreshness;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -86,6 +88,16 @@ class CheckItemFreshness extends Command
                 'kind' => 'expiring',
                 'message' => $message,
                 'done' => false,
+            ]);
+
+            // Denominator for the alert action rate; the numerator is logged when the item is
+            // removed (ItemRemovalService) since the event cascades away with the item.
+            AlgoFeedback::record($user, 'expiry_alert', [
+                'kind' => 'sent',
+                'name' => $item->name,
+                'class' => FoodGroupClassifier::classify($item->name, $item->icon),
+                'guess_number' => $daysLeft,
+                'source' => $openedAlerts && $item->opened ? 'opened' : 'printed',
             ]);
 
             $created++;

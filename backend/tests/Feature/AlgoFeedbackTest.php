@@ -213,4 +213,49 @@ class AlgoFeedbackTest extends TestCase
             'source' => 'ignored_fridge', 'name_key' => null,
         ]);
     }
+
+    public function test_expiry_alert_logs_sent_then_acted_when_the_item_is_removed(): void
+    {
+        config(['app.algo_feedback_enabled' => true]);
+        $user = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
+        $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'Top']);
+        $item = $section->items()->create([
+            'name' => 'Milk', 'icon' => 'milk', 'nutrition_category' => 'dairy', 'quantity' => 10,
+            'expiry_date' => now()->addDay()->toDateString(), 'shelf_life_days' => 7,
+        ]);
+        $item->forceFill(['created_at' => now()->subDays(3)])->saveQuietly();
+
+        $this->artisan('app:check-item-freshness');
+        $this->assertDatabaseHas('algo_feedback_events', [
+            'algo' => 'expiry_alert', 'kind' => 'sent', 'source' => 'printed', 'guess_number' => 1,
+        ]);
+
+        $this->actingAs($user)->deleteJson("/api/items/{$item->id}")->assertSuccessful();
+        $this->assertDatabaseHas('algo_feedback_events', [
+            'algo' => 'expiry_alert', 'kind' => 'acted', 'source' => 'within_24h', 'outcome' => 'used',
+        ]);
+    }
+
+    public function test_alert_signals_respect_the_sharing_switch_and_skip_unalerted_removals(): void
+    {
+        config(['app.algo_feedback_enabled' => true]);
+        $user = User::factory()->create(['preferences' => ['help_improve' => false]]);
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
+        $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'Top']);
+        $expiring = $section->items()->create([
+            'name' => 'Milk', 'icon' => 'milk', 'quantity' => 10, 'expiry_date' => now()->addDay()->toDateString(),
+        ]);
+        $plain = $section->items()->create(['name' => 'Rice', 'icon' => 'rice', 'quantity' => 10]);
+        $plain->forceFill(['created_at' => now()->subDays(3)])->saveQuietly();
+
+        $this->artisan('app:check-item-freshness');
+        $this->actingAs($user)->deleteJson("/api/items/{$expiring->id}")->assertSuccessful();
+        $this->assertDatabaseMissing('algo_feedback_events', ['algo' => 'expiry_alert']);
+
+        $user->preferences = ['help_improve' => true];
+        $user->save();
+        $this->deleteJson("/api/items/{$plain->id}")->assertSuccessful();
+        $this->assertDatabaseMissing('algo_feedback_events', ['algo' => 'expiry_alert', 'kind' => 'acted']);
+    }
 }

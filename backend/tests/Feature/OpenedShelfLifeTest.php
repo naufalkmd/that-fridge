@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\RecipeController;
 use App\Models\Fridge;
 use App\Models\Section;
 use App\Models\User;
+use App\Services\KitchenScoreService;
 use App\Support\ItemFreshness;
+use App\Support\ItemRemovalOutcome;
 use App\Support\OpenedShelfLife;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -89,5 +92,33 @@ class OpenedShelfLifeTest extends TestCase
         $this->assertNotNull($item->fresh()->opened_at);
         $this->travel(2)->days();
         $this->assertSame(5, ItemFreshness::effectiveDaysUntilExpiry($item->fresh()));
+    }
+
+    public function test_every_consumer_agrees_on_an_opened_items_effective_date(): void
+    {
+        $user = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
+        $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'Top']);
+        $item = $section->items()->create([
+            'name' => 'Milk', 'icon' => 'milk', 'nutrition_category' => 'dairy',
+            'expiry_date' => now()->addDays(30)->toDateString(), 'shelf_life_days' => 7,
+        ]);
+        $item->update(['opened' => true]);
+        // Opened 5 days ago with a 7-day estimate: 2 days left, well before the printed date.
+        $item->forceFill(['opened_at' => now()->subDays(5)])->saveQuietly();
+        $item = $item->fresh();
+
+        $this->assertSame(2, ItemFreshness::effectiveDaysUntilExpiry($item));
+
+        $resource = $this->actingAs($user)->patchJson("/api/items/{$item->id}", ['quantity' => 3])->assertOk();
+        $this->assertSame(2, $resource->json('data.days'));
+
+        $daysFor = new \ReflectionMethod(KitchenScoreService::class, 'daysFor');
+        $this->assertSame(2, $daysFor->invoke(app(KitchenScoreService::class), $item->fresh()));
+
+        $icons = new \ReflectionMethod(RecipeController::class, 'expiringItemIcons');
+        $this->assertSame(['milk' => 2], $icons->invoke(app(RecipeController::class), $user));
+
+        $this->assertSame(2, ItemRemovalOutcome::classify($item->fresh())['predicted_days']);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Item;
 use App\Models\ItemOutcome;
+use App\Models\NotificationEvent;
 use App\Models\User;
 use App\Support\AlgoFeedback;
 use App\Support\FoodGroupClassifier;
@@ -43,6 +44,10 @@ final class ItemRemovalService
 
             if ($outcome->outcome === 'used') {
                 $this->countUsage($user, $outcome);
+            }
+            // Must run before delete(): the item's notification events cascade away with it.
+            if ($outcome->outcome !== 'entry_mistake') {
+                $this->alertFeedback($user, $item, $outcome);
             }
             $item->delete();
 
@@ -180,6 +185,27 @@ final class ItemRemovalService
             }
         }
         $outcome->update(['usage_delta' => null, 'badge_counted' => false]);
+    }
+
+    /** Removal after an expiry alert = the alert was acted on; hours-to-action feeds the rate. */
+    private function alertFeedback(User $user, Item $item, ItemOutcome $outcome): void
+    {
+        $alert = NotificationEvent::where('item_id', $item->id)->where('kind', 'expiring')
+            ->latest('created_at')->first();
+        if (! $alert) {
+            return;
+        }
+
+        $hours = (int) $alert->created_at->diffInHours(now());
+        $name = $item->name;
+        AlgoFeedback::record($user, 'expiry_alert', [
+            'kind' => 'acted',
+            'name' => $name,
+            'class' => FoodGroupClassifier::classify($name, $item->icon),
+            'final_number' => $hours,
+            'source' => $hours <= 24 ? 'within_24h' : 'later',
+            'outcome' => $outcome->outcome,
+        ]);
     }
 
     private function feedback(User $user, ItemOutcome $outcome, string $kind): void
