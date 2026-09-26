@@ -98,14 +98,18 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   don't test-drive mutating features against prod with the shared demo account.
 
 ### Current state (2026-09-26)
-- `main` == `origin/main` at `d30bcd0`. Backend (`3c89571`: feedback logger + insights admin,
-  unified Remove, opened-item shelf life, privacy wording) is deployed; migrations ran on deploy.
+- `main` == `origin/main` at `5593b01`. Backend is deployed (API deploy green): feedback logger +
+  insights admin, unified Remove, opened-item shelf life, privacy wording, plus the server-side
+  signals for expiry/low-stock alerts, scans, autofill and notification toggles. Collection is still
+  switched **off** (`ALGO_FEEDBACK_ENABLED`, see Pending verification).
 - **OTA published by hand to `production` / runtime 1.3.3 (update group `b9964b3c-a856-4f18-9dfd-fc7d840a6df9`)**
   and it carries *everything* since `bbff2c2`: Kitchen Lab value editor, Remove/Undo, opened-item UI,
   "Help improve" switch, chat 👍/👎, plus the `d30bcd0` UI pass (tidier Add-item card with icon-only
   Auto-fill and qty on the date row; one **+** attach sheet in chat; one notification-card style on
   Home with crew tips inside the Notifications section, events scoped to the selected fridge —
   the bell dot and full `/notifications` screen are still all-fridges).
+- **Not in any OTA yet:** `8ca25a6` (scan drafts send `parsed_name`; without it the scan "saved"
+  signal is silently skipped — older app versions still work). Batch it with the QA fixes.
 - **None of it has been run on a device.** Rollback if anything crashes: `eas update:rollback` on `production`.
 - Working tree clean.
 
@@ -113,8 +117,8 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
 | # | Item | Done when |
 |---|---|---|
 | 0 | **Device QA** of the live OTA (everything since `91188bf`) | Checklist ticked; OTA rolled back if anything crashes |
-| 1 | Finish Algorithm insights (P1/P2 signals + remaining admin pages) | See backlog |
-| 2 | Opened-item leftovers (consumer parity, alert-timing check) | See backlog |
+| 1 | Finish Algorithm insights (P1 leftovers, P2 signals, remaining admin pages) | See backlog |
+| 2 | Opened-item alert-timing decision | See backlog |
 | 3 | Larger scope: credit-scheme audit, calendar integration, multi-Machine generation | see items below |
 
 **Priority over all of the above: the launch items** (Android Play setup, Devpost submission — hard
@@ -211,7 +215,8 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
   produce show no Opened button), Profile → "Help improve" switch + "Delete my improvement data",
   chat 👍/👎, and the Algorithm insights admin page.
 - [ ] **Decide on the disabled `eas-update.yml`** — re-enable, or keep OTAs manual on purpose.
-- [ ] **Check the nightly `app:rollup-algo-stats`** ran after the first night (Scheduled jobs admin widget).
+- [ ] **Check the nightly `app:rollup-algo-stats`** ran after the first night *with collection on*
+  (Scheduled jobs admin widget) — it has nothing to roll up until the flag is enabled.
 - [ ] Optional: scope the Home bell dot and the full `/notifications` screen by fridge too.
 - [ ] **Store privacy labels** — re-check App Store privacy label + Play Data Safety purposes
   ("Analytics / product improvement") now that item-name/guess-vs-final feedback is collected.
