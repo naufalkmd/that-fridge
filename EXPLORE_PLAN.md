@@ -50,11 +50,13 @@ One **Explore** page (Profile → Settings → Explore) that:
 - Rate limits and size caps per contribution; Machines are re-validated with `MachineDraftValidator`
   before they can be published (a shared Machine can only run tools a user could already run).
 
-## Decisions needed
+## Decisions (2026-09-26)
 
-1. Attribution: show the contributor's username, or publish anonymously?
-2. Are contributions free for everyone, or a Pro perk?
-3. Approve every submission by hand at first, or auto-publish after a report threshold?
+1. **Attribution: the contributor's username is shown.** Add one line to the privacy policy; it is also what
+   makes report / block work.
+2. **Contributing is free for everyone**, with rate limits and size caps (no Pro gate).
+3. **Every submission is approved by hand at first** (`pending` by default). Revisit auto-publish with a
+   report threshold once the volume justifies it.
 
 ## Not in scope
 
