@@ -203,13 +203,14 @@ export default function Profile() {
         <SectionHeader>Settings</SectionHeader>
         <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
           <LinkRow icon="restaurant-outline" label="Recipe book" onPress={() => router.push("/recipes")} />
+          <LinkRow icon="calendar-number-outline" label="Calendar" badge="NEW" onPress={() => router.push("/calendar")} />
           <LinkRow icon="calendar-outline" label="Meal plan" onPress={() => router.push("/meal-plan")} />
           <LinkRow icon="ribbon-outline" label="Badges" onPress={() => router.push("/badges")} />
           <LinkRow icon="sync-outline" label="Organizer" onPress={() => router.push("/organizer")} />
           <LinkRow
             icon="flask-outline"
             label="Kitchen Lab"
-            badge="BETA"
+            badge="NEW"
             onPress={() => router.push("/kitchen-lab")}
           />
           <LinkRow icon="sparkles-outline" label="AI Data & Memory" onPress={() => router.push("/ai-data")} />

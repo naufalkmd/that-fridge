@@ -51,6 +51,10 @@ final class CreditCost
      *  afterward are AI-free and cost nothing. Refunded if no valid draft comes back. */
     public const MACHINE_BUILD = 2;
 
+    /** One AI call that fills a week's empty meal-plan slots from what's expiring and the recipe book.
+     *  Refunded if no meal comes back; nothing is charged when there is nothing to fill. */
+    public const MEAL_AUTOFILL = 3;
+
     /**
      * What one Quick Chat turn costs given how many images (0-4) rode along and whether a
      * PDF did too - a PDF's base cost already covers its own document parsing, so only

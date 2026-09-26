@@ -74,6 +74,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('throttle:30,1')->delete('/calendar/history', [CalendarController::class, 'clearHistory']);
     Route::middleware('throttle:60,1')->group(function () {
         Route::get('/meal-entries/estimate', [MealEntryController::class, 'estimate']);
+        Route::post('/meal-entries/autofill', [MealEntryController::class, 'autofill']);
         Route::post('/meal-entries', [MealEntryController::class, 'store']);
         Route::patch('/meal-entries/{mealEntry}', [MealEntryController::class, 'update']);
         Route::delete('/meal-entries/{mealEntry}', [MealEntryController::class, 'destroy']);

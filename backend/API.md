@@ -444,6 +444,18 @@ nutrition table run over the meal's name (`estimate` - "Chicken rice" counts bot
 recognised). It is recomputed on create and when `title` or `recipe_id` changes, and left alone by other edits;
 sending `calories: null` drops a typed number and re-estimates. A cooked log made by mark-made takes the recipe's number.
 
+### `POST /meal-entries/autofill` 🔒
+
+AI-fills the **empty** slots of the meal plan. Body: `from`, `to` (`YYYY-MM-DD`, at most 14 days apart), optional
+`fridge_id` (membership-checked, else 404; default the caller's own fridge). The slots are the user's own
+`meal_slots` (default Lunch + Dinner) with no meal yet on that day, at most 21, oldest first. One model
+call gets the slots, what is in the fridge (soonest to expire first), the recipe book and what is already
+planned; each proposed meal is only accepted for an offered date + slot and goes through `MealPlanService`
+like any entry (calories, feedback). **Metered: 3 credits** (`CreditCost::MEAL_AUTOFILL`, ledger reason
+`meal_autofill`), charged before the call and refunded (`meal_autofill_refund`) when nothing usable comes back;
+nothing is charged when every slot is taken or AI isn't configured; 402 when the balance is short. Response
+(not wrapped in `data`): `{ created: MealEntry[], creditsUsed, balance, message }`. Throttled 60/min.
+
 ### `GET /meal-entries/estimate?title=...` 🔒
 
 `{ "calories": 341 | null }` - the table-only estimate for a meal name (instant, no model, no credits), used for the

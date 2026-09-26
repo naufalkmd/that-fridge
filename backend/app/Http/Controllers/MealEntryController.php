@@ -4,13 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\MealEntryResource;
 use App\Models\MealEntry;
+use App\Services\CreditService;
+use App\Services\MealAutofillService;
 use App\Services\MealPlanService;
+use App\Support\CreditCost;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class MealEntryController extends Controller
 {
-    public function __construct(private MealPlanService $meals) {}
+    public function __construct(
+        private MealPlanService $meals,
+        private MealAutofillService $autofill,
+        private CreditService $credits,
+    ) {}
 
     public function store(Request $request)
     {
@@ -46,6 +54,53 @@ class MealEntryController extends Controller
         $data = $request->validate(['title' => ['required', 'string', 'max:120']]);
 
         return response()->json(['calories' => $this->meals->estimate($data['title'])]);
+    }
+
+    /**
+     * "Autofill" the plan: one AI call that proposes meals for the empty slots in a date range (at most
+     * two weeks, 21 slots) from what is expiring and the recipe book. Metered in AI credits, charged
+     * before the call and refunded when no meal comes back; nothing is charged when every slot is
+     * already taken. Not wrapped in `data`: the credit figures sit beside the created entries so the
+     * app can tell the user what it cost.
+     */
+    public function autofill(Request $request)
+    {
+        $data = $request->validate([
+            'from' => ['required', 'date_format:Y-m-d'],
+            'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from'],
+            'fridge_id' => ['sometimes', 'nullable', 'integer'],
+        ]);
+        abort_if(Carbon::parse($data['from'])->diffInDays(Carbon::parse($data['to'])) > 13, 422, 'Pick a range of at most two weeks.');
+
+        $user = $request->user();
+        $this->assertFridgeMember($request, $data['fridge_id'] ?? null);
+        $fridgeId = $data['fridge_id'] ?? $user->fridges()->value('id');
+
+        $reply = fn (array $created, int $used, string $message = '') => response()->json([
+            'created' => MealEntryResource::collection(collect($created)->each->load('user:id,username'))->resolve($request),
+            'creditsUsed' => $used,
+            'balance' => $this->credits->balance($user),
+            'message' => $message ?: null,
+        ]);
+
+        $open = $this->autofill->openSlots($user, $data['from'], $data['to'], $fridgeId);
+        if ($open === []) {
+            return $reply([], 0, 'Every slot in that range already has a meal.');
+        }
+        if (! $this->autofill->available()) {
+            return $reply([], 0, "AI isn't available right now - plan these by hand instead.");
+        }
+
+        $this->credits->spend($user, CreditCost::MEAL_AUTOFILL, 'meal_autofill');
+        $created = $this->autofill->fill($user, $open, $fridgeId, $user->memberFridges()->pluck('fridges.id')->all());
+
+        if ($created === []) {
+            $this->credits->grant($user, CreditCost::MEAL_AUTOFILL, 'meal_autofill_refund');
+
+            return $reply([], 0, "Couldn't come up with a plan this time - nothing was charged.");
+        }
+
+        return $reply($created, CreditCost::MEAL_AUTOFILL);
     }
 
     public function destroy(Request $request, MealEntry $mealEntry)

@@ -133,9 +133,21 @@ class MachineController extends Controller
             'name' => ['sometimes', 'string', 'max:60'],
             'prompt' => ['sometimes', 'nullable', 'string', 'max:500'],
             'enabled' => ['sometimes', 'boolean'],
+            'fridge_id' => ['sometimes', Rule::exists('fridges', 'id')->where(
+                fn ($q) => $q->whereIn('id', $request->user()->memberFridges()->pluck('fridges.id'))
+            )],
             'trigger' => ['sometimes', 'array'],
             'steps' => ['sometimes', 'array'],
         ]);
+
+        // Moving to another of the caller's fridges: a threshold's met/not-met state described the old
+        // fridge, so it starts fresh (rechecked below when the Machine is on).
+        $moved = isset($data['fridge_id']) && (int) $data['fridge_id'] !== (int) $machine->fridge_id;
+        if ($moved) {
+            $machine->fridge_id = (int) $data['fridge_id'];
+            $machine->threshold_met = null;
+            $machine->unsetRelation('fridge');
+        }
 
         if (isset($data['trigger']) || isset($data['steps'])) {
             $merged = [
@@ -190,7 +202,7 @@ class MachineController extends Controller
 
         // An already-met threshold should start working the moment it's switched on, not wait
         // for the next unrelated item write on the fridge.
-        if ($wasEnabling && $machine->trigger_type === 'threshold') {
+        if (($wasEnabling || ($moved && $machine->enabled)) && $machine->trigger_type === 'threshold') {
             $this->machines->recheckThresholds($machine->fridge);
             $machine->refresh();
         }

@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { describeError, type CalendarEntry, type Recipe } from "@thatfridge/core";
+import { ApiError, describeError, type CalendarEntry, type Recipe } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { addDays, groupByDate, shortDayLabel, toISO, weekDays, weekRangeLabel } from "@/lib/calendar";
-import { compareMeals, draftFromEntry, kcalLabel, mealsTotal, newDraft, type MealDraft } from "@/lib/mealPlan";
+import { compareMeals, draftFromEntry, kcalLabel, MEAL_AUTOFILL_COST, mealsTotal, newDraft, type MealDraft } from "@/lib/mealPlan";
+import { useCredits } from "@/lib/credits";
+import { useToast } from "@/lib/toast";
 import { useScope } from "@/lib/scope";
 import { useTheme } from "@/lib/theme";
 import { getDeviceTimezone } from "@/lib/timezone";
@@ -25,6 +27,8 @@ export default function MealPlanScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { scope } = useScope();
+  const toast = useToast();
+  const { balance: credits, setBalance: setCredits } = useCredits();
   // "Add to plan" from a recipe lands here with the recipe: the meal form opens ready to save.
   const params = useLocalSearchParams<{ recipeId?: string; recipeName?: string }>();
 
@@ -35,6 +39,7 @@ export default function MealPlanScreen() {
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [sheet, setSheet] = useState<MealDraft | null>(null);
+  const [autofilling, setAutofilling] = useState(false);
 
   const meals = useMealActions(useCallback(() => setReload((n) => n + 1), []));
   const days = useMemo(() => weekDays(anchor), [anchor]);
@@ -63,6 +68,57 @@ export default function MealPlanScreen() {
   const byDate = useMemo(() => groupByDate(entries), [entries]);
   const order = useMemo(() => compareMeals(meals.slots), [meals.slots]);
   const weekTotal = mealsTotal(entries);
+
+  // Autofill covers the rest of the visible week: today onward, never days that have passed.
+  const fillFrom = days.find((d) => d >= today) ?? null;
+
+  function confirmAutofill() {
+    if (!fillFrom || autofilling) return;
+    if (credits !== null && credits < MEAL_AUTOFILL_COST) {
+      Alert.alert("Not enough credits", `Autofill costs ${MEAL_AUTOFILL_COST} credits and you have ${credits}.`, [
+        { text: "Not now", style: "cancel" },
+        { text: "Get credits", onPress: () => router.push("/credits") },
+      ]);
+      return;
+    }
+    Alert.alert(
+      "Autofill this week?",
+      `AI fills the empty meal slots from ${shortDayLabel(fillFrom).weekday} ${shortDayLabel(fillFrom).day} to ${shortDayLabel(days[6]).weekday} ${shortDayLabel(days[6]).day}, using what's expiring and your recipes. Meals you already planned stay as they are.\n\nThis uses ${MEAL_AUTOFILL_COST} credits${credits !== null ? ` (you have ${credits})` : ""}, and nothing is charged if it can't plan anything.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Autofill", onPress: () => void autofill(fillFrom) },
+      ],
+    );
+  }
+
+  async function autofill(from: string) {
+    setAutofilling(true);
+    try {
+      const res = await api.autofillMealPlan({ from, to: days[6], fridge_id: meals.fridgeId });
+      setCredits(res.balance);
+      setReload((n) => n + 1);
+      if (res.created.length === 0) {
+        toast.show(res.message ?? "Nothing to plan.");
+        return;
+      }
+      const n = res.created.length;
+      toast.show(`Planned ${n} meal${n === 1 ? "" : "s"} · used ${res.creditsUsed} credits · ${res.balance} left`, {
+        actionLabel: "Undo",
+        onAction: () => {
+          // Removes the meals it added; the credits are not refunded.
+          void Promise.allSettled(res.created.map((m) => api.deleteMealEntry(m.id))).then(() => setReload((x) => x + 1));
+        },
+      });
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 402) {
+        router.push("/credits");
+      } else {
+        Alert.alert("Couldn't autofill", describeError(e, "Please try again."));
+      }
+    } finally {
+      setAutofilling(false);
+    }
+  }
 
   const planFor = (day: string, recipe?: Recipe) =>
     setSheet(newDraft(day, meals.slots, meals.fridgeId, recipe ? { id: recipe.id, name: recipe.name } : null));
@@ -99,6 +155,31 @@ export default function MealPlanScreen() {
             <Text style={{ fontSize: 12.5, fontWeight: "700", color: colors.accent }}>Calendar ›</Text>
           </Pressable>
         </View>
+
+        {fillFrom && (
+          <Pressable
+            onPress={confirmAutofill}
+            disabled={autofilling}
+            accessibilityRole="button"
+            accessibilityLabel="Autofill this week"
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, marginBottom: 14,
+              borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, opacity: autofilling ? 0.6 : 1,
+            }}
+          >
+            {autofilling ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : (
+              <MaterialCommunityIcons name="auto-fix" size={22} color={colors.accent} />
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "800", color: colors.ink }}>{autofilling ? "Planning your week…" : "Autofill"}</Text>
+              <Text style={{ fontSize: 12, color: colors.faint, marginTop: 1 }}>
+                AI fills the empty slots · {MEAL_AUTOFILL_COST} credits
+              </Text>
+            </View>
+          </Pressable>
+        )}
 
         {error && (
           <Pressable onPress={() => setReload((n) => n + 1)} style={{ marginBottom: 12 }}>

@@ -115,6 +115,8 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
 - **Latest OTA** (group `d7911d71-c7cf-42dc-a65a-c97a73faa60b`, commit `5dac267`, API deployed): calendar delete /
   filter dropdown / Ask Quick Chat, Meal plan without the ideas card, Privacy + Meal plan as Settings rows.
   Not device-checked yet.
+- **Committed next, unpublished**: fridge picker on the Calendar, Autofill on Meal plan (3 credits), change a Machine's
+  fridge, Calendar + Kitchen Lab tagged NEW in Settings.
 
 ### Execution queue (post-launch product work; details in "Product backlog")
 

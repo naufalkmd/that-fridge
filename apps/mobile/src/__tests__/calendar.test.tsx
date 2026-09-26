@@ -669,6 +669,14 @@ describe("Calendar + Add menu", () => {
     await waitFor(() => expect(mockCreateMeal).toHaveBeenCalledWith(expect.objectContaining({ date: "2026-09-15", title: "Soup" })));
   });
 
+  test("the fridge picker sits on the calendar like Home and Crew, and follows the shared scope", async () => {
+    mockScope = "2";
+    await render(<CalendarScreen />);
+
+    await waitFor(() => expect(mockGetCalendar).toHaveBeenCalledWith(expect.objectContaining({ fridgeId: "2" })));
+    expect(screen.getByText("This Fridge")).toBeTruthy(); // the picker pill (no fridge names in this mock)
+  });
+
   test("links across to the meal plan", async () => {
     await render(<CalendarScreen />);
 

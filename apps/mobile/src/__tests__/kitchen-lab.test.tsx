@@ -13,8 +13,9 @@ jest.mock("react-native-safe-area-context", () => ({
 jest.mock("@/lib/theme", () => ({
   useTheme: () => ({ colors: new Proxy({}, { get: () => "#888888" }) }),
 }));
+let mockFridges = [{ id: "f1", name: "Home" }];
 jest.mock("@/lib/inventory", () => ({
-  useInventory: () => ({ fridges: [{ id: "f1", name: "Home" }], refresh: jest.fn() }),
+  useInventory: () => ({ fridges: mockFridges, refresh: jest.fn() }),
 }));
 jest.mock("@/lib/scope", () => ({ useScope: () => ({ scope: "all" }) }));
 jest.mock("@/lib/timezone", () => ({ getDeviceTimezone: () => "Asia/Kuala_Lumpur" }));
@@ -70,6 +71,7 @@ async function openCompose() {
 beforeEach(() => {
   jest.clearAllMocks();
   mockParams = {};
+  mockFridges = [{ id: "f1", name: "Home" }];
   mockApi.listMachines.mockResolvedValue([]);
   mockApi.listMachineRuns.mockResolvedValue([]);
 });
@@ -188,5 +190,32 @@ describe("KitchenLab screen", () => {
     expect(alert.mock.calls[0][0]).toBe("Possible duplicate");
     expect(mockApi.updateMachine).not.toHaveBeenCalled(); // nothing changed until confirmed
     alert.mockRestore();
+  });
+
+  test("an existing Machine can be moved to another fridge; only the fridge is sent", async () => {
+    mockFridges = [{ id: "f1", name: "Home" }, { id: "f2", name: "Office" }];
+    mockApi.listMachines.mockResolvedValue([machine({ id: "m1", name: "Morning check" })]);
+    mockApi.updateMachine.mockImplementation(async (id: string, input: object) => machine({ id, ...input }));
+    await render(<KitchenLab />);
+
+    await fireEvent.press(await screen.findByText("Morning check"));
+    await fireEvent.press(await screen.findByText("Office"));
+    expect(screen.getByText(/runs will use this fridge/)).toBeTruthy();
+    await fireEvent.press(screen.getByText("Save Changes"));
+
+    await waitFor(() => expect(mockApi.updateMachine).toHaveBeenCalledWith("m1", { fridge_id: "f2" }));
+  });
+
+  test("editing without changing the fridge sends no fridge", async () => {
+    mockFridges = [{ id: "f1", name: "Home" }, { id: "f2", name: "Office" }];
+    mockApi.listMachines.mockResolvedValue([machine({ id: "m1", name: "Morning check" })]);
+    mockApi.updateMachine.mockImplementation(async (id: string, input: object) => machine({ id, ...input }));
+    await render(<KitchenLab />);
+
+    await fireEvent.press(await screen.findByText("Morning check"));
+    await fireEvent.changeText(await screen.findByDisplayValue("Morning check"), "Breakfast check");
+    await fireEvent.press(screen.getByText("Save Changes"));
+
+    await waitFor(() => expect(mockApi.updateMachine).toHaveBeenCalledWith("m1", { name: "Breakfast check" }));
   });
 });

@@ -1,5 +1,6 @@
+import { Alert } from "react-native";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
-import type { CalendarEntry } from "@thatfridge/core";
+import { ApiError, type CalendarEntry } from "@thatfridge/core";
 
 const mockPush = jest.fn();
 let mockParams: Record<string, string> = {};
@@ -39,6 +40,13 @@ jest.mock("@/lib/localNotifications", () => ({
   cancelMealReminder: (...a: unknown[]) => mockCancel(...a),
 }));
 
+const mockToast = jest.fn();
+jest.mock("@/lib/toast", () => ({ useToast: () => ({ show: (...a: unknown[]) => mockToast(...a) }) }));
+let mockCredits: number | null = 20;
+const mockSetCredits = jest.fn();
+jest.mock("@/lib/credits", () => ({ useCredits: () => ({ balance: mockCredits, setBalance: mockSetCredits }) }));
+const mockAutofill = jest.fn();
+
 const mockGetCalendar = jest.fn();
 const mockCreateMeal = jest.fn();
 const mockUpdateMeal = jest.fn();
@@ -46,6 +54,7 @@ const mockDeleteMeal = jest.fn();
 const mockEstimate = jest.fn();
 jest.mock("@/lib/api", () => ({
   api: {
+    autofillMealPlan: (...a: unknown[]) => mockAutofill(...a),
     getCalendar: (...a: unknown[]) => mockGetCalendar(...a),
     createMealEntry: (...a: unknown[]) => mockCreateMeal(...a),
     updateMealEntry: (...a: unknown[]) => mockUpdateMeal(...a),
@@ -77,6 +86,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockScope = "all";
   mockParams = {};
+  mockCredits = 20;
   mockGetCalendar.mockResolvedValue({ entries: [], truncated: false, from: "", to: "" });
   mockCreateMeal.mockImplementation(async (input) => ({ id: "50", by: null, isMine: true, cookedAt: null, recipeId: input.recipe_id ?? null, fridgeId: input.fridge_id ?? null, note: null, ...input }));
   mockUpdateMeal.mockImplementation(async (id, input) => ({ id, slot: "Dinner", title: "Tacos", date: "2026-09-17", time: null, status: "planned", ...input }));
@@ -221,5 +231,104 @@ describe("Meal plan: from a recipe", () => {
 
     expect(await screen.findByDisplayValue("Pad Thai")).toBeTruthy();
     expect(screen.getByText("Plan a meal")).toBeTruthy();
+  });
+});
+
+describe("Meal plan: Autofill", () => {
+  const confirm = (spy: jest.SpyInstance, label: string) => {
+    const buttons = spy.mock.calls.at(-1)![2] as { text: string; onPress?: () => void }[];
+    buttons.find((b) => b.text === label)!.onPress?.();
+  };
+  const created = [
+    { id: "61", date: "2026-09-16", slot: "Dinner", title: "Chicken rice" },
+    { id: "62", date: "2026-09-17", slot: "Dinner", title: "Stir fry" },
+  ];
+
+  test("asks first, saying what it does, what it costs and the balance; cancelling calls nothing", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    await render(<MealPlanScreen />);
+    await loaded();
+
+    await fireEvent.press(await screen.findByLabelText("Autofill this week"));
+
+    expect(alert.mock.calls[0][0]).toBe("Autofill this week?");
+    expect(alert.mock.calls[0][1]).toMatch(/uses 3 credits \(you have 20\)/);
+    confirm(alert, "Cancel");
+    expect(mockAutofill).not.toHaveBeenCalled();
+    alert.mockRestore();
+  });
+
+  test("confirming fills from today to the end of the week and reports the usage, with Undo", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    mockAutofill.mockResolvedValue({ created, creditsUsed: 3, balance: 17, message: null });
+    mockScope = "2";
+    await render(<MealPlanScreen />);
+    await loaded();
+
+    await fireEvent.press(await screen.findByLabelText("Autofill this week"));
+    confirm(alert, "Autofill");
+
+    await waitFor(() => expect(mockAutofill).toHaveBeenCalledWith({ from: "2026-09-15", to: "2026-09-19", fridge_id: "2" }));
+    await waitFor(() => expect(mockToast).toHaveBeenCalledWith("Planned 2 meals · used 3 credits · 17 left", expect.objectContaining({ actionLabel: "Undo" })));
+    expect(mockSetCredits).toHaveBeenCalledWith(17);
+    await waitFor(() => expect(mockGetCalendar).toHaveBeenCalledTimes(2)); // the week is reloaded
+
+    mockToast.mock.calls.at(-1)![1].onAction();
+    await waitFor(() => expect(mockDeleteMeal).toHaveBeenCalledTimes(2));
+    expect(mockDeleteMeal).toHaveBeenCalledWith("61");
+    alert.mockRestore();
+  });
+
+  test("when nothing could be planned it says why and shows no charge", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    mockAutofill.mockResolvedValue({ created: [], creditsUsed: 0, balance: 20, message: "Couldn't come up with a plan this time - nothing was charged." });
+    await render(<MealPlanScreen />);
+    await loaded();
+
+    await fireEvent.press(await screen.findByLabelText("Autofill this week"));
+    confirm(alert, "Autofill");
+
+    await waitFor(() => expect(mockToast).toHaveBeenCalledWith("Couldn't come up with a plan this time - nothing was charged."));
+    alert.mockRestore();
+  });
+
+  test("with too few credits it offers to get more instead of calling the API", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    mockCredits = 2;
+    await render(<MealPlanScreen />);
+    await loaded();
+
+    await fireEvent.press(await screen.findByLabelText("Autofill this week"));
+
+    expect(alert.mock.calls[0][0]).toBe("Not enough credits");
+    confirm(alert, "Get credits");
+    expect(mockPush).toHaveBeenLastCalledWith("/credits");
+    expect(mockAutofill).not.toHaveBeenCalled();
+    alert.mockRestore();
+  });
+
+  test("a 402 from the server routes to Credits; other failures are shown", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    mockAutofill.mockRejectedValueOnce(new ApiError(402, "no"));
+    await render(<MealPlanScreen />);
+    await loaded();
+    await fireEvent.press(await screen.findByLabelText("Autofill this week"));
+    confirm(alert, "Autofill");
+    await waitFor(() => expect(mockPush).toHaveBeenLastCalledWith("/credits"));
+
+    mockAutofill.mockRejectedValueOnce(new Error("boom"));
+    await fireEvent.press(await screen.findByLabelText("Autofill this week"));
+    confirm(alert, "Autofill");
+    await waitFor(() => expect(alert).toHaveBeenLastCalledWith("Couldn't autofill", expect.any(String)));
+    alert.mockRestore();
+  });
+
+  test("a week that has already passed has nothing to fill, so the button is hidden", async () => {
+    await render(<MealPlanScreen />);
+    await loaded();
+    await fireEvent.press(screen.getByLabelText("Previous week"));
+    await waitFor(() => expect(mockGetCalendar).toHaveBeenCalledTimes(2));
+
+    expect(screen.queryByLabelText("Autofill this week")).toBeNull();
   });
 });

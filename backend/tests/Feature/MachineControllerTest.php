@@ -255,6 +255,49 @@ class MachineControllerTest extends TestCase
         $this->assertTrue($machine->fresh()->threshold_met);
     }
 
+    public function test_update_moves_a_machine_to_another_of_the_users_fridges(): void
+    {
+        $user = User::factory()->create();
+        $home = $this->fridgeFor($user);
+        $office = Fridge::create(['user_id' => $user->id, 'name' => 'Office']);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $home->id, 'name' => 'X',
+            'trigger_type' => 'threshold',
+            'trigger_config' => ['field' => 'quantity', 'custom_field_label' => null, 'unit' => null, 'filter' => [], 'op' => 'lt', 'value' => 2],
+            'threshold_met' => true,
+            'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+
+        $this->actingAs($user)->patchJson("/api/machines/{$machine->id}", ['fridge_id' => $office->id])
+            ->assertStatus(200)
+            ->assertJsonPath('data.fridgeId', (string) $office->id);
+
+        $fresh = $machine->fresh();
+        $this->assertSame($office->id, $fresh->fridge_id);
+        $this->assertNull($fresh->threshold_met); // the old fridge's state doesn't carry over
+        $this->assertSame(1, $fresh->version); // not a new draft, so no version bump
+    }
+
+    public function test_update_refuses_moving_a_machine_to_a_fridge_the_user_is_not_in(): void
+    {
+        $user = User::factory()->create();
+        $home = $this->fridgeFor($user);
+        $strangers = Fridge::create(['user_id' => User::factory()->create()->id, 'name' => 'Theirs']);
+        $machine = Machine::create([
+            'user_id' => $user->id, 'fridge_id' => $home->id, 'name' => 'X',
+            'trigger_type' => 'schedule',
+            'trigger_config' => ['frequency' => 'weekly', 'time' => '08:00', 'weekday' => 1],
+            'steps' => [['tool' => 'notify_user', 'args' => ['message' => 'hi']]],
+            'enabled' => false, 'version' => 1,
+        ]);
+
+        $this->actingAs($user)->patchJson("/api/machines/{$machine->id}", ['fridge_id' => $strangers->id])
+            ->assertStatus(422);
+
+        $this->assertSame($home->id, $machine->fresh()->fridge_id);
+    }
+
     public function test_update_recomputes_next_run_at_when_enabling_a_long_disabled_machine(): void
     {
         $user = User::factory()->create();

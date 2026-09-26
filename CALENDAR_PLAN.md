@@ -52,6 +52,17 @@ Meal planning is now its own feature, and **What should I eat? no longer exists 
 - **What should I eat?** is gone from the Meal plan screen (Home still has its suggestions).
 - **Settings**: Meal plan and Privacy are list rows (Profile → Settings → Privacy → details screen).
 
+## Third pass (built, unpublished)
+
+- **Fridge picker** on the calendar, same pill as Home and Crew, sharing the one scope.
+- **Autofill** on the Meal plan screen: fills the week's empty slots (today onward) with one AI call
+  (`MealAutofillService`, `POST /meal-entries/autofill`, 3 credits, refunded on an empty result). It asks first
+  with the cost and balance, then reports "Planned N meals · used 3 credits · X left" with Undo (removes the
+  meals; the credits stay spent). This is the "weekly planner" that waited on the credit audit - it is priced
+  and refunded like the other one-shot AI calls.
+- **Edit a Machine's fridge** (`PATCH /machines/{id}` accepts `fridge_id`; a threshold's state resets).
+- **Settings**: Calendar row added; Calendar and Kitchen Lab are tagged NEW.
+
 ## What the calendar shows
 
 | Kind | Source | Notes |

@@ -211,9 +211,8 @@ export default function KitchenLab() {
     setMode("prompt");
   }
 
-  /** Tapping an existing Machine - rename and/or redraft its trigger/steps with AI. Its
-   *  fridge can't change post-creation (see MachineController::update), so fridgeId is seeded
-   *  but never offered as a picker while editingId is set. */
+  /** Tapping an existing Machine - rename, redraft its trigger/steps with AI, or move it to
+   *  another fridge (fridgeId is seeded with its current one and offered as a picker). */
   function openEdit(machine: Machine) {
     setEditingId(machine.id);
     setRedrafted(false);
@@ -339,12 +338,14 @@ export default function KitchenLab() {
    *  `enabled` is a separate, opt-in field this screen never sends), so the only moment a
    *  save could newly create a live duplicate is redrafting an already-*enabled* Machine's
    *  trigger. Same reviewable Cancel / Save anyway treatment as toggleEnabled. */
+  const fridgeChanged = !!editingId && fridgeId !== null && fridgeId !== machines?.find((m) => m.id === editingId)?.fridgeId;
+
   function saveMachine() {
     if (!draft || !fridgeId) return;
-    if (editingId && redrafted) {
+    if (editingId && (redrafted || fridgeChanged)) {
       const original = machines?.find((m) => m.id === editingId);
       if (original?.enabled) {
-        const overlap = findOverlappingMachine(machines ?? [], draft.trigger, original.fridgeId, editingId);
+        const overlap = findOverlappingMachine(machines ?? [], draft.trigger, fridgeId, editingId);
         if (overlap) {
           Alert.alert(
             "Possible duplicate",
@@ -370,6 +371,7 @@ export default function KitchenLab() {
         const trimmedName = draftName.trim() || draft.name;
         const payload: MachineUpdateInput = {};
         if (!original || trimmedName !== original.name) payload.name = trimmedName;
+        if (original && fridgeId !== original.fridgeId) payload.fridge_id = fridgeId;
         if (redrafted) {
           payload.trigger = draft.trigger;
           payload.steps = draft.steps;
@@ -826,41 +828,37 @@ export default function KitchenLab() {
             </View>
           )}
 
-          {editingId ? (
+          {fridges.length > 1 && (
             <View className="gap-1.5">
               <Eyebrow color={colors.faint}>Fridge</Eyebrow>
-              <View className="rounded-lg border border-hairline bg-surface px-3.5 py-3">
-                <Text className="text-[14px] text-ink">
-                  {fridges.find((f) => f.id === fridgeId)?.name ?? "—"}
-                </Text>
-              </View>
-            </View>
-          ) : (
-            fridges.length > 1 && (
-              <View className="gap-1.5">
-                <Eyebrow color={colors.faint}>Fridge</Eyebrow>
-                <View className="flex-row flex-wrap gap-2">
-                  {fridges.map((f) => {
-                    const active = fridgeId === f.id;
-                    return (
-                      <Pressable
-                        key={f.id}
-                        onPress={() => setFridgeId(f.id)}
-                        className="rounded-lg px-3.5 py-2"
-                        style={{ backgroundColor: active ? colors.accent : colors.surface2 }}
+              <View className="flex-row flex-wrap gap-2">
+                {fridges.map((f) => {
+                  const active = fridgeId === f.id;
+                  return (
+                    <Pressable
+                      key={f.id}
+                      onPress={() => setFridgeId(f.id)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      className="rounded-lg px-3.5 py-2"
+                      style={{ backgroundColor: active ? colors.accent : colors.surface2 }}
+                    >
+                      <Text
+                        className="text-[12.5px] font-bold"
+                        style={{ color: active ? colors.canvas : colors.ink }}
                       >
-                        <Text
-                          className="text-[12.5px] font-bold"
-                          style={{ color: active ? colors.canvas : colors.ink }}
-                        >
-                          {f.name}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+                        {f.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
-            )
+              {fridgeChanged && (
+                <Text className="text-[11.5px] text-faint">
+                  Its runs will use this fridge&apos;s items once you save.
+                </Text>
+              )}
+            </View>
           )}
 
           <Pressable

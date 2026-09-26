@@ -2,6 +2,7 @@ import { ApiError, type HttpClient, type TokenStore } from "./http";
 import type {
   CalendarResult,
   MealEntry,
+  MealAutofillResult,
   MealEntryInput,
   BadgeKey,
   BadgeProgress,
@@ -900,6 +901,11 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.get<{ calories: number | null }>(`/meal-entries/estimate?title=${encodeURIComponent(title)}`);
   }
 
+  /** AI-fill the empty meal slots in a date range (max two weeks). Costs credits; see MealAutofillResult. */
+  function autofillMealPlan(params: { from: string; to: string; fridge_id?: string | null }): Promise<MealAutofillResult> {
+    return http.post<MealAutofillResult>("/meal-entries/autofill", params);
+  }
+
   function deleteMealEntry(id: string): Promise<void> {
     return http.del<void>(`/meal-entries/${id}`);
   }
@@ -1316,6 +1322,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     clearCalendarHistory,
     deleteMachineRun,
     createMealEntry,
+    autofillMealPlan,
     updateMealEntry,
     deleteMealEntry,
     estimateMealCalories,

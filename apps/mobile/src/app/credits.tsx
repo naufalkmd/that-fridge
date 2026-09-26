@@ -30,6 +30,8 @@ const REASON_LABEL: Record<string, string> = {
   autofill: "Auto-fill",
   item_autofill: "Auto-fill",
   item_autofill_refund: "Auto-fill refund",
+  meal_autofill: "Meal plan autofill",
+  meal_autofill_refund: "Meal plan autofill refund",
   machine_build: "Kitchen Lab draft",
   machine_build_refund: "Kitchen Lab draft refund",
   monthly_free: "Monthly free credits",

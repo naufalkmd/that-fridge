@@ -152,6 +152,9 @@ export function compareMeals(slots: readonly string[]): (a: CalendarEntry, b: Ca
 /** "1,240" - thousands separators without depending on the device locale. */
 export const withThousands = (n: number): string => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
+/** What one autofill costs in AI credits - keep in step with CreditCost::MEAL_AUTOFILL on the server. */
+export const MEAL_AUTOFILL_COST = 3;
+
 export const kcalLabel = (kcal: number): string => `≈ ${withThousands(kcal)} kcal`;
 
 /** What a day's meals add up to: skipped meals do not count, and meals with no estimate are reported

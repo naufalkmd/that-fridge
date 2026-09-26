@@ -456,6 +456,8 @@ export interface MachineUpdateInput {
   name?: string;
   prompt?: string | null;
   enabled?: boolean;
+  /** Move the Machine to another fridge the caller belongs to. */
+  fridge_id?: string;
   trigger?: MachineTrigger;
   steps?: MachineStep[];
 }
@@ -707,6 +709,17 @@ export interface MealEntryInput {
   calories?: number | null;
   status?: MealStatus;
   fridge_id?: string | null;
+}
+
+/** POST /meal-entries/autofill: what the AI planned, and what it cost. */
+export interface MealAutofillResult {
+  created: MealEntry[];
+  /** Credits charged for this call (0 when nothing was planned - it is refunded or never charged). */
+  creditsUsed: number;
+  /** The balance after the charge. */
+  balance: number;
+  /** Why nothing was planned, when that is the case. */
+  message: string | null;
 }
 
 export interface CalendarResult {

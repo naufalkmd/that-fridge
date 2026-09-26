@@ -28,6 +28,7 @@ import { SheetHeader } from "@/components/sheet";
 import { MonthGrid } from "@/components/calendar/month-grid";
 import { DaySheet } from "@/components/calendar/day-sheet";
 import { FilterMenu } from "@/components/calendar/filter-menu";
+import { FridgeScopePicker } from "@/components/fridge-scope";
 
 /**
  * The in-app calendar: everything ThatFridge knows about time in one month grid. Every day is
@@ -203,7 +204,8 @@ export default function CalendarScreen() {
           </Pressable>
         </View>
 
-        <View style={{ marginBottom: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <FridgeScopePicker />
           <FilterMenu hidden={hidden} onToggle={toggleTag} onReset={() => setHidden(new Set())} />
         </View>
 
