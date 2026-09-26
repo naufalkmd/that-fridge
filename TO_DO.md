@@ -112,10 +112,10 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   toast summary + Kitchen Score refresh, and the app following server-side Pro (admin-granted Pro), and the in-app calendar
   (phases 1-2).
   Rollback: `eas update:rollback`.
-- **Latest OTA** (group `5bcdff86-e24d-465a-8c8c-371a47efe343`, commit `b896fc7`, API deployed; earlier group `ab975687`): calendar delete / filter
+- **Latest OTA** (group `38644aea-0ad3-4e3a-8b21-452e40816d4a`, commit `1b3c374`, API deployed; earlier groups `5bcdff86`, `ab975687`): calendar delete / filter
   dropdown / Ask Quick Chat, Meal plan Autofill (3 credits), calendar fridge picker, change a Machine's fridge,
   Insights + Crew score + Privacy + Meal plan + Calendar Settings rows, profile avatar icon. Plus Explore Phase 1. Not device-checked yet.
-- **Settings audit fixes** (committed, unpublished): Organizer sweep asks first, is capped at 15 items and only counts answered
+- **Settings audit fixes** (live in the latest OTA): Organizer sweep asks first, is capped at 15 items and only counts answered
   checks (shared by the Organizer screen and the Crew tab); the Crew tab no longer reuses the shared-fridge "Crew activity"
   pref to gate sweeping; Home tips honour the Expiry / Low stock / Recipe switches; the dead Weekly digest switch is
   removed (no digest sender exists - build one before bringing it back); AI Data no longer fakes a successful clear.
