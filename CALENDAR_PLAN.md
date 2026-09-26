@@ -15,8 +15,9 @@ add-on later, see "Later").
    Rule in "Sharing rules" below.
 2. **Activity history = 180 days** (matches `app:prune-stale-data` and the privacy policy). Meal
    entries are user content: kept until the user deletes them.
-3. **Entry point: Home**, a calendar button at the right end of the fridge-selection row (directly
-   under the notification bell). Also "Add to plan" on recipe screens.
+3. **Entry point: Home**, a calendar button **directly under the notification bell** (right-aligned
+   to the bell, on the fridge-selection row). Tapping it opens the calendar; **every day is
+   tappable**. Also "Add to plan" on recipe screens.
 4. **Meal slots are user-defined**; we only suggest templates.
 5. **AI weekly planner ("plan my week around what's expiring") is later** — it spends AI credits,
    so it waits for the credit-scheme audit.
@@ -73,19 +74,29 @@ then the viewer's slot order, then label.
 
 ## UI (mobile)
 
-- `app/calendar.tsx`: month grid with coloured dots per day, a day agenda below (rows reuse
-  `NotificationCard`), kind filter chips, the existing fridge scope (`useScope`, same
-  all-vs-one-fridge rule as Home), swipe/arrow month navigation. Custom grid (no new dependency).
-- Tap: expiry → item, meal → edit sheet, run → Kitchen Lab detail. "+" → add a meal (slot picker,
-  recipe picker from the recipe book, or free text).
-- Meal reminder: local notification `kind: "meal"` at the entry's `time`, via
+- **Button:** an icon button at the right end of Home's fridge-selection row, aligned under the
+  notification bell (`app/(tabs)/home.tsx`; the row needs a right-hand slot next to
+  `FridgeScopePicker`, so the picker shrinks rather than the button wrapping).
+- **Calendar (`app/calendar.tsx`, opened as a modal from that button):** month grid, today
+  highlighted, coloured dots per day for what's on it, month navigation by swipe/arrows, kind
+  filter chips, and the existing fridge scope (`useScope`, same all-vs-one-fridge rule as Home).
+  Custom grid — no new dependency.
+- **Every day is tappable** — past, today, future, and the greyed days of neighbouring months.
+  Tapping a day selects it and opens that day's detail (a bottom sheet over the grid): its
+  entries grouped by kind (expiring items, meals by slot, automation runs, activity) and a "+"
+  to plan a meal on that day. Empty days are tappable too (that's how you plan ahead); they show
+  "Nothing planned" with the add button.
+- **Rows** reuse `NotificationCard`. Tap a row: expiry → item, meal → edit sheet, run → Kitchen
+  Lab detail. Adding a meal: slot picker, recipe picker from the recipe book, or free text.
+- **Meal reminder:** local notification `kind: "meal"` at the entry's `time`, via
   `lib/localNotifications.ts` (respect the existing permission flow).
 
 ## Phases
 
 1. **Read-only calendar (2–3 days).** `GET /api/calendar` (expiry, machines, activity), the screen,
    the Home button. *Done when:* the endpoint respects fridge membership and `effectiveExpiry`;
-   180-day cap; timezone placement tested; scope filter matches Home; jest screen test.
+   180-day cap; timezone placement tested; scope filter matches Home; every day cell opens its
+   day detail (past, today, future, adjacent-month days); jest screen test.
 2. **Meal plan + recipe log (~3 days).** Migration, policy, CRUD, templates, "Add to plan",
    mark-made integration, meal reminders, sharing rules + attribution. *Done when:* the sharing
    rules are covered by tests (author / Pro-owner member / non-Pro owner / lapsed Pro), account

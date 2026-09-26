@@ -208,8 +208,8 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
   pricing table, add an endpoint-to-cost test matrix, and change prices only after recording
   the expected user/cost impact.
 - [ ] **In-app calendar** — planned, decisions made 2026-09-26; full design in
-  [CALENDAR_PLAN.md](CALENDAR_PLAN.md). One screen (opened from a button at the right end of Home's
-  fridge-selection row) showing expiry dates, meal plan / recipe logs, Kitchen Lab runs and item
+  [CALENDAR_PLAN.md](CALENDAR_PLAN.md). One screen (opened from a button directly under Home's
+  notification bell; every day is tappable and opens that day's detail) showing expiry dates, meal plan / recipe logs, Kitchen Lab runs and item
   activity (180 days). New `meal_entries` table + `GET /api/calendar`; meal plans are shared with
   other members of a Pro-owned fridge without ever saying "household" in the UI; meal slots are
   user-defined with suggested templates; AI weekly planner later (after the credit audit). All
