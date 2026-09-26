@@ -112,10 +112,10 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   toast summary + Kitchen Score refresh, and the app following server-side Pro (admin-granted Pro), and the in-app calendar
   (phases 1-2).
   Rollback: `eas update:rollback`.
-- **Latest OTA** (group `4b8d196f-7efc-4326-a593-5303e0409906`, commit `7455a5e`, API deployed; earlier groups `38644aea`, `5bcdff86`, `ab975687`):
-  Ask Chef (recipe form + Meal plan), Quick Chat context, custom-field autofill, item page in sections, Settings in groups, Getting
-  Started recipe link fix. Not device-checked yet.
-- **Faster start** (committed, unpublished; also: Organizer toggle restored on its own local setting, Ask Chef is a dropdown on the recipe form): the native splash now stays up until the session and the fridges are ready (max 2.5s), the app
+- **Latest OTA** (group `4d2a4071-011e-4aad-bcf0-e2733e609c4b`, commit `1afccb4`; earlier groups `4b8d196f`, `38644aea`, `5bcdff86`, `ab975687`):
+  faster start (splash held until ready, saved-data-first, offline-safe launch), merged Insights page, Organizer toggle back,
+  Ask Chef dropdown on the recipe form. Not device-checked yet: cold-start twice (second should open complete), try airplane mode.
+- **Faster start** (live in the latest OTA; also: Organizer toggle restored on its own local setting, Ask Chef is a dropdown on the recipe form): the native splash now stays up until the session and the fridges are ready (max 2.5s), the app
   opens signed in from a saved profile while the server confirms it (and being offline at launch no longer signs you out), and
   fridges / recipes / shopping / notes / categories / notifications / score / Home's Chef pick are saved on the device and painted
   first, then refreshed (`lib/persist.ts`, `useStaleCache`; expo-file-system, best-effort - falls back to network-only). Spinners on
