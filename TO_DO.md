@@ -187,8 +187,10 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
 
 - [ ] **Flip the alert-timing switch** — `CheckItemFreshness` on the effective date is built but
   gated behind `OPENED_EXPIRY_ALERTS_ENABLED` (default `false`, see `backend/DEPLOY.md`). Enabling it
-  means opened milk alerts earlier, opened jam stops alerting at 3d, Waste Saver may shift —
-  owner's call.
+  means alerts for opened items fire on the (never later than printed) opened date, so opened milk
+  alerts earlier and opened items with no printed date start alerting; the first run may send a
+  batch for items already opened. Everything else (item screen, Home, recipes, Kitchen Score,
+  removal outcomes) already uses the opened date regardless. Owner's call; safe to leave off.
 - [ ] Later, only if people actually correct values often: per-name learning store, AI estimate for
   `default` items (piggyback on the autofill call, cached by name like the food-group answers).
 - [ ] Open question: which specific items besides eggs looked wrong (become first test cases).
