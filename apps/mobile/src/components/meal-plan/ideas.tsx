@@ -17,10 +17,9 @@ import { useInventory } from "@/lib/inventory";
 import { caloriesSuffix } from "@/lib/recipeCalories";
 import { useShopping } from "@/lib/shopping";
 import { FoodIcon } from "@/components/food-icon";
-import { SheetHeader } from "@/components/sheet";
 import { useTheme } from "@/lib/theme";
 
-const CHEF = require("../../assets/images/thatfridge/chef.gif");
+const CHEF = require("../../../assets/images/thatfridge/chef.gif");
 
 const MEAL_TYPES: { key: MealType; label: string }[] = [
   { key: "breakfast", label: "Breakfast" },
@@ -42,7 +41,12 @@ const FOOD_FOCUS: { key: FoodFocus; label: string }[] = [
   { key: "balanced", label: "Balanced" },
 ];
 
-export default function WhatToEat() {
+/**
+ * "What should I eat?" as part of the meal plan: pick the vibe, get ranked recipes from your own
+ * collection, and plan one with a single tap. The recommendation engine is unchanged - only where it
+ * lives and the new "Plan it" button.
+ */
+export function MealIdeas({ onPlan }: { onPlan: (recipe: Recipe) => void }) {
   const router = useRouter();
   const { refresh: refreshInventory } = useInventory();
   const {
@@ -90,12 +94,7 @@ export default function WhatToEat() {
   const exhausted = result?.exhausted && (result?.exact.length ?? 0) === 0;
 
   return (
-    <View className="flex-1 bg-canvas">
-      <SheetHeader title="What should I eat?" />
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 6, paddingBottom: 40, gap: 18 }}
-        keyboardShouldPersistTaps="handled"
-      >
+    <View style={{ gap: 18 }}>
         <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
           <Image source={CHEF} style={{ width: 56, height: 56 }} contentFit="contain" />
           <View
@@ -154,8 +153,8 @@ export default function WhatToEat() {
               </View>
             ) : (
               <>
-                <ResultsTier label="EXACT MATCHES" results={result.exact} page={exactPage} onShuffle={() => setExactPage((p) => p + 1)} onMade={refreshInventory} />
-                <ResultsTier label="SIMILAR MATCHES" results={result.similar} page={similarPage} onShuffle={() => setSimilarPage((p) => p + 1)} onMade={refreshInventory} />
+                <ResultsTier label="EXACT MATCHES" results={result.exact} page={exactPage} onShuffle={() => setExactPage((p) => p + 1)} onMade={refreshInventory} onPlan={onPlan} />
+                <ResultsTier label="SIMILAR MATCHES" results={result.similar} page={similarPage} onShuffle={() => setSimilarPage((p) => p + 1)} onMade={refreshInventory} onPlan={onPlan} />
                 {result.exact.length > 0 || result.similar.length > 0 ? (
                   <View style={{ alignItems: "center", paddingTop: 18 }}>
                     <Text style={{ fontSize: 11.5, color: FAINT, marginBottom: 10 }}>Still nothing to your liking?</Text>
@@ -170,7 +169,6 @@ export default function WhatToEat() {
             )}
           </View>
         )}
-      </ScrollView>
     </View>
   );
 }
@@ -202,12 +200,14 @@ function ResultsTier({
   page,
   onShuffle,
   onMade,
+  onPlan,
 }: {
   label: string;
   results: Recipe[];
   page: number;
   onShuffle: () => void;
   onMade: () => void;
+  onPlan: (recipe: Recipe) => void;
 }) {
   const { faint: FAINT, hairlineStrong: STRONG, ink: INK } = useTheme().colors;
   const visible = useMemo(() => {
@@ -221,7 +221,7 @@ function ResultsTier({
       <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>{label}</Text>
       <View style={{ gap: 8, marginBottom: results.length > 3 ? 10 : 0 }}>
         {visible.map((r) => (
-          <RecipeCard key={r.id} recipe={r} onMade={onMade} />
+          <RecipeCard key={r.id} recipe={r} onMade={onMade} onPlan={onPlan} />
         ))}
       </View>
       {results.length > 3 && (
@@ -237,7 +237,7 @@ function ResultsTier({
   );
 }
 
-function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) {
+function RecipeCard({ recipe, onMade, onPlan }: { recipe: Recipe; onMade: () => void; onPlan: (recipe: Recipe) => void }) {
   const { items } = useInventory();
   const { items: shoppingItems, add: addToShopping } = useShopping();
   const [open, setOpen] = useState(false);
@@ -291,6 +291,15 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
             {recipe.minutes} min{caloriesSuffix(recipe)} · {haveCount}/{ingredients.length} ready
           </Text>
         </View>
+        <Pressable
+          onPress={() => onPlan(recipe)}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={`Plan ${recipe.name}`}
+          style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 6, backgroundColor: AMBER }}
+        >
+          <Text style={{ fontSize: 12, fontWeight: "800", color: ONACCENT }}>Plan it</Text>
+        </Pressable>
         <MaterialCommunityIcons name={open ? "chevron-up" : "chevron-down"} size={18} color={FAINT} />
       </Pressable>
       {open && (

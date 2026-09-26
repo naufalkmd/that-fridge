@@ -258,7 +258,7 @@ export default function RecipeDetail() {
         </Pressable>
 
         <Pressable
-          onPress={() => router.push({ pathname: "/calendar", params: { recipeId: recipe.id, recipeName: recipe.name } })}
+          onPress={() => router.push({ pathname: "/meal-plan", params: { recipeId: recipe.id, recipeName: recipe.name } })}
           accessibilityRole="button"
           style={{
             flexDirection: "row",

@@ -4,6 +4,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { MealStatus } from "@thatfridge/core";
 
 import { api } from "@/lib/api";
+import { shortDayLabel } from "@/lib/calendar";
 import { useKeyboardHeight } from "@/lib/keyboard";
 import { useRecipes } from "@/lib/recipes";
 import { useTheme } from "@/lib/theme";
@@ -34,6 +35,7 @@ export function MealForm({
   onCancel,
   onDelete,
   onSaveSlots,
+  dayOptions,
 }: {
   draft: MealDraft;
   slots: string[];
@@ -44,6 +46,8 @@ export function MealForm({
   onCancel: () => void;
   onDelete?: () => void;
   onSaveSlots: (slots: string[]) => Promise<void>;
+  /** When given (the Meal plan screen), a "Day" row lets the meal be put on / moved to another day. */
+  dayOptions?: string[];
 }) {
   const { colors } = useTheme();
   const { recipes } = useRecipes();
@@ -197,6 +201,34 @@ export function MealForm({
             )}
           </ScrollView>
         </View>
+      )}
+
+      {dayOptions && (
+        <>
+          <Text style={label}>Day</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+            {(dayOptions.includes(draft.date) ? dayOptions : [draft.date, ...dayOptions]).map((day) => {
+              const on = draft.date === day;
+              const { weekday, day: n } = shortDayLabel(day);
+              return (
+                <Pressable
+                  key={day}
+                  testID={`day-chip-${day}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  onPress={() => onChange({ date: day })}
+                  style={{
+                    paddingHorizontal: 11, paddingVertical: 7, borderRadius: 999,
+                    backgroundColor: on ? `${colors.accent}26` : colors.surface2,
+                    borderWidth: 1, borderColor: on ? colors.accent : colors.hairline,
+                  }}
+                >
+                  <Text style={{ fontSize: 12.5, fontWeight: "700", color: on ? colors.accent : colors.muted }}>{weekday} {n}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
       )}
 
       <Text style={label}>Meal</Text>

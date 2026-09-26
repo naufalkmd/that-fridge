@@ -24,6 +24,21 @@ add-on later, see "Later").
 5. **AI weekly planner ("plan my week around what's expiring") is later** — it spends AI credits,
    so it waits for the credit-scheme audit.
 
+## Restructure after the first device pass (built, unpublished)
+
+Meal planning is now its own feature, and **What should I eat? no longer exists as a separate screen**:
+
+- **Meal plan** (`app/meal-plan.tsx`, opened from the Crew tab's Recipes button and from a recipe's
+  "Add to plan"): this week day by day - a "+" on each day, tap a meal to edit it, tick it when
+  cooked, week arrows, a week and day calorie total. A "What should I eat?" card expands the old
+  suggestion filters and results inline (`components/meal-plan/ideas.tsx`, same engine); each
+  suggestion has **Plan it**, which opens the meal form with the recipe and today selected. The
+  form has a **Day** row here, so a meal can be put on or moved to any day of the week.
+- **Calendar** keeps the month view. Its "Plan a meal" button became a general **+ Add** menu (in the
+  day sheet, and a floating "+" for today): plan a meal, add to the shopping list, leave a note, add
+  an item, new automation. The two screens link to each other.
+- One `useMealActions` hook and one meal form back both screens, so they cannot drift apart.
+
 ## What the calendar shows
 
 | Kind | Source | Notes |

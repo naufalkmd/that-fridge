@@ -252,7 +252,7 @@ function AppShell({
                                       options={{ headerShown: false }}
                                     />
                                     <Stack.Screen
-                                      name="what-to-eat"
+                                      name="meal-plan"
                                       options={{
                                         headerShown: false,
                                         presentation: "modal",

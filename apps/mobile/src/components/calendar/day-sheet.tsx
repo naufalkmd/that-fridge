@@ -1,34 +1,37 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { CalendarEntry, MealStatus } from "@thatfridge/core";
 
 import { BottomSheet } from "@/components/bottom-sheet";
 import { Eyebrow } from "@/components/ui";
 import { dayTitle, GROUP_LABEL, sectionsForDay } from "@/lib/calendar";
-import { compareMeals, draftFromEntry, kcalLabel, mealsTotal, newDraft, STATUS_LABEL, type MealDraft } from "@/lib/mealPlan";
+import { compareMeals, draftFromEntry, newDraft, type MealDraft } from "@/lib/mealPlan";
 import { useTheme } from "@/lib/theme";
-import { KIND_ICON, kindColor } from "./kind-meta";
+import { AddMenu, type AddAction } from "./add-menu";
 import { MealForm } from "./meal-form";
+import { QuickAdd } from "./quick-add";
+import { EntryRow, MealRow, MealsTotal } from "./rows";
 
-export function isOpenable(entry: CalendarEntry): boolean {
-  return !!(entry.refs.itemId || entry.refs.machineId);
-}
+export { isOpenable } from "./rows";
+
+type View_ = { type: "list" } | { type: "menu" } | { type: "meal"; draft: MealDraft } | { type: "shopping" } | { type: "note" };
 
 /**
- * One day's entries, grouped by kind, plus meal planning: "Plan a meal" and tapping a meal open the
- * form in this same sheet (a second modal over a modal is unreliable on iOS). Opens over the grid
- * when a day is tapped. Keyboard handling lives in BottomSheet, which sits on top of the keyboard.
+ * One day's entries, grouped by kind, plus everything you can add: the "+ Add" button opens a menu
+ * (plan a meal, shopping list, note, item, automation) right in this sheet - a second modal over a
+ * modal is unreliable on iOS. Keyboard handling lives in BottomSheet, which sits on top of the keyboard.
  */
 export function DaySheet({
   date,
   entries,
   slots,
   fridgeId,
-  seedRecipe,
+  startAtMenu,
   onClose,
   onOpenEntry,
+  onAddItem,
+  onNewAutomation,
   onSaveMeal,
   onDeleteMeal,
   onQuickStatus,
@@ -39,10 +42,12 @@ export function DaySheet({
   slots: string[];
   /** The fridge a new meal is planned on (null = personal). */
   fridgeId: string | null;
-  /** "Add to plan" from a recipe: the day sheet opens straight into the form with it filled in. */
-  seedRecipe?: { id: string; name: string } | null;
+  /** Opened from the floating "+": start on the add menu instead of the day's list. */
+  startAtMenu?: boolean;
   onClose: () => void;
   onOpenEntry: (entry: CalendarEntry) => void;
+  onAddItem: () => void;
+  onNewAutomation: () => void;
   /** Resolves to an error message, or null on success. */
   onSaveMeal: (draft: MealDraft) => Promise<string | null>;
   onDeleteMeal: (entry: { id: string; title: string }) => Promise<void>;
@@ -50,57 +55,70 @@ export function DaySheet({
   onSaveSlots: (slots: string[]) => Promise<void>;
 }) {
   const { colors } = useTheme();
-  const [draft, setDraft] = useState<MealDraft | null>(null);
+  const [view, setView] = useState<View_>({ type: "list" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // A different day (or closing) always returns to the list; a recipe seed opens the form.
+  // A different day (or closing) resets the sheet; the floating "+" opens straight onto the add menu.
   useEffect(() => {
     setError(null);
     setSaving(false);
-    setDraft(date !== null && seedRecipe ? newDraft(date, slots, fridgeId, seedRecipe) : null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, seedRecipe?.id]);
+    setView(date !== null && startAtMenu ? { type: "menu" } : { type: "list" });
+  }, [date, startAtMenu]);
 
   const sections = useMemo(() => {
     const order = compareMeals(slots);
     return sectionsForDay(entries).map((s) => (s.group === "meals" ? { ...s, entries: [...s.entries].sort(order) } : s));
   }, [entries, slots]);
 
-  async function save() {
-    if (!draft) return;
-    setSaving(true);
-    setError(null);
-    const problem = await onSaveMeal(draft);
-    setSaving(false);
-    if (problem) setError(problem);
-    else setDraft(null);
+  const backToList = () => setView({ type: "list" });
+
+  function pick(action: AddAction) {
+    if (date === null) return;
+    if (action === "meal") setView({ type: "meal", draft: newDraft(date, slots, fridgeId) });
+    else if (action === "shopping" || action === "note") setView({ type: action });
+    else if (action === "item") onAddItem();
+    else onNewAutomation();
   }
 
-  async function remove() {
-    if (!draft?.id) return;
+  async function saveMeal() {
+    if (view.type !== "meal") return;
     setSaving(true);
-    await onDeleteMeal({ id: draft.id, title: draft.title });
+    setError(null);
+    const problem = await onSaveMeal(view.draft);
     setSaving(false);
-    setDraft(null);
+    if (problem) setError(problem);
+    else backToList();
+  }
+
+  async function removeMeal() {
+    if (view.type !== "meal" || !view.draft.id) return;
+    setSaving(true);
+    await onDeleteMeal({ id: view.draft.id, title: view.draft.title });
+    setSaving(false);
+    backToList();
   }
 
   return (
     <BottomSheet visible={date !== null} onClose={onClose} maxHeight={620}>
       {date !== null && (
         <View>
-          {draft ? (
+          {view.type === "meal" ? (
             <MealForm
-              draft={draft}
+              draft={view.draft}
               slots={slots}
               saving={saving}
               error={error}
-              onChange={(patch) => setDraft((d) => (d ? { ...d, ...patch } : d))}
-              onSave={save}
-              onCancel={() => setDraft(null)}
-              onDelete={draft.id ? remove : undefined}
+              onChange={(patch) => setView((v) => (v.type === "meal" ? { type: "meal", draft: { ...v.draft, ...patch } } : v))}
+              onSave={saveMeal}
+              onCancel={backToList}
+              onDelete={view.draft.id ? removeMeal : undefined}
               onSaveSlots={onSaveSlots}
             />
+          ) : view.type === "menu" ? (
+            <AddMenu onPick={pick} onBack={backToList} />
+          ) : view.type === "shopping" || view.type === "note" ? (
+            <QuickAdd kind={view.type} onDone={backToList} onBack={() => setView({ type: "menu" })} />
           ) : (
             <View style={{ paddingBottom: 8 }}>
               <Text style={{ fontSize: 16, fontWeight: "800", color: colors.ink, marginBottom: 12 }}>{dayTitle(date)}</Text>
@@ -122,7 +140,7 @@ export function DaySheet({
                             <MealRow
                               key={entry.id}
                               entry={entry}
-                              onEdit={() => setDraft(draftFromEntry(entry))}
+                              onEdit={() => setView({ type: "meal", draft: draftFromEntry(entry) })}
                               onQuickStatus={onQuickStatus}
                             />
                           ) : (
@@ -135,112 +153,21 @@ export function DaySheet({
                 )}
               </ScrollView>
               <Pressable
-                onPress={() => setDraft(newDraft(date, slots, fridgeId))}
+                onPress={() => setView({ type: "menu" })}
                 accessibilityRole="button"
+                accessibilityLabel="Add"
                 style={{
                   flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 6,
                   paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.accent, backgroundColor: `${colors.accent}14`,
                 }}
               >
                 <Ionicons name="add" size={18} color={colors.accent} />
-                <Text style={{ fontSize: 13.5, fontWeight: "800", color: colors.accent }}>Plan a meal</Text>
+                <Text style={{ fontSize: 13.5, fontWeight: "800", color: colors.accent }}>Add</Text>
               </Pressable>
             </View>
           )}
         </View>
       )}
     </BottomSheet>
-  );
-}
-
-function EntryRow({ entry, onOpen }: { entry: CalendarEntry; onOpen: (e: CalendarEntry) => void }) {
-  const { colors } = useTheme();
-  const color = entry.tone === "overdue" ? colors.bad : kindColor(entry.kind, colors);
-  const openable = isOpenable(entry);
-  return (
-    <Pressable
-      disabled={!openable}
-      onPress={() => onOpen(entry)}
-      style={{
-        flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 8,
-        borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface,
-      }}
-    >
-      <View style={{ width: 34, height: 34, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: `${color}1a` }}>
-        <MaterialCommunityIcons name={KIND_ICON[entry.kind]} size={17} color={color} />
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 13.5, fontWeight: "700", color: colors.ink }}>{entry.title}</Text>
-        {(entry.time || entry.meta) && (
-          <Text style={{ fontSize: 11.5, color: colors.faint, marginTop: 2 }}>{[entry.time, entry.meta].filter(Boolean).join(" · ")}</Text>
-        )}
-      </View>
-      {openable && <Ionicons name="chevron-forward" size={16} color={colors.faint} />}
-    </Pressable>
-  );
-}
-
-function MealRow({
-  entry,
-  onEdit,
-  onQuickStatus,
-}: {
-  entry: CalendarEntry;
-  onEdit: () => void;
-  onQuickStatus: (entry: CalendarEntry, status: MealStatus) => Promise<void>;
-}) {
-  const { colors } = useTheme();
-  const color = kindColor("meal", colors);
-  const status = entry.status ?? "planned";
-  const done = status === "cooked";
-  const meta = [
-    entry.slot,
-    entry.time,
-    typeof entry.calories === "number" ? kcalLabel(entry.calories) : null,
-    entry.by ? `by @${entry.by}` : null,
-    status !== "planned" ? STATUS_LABEL[status] : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  return (
-    <Pressable
-      onPress={onEdit}
-      accessibilityRole="button"
-      accessibilityLabel={`Edit ${entry.title}`}
-      style={{
-        flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 8,
-        borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, opacity: status === "skipped" ? 0.55 : 1,
-      }}
-    >
-      <View style={{ width: 34, height: 34, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: `${color}1a` }}>
-        <MaterialCommunityIcons name={KIND_ICON.meal} size={17} color={color} />
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 13.5, fontWeight: "700", color: colors.ink, textDecorationLine: status === "skipped" ? "line-through" : "none" }}>
-          {entry.title}
-        </Text>
-        <Text style={{ fontSize: 11.5, color: colors.faint, marginTop: 2 }}>{meta}</Text>
-      </View>
-      {status === "planned" ? (
-        <Pressable hitSlop={8} accessibilityLabel={`Mark ${entry.title} cooked`} onPress={() => onQuickStatus(entry, "cooked")}>
-          <MaterialCommunityIcons name="check-circle-outline" size={24} color={colors.faint} />
-        </Pressable>
-      ) : (
-        done && <MaterialCommunityIcons name="check-circle" size={24} color={colors.good} />
-      )}
-    </Pressable>
-  );
-}
-
-/** The day's meals added up ("≈ 1,240 kcal"), noting how many had an estimate when some did not. */
-function MealsTotal({ entries }: { entries: CalendarEntry[] }) {
-  const { colors } = useTheme();
-  const { kcal, counted, total } = mealsTotal(entries);
-  if (counted === 0) return null;
-  return (
-    <Text style={{ fontSize: 12, fontWeight: "700", color: colors.muted }} accessibilityLabel={`Meals total ${kcal} kilocalories`}>
-      {kcalLabel(kcal)}
-      {counted < total ? ` · ${counted} of ${total} counted` : ""}
-    </Text>
   );
 }

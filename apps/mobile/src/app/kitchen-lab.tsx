@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -168,6 +168,13 @@ export default function KitchenLab() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Opened from the calendar's "+ New automation": go straight to composing one.
+  const params = useLocalSearchParams<{ new?: string }>();
+  useEffect(() => {
+    if (params.new === "1") openCompose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.new]);
 
   // Collapse the value editors whenever a different Machine/draft (or screen) is opened.
   useEffect(() => {

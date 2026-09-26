@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
-import { describeError, type CalendarEntry, type MealStatus } from "@thatfridge/core";
+import { describeError, type CalendarEntry } from "@thatfridge/core";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
-import { useInventory } from "@/lib/inventory";
-import { cancelMealReminder, syncMealReminder } from "@/lib/localNotifications";
-import { defaultFridgeId, draftToInput, userSlots, validateDraft, type MealDraft } from "@/lib/mealPlan";
+import { useMealActions } from "@/lib/useMealActions";
 import { useScope } from "@/lib/scope";
 import { useTheme } from "@/lib/theme";
 import { getDeviceTimezone } from "@/lib/timezone";
@@ -37,14 +34,8 @@ export default function CalendarScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { scope } = useScope();
-  const { user, updateMealSlots } = useAuth();
-  const { fridges } = useInventory();
-  // "Add to plan" from a recipe: pick a day, and the day sheet opens with that recipe filled in.
-  const params = useLocalSearchParams<{ recipeId?: string; recipeName?: string }>();
-  const [seedRecipe, setSeedRecipe] = useState<{ id: string; name: string } | null>(
-    params.recipeId ? { id: params.recipeId, name: params.recipeName ?? "this recipe" } : null,
-  );
-  const slots = useMemo(() => userSlots(user), [user]);
+  const [startAtMenu, setStartAtMenu] = useState(false);
+  const meals = useMealActions(useCallback(() => setReload((n) => n + 1), []));
 
   const today = toISO(new Date());
   const now = new Date();
@@ -94,48 +85,15 @@ export default function CalendarScreen() {
     });
   }, []);
 
-  /** Save (create or update) a meal; resolves to an error message, or null on success. */
-  async function saveMeal(draft: MealDraft): Promise<string | null> {
-    const problem = validateDraft(draft);
-    if (problem) return problem;
-    try {
-      const input = draftToInput(draft);
-      const saved = draft.id ? await api.updateMealEntry(draft.id, input) : await api.createMealEntry(input);
-      void syncMealReminder(saved);
-      setSeedRecipe(null);
-      setReload((n) => n + 1);
-      return null;
-    } catch (e) {
-      return describeError(e, "Couldn't save that meal.");
-    }
-  }
-
-  async function deleteMeal(entry: { id: string }) {
-    try {
-      await api.deleteMealEntry(entry.id);
-      void cancelMealReminder(entry.id);
-      setReload((n) => n + 1);
-    } catch {
-      setError("Couldn't delete that meal.");
-    }
-  }
-
-  async function quickStatus(entry: CalendarEntry, status: MealStatus) {
-    const id = entry.refs.mealEntryId;
-    if (!id) return;
-    try {
-      const saved = await api.updateMealEntry(id, { status });
-      void syncMealReminder(saved);
-      setReload((n) => n + 1);
-    } catch {
-      setError("Couldn't update that meal.");
-    }
-  }
-
   function openEntry(entry: CalendarEntry) {
     setSelected(null);
     if (entry.refs.itemId) router.push(`/item/${entry.refs.itemId}`);
     else if (entry.refs.machineId) router.push("/kitchen-lab");
+  }
+
+  function closeSheet() {
+    setSelected(null);
+    setStartAtMenu(false);
   }
 
   const isCurrentMonth = cursor.year === now.getFullYear() && cursor.month === now.getMonth();
@@ -144,19 +102,11 @@ export default function CalendarScreen() {
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
       <SheetHeader title="Calendar" />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
-        {seedRecipe && (
-          <View
-            style={{
-              flexDirection: "row", alignItems: "center", gap: 10, padding: 12, marginTop: 4, borderRadius: 8,
-              backgroundColor: `${colors.accent}1a`, borderWidth: 1, borderColor: `${colors.accent}55`,
-            }}
-          >
-            <Text style={{ flex: 1, fontSize: 13, fontWeight: "700", color: colors.ink }}>Pick a day for {seedRecipe.name}</Text>
-            <Pressable hitSlop={8} accessibilityLabel="Cancel planning" onPress={() => setSeedRecipe(null)}>
-              <Ionicons name="close" size={18} color={colors.muted} />
-            </Pressable>
-          </View>
-        )}
+        <View style={{ alignItems: "flex-end", marginTop: 2 }}>
+          <Pressable hitSlop={8} accessibilityLabel="Open the meal plan" onPress={() => router.push("/meal-plan")}>
+            <Text style={{ fontSize: 12.5, fontWeight: "700", color: colors.accent }}>Meal plan ›</Text>
+          </Pressable>
+        </View>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginVertical: 8 }}>
           <Pressable
             accessibilityLabel="Previous month"
@@ -216,7 +166,11 @@ export default function CalendarScreen() {
           ))}
         </View>
 
-        <MonthGrid cells={grid.cells} entriesByDate={byDate} today={today} selected={selected} onSelect={setSelected} />
+        <MonthGrid cells={grid.cells} entriesByDate={byDate} today={today} selected={selected} onSelect={(d) => {
+            setStartAtMenu(false);
+            setSelected(d);
+          }}
+        />
 
         <View style={{ marginTop: 14, minHeight: 24, alignItems: "center", justifyContent: "center" }}>
           {loading ? (
@@ -225,6 +179,8 @@ export default function CalendarScreen() {
             <Pressable onPress={() => setReload((n) => n + 1)}>
               <Text style={{ fontSize: 12.5, color: colors.bad, textAlign: "center" }}>{error} Tap to retry.</Text>
             </Pressable>
+          ) : meals.error ? (
+            <Text style={{ fontSize: 12.5, color: colors.bad, textAlign: "center" }}>{meals.error}</Text>
           ) : truncated ? (
             <Text style={{ fontSize: 11.5, color: colors.faint }}>Showing the first entries — narrow to one fridge to see the rest.</Text>
           ) : null}
@@ -234,16 +190,41 @@ export default function CalendarScreen() {
       <DaySheet
         date={selected}
         entries={selected ? (byDate[selected] ?? []) : []}
-        slots={slots}
-        fridgeId={defaultFridgeId(fridges, scope)}
-        seedRecipe={seedRecipe}
-        onClose={() => setSelected(null)}
+        slots={meals.slots}
+        fridgeId={meals.fridgeId}
+        startAtMenu={startAtMenu}
+        onClose={closeSheet}
         onOpenEntry={openEntry}
-        onSaveMeal={saveMeal}
-        onDeleteMeal={deleteMeal}
-        onQuickStatus={quickStatus}
-        onSaveSlots={updateMealSlots}
+        onAddItem={() => {
+          closeSheet();
+          router.push("/add");
+        }}
+        onNewAutomation={() => {
+          closeSheet();
+          router.push({ pathname: "/kitchen-lab", params: { new: "1" } });
+        }}
+        onSaveMeal={meals.saveMeal}
+        onDeleteMeal={meals.deleteMeal}
+        onQuickStatus={meals.quickStatus}
+        onSaveSlots={meals.saveSlots}
       />
+
+      {/* The general "+": add anything to the selected day (or today) without picking a day first. */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Add to the calendar"
+        onPress={() => {
+          setStartAtMenu(true);
+          setSelected(selected ?? today);
+        }}
+        style={{
+          position: "absolute", right: 20, bottom: 28, width: 54, height: 54, borderRadius: 27,
+          backgroundColor: colors.accent, alignItems: "center", justifyContent: "center",
+          shadowColor: "#000", shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6,
+        }}
+      >
+        <Ionicons name="add" size={28} color={colors.onAccent} />
+      </Pressable>
     </SafeAreaView>
   );
 }

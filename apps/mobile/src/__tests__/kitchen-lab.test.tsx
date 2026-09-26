@@ -2,7 +2,11 @@ import { Alert } from "react-native";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { Machine, MachineDraft } from "@thatfridge/core";
 
-jest.mock("expo-router", () => ({ useRouter: () => ({ back: jest.fn(), push: jest.fn(), replace: jest.fn() }) }));
+let mockParams: Record<string, string> = {};
+jest.mock("expo-router", () => ({
+  useRouter: () => ({ back: jest.fn(), push: jest.fn(), replace: jest.fn() }),
+  useLocalSearchParams: () => mockParams,
+}));
 jest.mock("react-native-safe-area-context", () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -65,6 +69,7 @@ async function openCompose() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockParams = {};
   mockApi.listMachines.mockResolvedValue([]);
   mockApi.listMachineRuns.mockResolvedValue([]);
 });
@@ -84,6 +89,21 @@ describe("KitchenLab screen", () => {
 
     expect(await screen.findByText("Morning check")).toBeTruthy();
     expect(screen.getByText("Every day at 7:00 AM")).toBeTruthy();
+  });
+
+  test("opened with new=1 (from the calendar's + menu) it goes straight to composing a Machine", async () => {
+    mockParams = { new: "1" };
+    await render(<KitchenLab />);
+
+    expect(await screen.findByText("New Machine")).toBeTruthy();
+    expect(screen.getByPlaceholderText(/Every Monday at 8am/)).toBeTruthy();
+  });
+
+  test("without it, it opens on the list as before", async () => {
+    await render(<KitchenLab />);
+
+    expect(await screen.findByText("Create a Machine")).toBeTruthy();
+    expect(screen.queryByText("New Machine")).toBeNull();
   });
 
   test("Draft is disabled until there's a prompt, then sends the trimmed prompt and lands on review", async () => {

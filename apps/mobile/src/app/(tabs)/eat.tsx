@@ -774,7 +774,8 @@ export default function Crew() {
 
       {tab === "recipes" && (
         <Pressable
-          onPress={() => router.push("/what-to-eat")}
+          accessibilityLabel="Meal plan"
+          onPress={() => router.push("/meal-plan")}
           style={{
             position: "absolute",
             right: 20,
@@ -789,7 +790,7 @@ export default function Crew() {
             borderColor: STRONG,
           }}
         >
-          <MaterialCommunityIcons name="chef-hat" size={22} color={CANVAS} />
+          <MaterialCommunityIcons name="calendar-check" size={22} color={CANVAS} />
         </Pressable>
       )}
     </SafeAreaView>

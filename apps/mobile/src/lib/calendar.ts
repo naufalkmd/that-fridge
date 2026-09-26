@@ -37,6 +37,35 @@ export function monthGrid(year: number, month: number, weekStartsOn: number = WE
   return { cells, from: cells[0].date, to: cells[41].date };
 }
 
+/** YYYY-MM-DD plus (or minus) whole days, on the local calendar (noon-anchored, so DST never shifts a day). */
+export function addDays(iso: string, days: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return toISO(new Date(y, m - 1, d + days, 12));
+}
+
+/** The 7 days of the week containing `iso`, starting on `weekStartsOn`. */
+export function weekDays(iso: string, weekStartsOn: number = WEEK_STARTS_ON): string[] {
+  const [y, m, d] = iso.split("-").map(Number);
+  const offset = (new Date(y, m - 1, d, 12).getDay() - weekStartsOn + 7) % 7;
+  const start = addDays(iso, -offset);
+  return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+}
+
+/** "26 Sep – 2 Oct" for a week's first and last day. */
+export function weekRangeLabel(days: readonly string[]): string {
+  const fmt = (iso: string) => {
+    const [y, m, d] = iso.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  };
+  return `${fmt(days[0])} – ${fmt(days[days.length - 1])}`;
+}
+
+/** "Sat 26" for a compact day label. */
+export function shortDayLabel(iso: string): { weekday: string; day: number } {
+  const [y, m, d] = iso.split("-").map(Number);
+  return { weekday: new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: "short" }), day: d };
+}
+
 export function addMonths(year: number, month: number, delta: number): { year: number; month: number } {
   const d = new Date(year, month + delta, 1);
   return { year: d.getFullYear(), month: d.getMonth() };

@@ -1,6 +1,10 @@
 import type { CalendarEntry } from "@thatfridge/core";
 import {
+  addDays,
   addMonths,
+  shortDayLabel,
+  weekDays,
+  weekRangeLabel,
   dayDots,
   filterEntries,
   groupByDate,
@@ -113,5 +117,33 @@ describe("entries", () => {
     expect(sections.map((s) => s.group)).toEqual(["meals", "expiry", "automation", "activity"]);
     expect(sectionsForDay([entry("used")]).map((s) => s.group)).toEqual(["activity"]);
     expect(sectionsForDay([])).toEqual([]);
+  });
+});
+
+describe("week helpers", () => {
+  test("addDays crosses months, years and DST changes without skipping or repeating a day", () => {
+    expect(addDays("2026-09-30", 1)).toBe("2026-10-01");
+    expect(addDays("2026-01-01", -1)).toBe("2025-12-31");
+    expect(addDays("2028-02-28", 1)).toBe("2028-02-29");
+    expect(addDays("2026-03-08", 1)).toBe("2026-03-09"); // US spring-forward
+    expect(addDays("2026-11-01", 1)).toBe("2026-11-02"); // US fall-back
+    expect(addDays("2026-09-26", 0)).toBe("2026-09-26");
+    let day = "2026-01-01";
+    for (let i = 0; i < 400; i++) day = addDays(day, 1);
+    expect(day).toBe("2027-02-05");
+  });
+
+  test("weekDays returns 7 consecutive days containing the given day, from the week's first day", () => {
+    // 26 Sep 2026 is a Saturday.
+    expect(weekDays("2026-09-26", 0)).toEqual(["2026-09-20", "2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24", "2026-09-25", "2026-09-26"]);
+    expect(weekDays("2026-09-26", 1)).toEqual(["2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24", "2026-09-25", "2026-09-26", "2026-09-27"]);
+    expect(weekDays("2026-09-20", 0)[0]).toBe("2026-09-20"); // a Sunday starts its own week
+    expect(weekDays("2026-09-30", 0)).toContain("2026-10-03"); // spans a month end
+  });
+
+  test("labels", () => {
+    expect(weekRangeLabel(weekDays("2026-09-26", 0))).toMatch(/20.*26|Sep.*20|20.*Sep/);
+    expect(shortDayLabel("2026-09-26")).toMatchObject({ day: 26 });
+    expect(shortDayLabel("2026-09-26").weekday.length).toBeGreaterThan(0);
   });
 });

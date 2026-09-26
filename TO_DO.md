@@ -223,7 +223,9 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
   user-defined with suggested templates; AI weekly planner later (after the credit audit). All
   OTA — no native rebuild, no Apple/Google Calendar. **Phases 1 (read-only calendar) and 2 (meal plan + recipe log) are
   PUBLISHED (OTA `0a92e78c`); a first device pass found the meal form hidden by the keyboard —
-  fixed in OTA `b1402ef0` (sheet now rides above the keyboard, name field first, calories on meals).** Still to check on a phone: Home button under the bell,
+  fixed in OTA `b1402ef0` (sheet now rides above the keyboard, name field first, calories on meals).** Since then (committed, **not yet published**): Meal plan became its own screen replacing What should I eat?
+  (`CALENDAR_PLAN.md` → "Restructure"), and the calendar's Plan a meal button is now a general + Add menu.
+  Still to check on a phone: Home button under the bell,
   tap days incl. empty ones, filters, month arrows, plan / edit / delete / tick a meal, first-time slot
   templates, a reminder time, "Add to plan" on a recipe, and the sharing rule with a second account
   (Pro-owned fridge shares, free-owned stays personal). Phase 3 (AI/automation hooks) not started.
