@@ -112,11 +112,10 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   toast summary + Kitchen Score refresh, and the app following server-side Pro (admin-granted Pro), and the in-app calendar
   (phases 1-2).
   Rollback: `eas update:rollback`.
-- **Latest OTA** (group `ab975687-731d-4089-9dd0-a850906abda1`, commit `96ac86c`, API deployed): calendar delete / filter
+- **Latest OTA** (group `5bcdff86-e24d-465a-8c8c-371a47efe343`, commit `b896fc7`, API deployed; earlier group `ab975687`): calendar delete / filter
   dropdown / Ask Quick Chat, Meal plan Autofill (3 credits), calendar fridge picker, change a Machine's fridge,
-  Insights + Crew score + Privacy + Meal plan + Calendar Settings rows, profile avatar icon. Not device-checked yet.
-- **Explore** Phase 1 (search + icon / recipe / Machine / meal-plan libraries, admin-curated, read-only) is built and committed,
-  not pushed. Phase 2 (user contributions) needs UGC moderation (App Store 1.2) first: see `EXPLORE_PLAN.md`.
+  Insights + Crew score + Privacy + Meal plan + Calendar Settings rows, profile avatar icon. Plus Explore Phase 1. Not device-checked yet.
+- **Explore** Phase 1 (search + icon / recipe / Machine / meal-plan libraries, admin-curated, read-only) is live. Phase 2 (user contributions) needs UGC moderation (App Store 1.2) first: see `EXPLORE_PLAN.md`.
 
 ### Execution queue (post-launch product work; details in "Product backlog")
 
