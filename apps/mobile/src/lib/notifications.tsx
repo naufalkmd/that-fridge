@@ -9,6 +9,7 @@ import {
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useStaleCache } from "@/lib/useStaleCache";
 import { registerForPush } from "@/lib/push";
 
 // How long a swiped-away notification stays undoable before the delete actually commits to
@@ -43,6 +44,12 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const cachedValue = useMemo(() => ({ events, prefs }), [events, prefs]);
+  const { markFresh } = useStaleCache<{ events: NotificationEvent[]; prefs: NotificationPrefs | null }>("notifications", cachedValue, (cached) => {
+    setEvents(cached.events);
+    setPrefs(cached.prefs);
+    setLoading(false);
+  });
 
   const load = useCallback(async () => {
     setError(null);
@@ -51,6 +58,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         api.listNotificationEvents(),
         api.getNotificationPrefs(),
       ]);
+      markFresh();
       setEvents(evts);
       setPrefs(p);
     } catch (err) {
@@ -58,7 +66,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [markFresh]);
 
   useEffect(() => {
     if (status === "signedIn") {

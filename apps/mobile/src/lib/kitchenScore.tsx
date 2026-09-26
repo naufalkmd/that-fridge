@@ -9,6 +9,7 @@ import {
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useStaleCache } from "@/lib/useStaleCache";
 
 // Backs the Home "Your Kitchen This Week" gauge. All three feeds are read-only on mobile —
 // usage history is written when items are used up (not yet wired here), the organizer tally
@@ -29,6 +30,17 @@ export function KitchenScoreProvider({ children }: { children: React.ReactNode }
   const [scoreSnapshots, setScoreSnapshots] = useState<ScoreSnapshot[]>([]);
 
   const varietyAwarded = useRef(false);
+  // Last launch's numbers paint at once so the score card doesn't flash "building your score" while these load.
+  const feeds = useMemo(() => ({ usageHistory, organizerTally, scoreSnapshots }), [usageHistory, organizerTally, scoreSnapshots]);
+  const { markFresh } = useStaleCache<{
+    usageHistory: UsageHistoryEntry[];
+    organizerTally: OrganizerTally | null;
+    scoreSnapshots: ScoreSnapshot[];
+  }>("kitchenScore", feeds, (cached) => {
+    setUsageHistory(cached.usageHistory);
+    setOrganizerTally(cached.organizerTally);
+    setScoreSnapshots(cached.scoreSnapshots);
+  });
 
   const refresh = useCallback(async () => {
     const [u, t, s] = await Promise.allSettled([
@@ -37,6 +49,7 @@ export function KitchenScoreProvider({ children }: { children: React.ReactNode }
       api.getScoreSnapshots(),
     ]);
     if (u.status === "fulfilled") {
+      markFresh();
       setUsageHistory(u.value);
       // "Balanced Plate" badge — every food group used at least once this month.
       if (!varietyAwarded.current && hasFullFoodGroupVariety(u.value)) {
@@ -46,7 +59,7 @@ export function KitchenScoreProvider({ children }: { children: React.ReactNode }
     }
     if (t.status === "fulfilled") setOrganizerTally(t.value);
     if (s.status === "fulfilled") setScoreSnapshots(s.value);
-  }, []);
+  }, [markFresh]);
 
   useEffect(() => {
     if (status === "signedIn") {

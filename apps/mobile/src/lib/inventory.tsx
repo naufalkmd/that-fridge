@@ -13,6 +13,7 @@ import {
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useStaleCache } from "@/lib/useStaleCache";
 import { ensureOnboardingFridge } from "@/lib/hydrateOnboarding";
 import { useScope } from "@/lib/scope";
 
@@ -61,17 +62,24 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [fridges, setFridges] = useState<Fridge[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Last launch's fridges paint at once; the network answer replaces them a moment later.
+  const { markFresh } = useStaleCache<Fridge[]>("fridges", fridges, (cached) => {
+    setFridges(cached);
+    setLoading(false);
+  });
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      setFridges(await api.listFridges());
+      const fresh = await api.listFridges();
+      markFresh();
+      setFridges(fresh);
     } catch (err) {
       setError(describeError(err, "Couldn't load your inventory."));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [markFresh]);
 
   useEffect(() => {
     if (status === "signedIn") {

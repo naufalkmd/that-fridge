@@ -15,7 +15,9 @@ import { useTheme } from "@/lib/theme";
 import { getDeviceTimezone } from "@/lib/timezone";
 import { useToast } from "@/lib/toast";
 import { BottomSheet } from "@/components/bottom-sheet";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, SkeletonList } from "@/components/ui";
+
+let lastBrowse: { featured: ExploreItem[]; items: ExploreItem[] } | null = null;
 
 const SEARCH_DELAY_MS = 250;
 const PREVIEW = 6;
@@ -36,8 +38,9 @@ export default function Explore() {
 
   const [query, setQuery] = useState("");
   const [type, setType] = useState<ExploreType | null>(null);
-  const [featured, setFeatured] = useState<ExploreItem[]>([]);
-  const [items, setItems] = useState<ExploreItem[]>([]);
+  // The last unfiltered browse is kept for the session, so coming back to Explore is instant while it refreshes.
+  const [featured, setFeatured] = useState<ExploreItem[]>(lastBrowse?.featured ?? []);
+  const [items, setItems] = useState<ExploreItem[]>(lastBrowse?.items ?? []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
@@ -59,6 +62,7 @@ export default function Explore() {
             if (!alive) return;
             setFeatured(res.featured);
             setItems(res.items);
+            if (!q && !type) lastBrowse = res;
           })
           .catch((e) => alive && setError(describeError(e, "Couldn't load Explore.")))
           .finally(() => alive && setLoading(false));
@@ -162,7 +166,7 @@ export default function Explore() {
             <Text style={{ fontSize: 12.5, color: colors.bad, textAlign: "center" }}>{error} Tap to retry.</Text>
           </Pressable>
         )}
-        {loading && items.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 24 }} />}
+        {loading && items.length === 0 && <SkeletonList rows={6} />}
 
         {!loading && !error && items.length === 0 && featured.length === 0 && (
           <Text style={{ fontSize: 13, color: colors.muted, textAlign: "center", marginTop: 24, lineHeight: 19 }}>

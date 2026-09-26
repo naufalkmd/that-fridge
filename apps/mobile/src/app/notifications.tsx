@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   RefreshControl,
@@ -10,6 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SkeletonList } from "@/components/ui";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
@@ -147,7 +147,9 @@ export default function Notifications() {
         )}
 
         {loading ? (
-          <ActivityIndicator color={ACCENT} style={{ marginTop: 40 }} />
+          <View style={{ marginTop: 12 }}>
+            <SkeletonList rows={5} />
+          </View>
         ) : events.length === 0 && !hasPending ? (
           <Text style={{ textAlign: "center", paddingVertical: 60, color: FAINT, fontSize: 13 }}>
             You&apos;re all caught up — no notifications yet.

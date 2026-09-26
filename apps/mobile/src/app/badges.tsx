@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { BADGE_CATALOG, type BadgeKey, type BadgeProgress } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, SkeletonList } from "@/components/ui";
 
 export default function Badges() {
   const {
@@ -42,7 +42,9 @@ export default function Badges() {
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
       <PageHeader title="Badges" subtitle="One-time unlocks for real anti-waste habits" />
       {loading ? (
-        <ActivityIndicator color={ACCENT} style={{ marginTop: 40 }} />
+        <View style={{ paddingHorizontal: 20, paddingTop: 6 }}>
+          <SkeletonList rows={5} />
+        </View>
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 60, gap: 10 }}>
           {BADGE_CATALOG.map((badge) => {

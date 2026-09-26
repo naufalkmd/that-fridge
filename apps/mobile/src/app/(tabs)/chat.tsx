@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   ImageBackground,
@@ -41,6 +40,7 @@ import { useVoiceDictation } from "@/lib/voice";
 import { MarkdownText } from "@/components/markdown-text";
 import { RecipeSuggestionCard } from "@/components/recipe-suggestion-card";
 import { BottomSheet } from "@/components/bottom-sheet";
+import { Skeleton } from "@/components/ui";
 import { ContextSheet } from "@/components/chat/context-sheet";
 import { addContext, contextIcon, dayLabel, MAX_CONTEXTS, toRefs, type ChatContext } from "@/lib/chatContext";
 import { toISO } from "@/lib/calendar";
@@ -469,7 +469,11 @@ export default function Chat() {
             keyboardShouldPersistTaps="handled"
           >
             {loading ? (
-              <ActivityIndicator color={AMBER} style={{ marginTop: 32 }} />
+              <View style={{ gap: 12, marginTop: 8 }}>
+                <Skeleton width="62%" height={44} radius={16} />
+                <Skeleton width="48%" height={34} radius={16} style={{ alignSelf: "flex-end" }} />
+                <Skeleton width="72%" height={64} radius={16} />
+              </View>
             ) : (
               <>
                 {messages.map((m, i) => <Bubble key={i} msg={m} />)}

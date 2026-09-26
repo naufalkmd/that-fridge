@@ -1,12 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import * as AppleAuthentication from "expo-apple-authentication";
-import type { CurrentUser, ProfileFields } from "@thatfridge/core";
+import { ApiError, type CurrentUser, type ProfileFields } from "@thatfridge/core";
 
 import { api, secureTokenStore } from "@/lib/api";
 import { unregisterPush } from "@/lib/push";
 import { track } from "@/lib/analytics";
 import { hydrateOnboarding } from "@/lib/hydrateOnboarding";
 import { googleSignInIdToken, googleSignOut } from "@/lib/google-auth";
+import { clearCache, readCache, writeCache } from "@/lib/persist";
 
 // Fired once after any successful auth: replays a pre-sign-in onboarding draft to the
 // server (a no-op when there's none) and beacons the funnel event. Fire-and-forget.
@@ -45,7 +46,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<Status>("loading");
   const [user, setUser] = useState<CurrentUser | null>(null);
 
-  // Restore a session from the stored token so a relaunch doesn't bounce to sign-in.
+  // Restore a session from the stored token so a relaunch doesn't bounce to sign-in. With a saved copy of the
+  // profile the app opens signed in at once and confirms the session with the server in the background, instead of
+  // waiting a network round trip on a blank screen. Only the server actually rejecting the token (401/403) ends the
+  // session: being offline at launch no longer signs anyone out.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -54,20 +58,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!cancelled) setStatus("signedOut");
         return;
       }
+      const saved = await readCache<CurrentUser>("user", null);
+      if (saved && !cancelled) {
+        setUser(saved);
+        setStatus("signedIn");
+      }
       try {
         const me = await api.me();
         if (cancelled) return;
         setUser(me);
         setStatus("signedIn");
-      } catch {
-        await secureTokenStore.clear();
-        if (!cancelled) setStatus("signedOut");
+      } catch (e) {
+        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
+          await secureTokenStore.clear();
+          clearCache();
+          if (!cancelled) {
+            setUser(null);
+            setStatus("signedOut");
+          }
+        } else if (!saved && !cancelled) {
+          // Offline (or the server is down) and nothing saved to show: the sign-in screen, but the token is kept
+          // so the next launch with a connection restores the session.
+          setStatus("signedOut");
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // Keep the saved profile current (name, credits, preferences) for the next launch.
+  useEffect(() => {
+    if (status === "signedIn" && user) writeCache("user", user.id, user);
+  }, [status, user]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { user } = await api.login(email, password);
@@ -142,6 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await unregisterPush().catch(() => {});
     await googleSignOut().catch(() => {});
     await api.logout().catch(() => {});
+    clearCache();
     setUser(null);
     setStatus("signedOut");
   }, []);
@@ -161,6 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const deleteAccount = useCallback(async () => {
     await unregisterPush().catch(() => {});
     await api.deleteAccount(); // must succeed — the account is really being deleted
+    clearCache();
     setUser(null);
     setStatus("signedOut");
   }, []);

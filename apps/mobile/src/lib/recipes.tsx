@@ -9,6 +9,7 @@ import {
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useStaleCache } from "@/lib/useStaleCache";
 
 // Hand-off buffer for "Edit first" on a Chef chat suggestion: the card stashes the
 // suggested recipe here, then /recipe-form?from=suggestion picks it up and opens
@@ -64,17 +65,23 @@ export function RecipesProvider({ children }: { children: React.ReactNode }) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { markFresh } = useStaleCache<Recipe[]>("recipes", recipes, (cached) => {
+    setRecipes(cached);
+    setLoading(false);
+  });
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      setRecipes(await api.listRecipes());
+      const fresh = await api.listRecipes();
+      markFresh();
+      setRecipes(fresh);
     } catch (e) {
       setError(describeError(e, "Couldn't load your recipes."));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [markFresh]);
 
   useEffect(() => {
     if (status === "signedIn") {

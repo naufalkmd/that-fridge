@@ -4,6 +4,7 @@ import type { FridgeNote, FridgeNoteColor } from "@thatfridge/core";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useStaleCache } from "@/lib/useStaleCache";
 
 interface NotesContextValue {
   notes: FridgeNote[];
@@ -18,14 +19,17 @@ const NotesContext = createContext<NotesContextValue | null>(null);
 export function NotesProvider({ children }: { children: React.ReactNode }) {
   const { status } = useAuth();
   const [notes, setNotes] = useState<FridgeNote[]>([]);
+  const { markFresh } = useStaleCache<FridgeNote[]>("notes", notes, setNotes);
 
   const refresh = useCallback(async () => {
     try {
-      setNotes(await api.listFridgeNotes());
+      const fresh = await api.listFridgeNotes();
+      markFresh();
+      setNotes(fresh);
     } catch {
       /* keep last known */
     }
-  }, []);
+  }, [markFresh]);
 
   useEffect(() => {
     if (status === "signedIn") refresh();

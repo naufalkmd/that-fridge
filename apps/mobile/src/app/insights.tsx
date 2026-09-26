@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -16,7 +16,7 @@ import { getDeviceTimezone } from "@/lib/timezone";
 import { useAuth } from "@/lib/auth";
 import { FoodIcon } from "@/components/food-icon";
 import { FridgeScopePicker } from "@/components/fridge-scope";
-import { Eyebrow, PageHeader } from "@/components/ui";
+import { Eyebrow, PageHeader, Skeleton } from "@/components/ui";
 
 const WEEKS = 4;
 
@@ -105,7 +105,7 @@ export default function Insights() {
 
         <Card title={`Waste · last ${WEEKS} weeks`}>
           {loading ? (
-            <ActivityIndicator color={colors.accent} />
+            <BarsSkeleton rows={4} />
           ) : waste.used + waste.wasted === 0 ? (
             <Empty>Nothing used up or thrown out yet. Remove items as you finish them to see this.</Empty>
           ) : (
@@ -133,7 +133,7 @@ export default function Insights() {
 
         <Card title="Calories · this week">
           {loading ? (
-            <ActivityIndicator color={colors.accent} />
+            <BarsSkeleton rows={7} />
           ) : calories.plannedTotal + calories.cookedTotal === 0 ? (
             <Empty>No meals with calories on this week's plan yet.</Empty>
           ) : (
@@ -215,6 +215,17 @@ export default function Insights() {
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/** Placeholder bars while a chart's numbers load. */
+function BarsSkeleton({ rows }: { rows: number }) {
+  return (
+    <View style={{ gap: 10 }}>
+      {Array.from({ length: rows }).map((_, i) => (
+        <Skeleton key={i} height={10} radius={5} width={`${92 - i * 9}%`} />
+      ))}
+    </View>
   );
 }
 

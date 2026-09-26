@@ -36,13 +36,14 @@ import { useNotifications } from "@/lib/notifications";
 import { useScope, scopeItems } from "@/lib/scope";
 import { useShopping } from "@/lib/shopping";
 import { useKitchenScore } from "@/lib/kitchenScore";
+import { useStaleCache } from "@/lib/useStaleCache";
 import { useSocial } from "@/lib/social";
 import { useAgentInsight } from "@/lib/agentInsight";
 import { usePro } from "@/lib/pro";
 import { useTheme } from "@/lib/theme";
 import { PixelText } from "@/components/brand";
 import { MarkdownText } from "@/components/markdown-text";
-import { SectionHeader } from "@/components/ui";
+import { SectionHeader, Skeleton } from "@/components/ui";
 import { FridgeScopePicker } from "@/components/fridge-scope";
 import { KitchenScore } from "@/components/home/KitchenScore";
 import { GettingStarted } from "@/components/home/GettingStarted";
@@ -118,16 +119,24 @@ export default function Home() {
       }
     });
 
+  // Last launch's Chef pick shows straight away; the fresh one replaces it. Waits for the fridge to load first
+  // (asking while it is still empty just wastes a request and returns the wrong picks).
+  const { markFresh: markSuggestionsFresh } = useStaleCache<Recipe[] | null>("homeSuggestions", suggestions, setSuggestions);
   useEffect(() => {
+    if (loading) return;
     let alive = true;
     api
       .suggestRecipes({})
-      .then((r) => alive && setSuggestions([...r.exact, ...r.similar]))
-      .catch(() => alive && setSuggestions([]));
+      .then((r) => {
+        if (!alive) return;
+        markSuggestionsFresh();
+        setSuggestions([...r.exact, ...r.similar]);
+      })
+      .catch(() => alive && setSuggestions((prev) => prev ?? []));
     return () => {
       alive = false;
     };
-  }, [items.length]);
+  }, [items.length, loading, markSuggestionsFresh]);
 
   const scoped = useMemo(() => scopeItems(items, scope), [items, scope]);
   // A single-fridge view only shows that fridge's notifications; "All Fridges" shows everything.
@@ -326,7 +335,8 @@ export default function Home() {
               }
               style={{ borderRadius: 14, overflow: "hidden" }}
             >
-              {heroWidth > 0 && (
+              {(heroWidth === 0 || (loading && fridges.length === 0)) && <Skeleton height={236} radius={14} />}
+              {heroWidth > 0 && !(loading && fridges.length === 0) && (
                 <ScrollView
                   ref={heroRef}
                   horizontal

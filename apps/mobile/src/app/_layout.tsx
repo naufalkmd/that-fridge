@@ -12,10 +12,10 @@ import { vars } from "nativewind";
 
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { ThemeProvider, useTheme, themeCssVars } from "@/lib/theme";
-import { OnboardingProvider } from "@/lib/onboarding";
+import { OnboardingProvider, useOnboarding } from "@/lib/onboarding";
 import { ProProvider } from "@/lib/pro";
 import { CreditsProvider } from "@/lib/credits";
-import { InventoryProvider } from "@/lib/inventory";
+import { InventoryProvider, useInventory } from "@/lib/inventory";
 import { ScopeProvider } from "@/lib/scope";
 import { NotificationsProvider } from "@/lib/notifications";
 import { ShoppingProvider } from "@/lib/shopping";
@@ -28,8 +28,11 @@ import { ToastProvider } from "@/lib/toast";
 import { ExpiryReminderSync } from "@/lib/ExpiryReminderSync";
 import { initAnalytics, track } from "@/lib/analytics";
 import { OfflineBanner } from "@/components/offline-banner";
+import { SplashGate } from "@/components/splash-gate";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+const SPLASH_SAFETY_MS = 8000;
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -59,8 +62,12 @@ function AppShell({
   const { ready: themeReady, scheme, colors } = useTheme();
   const appReady = (fontsLoaded || !!fontError) && themeReady;
 
+  // The native splash now stays up until the app has something real to show (see SplashGate, which knows when the
+  // session and the first data are ready). This is only the safety net so a hung provider can never strand it.
   useEffect(() => {
-    if (appReady) SplashScreen.hideAsync().catch(() => {});
+    if (!appReady) return;
+    const t = setTimeout(() => SplashScreen.hideAsync().catch(() => {}), SPLASH_SAFETY_MS);
+    return () => clearTimeout(t);
   }, [appReady]);
 
   useEffect(() => {
@@ -90,6 +97,7 @@ function AppShell({
                             <KitchenScoreProvider>
                               <RecipesProvider>
                                 <NotesProvider>
+                                  <SplashGate />
                                   <ExpiryReminderSync />
                                   <ImprovementNotice />
                                   <AuthGuard />

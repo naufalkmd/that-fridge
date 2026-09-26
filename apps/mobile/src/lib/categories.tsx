@@ -10,6 +10,7 @@ import { describeError, type Category } from "@thatfridge/core";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useStaleCache } from "@/lib/useStaleCache";
 import { useInventory } from "@/lib/inventory";
 
 interface CategoriesContextValue {
@@ -36,17 +37,23 @@ export function CategoriesProvider({
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { markFresh } = useStaleCache<Category[]>("categories", categories, (cached) => {
+    setCategories(cached);
+    setLoading(false);
+  });
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      setCategories(await api.listCategories());
+      const fresh = await api.listCategories();
+      markFresh();
+      setCategories(fresh);
     } catch (err) {
       setError(describeError(err, "Couldn't load your categories."));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [markFresh]);
 
   useEffect(() => {
     if (status === "signedIn") {

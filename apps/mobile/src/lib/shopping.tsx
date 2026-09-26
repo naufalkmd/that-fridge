@@ -10,6 +10,7 @@ import { describeError, type ShoppingItem } from "@thatfridge/core";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useStaleCache } from "@/lib/useStaleCache";
 import { useInventory } from "@/lib/inventory";
 
 interface ShoppingContextValue {
@@ -33,17 +34,23 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { markFresh } = useStaleCache<ShoppingItem[]>("shopping", items, (cached) => {
+    setItems(cached);
+    setLoading(false);
+  });
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      setItems(await api.listShoppingItems());
+      const fresh = await api.listShoppingItems();
+      markFresh();
+      setItems(fresh);
     } catch (err) {
       setError(describeError(err, "Couldn't load your shopping list."));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [markFresh]);
 
   useEffect(() => {
     if (status === "signedIn") {
