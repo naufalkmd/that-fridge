@@ -13,6 +13,7 @@ use App\Models\Section;
 use App\Models\ShoppingItem;
 use App\Models\User;
 use App\Models\UserBadge;
+use App\Support\CustomFieldValue;
 use App\Support\FoodIconMatcher;
 use App\Support\ItemFeedback;
 use App\Support\ItemFreshness;
@@ -143,6 +144,7 @@ class AgentToolbox
                 'location' => ['type' => 'string', 'enum' => ['fridge', 'freezer', 'pantry']],
                 'search' => ['type' => 'string', 'description' => 'Case-insensitive name substring.'],
                 'fridge_id' => ['type' => 'integer', 'description' => 'From list_fridges. Omit to include every fridge the user belongs to.'],
+                ...self::CUSTOM_FILTER_PROPS,
             ]),
             $fn('list_plan', "List the user's meal plan (the meals on their calendar) for a date range, with each meal's id, meal label, calories and whether it is planned, cooked or skipped, plus each day's total and the meal labels the user uses. Defaults to today and the next 13 days. Call this before planning so you do not double-book, and to answer \"what's for dinner Friday?\".", [
                 'from' => ['type' => 'string', 'description' => 'YYYY-MM-DD. Defaults to today.'],
@@ -233,6 +235,7 @@ class AgentToolbox
                             'weight' => ['type' => 'number', 'description' => 'Weight/volume of ONE unit. Needs weight_unit alongside it.'],
                             'weight_unit' => ['type' => 'string', 'enum' => ItemPayload::WEIGHT_UNITS],
                             'calories' => ['type' => 'integer', 'description' => 'kcal for ONE unit (0-100000).'],
+                            'custom_fields' => self::NEW_ITEM_CUSTOM_FIELDS,
                         ],
                         'required' => ['name'],
                     ],
@@ -273,6 +276,7 @@ class AgentToolbox
                 'weight' => ['type' => 'number', 'description' => 'Weight/volume of ONE unit, e.g. from a package label. Needs weight_unit alongside it.'],
                 'weight_unit' => ['type' => 'string', 'enum' => ItemPayload::WEIGHT_UNITS],
                 'calories' => ['type' => 'integer', 'description' => 'kcal for ONE unit (0-100000).'],
+                'custom_fields' => self::NEW_ITEM_CUSTOM_FIELDS,
             ], ['name']),
             $fn('move_item', 'Move an item to a different shelf/section, and optionally change its storage location. Get item_id from list_items.', [
                 'item_id' => ['type' => 'integer'],
@@ -321,6 +325,7 @@ class AgentToolbox
                 'location' => ['type' => 'string', 'enum' => ['fridge', 'freezer', 'pantry']],
                 'search' => ['type' => 'string', 'description' => 'Case-insensitive name substring.'],
                 'fridge_id' => ['type' => 'integer', 'description' => 'From list_fridges. Omit to include every fridge the user belongs to.'],
+                ...self::CUSTOM_FILTER_PROPS,
             ], ['field']),
             $fn('mark_items_used_matching', "Mark EVERY item matching a filter as used, logging each to usage history - the filter (same args as sum_item_field/list_items) is re-evaluated fresh every time this runs, so unlike mark_item_used it never references a stale saved item_id and is safe for unattended Kitchen Lab automation. Fully consumes each match (no partial quantities). You MUST pass at least one filter - this refuses to run with none, so 'mark everything used' can never happen by an empty filter falling through.", [
                 'expired_only' => ['type' => 'boolean', 'description' => 'Only items already past their date.'],
@@ -328,6 +333,7 @@ class AgentToolbox
                 'location' => ['type' => 'string', 'enum' => ['fridge', 'freezer', 'pantry']],
                 'search' => ['type' => 'string', 'description' => 'Case-insensitive name substring.'],
                 'fridge_id' => ['type' => 'integer', 'description' => 'From list_fridges. Omit to include every fridge the user belongs to.'],
+                ...self::CUSTOM_FILTER_PROPS,
             ]),
             $fn('create_machine', "Set up a Kitchen Lab \"Machine\" - a recurring automation with a trigger (a schedule, an item being added, a value crossing a threshold, or a recipe being marked made) and a fixed list of steps that run on their own after that, no chat involved. Use this whenever the user describes something they want to happen automatically or repeatedly (\"every morning tell me...\", \"whenever milk is added...\", \"when stock drops below...\", \"whenever I mark a recipe made...\") rather than something they want done right now. Pass their own description straight through in prompt - the trigger and steps are worked out automatically from it, same as Kitchen Lab's own \"AI draft\". The Machine is created OFF by default (same as building one in Kitchen Lab) - tell the user to review it and turn it on from Kitchen Lab when they're ready; it will not run until they do.", [
                 'prompt' => ['type' => 'string', 'description' => 'The automation described in the user\'s own words, e.g. "every Sunday at 9am, tell me total calories expiring this week".'],
@@ -557,7 +563,7 @@ class AgentToolbox
     private function previewMarkItemsUsedMatching(User $user, array $args): string
     {
         if (! $this->hasItemFilter($args)) {
-            return 'Error: pass at least one filter (search, location, expired_only, expiring_within_days, or fridge_id) - this cannot run against every item.';
+            return 'Error: pass at least one filter (search, location, expired_only, expiring_within_days, fridge_id, or a custom field range) - this cannot run against every item.';
         }
 
         $items = $this->filteredItems($user, $args, null);
@@ -799,8 +805,27 @@ class AgentToolbox
         if (isset($args['location'])) {
             $rows = $rows->filter(fn ($i) => $i['location'] === $args['location']);
         }
+        if ($this->customFilter($args) !== null) {
+            ['label' => $label, 'min' => $min, 'max' => $max] = $this->customFilter($args);
+            $rows = $rows->filter(function ($i) use ($label, $min, $max) {
+                $field = collect($i['custom_fields'])->first(fn ($f) => CustomFieldValue::sameLabel((string) ($f['label'] ?? ''), $label));
+                $n = CustomFieldValue::number($field['value'] ?? null);
+
+                return $n !== null && ($min === null || $n >= $min) && ($max === null || $n <= $max);
+            });
+        }
 
         return $rows->values();
+    }
+
+    /** The custom-field range filter when it is fully specified (a label and at least one bound), else null. */
+    private function customFilter(array $args): ?array
+    {
+        $label = trim((string) ($args['custom_filter_label'] ?? ''));
+        $min = is_numeric($args['custom_filter_min'] ?? null) ? (float) $args['custom_filter_min'] : null;
+        $max = is_numeric($args['custom_filter_max'] ?? null) ? (float) $args['custom_filter_max'] : null;
+
+        return $label !== '' && ($min !== null || $max !== null) ? ['label' => $label, 'min' => $min, 'max' => $max] : null;
     }
 
     /** Trims trailing zeros so 500.000 reads as "500g" and 0.750 as "0.75kg". */
@@ -842,6 +867,21 @@ class AgentToolbox
      *  this class's own runtime check, MachineDraftValidator's threshold field, and
      *  AgentService's draft system prompt. */
     public const FIELDS = ['quantity', 'weight', 'calories', 'custom'];
+
+    /** Filter on a custom field's NUMBER ("Protein" of at least 20): shared by list_items, sum_item_field and mark_items_used_matching
+     *  (and so by a Machine's threshold filter). Deliberately separate from `custom_field_label`, which names the field a sum adds up. */
+    /** `custom_fields` on a NEW item (add_item / bulk_add_items): the same label/value rows update_item's set_custom_fields edits. */
+    public const NEW_ITEM_CUSTOM_FIELDS = [
+        'type' => 'array',
+        'description' => 'Optional custom fields for the new item as {label, value} rows, e.g. [{"label":"Protein","value":"25 g"}]. Only what the user actually gave or what is plainly known - never invent a brand, price or code.',
+        'items' => ['type' => 'object', 'properties' => ['label' => ['type' => 'string'], 'value' => ['type' => 'string']], 'required' => ['label', 'value']],
+    ];
+
+    public const CUSTOM_FILTER_PROPS = [
+        'custom_filter_label' => ['type' => 'string', 'description' => 'Custom field to filter on, case-insensitive (e.g. "Protein"). Only takes effect together with custom_filter_min and/or custom_filter_max; items without a numeric value in it are left out ("25 g" counts as 25).'],
+        'custom_filter_min' => ['type' => 'number', 'description' => 'Keep items whose custom_filter_label value is at least this.'],
+        'custom_filter_max' => ['type' => 'number', 'description' => 'Keep items whose custom_filter_label value is at most this.'],
+    ];
 
     private function sumItemField(User $user, array $args): string
     {
@@ -926,9 +966,9 @@ class AgentToolbox
             $label = Str::lower(trim((string) $args['custom_field_label']));
             $values = $items->map(function ($i) use ($label) {
                 $match = collect($i['custom_fields'])->first(fn ($f) => Str::lower(trim((string) ($f['label'] ?? ''))) === $label);
-                $value = $match['value'] ?? null;
+                $number = CustomFieldValue::number($match['value'] ?? null); // "25 g" counts as 25
 
-                return $value !== null && is_numeric($value) ? (float) $value * $i['quantity'] : null;
+                return $number !== null ? $number * $i['quantity'] : null;
             });
             $matched = $values->filter(fn ($v) => $v !== null);
 
@@ -1582,6 +1622,10 @@ class AgentToolbox
 
     private function hasItemFilter(array $args): bool
     {
+        if ($this->customFilter($args) !== null) {
+            return true;
+        }
+
         foreach (self::ITEM_FILTER_KEYS as $key) {
             if (isset($args[$key]) && $args[$key] !== '' && $args[$key] !== false) {
                 return true;
@@ -1599,7 +1643,7 @@ class AgentToolbox
     private function markItemsUsedMatching(User $user, array $args): string
     {
         if (! $this->hasItemFilter($args)) {
-            return 'Error: pass at least one filter (search, location, expired_only, expiring_within_days, or fridge_id) - this cannot run against every item.';
+            return 'Error: pass at least one filter (search, location, expired_only, expiring_within_days, fridge_id, or a custom field range) - this cannot run against every item.';
         }
 
         $items = $this->filteredItems($user, $args, null);
@@ -1768,7 +1812,8 @@ class AgentToolbox
         return "Added \"{$item->name}\" ({$item->quantity}x) to {$item->section->name} in {$fridge->name}".
             ($item->expiry_date ? ' · expires '.$item->expiry_date->toDateString() : '').
             ($item->weight !== null ? ' · '.$this->formatWeight($item->weight, $item->weight_unit) : '').
-            ($item->calories !== null ? " · {$item->calories} kcal" : '').'.';
+            ($item->calories !== null ? " · {$item->calories} kcal" : '').
+            $this->formatCustomFields($item->custom_fields ?? []).'.';
     }
 
     private function bulkAddItems(User $user, ?int $fridgeId, array $args): string
@@ -1868,6 +1913,15 @@ class AgentToolbox
             $calories = (int) $spec['calories'];
         }
 
+        $customFields = [];
+        if (isset($spec['custom_fields']) && is_array($spec['custom_fields']) && $spec['custom_fields'] !== []) {
+            $merged = ItemPayload::mergeCustomFields([], array_values(array_filter($spec['custom_fields'], 'is_array')));
+            if (is_string($merged)) {
+                return $merged;
+            }
+            $customFields = $merged;
+        }
+
         $section = $this->sectionFor($fridge, $spec['section'] ?? null, $location);
         $icon = FoodIconMatcher::guess($name) ?? '';
 
@@ -1883,6 +1937,7 @@ class AgentToolbox
             'weight' => $weight,
             'weight_unit' => $weightUnit,
             'calories' => $calories,
+            'custom_fields' => $customFields === [] ? null : $customFields,
         ]);
         ItemFeedback::created($user, $item);
         $this->mutated = true;

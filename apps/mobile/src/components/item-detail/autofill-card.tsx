@@ -12,6 +12,7 @@ import {
 } from "@thatfridge/core";
 
 import { api } from "@/lib/api";
+import { customFieldProposals, sourceLabel, type CustomFieldSource } from "@/lib/autofillPreview";
 import { useInventory } from "@/lib/inventory";
 import { useTheme } from "@/lib/theme";
 
@@ -40,7 +41,9 @@ function fieldLabel(key: string, fields: Partial<UpdateItemInput>): string {
 
 /**
  * The item detail page's "Autofill" button - one credit-metered call that estimates
- * whichever of weight/calories/best-before/food group this item is still missing, then
+ * whichever of weight/calories/best-before/food group this item is still missing - plus any
+ * custom field left empty (like "Protein"), settled from the user's own other items, the
+ * built-in nutrient table or the AI, in that order (CustomFieldAutofill on the server) - then
  * requires an explicit "Use these" before writing anything. Never proposes a field the item
  * already has a value for (enforced server-side, not just here) - autofill fills blanks, it
  * doesn't overwrite what's already there.
@@ -48,9 +51,10 @@ function fieldLabel(key: string, fields: Partial<UpdateItemInput>): string {
 export function AutofillCard({ item }: { item: FlatItem }) {
   const router = useRouter();
   const { patchItem } = useInventory();
-  const { ink: INK } = useTheme().colors;
+  const { ink: INK, faint: FAINT } = useTheme().colors;
   const [step, setStep] = useState<"idle" | "loading" | "result">("idle");
   const [fields, setFields] = useState<Partial<UpdateItemInput> | null>(null);
+  const [sources, setSources] = useState<Record<string, CustomFieldSource> | undefined>(undefined);
   const [applying, setApplying] = useState(false);
 
   function notifyOutOfCredits() {
@@ -77,6 +81,7 @@ export function AutofillCard({ item }: { item: FlatItem }) {
         return;
       }
       setFields(result.fields);
+      setSources(result.custom_sources);
       setStep("result");
     } catch (e) {
       setStep("idle");
@@ -95,6 +100,7 @@ export function AutofillCard({ item }: { item: FlatItem }) {
       await patchItem(item.id, fields);
       setStep("idle");
       setFields(null);
+      setSources(undefined);
     } catch (e) {
       Alert.alert("Error", describeError(e, "Couldn't save those details."));
     } finally {
@@ -105,6 +111,7 @@ export function AutofillCard({ item }: { item: FlatItem }) {
   function dismiss() {
     setStep("idle");
     setFields(null);
+    setSources(undefined);
   }
 
   if (step === "idle") {
@@ -155,6 +162,7 @@ export function AutofillCard({ item }: { item: FlatItem }) {
   }
 
   const visibleKeys = DISPLAY_KEYS.filter((k) => fields && k in fields);
+  const customRows = customFieldProposals(item.customFields, fields?.custom_fields, sources);
 
   return (
     <View
@@ -177,6 +185,14 @@ export function AutofillCard({ item }: { item: FlatItem }) {
         <Text key={k} style={{ fontSize: 13, color: INK, marginBottom: 4 }}>
           {fieldLabel(k, fields ?? {})}
         </Text>
+      ))}
+      {customRows.map((c) => (
+        <View key={c.label} style={{ marginBottom: 4 }}>
+          <Text style={{ fontSize: 13, color: INK }}>
+            {c.label}: {c.value}
+          </Text>
+          {sourceLabel(c.source) && <Text style={{ fontSize: 11, color: FAINT }}>{sourceLabel(c.source)}</Text>}
+        </View>
       ))}
       <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
         <Pressable

@@ -4,10 +4,13 @@ namespace App\Services;
 
 use App\Models\Item;
 use App\Models\User;
+use App\Support\CustomFieldValue;
 use App\Support\FoodGroupClassifier;
 use App\Support\ItemPayload;
+use App\Support\PromptData;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class AgentService
 {
@@ -690,7 +693,7 @@ PROMPT;
      * (ItemController::autofill) decides which of these to actually offer, since "autofill"
      * must never silently overwrite a value that's already set.
      */
-    public function autofillItemDetails(Item $item): array
+    public function autofillItemDetails(Item $item, array $customAsk = [], array $examples = []): array
     {
         if (! $this->client->available()) {
             return $this->fallbackAutofill($item);
@@ -718,14 +721,18 @@ Return ONLY a JSON object (no prose, no markdown fences) with exactly these fiel
 - "nutrition_category": the item's food group - one of "protein", "vegetables", "fruit", "grains", "dairy", "other_extras" (use "other_extras" for sauces, oils, snacks, drinks, condiments, desserts, and mixed/prepared dishes)
 PROMPT;
 
+            if ($customAsk !== []) {
+                $prompt .= $this->customFieldsPrompt($item, $customAsk, $examples);
+            }
+
             $result = $this->client->complete([
                 ['role' => 'user', 'content' => $prompt],
-            ], 150);
+            ], $customAsk !== [] ? 150 + 40 * count($customAsk) : 150);
 
             if ($result['ok']) {
                 $parsed = $this->parseJsonObject($result['content']);
                 if ($parsed) {
-                    return $this->normalizeAutofillEstimate($parsed, $item);
+                    return $this->normalizeAutofillEstimate($parsed, $item, $customAsk);
                 }
             }
         } catch (\Exception $e) {
@@ -740,7 +747,35 @@ PROMPT;
         return now()->toDateString();
     }
 
-    private function normalizeAutofillEstimate(array $parsed, Item $item): array
+    /**
+     * The extra ask when the item has empty custom fields the deterministic sources couldn't fill: the labels, what is already known
+     * about the item, and the user's own earlier entries so the answer reuses their units and style. Item text is quoted data.
+     *
+     * @param  list<string>  $labels
+     * @param  list<string>  $examples
+     */
+    private function customFieldsPrompt(Item $item, array $labels, array $examples): string
+    {
+        $known = collect($item->custom_fields ?? [])
+            ->filter(fn ($f) => trim((string) ($f['value'] ?? '')) !== '')
+            ->map(fn ($f) => ($f['label'] ?? '?').': '.Str::limit((string) $f['value'], 40, ''))->implode('; ');
+        $details = collect([
+            $item->calories !== null ? "calories {$item->calories} kcal" : null,
+            $item->nutrition_category ? "food group {$item->nutrition_category}" : null,
+            $known !== '' ? "other fields ({$known})" : null,
+        ])->filter()->implode(', ');
+        $keys = collect($labels)->map(fn ($l) => '"'.str_replace('"', "'", PromptData::clean($l)).'"')->implode(', ');
+        $shots = $examples !== [] ? "\nThe user's own earlier entries (copy their units and style):\n- ".implode("\n- ", array_map([PromptData::class, 'clean'], $examples)) : '';
+
+        return <<<EXTRA
+
+
+- "custom_fields": an object with EXACTLY these keys: {$keys}. Each value is your best estimate for ONE unit of this item as stored (the same weight as above). Use a number followed by its unit for measurements (e.g. "25 g"), plain short text otherwise. Use JSON null for anything you cannot know from the item's name and details - never invent a brand, a price, a date or a code.
+Already known about this item: {$details}.{$shots}
+EXTRA;
+    }
+
+    private function normalizeAutofillEstimate(array $parsed, Item $item, array $customAsk = []): array
     {
         $weightUnit = in_array($parsed['weight_unit'] ?? null, ItemPayload::WEIGHT_UNITS, true)
             ? $parsed['weight_unit'] : null;
@@ -763,7 +798,52 @@ PROMPT;
                 ? max(1, min(365, (int) $parsed['shelf_life_days']))
                 : $this->fallbackItemSuggestion($item->name, $item->icon)['shelf_life_days'],
             'nutrition_category' => $nutritionCategory,
+            'custom' => $this->cleanCustomFieldAnswers($parsed['custom_fields'] ?? null, $customAsk, $item, $weight ?? $item->weight, $weightUnit ?? $item->weight_unit),
         ];
+    }
+
+    /**
+     * Keeps only sensible answers for the labels that were asked: a value per asked label (case-insensitive key match), trimmed and
+     * capped, "unknown"-style answers dropped, and a nutrient (protein, fat...) that is not a number, or weighs more than the item
+     * itself, dropped rather than trusted.
+     *
+     * @param  list<string>  $asked
+     * @return array<string, string> label => value
+     */
+    /** Grams (or ml) in one of an item's weight units - what a nutrient answer is sanity-checked against. */
+    private const UNIT_GRAMS = ['g' => 1, 'kg' => 1000, 'mg' => 0.001, 'oz' => 28.3495, 'lb' => 453.592, 'ml' => 1, 'l' => 1000];
+
+    private function cleanCustomFieldAnswers(mixed $raw, array $asked, Item $item, ?float $weight, ?string $weightUnit): array
+    {
+        if (! is_array($raw) || $asked === []) {
+            return [];
+        }
+        $grams = $weight !== null && isset(self::UNIT_GRAMS[$weightUnit ?? '']) ? $weight * self::UNIT_GRAMS[$weightUnit] : null;
+
+        $out = [];
+        foreach ($asked as $label) {
+            $answer = null;
+            foreach ($raw as $key => $value) {
+                if (is_string($key) && CustomFieldValue::sameLabel($key, $label)) {
+                    $answer = $value;
+                    break;
+                }
+            }
+            $text = is_scalar($answer) ? trim((string) $answer) : '';
+            if ($text === '' || preg_match('/^(unknown|n\/a|na|none|null|not (?:known|available)|-+)$/i', $text)) {
+                continue;
+            }
+            $number = CustomFieldValue::number($text);
+            if (CustomFieldValue::nutrient($label) !== null) {
+                // A nutrient has to be a sane number: not text, not negative, not more grams than the whole item.
+                if ($number === null || $number < 0 || ($grams !== null && $number > $grams * 1.01 && Str::lower((string) (CustomFieldValue::unit($text) ?? 'g')) === 'g')) {
+                    continue;
+                }
+            }
+            $out[$label] = Str::limit($text, ItemPayload::MAX_VALUE_LENGTH, '');
+        }
+
+        return $out;
     }
 
     /**

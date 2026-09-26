@@ -8,9 +8,11 @@ use App\Models\Product;
 use App\Models\Section;
 use App\Services\AgentService;
 use App\Services\CreditService;
+use App\Services\CustomFieldAutofill;
 use App\Services\ItemRemovalService;
 use App\Support\AlgoFeedback;
 use App\Support\CreditCost;
+use App\Support\CustomFieldValue;
 use App\Support\FoodGroupClassifier;
 use App\Support\ItemFeedback;
 use App\Support\ItemPayload;
@@ -150,7 +152,7 @@ class ItemController extends Controller
      * overwrite something the user (or a scan) already set. The client applies the returned
      * fields via a normal PATCH, same review-then-confirm shape as estimate-calories.
      */
-    public function autofill(Request $request, Item $item)
+    public function autofill(Request $request, Item $item, CustomFieldAutofill $customFields)
     {
         $this->authorize('update', $item);
 
@@ -159,12 +161,22 @@ class ItemController extends Controller
         $needsShelfLife = $item->expiry_date === null;
         $needsCategory = $item->nutrition_category === null;
 
-        if (! $needsWeight && ! $needsCalories && ! $needsShelfLife && ! $needsCategory) {
+        // Empty custom fields ("Protein"...): what history and the nutrient table can settle is free; what is left rides on the one AI call.
+        $custom = $customFields->resolve($request->user(), $item);
+        $needsCustomAi = $custom['ask'] !== [];
+
+        if (! $needsWeight && ! $needsCalories && ! $needsShelfLife && ! $needsCategory && $custom['filled'] === [] && ! $needsCustomAi) {
             return response()->json(['fields' => (object) []], 200);
         }
 
         $fields = [];
         $categorySource = 'ai';
+        $customSources = [];
+        $customValues = [];
+        foreach ($custom['filled'] as $label => $found) {
+            $customValues[$label] = $found['value'];
+            $customSources[$label] = $found['source'];
+        }
 
         // Deterministic food-group classification first (keyword rules, then a cache of
         // previously AI-resolved names - see FoodGroupClassifier) - a confident hit here
@@ -179,15 +191,19 @@ class ItemController extends Controller
             }
         }
 
-        if (! $needsWeight && ! $needsCalories && ! $needsShelfLife && ! $needsCategory) {
+        if (! $needsWeight && ! $needsCalories && ! $needsShelfLife && ! $needsCategory && ! $needsCustomAi) {
             ItemFeedback::autofillProposed($request->user(), $item, $fields, $categorySource);
 
-            return response()->json(['fields' => (object) $fields], 200);
+            return $this->autofillResponse($item, $fields, $customValues, $customSources);
         }
 
         $this->credits->spend($request->user(), CreditCost::AUTOFILL, 'item_autofill');
 
-        $estimate = $this->agent->autofillItemDetails($item);
+        $estimate = $this->agent->autofillItemDetails($item, $custom['ask'], $custom['examples']);
+        foreach ($estimate['custom'] ?? [] as $label => $value) {
+            $customValues[$label] = $value;
+            $customSources[$label] = 'ai';
+        }
 
         if ($needsWeight && $estimate['weight'] !== null) {
             $fields['weight'] = $estimate['weight'];
@@ -211,7 +227,7 @@ class ItemController extends Controller
         // weight, or a name nothing could confidently classify) - refund when that left
         // nothing new at all, since the user got nothing for their credit, same precedent as
         // CalorieController::scanLabel.
-        if ($fields === []) {
+        if ($fields === [] && $customValues === []) {
             $this->credits->grant($request->user(), CreditCost::AUTOFILL, 'item_autofill_refund');
 
             return response()->json(['fields' => (object) [], 'message' => "Couldn't confidently estimate anything new for this item."], 200);
@@ -219,7 +235,37 @@ class ItemController extends Controller
 
         ItemFeedback::autofillProposed($request->user(), $item, $fields, $categorySource);
 
-        return response()->json(['fields' => (object) $fields], 200);
+        return $this->autofillResponse($item, $fields, $customValues, $customSources);
+    }
+
+    /**
+     * The proposal: the plain fields, plus - when custom fields were filled - the item's WHOLE custom_fields array with the new values
+     * in place (ids kept), because that is what the client PATCHes back (it replaces the array). `custom_sources` says where each
+     * value came from (history / table / ai) so the review card can show it. Values are proposals only; nothing is written here.
+     *
+     * @param  array<string, mixed>  $fields
+     * @param  array<string, string>  $customValues  label => proposed value
+     * @param  array<string, string>  $customSources  label => history|table|ai
+     */
+    private function autofillResponse(Item $item, array $fields, array $customValues, array $customSources)
+    {
+        $body = ['fields' => $fields];
+        if ($customValues !== []) {
+            $rows = array_map(function ($row) use ($customValues) {
+                foreach ($customValues as $label => $value) {
+                    if (trim((string) ($row['value'] ?? '')) === '' && CustomFieldValue::sameLabel((string) ($row['label'] ?? ''), (string) $label)) {
+                        $row['value'] = $value;
+                    }
+                }
+
+                return $row;
+            }, $item->custom_fields ?? []);
+            $body['fields']['custom_fields'] = array_values($rows);
+            $body['custom_sources'] = $customSources;
+        }
+        $body['fields'] = (object) $body['fields'];
+
+        return response()->json($body, 200);
     }
 
     public function destroy(Request $request, Item $item)

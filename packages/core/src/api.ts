@@ -730,6 +730,9 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   function autofillItem(itemId: string): Promise<{
     fields: Partial<UpdateItemInput>;
     message?: string;
+    /** Empty custom fields that got a proposed value, by label: where it came from - the user's own other items,
+     *  the built-in nutrient table, or the AI. `fields.custom_fields` then holds the whole array with those filled in. */
+    custom_sources?: Record<string, "history" | "table" | "ai">;
   }> {
     return http.post(`/items/${itemId}/autofill`, {});
   }

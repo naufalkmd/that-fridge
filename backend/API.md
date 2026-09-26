@@ -307,6 +307,38 @@ freezer items can be lengthened. Setting `opened: false` clears the opening snap
 treated as an entry mistake; otherwise the effective expiry determines the default. The
 optional `?context=recipe_used` explicitly marks a recipe ingredient used.
 
+### `POST /items/{item}/autofill` 🔒
+
+The item page's "Autofill missing details". Proposes values for whatever the item is missing - weight, calories, best-before, food
+group, and any **custom field left empty** (e.g. a "Protein" row with no value) - and never for a value already set. Nothing is
+written: the client shows the proposal and PATCHes it back. Response: `{ fields, message?, custom_sources? }`. When custom fields were
+filled, `fields.custom_fields` is the item's **whole** array (ids kept) with the new values in place, and `custom_sources` says where
+each came from, keyed by label: `history`, `table` or `ai`.
+
+Custom fields are settled cheapest-first (`CustomFieldAutofill`): (1) **history** - the same label on another of the user's items with
+the same name and weight is reused as it is; (2) **table** - a protein / carbs / fat / fibre / sugar label on a plain food with a known
+weight is computed from `NutrientTable` (per-100 g figures x the item's weight, i.e. per ONE unit like calories; accepted only when the
+whole name is one known food plus harmless words, so "chicken rice" or a branded product is not guessed) - deterministic, no credit;
+(3) **model** - what is left is asked in the same single AI call as the other fields (1 credit), together with what is already known about
+the item and the user's own earlier entries for those labels so units and style match ("25 g" vs "25"). Model answers are cleaned: text
+where a nutrient number belongs, a negative number, more grams than the item weighs, or "unknown" is dropped. Labels only the user can
+know (price, brand, batch/serial/barcode, dates, notes, store) are never guessed or sent to the model. If nothing at all comes back the
+credit is refunded; if only history/table settled everything, nothing is charged. Values are written the way the user writes that label
+(unit in the label -> bare number; their other entries "12 g" -> with unit; default "25 g").
+
+### Custom fields in chat and Kitchen Lab
+
+A custom field value is read by its **number** wherever fields are added up or compared (`App\Support\CustomFieldValue::number`): "25", "25.5",
+"25 g", "1,200 mg" and "12%" all count (text does not, and the item is reported as skipped). That number is what `sum_item_field`
+(`field: "custom"`), a Machine threshold trigger on a custom field, and the new range filter use.
+
+- **Range filter** on `list_items`, `sum_item_field` and `mark_items_used_matching` (and so a Machine's threshold `filter`):
+  `custom_filter_label` with `custom_filter_min` and/or `custom_filter_max` keeps items whose numeric value is in range; items without one
+  are left out. A label with no bound is not a filter, and `mark_items_used_matching` does not accept it as its required filter.
+- **Setting fields**: `update_item` has `set_custom_fields`; `add_item` and `bulk_add_items` now take `custom_fields: [{label, value}]` on a new item.
+- **Reading**: `list_items` rows and Quick Chat context blocks (an item, a fridge, what is expiring) include the filled fields.
+- Editing a field (including an accepted Autofill) re-checks Machine thresholds, as any other item change does.
+
 ### `PATCH /item-outcomes/{id}` · `POST /item-outcomes/{id}/undo` 🔒
 
 `PATCH` accepts `{ "outcome": "used|wasted" }` while the short-lived Undo snapshot is

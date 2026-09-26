@@ -212,7 +212,20 @@ class ChatContextService
             .($i->opened ? ' · opened' : '')
             .($i->nutrition_category ? " · {$i->nutrition_category}" : '')
             .($i->weight !== null ? " · {$i->weight}".($i->weight_unit ?? '') : '')
-            .($i->calories !== null ? " · {$i->calories} kcal" : '');
+            .($i->calories !== null ? " · {$i->calories} kcal" : '')
+            .$this->fieldsSuffix($i);
+    }
+
+    /** " · Protein=25 g; Brand=X" - the item's filled custom fields, so Chat can use them (capped so a busy item can't dominate a list). */
+    private function fieldsSuffix(Item $i): string
+    {
+        $fields = collect($i->custom_fields ?? [])->filter(fn ($f) => trim((string) ($f['value'] ?? '')) !== '');
+        if ($fields->isEmpty()) {
+            return '';
+        }
+
+        return ' · '.$fields->take(6)->map(fn ($f) => ($f['label'] ?? '?').'='.Str::limit((string) $f['value'], 40, '…'))->implode('; ')
+            .($fields->count() > 6 ? ' (+'.($fields->count() - 6).' more)' : '');
     }
 
     private function parseDate(?string $value): ?string

@@ -250,9 +250,11 @@ class MachineDraftValidator
 
             // Same "mark everything used" guardrail AgentToolbox::hasItemFilter() enforces at
             // run time, checked here too so a filter-less draft never gets saved at all.
-            if ($argErrors === [] && $tool === 'mark_items_used_matching'
+            $hasCustomRange = trim((string) ($args['custom_filter_label'] ?? '')) !== ''
+                && (is_numeric($args['custom_filter_min'] ?? null) || is_numeric($args['custom_filter_max'] ?? null));
+            if ($argErrors === [] && $tool === 'mark_items_used_matching' && ! $hasCustomRange
                 && ! collect(self::ITEM_FILTER_KEYS)->contains(fn ($key) => isset($args[$key]) && $args[$key] !== '' && $args[$key] !== false)) {
-                $argErrors[] = "step {$n}: mark_items_used_matching needs at least one filter (search, location, expired_only, expiring_within_days, or fridge_id).";
+                $argErrors[] = "step {$n}: mark_items_used_matching needs at least one filter (search, location, expired_only, expiring_within_days, fridge_id, or a custom field range: custom_filter_label with custom_filter_min/max).";
             }
 
             $placeholderError = $argErrors === [] ? $this->validatePlaceholders($args, $n) : null;

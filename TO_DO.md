@@ -125,6 +125,8 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
 - **Ask Chef + chat context** (committed, unpublished): "Ask Chef" box on the recipe form (`POST /recipes/ask-chef`, 2 credits) and
   on the Meal plan (replaces Autofill; same endpoint, now takes a typed `prompt`, 3 credits); Quick Chat can pin items, a fridge,
   a recipe, a day, a meal-plan week, the shopping list or what's expiring (`contexts` on `POST /chat`, no extra credit).
+- **Custom-field autofill** (committed, unpublished): item-page Autofill also fills empty custom fields ("Protein"...) from history, a built-in
+  nutrient table, then the one AI call; Chat and Machines can filter/sum/set custom fields ("25 g" now counts as 25).
 - **Explore** Phase 1 (search + icon / recipe / Machine / meal-plan libraries, admin-curated, read-only) is live. Phase 2 (user contributions) needs UGC moderation (App Store 1.2) first: see `EXPLORE_PLAN.md`.
 
 ### Execution queue (post-launch product work; details in "Product backlog")
