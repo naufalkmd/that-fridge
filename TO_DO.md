@@ -8,7 +8,7 @@ entry.
 fast-follow (see Deferred). API hosted in Singapore; v1 app UI is English-only.
 
 **Hard deadline: Sep 30, 2026, 11:45pm PDT.** The app must be **fully published and live**
-(review passed), not just submitted — review takes days, so submit ~2 weeks early.
+(review passed), not just submitted — review takes days.
 
 ---
 
@@ -39,7 +39,7 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
 `backend/DEPLOY.md`, and the **Reference** section at the bottom of this file.
 
 ### Commands (all must be green before you call anything done)
-- Backend: `cd backend && php artisan test` (~750 tests). Style: `vendor/bin/pint --test <files you
+- Backend: `cd backend && php artisan test` (~770 tests). Style: `vendor/bin/pint --test <files you
   touched>` — repo-wide Pint has **pre-existing failures in untouched files**; don't "fix" those.
 - Mobile: `cd apps/mobile && npx tsc --noEmit -p tsconfig.json && npx jest` (jest-expo +
   `@testing-library/react-native`). Core: `cd packages/core && npx tsc --noEmit`.
@@ -47,15 +47,15 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
 - macOS shell: BSD `sed` needs `-i ''` and has no `\s` — use `perl -pi -e` or python.
 
 ### Deploy & release rules
-- Push to `main` ⇒ `deploy-api.yml` (backend + migrations). **`eas-update.yml` is currently
-  DISABLED in GitHub** (found 2026-09-26; last auto-OTA was `bbff2c2`), so a push no longer ships
-  an OTA — publish by hand from `apps/mobile`: `EXPO_PUBLIC_API_URL=https://api.thatfridge.com/api
-  EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=<see workflow> npx eas env:exec production "eas update --branch
-  production --environment production --non-interactive --message '…'"` (local eas-cli needs
-  `--environment`), or re-enable the workflow in the Actions tab (ask the owner why it was off).
-  OTA runtime = `apps/mobile/app.config.ts` `version` (currently `1.3.3`,
-  policy `appVersion`). Native changes (new native module, permissions, icon) need a version bump
-  + a `v*` tag build (TestFlight/Play), not OTA. Roll back an OTA: `eas update:rollback`.
+- Push to `main` ⇒ `deploy-api.yml` (backend + migrations). **`eas-update.yml` is DISABLED in
+  GitHub** (found 2026-09-26; last auto-OTA was `bbff2c2`), so pushing no longer ships an OTA.
+  Publish by hand from `apps/mobile`: `EXPO_PUBLIC_API_URL=https://api.thatfridge.com/api
+  EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=<from eas-update.yml> npx eas env:exec production "eas update
+  --branch production --environment production --non-interactive --message '…'"` (local eas-cli
+  needs `--environment`), or re-enable the workflow in the Actions tab.
+- OTA runtime = `apps/mobile/app.config.ts` `version` (currently `1.3.3`, policy `appVersion`).
+  Native changes (new native module, permissions, icon) need a version bump + a `v*` tag build
+  (TestFlight/Play), not OTA. Roll back an OTA: `eas update:rollback`.
 - **Do not push/deploy without the owner's explicit OK** — they have asked "commit, don't deploy"
   before. A bad OTA (chat attachments) already crashed once: device-test before pushing.
 - Commits: **no `Co-Authored-By: Claude` trailer** (owner rule), stage specific files, new commits
@@ -98,34 +98,27 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   don't test-drive mutating features against prod with the shared demo account.
 
 ### Current state (2026-09-26)
-- `main` == `origin/main` at `5593b01`. Backend is deployed (API deploy green): feedback logger +
-  insights admin, unified Remove, opened-item shelf life, privacy wording, plus the server-side
-  signals for expiry/low-stock alerts, scans, autofill and notification toggles. Collection is still
-  switched **off** (`ALGO_FEEDBACK_ENABLED`, see Pending verification).
-- **OTA published by hand to `production` / runtime 1.3.3 (update group `b9964b3c-a856-4f18-9dfd-fc7d840a6df9`)**
-  and it carries *everything* since `bbff2c2`: Kitchen Lab value editor, Remove/Undo, opened-item UI,
-  "Help improve" switch, chat 👍/👎, plus the `d30bcd0` UI pass (tidier Add-item card with icon-only
-  Auto-fill and qty on the date row; one **+** attach sheet in chat; one notification-card style on
-  Home with crew tips inside the Notifications section, events scoped to the selected fridge —
-  the bell dot and full `/notifications` screen are still all-fridges).
+- `main` == `origin/main` (except docs-only TO_DO commits). Backend deployed: feedback logger +
+  Algorithm insights admin, unified Remove, opened-item shelf life, privacy wording, and server-side
+  signals for alerts, scans, autofill and notification toggles — **collection is still off**
+  (`ALGO_FEEDBACK_ENABLED`, see Pending verification).
+- **Live OTA (production, runtime 1.3.3, group `b9964b3c-a856-4f18-9dfd-fc7d840a6df9`)** carries
+  everything since `bbff2c2`: Kitchen Lab value editor, Remove/Undo, opened-item UI, "Help improve"
+  switch, chat 👍/👎, tidier Add-item card, chat **+** attach sheet, one notification-card style on
+  Home (events scoped to the selected fridge). **None of it has been run on a device.** Rollback:
+  `eas update:rollback` on `production`.
 - **Not in any OTA yet:** `8ca25a6` (scan drafts send `parsed_name`; without it the scan "saved"
-  signal is silently skipped — older app versions still work). Batch it with the QA fixes.
-- **None of it has been run on a device.** Rollback if anything crashes: `eas update:rollback` on `production`.
-- Working tree clean.
+  signal is skipped — older app versions still work). Batch it with the QA fixes.
 
-### Execution queue (post-launch product work; details in "Product backlog" below)
-| # | Item | Done when |
-|---|---|---|
-| 0 | **Device QA** of the live OTA (everything since `91188bf`) | Checklist ticked; OTA rolled back if anything crashes |
-| 1 | Finish Algorithm insights (P1 leftovers, P2 signals, remaining admin pages) | See backlog |
-| 2 | Opened-item alert-timing decision | See backlog |
-| 3 | Larger scope: credit-scheme audit, calendar integration, multi-Machine generation | see items below |
+### Execution queue (post-launch product work; details in "Product backlog")
+1. **Device QA** of the live OTA. 2. **Turn on feedback collection.** 3. Finish Algorithm insights.
+4. Opened-item alert-timing decision. 5. Credit-scheme audit, then calendar, then multi-Machine.
 
 **Priority over all of the above: the launch items** (Android Play setup, Devpost submission — hard
 deadline Sep 30, 2026 11:45pm PDT) and the "Deferred to post-launch — don't work on these before
 Sep 30" list is off-limits until then. Don't let the queue above displace a launch blocker, and
-don't push risky OTAs close to the deadline without device QA.
-Open owner decisions: waste in Waste Saver score, "wasted this month" stat, no-expiry removals.
+don't push risky OTAs close to the deadline without device QA. Open owner decisions: waste in
+Waste Saver score, "wasted this month" stat, no-expiry removals.
 
 ---
 
@@ -133,8 +126,7 @@ Open owner decisions: waste in Waste Saver score, "wasted this month" stat, no-e
 
 ### iOS — App Store
 
-`v1.3.0` is approved and live. (Rejection/resubmission history from the 2.1(b)/5.1.1(v) round:
-git log around `37e21a7` if ever needed again.)
+`v1.3.0` is approved and live.
 
 - [ ] `v1.3.2` — App Store rating (Settings row + native review prompt), swipe-right-to-profile,
   light/dark theme — submitted for review 2026-09-18, awaiting Apple's decision. **Verify status
@@ -143,41 +135,27 @@ git log around `37e21a7` if ever needed again.)
 
 ### Android — Play Store
 
-Play Console **Personal** account, app record (`app.thatfridge`, Food & Drink, Free), Data
-Safety / content rating / ads / financial / health declarations, advertising-ID declaration,
-app icon + feature graphic, and the `#delete-account`/`#delete-data` privacy-policy anchors are
-all done. First production build shipped to Internal testing; RevenueCat's Android API key
-(`EXPO_PUBLIC_RC_ANDROID_KEY`) is wired into EAS and the `Platform.OS`-based key-selection bug
-is fixed (`a7fea71`) — the paywall works for whichever products are attached (below).
+Done: Play Console **Personal** account, app record (`app.thatfridge`), Data Safety / content
+rating / declarations, listing assets, `#delete-account`/`#delete-data` policy anchors, first
+Internal-testing build, RevenueCat Android key wired into EAS (`a7fea71`), 4 of 5 IAP products
+created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already fires
+`.github/workflows/google-play.yml`.
 
-- [ ] **EAS→Play publishing service account is NOT actually set up**, despite earlier appearing
-  configured — a real `eas build --auto-submit` attempt failed with "Google Service Account Keys
-  cannot be set up in --non-interactive mode." Needs running `eas credentials` (interactive,
-  can't be done from here) → Android → production → Google Service Account → set up, using the
-  **Release manager**-role service account JSON (separate from RevenueCat's). Until then, every
-  build needs a manual `.aab` upload to Play Console. Evidence (2026-09-26): `google-play.yml`
-  **failed on the `v1.3.1` and `v1.3.2` tags** (2026-09-18) and never ran for `v1.3.3` (TestFlight
-  did) — commit `37e21a7`'s "service account is set up" was premature; RevenueCat's own Play
-  credentials *are* configured (separate thing).
-- [ ] **Google Play Payments Profile is incomplete** (pay.google.com/business/console) — this is
-  the likely root cause of persistent, differently-coded "unexpected error" failures when
-  creating the `credits_100` product specifically. Needs the banking/payout + tax (W-8BEN) form
-  there completed before retrying.
-- [ ] **`credits_100` product still not created** in Play Console — blocked on the above. The
-  other 4 products (`thatfridge_pro_monthly` $2.99/mo, `thatfridge_pro_yearly` $19.99/yr,
-  `credits_500` $7.99, `credits_1500` $19.99) exist and are already attached to RevenueCat
-  (verified via the RevenueCat API 2026-09-26: the Play app has exactly those 4; the App Store app
-  has all 3 credit packs plus both subscriptions);
-  attach `credits_100` the same way once it's created.
-- [ ] **Closed testing must clear before Play Console allows creating the remaining IAP
-  product** — track created and running (started 2026-09-16); check Play Console for the exact
-  tester-count/day requirement and days remaining. Internal testing opt-ins do **not** count
-  toward this — testers need the Closed-testing-specific opt-in link.
+- [ ] **EAS→Play publishing service account is NOT set up** — `google-play.yml` failed on the
+  `v1.3.1` and `v1.3.2` tags (2026-09-18, "Google Service Account Keys cannot be set up in
+  --non-interactive mode") and never ran for `v1.3.3`. Run `eas credentials` (interactive) →
+  Android → production → Google Service Account, with a **Release manager**-role service account
+  JSON (separate from RevenueCat's, whose own Play credentials are fine). Until then every build
+  needs a manual `.aab` upload to Play Console.
+- [ ] **Google Play Payments Profile is incomplete** (pay.google.com/business/console) — likely
+  root cause of the "unexpected error" failures creating `credits_100`. Needs the banking/payout +
+  tax (W-8BEN) form completed first.
+- [ ] **`credits_100` not created in Play Console** — blocked on the Payments Profile and on
+  **closed testing** clearing (track running since 2026-09-16; check Play Console for the
+  tester-count/day requirement — Internal-testing opt-ins don't count, testers need the
+  Closed-testing opt-in link). Attach it to RevenueCat like the other 4 once created.
 - [ ] **Google Sign-In on Android needs its own OAuth client** (separate from iOS's) — the
   button fails ("sign-in didn't go through") until this exists.
-- [ ] Once the above clears: enable the tag trigger is already done
-  (`.github/workflows/google-play.yml` fires on the same `v*` tag as `testflight.yml`) — just
-  needs the service account fixed for it to actually work end-to-end.
 - [ ] **UGC reporting is stricter in wording than Apple's** — Google's policy says "in-app
   functionality for reporting"; the mailto-based report (`FridgeNotes.tsx`, `find-friend.tsx`)
   commonly passes review in practice but is a literal gap vs. the text. Deliberately left as-is;
@@ -198,33 +176,25 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 
 **Pending verification**
 
-- [ ] **Turn feedback collection ON in prod** — `ALGO_FEEDBACK_ENABLED` defaults to `false`
-  (`backend/config/app.php`; `.env.production.example`), so **no feedback rows are being written
-  yet**. The updated privacy notices are deployed; set `ALGO_FEEDBACK_ENABLED=true` in the
-  server `.env` and rebuild the config cache (`backend/DEPLOY.md`). Until then every signal, the
-  rollup and the admin page stay empty; events can't be backfilled, so flip it soon. Also
-  re-check the store privacy labels first (item below).
-- [ ] **Device QA of the live OTA** — never run on a device, and an OTA crashed once already. Check:
-  Home (one card style; tips swipe/Clear; switching fridge hides other fridges' events, All Fridges
-  shows all), Add item (card layout, wand Auto-fill, camera date scan, qty stepper; also the barcode
-  scan card), chat **+** sheet (take photo / library / PDF — the picker opens ~350ms after the sheet
-  closes, verify it does on iOS), Notifications swipe + undo, Find a Friend recent searches,
-  Kitchen Lab (templates, timezone, value editor, dry run, history, undo, duplicate-trigger
-  warning), the single Remove button + Undo toast + "change to thrown out" correction (single,
-  bulk, swipe, chat), opened-item label / edit days / "Mark as sealed again" (eggs and whole
-  produce show no Opened button), Profile → "Help improve" switch + "Delete my improvement data",
-  chat 👍/👎, and the Algorithm insights admin page.
+- [ ] **Device QA of the live OTA** — an OTA crashed once already. Check: Home (one card style; tips
+  swipe/Clear; switching fridge hides other fridges' events, All Fridges shows all), Add item (card
+  layout, wand Auto-fill, camera date scan, qty stepper; barcode scan card), chat **+** sheet
+  (take photo / library / PDF — the picker opens ~350ms after the sheet closes, verify on iOS),
+  Notifications swipe + undo, Find a Friend recent searches, Kitchen Lab (templates, timezone,
+  value editor, dry run, history, undo, duplicate-trigger warning), the single Remove button + Undo
+  toast + "change to thrown out" correction (single, bulk, swipe, chat), opened-item label / edit
+  days / "Mark as sealed again" (eggs and whole produce show no Opened button), Profile → "Help
+  improve" switch + "Delete my improvement data", chat 👍/👎, and the Algorithm insights admin page.
+- [ ] **Turn feedback collection ON in prod** — `ALGO_FEEDBACK_ENABLED` defaults to `false`, so no
+  feedback rows are written yet; events can't be backfilled. The updated privacy notices are
+  deployed. First re-check the App Store privacy label + Play Data Safety purposes ("Analytics /
+  product improvement") for item-name / guess-vs-final feedback, then set the flag in the server
+  `.env` and rebuild the config cache (`backend/DEPLOY.md`). Afterwards confirm the nightly
+  `app:rollup-algo-stats` ran (Scheduled jobs widget).
 - [ ] **Decide on the disabled `eas-update.yml`** — re-enable, or keep OTAs manual on purpose.
-- [ ] **Check the nightly `app:rollup-algo-stats`** ran after the first night *with collection on*
-  (Scheduled jobs admin widget) — it has nothing to roll up until the flag is enabled.
-- [ ] Optional: scope the Home bell dot and the full `/notifications` screen by fridge too.
-- [ ] **Store privacy labels** — re-check App Store privacy label + Play Data Safety purposes
-  ("Analytics / product improvement") now that item-name/guess-vs-final feedback is collected.
 - [ ] **Screen-level tests** for `kitchen-lab.tsx` and `find-friend.tsx` (only their logic modules
   are covered today; RNTL can't simulate the swipe pan gesture).
-- [ ] **Local dev DB**: Postgres listens on 5432 but `backend/.env` has `DB_PORT=5433`, so
-  `php artisan migrate` fails locally (tests unaffected — in-memory SQLite). Confirm which
-  port is intended before changing either.
+- [ ] Optional: scope the Home bell dot and the full `/notifications` screen by fridge too.
 
 **Algorithm insights — what's left**
 
@@ -241,7 +211,8 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
   "create Product" from the unknown-barcodes queue, icon-requests → `SharedIcon`, outcome metrics
   (waste rate, items rescued, alert action rate, add time per item), data-health widget
   (event-volume drops, null rates — the rollup's last-run already shows in Scheduled jobs), and
-  read-only opened snapshot columns on `ItemResource` (only the `opened` flag is shown). Keep `MIN_USERS` hiding; act on patterns only with ≥5 users.
+  read-only opened snapshot columns on `ItemResource` (only the `opened` flag is shown). Keep
+  `MIN_USERS` hiding; act on patterns only with ≥5 users.
 - **Later:** per-user personalisation and automatic rule learning (needs volume).
 
 **Opened-item shelf life — leftovers**
@@ -256,8 +227,7 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 
 **Larger scope, tackle last**
 
-- [ ] **Recheck the credit scheme** — moved here from Phase 2 (2026-09-25) since it's an audit-
-  first task, not a foundation the other phases block on. The authority is
+- [ ] **Recheck the credit scheme** — an audit-first task. The authority is
   `backend/app/Services/CreditService.php` plus `ai_credit_ledger`; prices are centralized in
   `backend/app/Support/CreditCost.php`, grants arrive through `RevenueCatWebhookController`
   and `GrantMonthlyCredits`, and the mobile ledger is displayed by
@@ -279,9 +249,8 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
   independent Machines, but return and validate them as separate drafts. Review each trigger
   and action independently, detect duplicates, charge per saved Machine, and save atomically or
   report partial failures clearly. Keep the current one-trigger/up-to-10-step Machine model as
-  the default until this review flow exists. Depends on the *duplicate-trigger protection* and
-  *dry run* work in Phase 3 — multi-Machine drafts need the same duplicate detection and preview
-  safety, just applied per-draft.
+  the default until this review flow exists. Reuse the existing duplicate-trigger detection and dry
+  run, applied per draft.
 
 ### Deferred to post-launch (don't work on these before Sep 30)
 
@@ -304,7 +273,7 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
   intuitive metric ("items rescued"), a live Home card, an honest timeframe. Backend
   `user_goals`/`UserGoalController`/`progress.ts` still exist, unused by the client.
 - [ ] Turn on low-balance email alerts on the OpenRouter + fal.ai dashboards (the spend-ceiling
-  system itself is done — see AI credits below).
+  system itself is done).
 - [ ] Photographic recipe hero image — an optional full-bleed photo (`image_url`, `flux/schnell`
   no-rembg ~$0.003/img) on the card + detail, alongside the existing `icon`/`icon_url`. Web
   parity for the icon picker also unbuilt.
@@ -372,11 +341,6 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 | Google Play Console                                           | $25 one-time | Paid                                             |
 | OpenRouter wallet (AI chat/vision, prepaid, no auto-recharge) | $10 one-time | Paid                                             |
 | fal.ai wallet (icon generation, prepaid, no auto-recharge)    | $10 one-time | Paid                                             |
-
-- [X] **Downgrade EAS back to the free plan** before the next monthly renewal, if the extra iOS
-  build capacity isn't still needed by then — subscribed 2026-09-18 to unblock a TestFlight build
-  after hitting the free tier's monthly iOS build quota. Check the exact renewal date at
-  `expo.dev/accounts/avocacode/settings/billing`.
 
 **Fixed recurring cost: ≈$49.72/mo ($596.66/yr)**, regardless of user count. Apple's commission
 is 15% once the Small Business Program application (submitted 2026-09-05) is approved, 30%
@@ -518,8 +482,8 @@ server-side.
 (done >60d / any >180d), terminal `fridge_join_requests` >90d, `photos/`+`receipts/` scan
 images + orphaned `icons/`/`recipe-attachments/` files >7d. Not pruned: `chat_history` (needs a
 "kept 12 months" UI message first), and real user data (items, recipes, usage history, memory).
-`--dry-run` reports without deleting. `algo_feedback_events` pruned at 180d, `algo_stats_daily` kept (no user id). `photo_scans`/`receipts`/`receipt_line_items` tables are
-dead schema — the vision services store the file and return it inline, never writing a row.
+`algo_feedback_events` are pruned at 180d; `algo_stats_daily` is kept (no user id). `--dry-run`
+reports without deleting. `photo_scans`/`receipts`/`receipt_line_items` tables are dead schema — the vision services store the file and return it inline, never writing a row.
 
 ### Security
 
@@ -619,8 +583,7 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
    native feature use; a written rebuttal is on hand in `STORE_LISTING.md` §3 if needed.
 3. **Shipaton "first public release" timing.** No public TestFlight/Play link or press before
    the store listing is live.
-4. **The deadline is a wall.** Sep 30, no extensions. Submit ~2 weeks early; be ready for
-   same-day resubmits if rejected.
+4. **The deadline is a wall.** Sep 30, no extensions; be ready for same-day resubmits if rejected.
 5. **Scope creep.** Anything not already in the app is post-launch OTA. The paywall is
    mandatory — don't trade release-track time for a nice-to-have screen.
 
