@@ -11,7 +11,7 @@ class OnboardingFunnelWidget extends Widget
 {
     protected static string $view = 'filament.widgets.onboarding-funnel';
 
-    protected static ?int $sort = 4;
+    protected static ?int $sort = 7;
 
     protected int|string|array $columnSpan = 1;
 

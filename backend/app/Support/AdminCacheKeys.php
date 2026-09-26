@@ -11,6 +11,12 @@ final class AdminCacheKeys
 
     public const CREDIT_SPEND = 'admin:credit-spend:7';
 
+    public const AI_USAGE = 'admin:ai-usage:';
+
+    public const AI_BY_DAY = 'admin:ai-by-day:';
+
+    public const AI_BY_FEATURE = 'admin:ai-by-feature:';
+
     public const ONBOARDING_FUNNEL = 'admin:funnel:14';
 
     public const ALGORITHM_INSIGHTS = 'admin:algorithm-insights:30';

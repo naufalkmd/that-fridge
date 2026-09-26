@@ -28,7 +28,7 @@ class ScheduledJobs extends Widget implements HasActions, HasForms
 
     protected static string $view = 'filament.widgets.scheduled-jobs';
 
-    protected static ?int $sort = 6;
+    protected static ?int $sort = 9;
 
     protected int|string|array $columnSpan = 'full';
 

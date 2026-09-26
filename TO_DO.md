@@ -10,6 +10,8 @@ fast-follow (see Deferred). API hosted in Singapore; v1 app UI is English-only.
 **Hard deadline: Sep 30, 2026, 11:45pm PDT.** The app must be **fully published and live**
 (review passed), not just submitted — review takes days.
 
+> The admin panel (`/admin` → Insights → To-do, and the top of the dashboard) keeps a live copy of this launch checklist with a countdown; tick items off there.
+
 ---
 
 ## Handoff — read this first (context for the next AI / developer)

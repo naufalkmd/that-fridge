@@ -40,7 +40,7 @@ class FalClient
             'image_size' => 'square',
             'num_images' => 1,
             'output_format' => 'png',
-        ], 'images.0.url');
+        ], 'images.0.url', 'Icon generation', 'cost_generate', 0.003);
     }
 
     /**
@@ -50,28 +50,41 @@ class FalClient
      */
     public function removeBackground(string $imageUrl): array
     {
-        return $this->post($this->rembgUrl, ['image_url' => $imageUrl], 'image.url');
+        return $this->post($this->rembgUrl, ['image_url' => $imageUrl], 'image.url', 'Icon background removal', 'cost_rembg', 0.0005);
     }
 
-    private function post(string $url, array $body, string $urlField): array
+    /**
+     * fal.ai does not report a cost per call, so each call is logged with an ESTIMATE from config (services.fal.cost_generate /
+     * cost_rembg, in US$): flux/schnell is billed per megapixel and one square icon is about one. Correct the config if fal's prices change.
+     */
+    private function post(string $url, array $body, string $urlField, string $feature = 'Icon generation', string $costKey = 'cost_generate', float $defaultCost = 0.003): array
     {
         if (! $this->available()) {
             return ['ok' => false, 'reason' => 'no_api_key'];
         }
 
         try {
+            $startedAt = microtime(true);
             $response = Http::withHeaders([
                 'Authorization' => "Key {$this->apiKey}",
             ])->post($url, $body);
+            $latency = (int) round((microtime(true) - $startedAt) * 1000);
+            $record = fn (bool $ok, ?string $reason = null) => app(ApiUsageLogger::class)->record([
+                'provider' => 'fal', 'feature' => $feature, 'model' => str_replace('https://fal.run/', '', $url), 'ok' => $ok, 'reason' => $reason,
+                'cost_usd' => $ok ? (float) config("services.fal.{$costKey}", $defaultCost) : null, 'cost_estimated' => true, 'latency_ms' => $latency,
+            ]);
 
             if ($response->successful()) {
                 $imageUrl = $response->json($urlField);
 
                 if (! $imageUrl) {
+                    $record(false, 'api_error');
                     Log::error('fal.ai response missing image url', ['url' => $url, 'body' => $response->body()]);
 
                     return ['ok' => false, 'reason' => 'api_error', 'status' => $response->status()];
                 }
+
+                $record(true);
 
                 return ['ok' => true, 'image_url' => $imageUrl];
             }
@@ -83,6 +96,7 @@ class FalClient
                 default => 'api_error',
             };
 
+            $record(false, $reason);
             Log::error('fal.ai API error', ['url' => $url, 'status' => $response->status(), 'reason' => $reason, 'body' => $response->body()]);
 
             return ['ok' => false, 'reason' => $reason, 'status' => $response->status()];

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\ApiUsageFeature;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -51,19 +52,32 @@ class OpenRouterClient
                 'model' => $model,
                 'max_tokens' => $maxTokens,
                 'messages' => $messages,
+                // Ask OpenRouter to report the tokens and the real cost of this call in its response (see ApiUsageLogger).
+                'usage' => ['include' => true],
             ];
 
             if ($tools) {
                 $payload['tools'] = $tools;
             }
 
+            $startedAt = microtime(true);
+            $feature = ApiUsageFeature::resolve();
             $response = Http::withHeaders([
                 'Authorization' => "Bearer {$this->apiKey}",
                 'HTTP-Referer' => config('app.url'),
                 'X-Title' => 'ThatFridge',
             ])->post($this->baseUrl, $payload);
+            $latency = (int) round((microtime(true) - $startedAt) * 1000);
 
             if ($response->successful()) {
+                $usage = $response->json('usage', []);
+                app(ApiUsageLogger::class)->record([
+                    'provider' => 'openrouter', 'feature' => $feature, 'model' => $model,
+                    'prompt_tokens' => (int) ($usage['prompt_tokens'] ?? 0), 'completion_tokens' => (int) ($usage['completion_tokens'] ?? 0),
+                    'cost_usd' => isset($usage['cost']) && is_numeric($usage['cost']) ? (float) $usage['cost'] : null,
+                    'ok' => true, 'latency_ms' => $latency,
+                ]);
+
                 $message = $response->json('choices.0.message', []);
 
                 return [
@@ -81,6 +95,9 @@ class OpenRouterClient
                 default => 'api_error',
             };
 
+            app(ApiUsageLogger::class)->record([
+                'provider' => 'openrouter', 'feature' => $feature, 'model' => $model, 'ok' => false, 'reason' => $reason, 'latency_ms' => $latency,
+            ]);
             Log::error('OpenRouter API error', ['status' => $response->status(), 'reason' => $reason, 'body' => $response->body()]);
 
             return ['ok' => false, 'reason' => $reason, 'status' => $response->status()];

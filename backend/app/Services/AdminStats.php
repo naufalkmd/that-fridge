@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AiCreditLedger;
+use App\Models\ApiUsageLog;
 use App\Models\ChatHistory;
 use App\Models\Fridge;
 use App\Models\GeneratedIcon;
@@ -10,6 +11,7 @@ use App\Models\Item;
 use App\Models\Recipe;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The operator's at-a-glance counters, shared by `app:stats` and the admin dashboard so the
@@ -107,6 +109,89 @@ class AdminStats
             $out['apple'][] = $onDay->where('oauth_provider', 'apple')->count();
             $out['google'][] = $onDay->where('oauth_provider', 'google')->count();
             $out['email'][] = $onDay->whereNull('oauth_provider')->count();
+        }
+
+        return $out;
+    }
+
+    /**
+     * What the AI providers cost over the last N days, per provider, from our own call log (ApiUsageLog): dollars, calls, failures, tokens.
+     * `unpriced` counts successful calls the provider did not report a cost for, so a low total is never mistaken for a cheap one.
+     *
+     * @return array<string, array{cost: float, calls: int, failed: int, tokens: int, unpriced: int, estimated: bool}>
+     */
+    public function aiUsageSummary(int $days = 7): array
+    {
+        $out = ['openrouter' => $this->emptyUsage(), 'fal' => $this->emptyUsage()];
+        ApiUsageLog::query()
+            ->where('created_at', '>=', Carbon::now()->subDays($days))
+            ->groupBy('provider')
+            ->selectRaw('provider, sum(cost_usd) as cost, count(*) as calls, sum(case when ok then 0 else 1 end) as failed, sum(prompt_tokens + completion_tokens) as tokens, sum(case when ok and cost_usd is null then 1 else 0 end) as unpriced, max(case when cost_estimated then 1 else 0 end) as estimated')
+            ->get()
+            ->each(function ($row) use (&$out) {
+                $out[$row->provider] = [
+                    'cost' => round((float) $row->cost, 4), 'calls' => (int) $row->calls, 'failed' => (int) $row->failed,
+                    'tokens' => (int) $row->tokens, 'unpriced' => (int) $row->unpriced, 'estimated' => (bool) $row->estimated,
+                ];
+            });
+
+        return $out;
+    }
+
+    /** @return array{cost: float, calls: int, failed: int, tokens: int, unpriced: int, estimated: bool} */
+    private function emptyUsage(): array
+    {
+        return ['cost' => 0.0, 'calls' => 0, 'failed' => 0, 'tokens' => 0, 'unpriced' => 0, 'estimated' => false];
+    }
+
+    /**
+     * Dollars per day for the last N days, one series per provider, every day present (zero when quiet) so a chart's x axis never skips.
+     *
+     * @return array{labels: list<string>, openrouter: list<float>, fal: list<float>}
+     */
+    public function aiSpendByDay(int $days = 14): array
+    {
+        $start = Carbon::today()->subDays($days - 1);
+        $rows = ApiUsageLog::query()
+            ->where('created_at', '>=', $start)
+            ->groupBy(DB::raw('date(created_at)'), 'provider')
+            ->selectRaw('date(created_at) as d, provider, sum(cost_usd) as cost')
+            ->get()
+            ->groupBy(fn ($r) => (string) $r->d);
+
+        $out = ['labels' => [], 'openrouter' => [], 'fal' => []];
+        for ($day = $start->copy(); $day->lte(Carbon::today()); $day->addDay()) {
+            $onDay = $rows->get($day->toDateString(), collect());
+            $out['labels'][] = $day->format('M j');
+            foreach (['openrouter', 'fal'] as $provider) {
+                $out[$provider][] = round((float) $onDay->firstWhere('provider', $provider)?->cost, 4);
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Where the AI money goes: dollars per feature over the last N days, biggest first; everything past `$limit` folds into "Everything else".
+     *
+     * @return array<string, float>
+     */
+    public function aiSpendByFeature(int $days = 7, int $limit = 8): array
+    {
+        $rows = ApiUsageLog::query()
+            ->where('created_at', '>=', Carbon::now()->subDays($days))
+            ->groupBy('feature')
+            ->selectRaw('feature, sum(cost_usd) as cost')
+            ->orderByDesc('cost')
+            ->get();
+
+        $out = [];
+        foreach ($rows->take($limit) as $row) {
+            $out[$row->feature] = round((float) $row->cost, 4);
+        }
+        $rest = (float) $rows->skip($limit)->sum('cost');
+        if ($rest > 0) {
+            $out['Everything else'] = round($rest, 4);
         }
 
         return $out;

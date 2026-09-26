@@ -41,6 +41,9 @@ return [
 
     'fal' => [
         'key' => env('FAL_KEY'),
+        // fal.ai does not report a cost per call, so the admin dashboard estimates one (US$ per call). Adjust if fal's prices change.
+        'cost_generate' => (float) env('FAL_COST_GENERATE', 0.003),
+        'cost_rembg' => (float) env('FAL_COST_REMBG', 0.0005),
     ],
 
     // Sign in with Apple / Google. `client_ids` are the audiences an identity token is

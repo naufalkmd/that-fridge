@@ -156,6 +156,9 @@ MAIL_FROM_NAME=ThatFridge
 # AI providers (same keys as local dev)
 OPENROUTER_API_KEY=...
 FAL_KEY=...
+# Optional: fal.ai has no per-call price, so the admin dashboard estimates it (USD per image)
+FAL_COST_GENERATE=0.003
+FAL_COST_REMBG=0.0005
 
 # Lock CORS to the app's origins (see note below)
 ```
@@ -180,6 +183,13 @@ php artisan view:cache
 php artisan event:cache
 php artisan filament:optimize # caches the admin panel's components + icons
 ```
+
+> **Admin dashboard (`/admin`):** every OpenRouter and fal.ai call is logged to `api_usage_logs`
+> (cost, tokens, feature, failures), so the AI cost widgets fill in from the first deploy onward;
+> there is no history before that. OpenRouter's cost is real; fal.ai's is an estimate from the
+> two `FAL_COST_*` values. The OpenRouter balance tile uses the same key (`/credits`, then `/key`).
+> The migration also seeds the **To-do** list (Insights → To-do, and the top of the dashboard)
+> with the launch checklist; tick items off there instead of in `TO_DO.md`.
 
 > Change the seeded reviewer password from the default before submitting, and put the real
 > credentials in the App Review notes + your password manager.
