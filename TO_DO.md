@@ -47,8 +47,13 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
 - macOS shell: BSD `sed` needs `-i ''` and has no `\s` — use `perl -pi -e` or python.
 
 ### Deploy & release rules
-- Push to `main` ⇒ `deploy-api.yml` (backend + migrations) **and** `eas-update.yml` (OTA to the
-  `production` channel). OTA runtime = `apps/mobile/app.config.ts` `version` (currently `1.3.3`,
+- Push to `main` ⇒ `deploy-api.yml` (backend + migrations). **`eas-update.yml` is currently
+  DISABLED in GitHub** (found 2026-09-26; last auto-OTA was `bbff2c2`), so a push no longer ships
+  an OTA — publish by hand from `apps/mobile`: `EXPO_PUBLIC_API_URL=https://api.thatfridge.com/api
+  EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=<see workflow> npx eas env:exec production "eas update --branch
+  production --environment production --non-interactive --message '…'"` (local eas-cli needs
+  `--environment`), or re-enable the workflow in the Actions tab (ask the owner why it was off).
+  OTA runtime = `apps/mobile/app.config.ts` `version` (currently `1.3.3`,
   policy `appVersion`). Native changes (new native module, permissions, icon) need a version bump
   + a `v*` tag build (TestFlight/Play), not OTA. Roll back an OTA: `eas update:rollback`.
 - **Do not push/deploy without the owner's explicit OK** — they have asked "commit, don't deploy"
@@ -93,17 +98,21 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   don't test-drive mutating features against prod with the shared demo account.
 
 ### Current state (2026-09-26)
-- Pushed to `main` (`main` == `origin/main`): Kitchen Lab value editor (`1a286df`) and `3c89571` —
-  algorithm feedback logger + sharing switch + rollup + Algorithm insights admin (scoreboard, gaps,
-  unknown barcodes), unified Remove action with Undo/correction, opened-item shelf-life resolver +
-  `effectiveExpiry` + edit/"sealed again" UI, privacy policy + PDPA wording. Migrations run on deploy.
-- **None of the shipped UI (`91188bf`, `1a286df`, `3c89571`) has been run on a device.** Do QA next.
-- Working tree: this file is the only uncommitted change.
+- `main` == `origin/main` at `d30bcd0`. Backend (`3c89571`: feedback logger + insights admin,
+  unified Remove, opened-item shelf life, privacy wording) is deployed; migrations ran on deploy.
+- **OTA published by hand to `production` / runtime 1.3.3 (update group `b9964b3c-a856-4f18-9dfd-fc7d840a6df9`)**
+  and it carries *everything* since `bbff2c2`: Kitchen Lab value editor, Remove/Undo, opened-item UI,
+  "Help improve" switch, chat 👍/👎, plus the `d30bcd0` UI pass (tidier Add-item card with icon-only
+  Auto-fill and qty on the date row; one **+** attach sheet in chat; one notification-card style on
+  Home with crew tips inside the Notifications section, events scoped to the selected fridge —
+  the bell dot and full `/notifications` screen are still all-fridges).
+- **None of it has been run on a device.** Rollback if anything crashes: `eas update:rollback` on `production`.
+- Working tree clean.
 
 ### Execution queue (post-launch product work; details in "Product backlog" below)
 | # | Item | Done when |
 |---|---|---|
-| 0 | **Device QA** of `91188bf` + `1a286df` + `3c89571` | Checklist ticked; OTA rolled back if anything crashes |
+| 0 | **Device QA** of the live OTA (everything since `91188bf`) | Checklist ticked; OTA rolled back if anything crashes |
 | 1 | Finish Algorithm insights (P1/P2 signals + remaining admin pages) | See backlog |
 | 2 | Opened-item leftovers (consumer parity, alert-timing check) | See backlog |
 | 3 | Larger scope: credit-scheme audit, calendar integration, multi-Machine generation | see items below |
@@ -183,17 +192,19 @@ food-group removal, credits-ledger labels, mobile jest runner) are **shipped** �
 
 **Pending verification**
 
-- [ ] **Device QA of everything shipped since `91188bf`** — never run on a device, and an OTA crashed
-  once already; if anything breaks, `eas update:rollback` on `production`. Check: Notifications
-  swipe + undo, Home preview, Find a Friend recent searches, Add-item with no food-group control,
+- [ ] **Device QA of the live OTA** — never run on a device, and an OTA crashed once already. Check:
+  Home (one card style; tips swipe/Clear; switching fridge hides other fridges' events, All Fridges
+  shows all), Add item (card layout, wand Auto-fill, camera date scan, qty stepper; also the barcode
+  scan card), chat **+** sheet (take photo / library / PDF — the picker opens ~350ms after the sheet
+  closes, verify it does on iOS), Notifications swipe + undo, Find a Friend recent searches,
   Kitchen Lab (templates, timezone, value editor, dry run, history, undo, duplicate-trigger
   warning), the single Remove button + Undo toast + "change to thrown out" correction (single,
   bulk, swipe, chat), opened-item label / edit days / "Mark as sealed again" (eggs and whole
   produce show no Opened button), Profile → "Help improve" switch + "Delete my improvement data",
   chat 👍/👎, and the Algorithm insights admin page.
-- [ ] **Confirm the `3c89571` deploy ran** — 4 new migrations (`algo_feedback_*`, `item_outcomes`,
-  opened snapshot columns, chat feedback) and the nightly `app:rollup-algo-stats` schedule; check
-  the "Scheduled jobs" admin widget after the first night.
+- [ ] **Decide on the disabled `eas-update.yml`** — re-enable, or keep OTAs manual on purpose.
+- [ ] **Check the nightly `app:rollup-algo-stats`** ran after the first night (Scheduled jobs admin widget).
+- [ ] Optional: scope the Home bell dot and the full `/notifications` screen by fridge too.
 - [ ] **Store privacy labels** — re-check App Store privacy label + Play Data Safety purposes
   ("Analytics / product improvement") now that item-name/guess-vs-final feedback is collected.
 - [ ] **Screen-level tests** for `kitchen-lab.tsx` and `find-friend.tsx` (only their logic modules
@@ -570,8 +581,8 @@ retired once web output ships) · signing keys + store assets in a shared passwo
   (runs migrations automatically).
 - Legal site: `https://thatfridge.com` (Cloudflare Workers). CD:
   `.github/workflows/deploy-legal.yml`.
-- Mobile OTA: `.github/workflows/eas-update.yml`, push to `main` touching `apps/mobile`/
-  `packages` → production channel.
+- Mobile OTA: `.github/workflows/eas-update.yml` (push to `main` touching `apps/mobile`/
+  `packages` → production channel) — **currently disabled**, publish manually (see Deploy rules).
 - Mobile native builds: `git tag v*` (or manual dispatch) fires both
   `.github/workflows/testflight.yml` (iOS) and `.github/workflows/google-play.yml` (Android) —
   Android auto-submit needs its service account fixed first (see Android section).
