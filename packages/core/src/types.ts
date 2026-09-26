@@ -125,6 +125,10 @@ export interface Recipe {
   id: string;
   name: string;
   minutes: number;
+  /** Estimated kcal for ONE serving, worked out server-side from the ingredients (never typed in). */
+  calories?: number | null;
+  /** How that number was worked out: the nutrition table, the model, or a stop-gap until the model has looked. */
+  caloriesSource?: "algorithm" | "ai" | "rough" | null;
   category: RecipeCategory | null;
   /** The recipe's own thumbnail: curated pixel-pack key. Null → fall back to ingredients[0]. */
   icon: string | null;

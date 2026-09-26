@@ -17,6 +17,7 @@ class JobHeartbeat
         'app:snapshot-kitchen-scores' => ['label' => 'Kitchen score snapshot', 'every' => 'Mondays 07:30'],
         'app:prune-stale-data' => ['label' => 'Prune stale data', 'every' => 'Daily 04:00'],
         'app:rollup-algo-stats' => ['label' => 'Algorithm stats rollup', 'every' => 'Daily 04:30'],
+        'app:fill-recipe-calories' => ['label' => 'Recipe calories', 'every' => 'Daily 05:00'],
         'app:grant-monthly-credits' => ['label' => 'Monthly credit grant', 'every' => '1st of month 00:15'],
     ];
 

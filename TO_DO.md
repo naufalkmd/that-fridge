@@ -178,6 +178,13 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
 
 ### Product backlog
 
+- [ ] **Recipe calories — built, not deployed** (committed, unpushed). Every recipe gets `calories`
+  per serving from `RecipeCalories`/`NutritionTable` (table first; the model only when < 70% of the
+  ingredients are recognised). After the deploy: spot-check a few real recipes against expectations,
+  and run `php artisan app:fill-recipe-calories` once on the server so the model refines the
+  stop-gaps (the nightly sweep does 50/day). Recipes have no quantities, so it is "one typical
+  serving" by design; the table values are estimates. Needs an OTA for the app to show the number.
+
 **Algorithm insights — what's left**
 
 - [ ] Nothing required; extend only if the data shows gaps. Autofill's card is all-or-nothing, so

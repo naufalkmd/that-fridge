@@ -6,6 +6,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import type { Recipe, RecipeCategory } from "@thatfridge/core";
+import { caloriesSuffix } from "@/lib/recipeCalories";
 import { useInventory } from "@/lib/inventory";
 import { useRecipes } from "@/lib/recipes";
 import { PixelText } from "@/components/brand";
@@ -247,7 +248,7 @@ function Row({
           {r.name}
         </Text>
         <Text style={{ fontSize: 11, color: ready ? GOOD : MUTED }} numberOfLines={1}>
-          {r.minutes} min · {have}/{total} ready
+          {r.minutes} min{caloriesSuffix(r)} · {have}/{total} ready
           {!r.isMine && r.ownerUsername ? ` · from @${r.ownerUsername}` : ""}
         </Text>
       </View>

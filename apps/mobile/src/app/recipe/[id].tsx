@@ -14,6 +14,7 @@ import * as Haptics from "expo-haptics";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { describeError } from "@thatfridge/core";
+import { caloriesSuffix } from "@/lib/recipeCalories";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { useShopping } from "@/lib/shopping";
@@ -170,7 +171,7 @@ export default function RecipeDetail() {
         )}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4, marginBottom: 18 }}>
           <Text style={{ fontSize: 12.5, color: FAINT }}>
-            {recipe.minutes} min · {haveCount}/{ingredients.length} ready
+            {recipe.minutes} min{caloriesSuffix(recipe, true)} · {haveCount}/{ingredients.length} ready
           </Text>
           {recipe.category && (
             <View style={{ backgroundColor: `${BLUE}1a`, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>

@@ -2,8 +2,10 @@
 
 namespace App\Observers;
 
+use App\Jobs\EstimateRecipeCalories;
 use App\Models\Recipe;
 use App\Services\MachineTriggerService;
+use App\Services\RecipeCalorieService;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -16,6 +18,25 @@ use Illuminate\Support\Facades\Auth;
 class RecipeObserver
 {
     public function __construct(private MachineTriggerService $machines) {}
+
+    /**
+     * Calories per serving are always derived, never typed: computed from the ingredients whenever a
+     * recipe is created, its ingredients change, or it has none yet. Only the fast, free table
+     * algorithm runs in the request; a recipe it can't cover is handed to the model via a queued job.
+     */
+    public function saving(Recipe $recipe): void
+    {
+        if ($recipe->calories === null || $recipe->isDirty('ingredients')) {
+            app(RecipeCalorieService::class)->applyAlgorithm($recipe);
+        }
+    }
+
+    public function saved(Recipe $recipe): void
+    {
+        if ($recipe->calories_source === 'rough' && ($recipe->wasRecentlyCreated || $recipe->wasChanged('ingredients'))) {
+            EstimateRecipeCalories::dispatch($recipe->id)->afterCommit();
+        }
+    }
 
     public function updated(Recipe $recipe): void
     {

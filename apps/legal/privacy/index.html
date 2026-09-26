@@ -83,7 +83,7 @@
         <li><strong>Fridges</strong> you own or join — names, storage sections, and any fridge photo you upload.</li>
         <li><strong>Food items</strong> — name, quantity, category, expiry / best-before date, storage location, and an optional link to where you buy it.</li>
         <li><strong>Shopping list</strong> items.</li>
-        <li><strong>Recipes</strong> — titles, ingredients, steps, tags, links you import, and any photo or video attachments you add.</li>
+        <li><strong>Recipes</strong> — titles, ingredients, steps, tags, links you import, and any photo or video attachments you add. We work out an estimated calorie count per serving for each recipe from its ingredients, using a built-in nutrition table and, where that cannot cover them, by sending the recipe's name, ingredients and steps to our AI provider (see &sect;4).</li>
         <li><strong>AI-generated icons</strong> — the short prompt you type and the resulting image, kept in your icon library.</li>
         <li><strong>Fridge notes</strong>, <strong>goals</strong>, and earned <strong>badges</strong>.</li>
         <li><strong>Kitchen Lab automations</strong> — the sentence you type to describe an automation, the trigger and steps it becomes (which you can edit), and a log of each run and what it did. The sentence is sent to the AI provider to draft the automation (see &sect;4); once saved, it runs on our server without further AI use.</li>
@@ -202,7 +202,7 @@
         <tr><th>Provider</th><th>Purpose</th><th>Data shared</th></tr>
         <tr><td>DigitalOcean, LLC (servers in Singapore)</td><td>Runs our servers and database</td><td>All application data, at rest</td></tr>
         <tr><td>Cloudflare, Inc.</td><td>DNS and hosting for our public website (this page)</td><td>Standard web request logs (IP, user-agent); no account content</td></tr>
-        <tr><td>OpenRouter</td><td>Routes AI chat / recipe requests to large-language-model providers</td><td>Your message text and the kitchen context for that question (inventory, and where relevant your notes, shopping list, recipes, remembered facts, usage history); the text of any link you ask the crew to read; any photo or PDF you attach to a message; the sentence you type to draft a Kitchen Lab automation</td></tr>
+        <tr><td>OpenRouter</td><td>Routes AI chat / recipe requests to large-language-model providers</td><td>Your message text and the kitchen context for that question (inventory, and where relevant your notes, shopping list, recipes, remembered facts, usage history); the text of any link you ask the crew to read; any photo or PDF you attach to a message; the sentence you type to draft a Kitchen Lab automation; a recipe's name, ingredients and steps when its calories are estimated by the model</td></tr>
         <tr><td>Downstream LLM providers (via OpenRouter)</td><td>Generate the AI responses</td><td>Same as above, per OpenRouter's routing</td></tr>
         <tr><td>fal.ai</td><td>Receipt / fridge-photo vision parsing and food-icon image generation</td><td>The image you submitted and short prompts</td></tr>
         <tr><td>RevenueCat</td><td>Subscription and in-app-purchase entitlement management</td><td>Account ID, purchase / receipt data, device info, AI-credit balance</td></tr>

@@ -14,6 +14,7 @@ import {
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
+import { caloriesSuffix } from "@/lib/recipeCalories";
 import { useShopping } from "@/lib/shopping";
 import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
@@ -287,7 +288,7 @@ function RecipeCard({ recipe, onMade }: { recipe: Recipe; onMade: () => void }) 
             {recipe.name}
           </Text>
           <Text style={{ fontSize: 11, color: FAINT }}>
-            {recipe.minutes} min · {haveCount}/{ingredients.length} ready
+            {recipe.minutes} min{caloriesSuffix(recipe)} · {haveCount}/{ingredients.length} ready
           </Text>
         </View>
         <MaterialCommunityIcons name={open ? "chevron-up" : "chevron-down"} size={18} color={FAINT} />

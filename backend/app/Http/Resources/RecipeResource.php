@@ -18,6 +18,10 @@ class RecipeResource extends JsonResource
             'id' => (string) $this->id,
             'name' => $this->name,
             'minutes' => $this->minutes,
+            // Estimated kcal for ONE serving, derived from the ingredients (never user-entered);
+            // `caloriesSource` is algorithm | ai | rough (a stop-gap until the model has looked).
+            'calories' => $this->calories,
+            'caloriesSource' => $this->calories_source,
             'category' => $this->category,
             'icon' => $this->icon,
             'iconUrl' => $this->icon_url,

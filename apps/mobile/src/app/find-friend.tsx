@@ -14,6 +14,7 @@ import {
 import { api } from "@/lib/api";
 import { useSocial } from "@/lib/social";
 import { useRecipes } from "@/lib/recipes";
+import { caloriesSuffix } from "@/lib/recipeCalories";
 import { useTheme } from "@/lib/theme";
 import { PixelText } from "@/components/brand";
 import {
@@ -272,7 +273,7 @@ export default function FindFriend() {
                         {r.name}
                       </Text>
                       <Text style={{ fontSize: 11, color: FAINT }}>
-                        {r.minutes} min · {r.ingredients.length} ingredient
+                        {r.minutes} min{caloriesSuffix(r)} · {r.ingredients.length} ingredient
                         {r.ingredients.length === 1 ? "" : "s"}
                       </Text>
                     </View>

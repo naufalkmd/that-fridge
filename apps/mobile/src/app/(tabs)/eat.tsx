@@ -39,6 +39,7 @@ import {
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
+import { caloriesSuffix } from "@/lib/recipeCalories";
 import { useScope, scopeItems } from "@/lib/scope";
 import { useShopping } from "@/lib/shopping";
 import { useRecipes } from "@/lib/recipes";
@@ -899,7 +900,7 @@ function RecipesPanel() {
                 {tonight.r.name}
               </Text>
               <Text style={{ fontSize: 12, color: FAINT }}>
-                {tonight.r.minutes} min · {tonight.have}/{tonight.total} ready
+                {tonight.r.minutes} min{caloriesSuffix(tonight.r)} · {tonight.have}/{tonight.total} ready
               </Text>
             </View>
           </View>
@@ -1040,7 +1041,7 @@ function RecipesPanel() {
                   }}
                 >
                   <Text style={{ fontSize: 11.5, color: FAINT }}>
-                    {r.minutes} min
+                    {r.minutes} min{caloriesSuffix(r)}
                   </Text>
                   {r.category && (
                     <View

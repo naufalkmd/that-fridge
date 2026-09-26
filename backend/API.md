@@ -629,12 +629,23 @@ Also runs the one-time "What Should I Eat?" tagging call (`AgentService::tagReci
 **201**:
 ```json
 { "data": {
-  "id": "1", "name": "Weeknight Pasta", "minutes": 20, "category": null,
+  "id": "1", "name": "Weeknight Pasta", "minutes": 20, "calories": 284, "caloriesSource": "algorithm", "category": null,
   "ingredients": [{ "name": "Pasta", "icon": "leftovers" }], "steps": ["Boil it", "Eat it"], "attachments": [],
   "mealType": "dinner", "vibes": [], "foodFocus": ["balanced"], "madeCount": 0,
   "isCustom": true, "isFavorite": false
 } }
 ```
+
+**Calories.** Every recipe carries `calories` - an estimate for **one serving** - and `caloriesSource`. It is derived, never
+accepted from a request (a `calories` in the body is ignored). Recipes have no quantities, so the estimate is
+"ingredients x a typical portion of each": `App\Support\RecipeCalories` matches each ingredient name (whole words, longest
+keyword wins, "chicken or beef" averages, "salt and pepper" adds, a leading quantity is ignored) against
+`App\Support\NutritionTable` (kcal per 100 g and typical grams per serving). `caloriesSource` is `algorithm` when the table
+recognised at least 70% of the ingredients (and at least two); otherwise `rough` (a stop-gap that counts each unknown
+ingredient as 90 kcal) until the model refines it to `ai` - a queued `EstimateRecipeCalories` job right after the save, and a
+nightly `app:fill-recipe-calories` sweep (50 per run) for anything left. It is recomputed only when `ingredients` change,
+never on a rename or `made_count`. `php artisan app:fill-recipe-calories [--no-ai] [--limit=N] [--recompute]` backfills by hand;
+the migration ran the table pass over existing recipes.
 
 ### `PATCH /recipes/{recipe}` 🔒 · `DELETE /recipes/{recipe}` 🔒
 
