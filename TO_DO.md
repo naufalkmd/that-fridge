@@ -105,11 +105,12 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   Product, icon requests), unified Remove, opened-item shelf life, privacy wording, and
   server-side signals for alerts, scans, autofill, notification toggles, recipe rank and Kitchen Lab
   authoring.
-- **Live OTA (production, runtime 1.3.3, latest group `8d8148d0-e68b-46c0-b4f9-8566b1f309fb`, commit
-  `9026b34`)** carries everything since `bbff2c2`. The earlier batch was verified on a device; the
+- **Live OTA (production, runtime 1.3.3, latest group `609c5f4a-9192-4816-90ee-998596529ba8`, commit
+  `4498c81`)** carries everything since `bbff2c2`. The earlier batch was verified on a device; the
   latest changes have **not** been device-checked yet: scan `parsed_name`, Home tip taps/dismissals
   (`/tip-feedback`), fridge-scoped Home bell dot, Profile → Privacy as list rows, and the bulk-remove
-  toast summary + Kitchen Score refresh. Rollback: `eas update:rollback`.
+  toast summary + Kitchen Score refresh, and the app following server-side Pro (admin-granted Pro).
+  Rollback: `eas update:rollback`.
 
 ### Execution queue (post-launch product work; details in "Product backlog")
 
