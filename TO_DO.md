@@ -207,15 +207,13 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
   surcharge, scans, refunds, webhook idempotency, and monthly top-ups. Then version the
   pricing table, add an endpoint-to-cost test matrix, and change prices only after recording
   the expected user/cost impact.
-- [ ] **Calendar integration** — no calendar API, permission, or model exists today; expiry data
-  lives on `items.expiry_date`, local reminders are managed by
-  `apps/mobile/src/lib/localNotifications.ts`, and server expiry events come from
-  `backend/app/Console/Commands/CheckItemFreshness.php`. Implement in phases: first add a
-  permission-free `.ics` export/share from the item or expiry list; only then consider
-  `expo-calendar` event creation. If native sync is added, keep event IDs per item, use an
-  app-owned calendar, reconcile edits/deletes, handle timezone changes, and request permission
-  only at the point of export/sync. Add the package/config plugin and bump the app version
-  because this cannot safely be delivered by OTA.
+- [ ] **In-app calendar** — planned, decisions made 2026-09-26; full design in
+  [CALENDAR_PLAN.md](CALENDAR_PLAN.md). One screen (opened from a button at the right end of Home's
+  fridge-selection row) showing expiry dates, meal plan / recipe logs, Kitchen Lab runs and item
+  activity (180 days). New `meal_entries` table + `GET /api/calendar`; meal plans are shared with
+  other members of a Pro-owned fridge without ever saying "household" in the UI; meal slots are
+  user-defined with suggested templates; AI weekly planner later (after the credit audit). All
+  OTA — no native rebuild, no Apple/Google Calendar. Not before Sep 30.
 - [ ] **Kitchen Lab multi-Machine generation** — later allow one prompt to propose several
   independent Machines, but return and validate them as separate drafts. Review each trigger
   and action independently, detect duplicates, charge per saved Machine, and save atomically or
