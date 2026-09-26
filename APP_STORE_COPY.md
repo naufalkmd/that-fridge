@@ -29,22 +29,23 @@ Why these words:
 - "AI" and "chef" are high-interest words; they live in the keyword field with the recommended subtitle, and in the subtitle itself with the alternative.
 - No spaces after commas, and no plurals of a word you already have (Apple matches both).
 
-## What's New (limit 4000) — 778 characters
+## What's New (limit 4000) — 947 characters
 
 ```
-We've made ThatFridge faster and a lot more useful in the kitchen.
+ThatFridge now plans your meals, writes your recipes and opens faster than ever.
 
 NEW
-- Meal plan and Calendar: plan the week, see what expires when, and tick meals off as you cook.
-- Ask Chef: describe what you feel like and Chef writes the recipe or plans your week from what's in your fridge.
-- Quick Chat can now use your kitchen: attach an item, a fridge, a recipe, a day or your meal plan to a message.
+- Meal plan and Calendar: plan your week, see calories for each day, tick meals off as you cook, and get a reminder at mealtime.
+- Ask Chef: describe what you fancy and Chef writes the recipe, or plans your week from what's about to expire.
+- Quick Chat knows your kitchen: attach an item, a fridge, a recipe, a day or your meal plan to a message.
 - Explore: search recipes, automations, meal plans and food icons.
-- Insights: one page for your kitchen score, waste, calories and food groups, with simple charts.
-- Autofill now fills custom fields like Protein too.
+- Insights: your kitchen score, waste, calories and food groups on one page, with simple charts.
+- Autofill now fills custom fields such as Protein.
 
 BETTER
-- Opens faster and shows your last data straight away, even offline.
-- A cleaner item page and a tidier Settings.
+- Opens faster, shows your last data straight away, and stays signed in offline.
+- A cleaner item page, a tidier Settings, and a quicker way from Home to your profile.
+- Organizer can check where your items are stored, with a switch you control.
 - Fixes and small improvements throughout.
 ```
 
