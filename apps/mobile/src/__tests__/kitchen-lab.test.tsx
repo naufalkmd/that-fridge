@@ -101,6 +101,22 @@ describe("KitchenLab screen", () => {
     expect(screen.getByPlaceholderText(/Every Monday at 8am/)).toBeTruthy();
   });
 
+  test("opened with a draft from Explore it goes straight to reviewing it, unsaved", async () => {
+    mockParams = { draft: JSON.stringify(draft) };
+    await render(<KitchenLab />);
+
+    expect(await screen.findByDisplayValue(draft.name)).toBeTruthy();
+    expect(screen.getByText("Save Machine")).toBeTruthy();
+    expect(mockApi.createMachine).not.toHaveBeenCalled();
+  });
+
+  test("a garbled draft is ignored and the list shows", async () => {
+    mockParams = { draft: "{not json" };
+    await render(<KitchenLab />);
+
+    expect(await screen.findByText("Create a Machine")).toBeTruthy();
+  });
+
   test("without it, it opens on the list as before", async () => {
     await render(<KitchenLab />);
 

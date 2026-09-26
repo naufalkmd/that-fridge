@@ -12,6 +12,7 @@ use App\Http\Controllers\CalorieController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CreditController;
 use App\Http\Controllers\ExpiryScanController;
+use App\Http\Controllers\ExploreController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\FridgeController;
 use App\Http\Controllers\FridgeJoinRequestController;
@@ -79,6 +80,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/meal-entries/{mealEntry}', [MealEntryController::class, 'update']);
         Route::delete('/meal-entries/{mealEntry}', [MealEntryController::class, 'destroy']);
     });
+    Route::middleware('throttle:60,1')->get('/explore', [ExploreController::class, 'index']);
+    Route::middleware('throttle:30,1')->post('/explore/{item}/use', [ExploreController::class, 'use']);
     Route::patch('/me/meal-slots', [AuthController::class, 'updateMealSlots']);
     Route::delete('/me/improvement-data', [AuthController::class, 'deleteImprovementData']);
     Route::patch('/item-outcomes/{itemOutcome}', [ItemOutcomeController::class, 'correct']);

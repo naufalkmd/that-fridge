@@ -722,6 +722,52 @@ export interface MealAutofillResult {
   message: string | null;
 }
 
+export type ExploreType = "icon" | "recipe" | "machine" | "meal_plan";
+
+/** One meal of a meal-plan template: `day` counts from the day the plan is started (0 = that day). */
+export interface MealPlanTemplateDay {
+  day: number;
+  slot: string;
+  title: string;
+}
+
+/** An entry in the Explore catalogue (GET /explore). Which extra fields are set depends on `type`. */
+export interface ExploreItem {
+  id: string;
+  type: ExploreType;
+  title: string;
+  blurb: string | null;
+  tags: string[];
+  featured: boolean;
+  /** Icons: the picture. */
+  imageUrl: string | null;
+  /** Recipes: the headline facts (open the copy in your book for the rest). */
+  recipe: {
+    minutes: number | null;
+    calories: number | null;
+    mealType: string | null;
+    icon: string | null;
+    iconUrl: string | null;
+    ingredients: number;
+  } | null;
+  /** Machines: the draft. Meal plans: `{ days }`. */
+  payload: MachineDraft | { days: MealPlanTemplateDay[] } | null;
+}
+
+export interface ExploreResult {
+  /** Featured items in the admin's order; empty while searching. */
+  featured: ExploreItem[];
+  /** Everything else, or the ranked matches while searching. */
+  items: ExploreItem[];
+}
+
+/** POST /explore/{id}/use: what taking an item as your own produced. */
+export type ExploreUseResult =
+  | { type: "recipe"; recipe: Recipe }
+  | { type: "machine"; draft: MachineDraft }
+  | { type: "meal_plan"; created: MealEntry[]; skipped: number }
+  | { type: "icon" };
+
 export interface CalendarResult {
   entries: CalendarEntry[];
   /** True when the server hit its entry cap for this range. */

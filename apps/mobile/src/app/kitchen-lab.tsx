@@ -170,11 +170,23 @@ export default function KitchenLab() {
   }, [load]);
 
   // Opened from the calendar's "+ New automation": go straight to composing one.
-  const params = useLocalSearchParams<{ new?: string }>();
+  const params = useLocalSearchParams<{ new?: string; draft?: string }>();
   useEffect(() => {
     if (params.new === "1") openCompose();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.new]);
+
+  // Opened from Explore's "Use this Machine": review the draft it handed over (JSON in `draft`).
+  useEffect(() => {
+    if (!params.draft) return;
+    try {
+      const parsed = JSON.parse(params.draft) as MachineDraft;
+      if (parsed && typeof parsed.name === "string" && parsed.trigger && Array.isArray(parsed.steps)) openDraft(parsed);
+    } catch {
+      // A garbled draft just leaves the list showing.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.draft]);
 
   // Collapse the value editors whenever a different Machine/draft (or screen) is opened.
   useEffect(() => {
@@ -249,7 +261,11 @@ export default function KitchenLab() {
    *  fridgeId - seed it here the same way so a single-fridge user isn't left with Save
    *  disabled by a still-null fridgeId. */
   function openTemplate(template: MachineTemplate) {
-    const built = template.build();
+    openDraft(template.build());
+  }
+
+  /** Review a ready-made draft (a curated template, or one taken from Explore) - see openTemplate. */
+  function openDraft(built: MachineDraft) {
     setEditingId(null);
     setRuns(null);
     setDryRunResult(null);

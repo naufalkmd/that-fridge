@@ -263,6 +263,10 @@ function AppShell({
                                       }}
                                     />
                                     <Stack.Screen
+                                      name="explore"
+                                      options={{ headerShown: false }}
+                                    />
+                                    <Stack.Screen
                                       name="insights"
                                       options={{ headerShown: false }}
                                     />

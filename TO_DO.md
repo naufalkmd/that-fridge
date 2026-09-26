@@ -115,8 +115,8 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
 - **Latest OTA** (group `ab975687-731d-4089-9dd0-a850906abda1`, commit `96ac86c`, API deployed): calendar delete / filter
   dropdown / Ask Quick Chat, Meal plan Autofill (3 credits), calendar fridge picker, change a Machine's fridge,
   Insights + Crew score + Privacy + Meal plan + Calendar Settings rows, profile avatar icon. Not device-checked yet.
-- **Explore** (search + icon / recipe / Machine / meal-plan libraries, admin-curated, user contributions): planned in
-  `EXPLORE_PLAN.md`; needs UGC moderation (App Store 1.2) before contributions, so it is post-launch.
+- **Explore** Phase 1 (search + icon / recipe / Machine / meal-plan libraries, admin-curated, read-only) is built and committed,
+  not pushed. Phase 2 (user contributions) needs UGC moderation (App Store 1.2) first: see `EXPLORE_PLAN.md`.
 
 ### Execution queue (post-launch product work; details in "Product backlog")
 

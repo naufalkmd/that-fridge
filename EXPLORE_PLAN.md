@@ -1,8 +1,18 @@
 # Explore — plan
 
-Status: **not started** (2026-09-26). Asked for as a Settings row; it needs its own design because it is
+Status: **Phase 1 built, unpublished** (2026-09-26): `explore_items`, `GET /explore` (ranked search), `POST /explore/{id}/use`, Filament Content → Explore, `app:seed-explore`, and the app's `explore.tsx` (Settings row). Phase 2 (contributions + moderation) not started. Earlier: not started. Asked for as a Settings row; it needs its own design because it is
 a search product plus a user-contribution system. Recommendation: ship Phase 1 after the Sep 30
 Shipaton deadline, not before.
+
+## Phase 1 as built
+
+- `explore_items` (type, ref_id, payload, title, blurb, tags, featured, position, status). The migration seeds it from curated
+  recipes, the shared icon pack and 3 Machine + 3 meal-plan starter templates; `php artisan app:seed-explore` (or the admin
+  "Sync from libraries" button) adds anything new and never touches admin edits.
+- Search is scored in PHP (`ExploreSearch`), portable across Postgres/SQLite; fine while the catalogue is in the low thousands.
+  Move to `pg_trgm` if it outgrows that.
+- The static `MACHINE_TEMPLATES` in the app still exist in Kitchen Lab (works offline); the same three are now also in Explore.
+- Admin payload check: a Machine draft must pass `MachineDraftValidator`; a meal plan must be `{days:[{day 0-41, slot, title}]}`.
 
 ## What was asked
 

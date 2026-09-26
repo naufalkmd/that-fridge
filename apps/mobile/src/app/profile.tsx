@@ -203,6 +203,7 @@ export default function Profile() {
           <LinkRow icon="restaurant-outline" label="Recipe book" onPress={() => router.push("/recipes")} />
           <LinkRow icon="calendar-number-outline" label="Calendar" badge="NEW" onPress={() => router.push("/calendar")} />
           <LinkRow icon="calendar-outline" label="Meal plan" onPress={() => router.push("/meal-plan")} />
+          <LinkRow icon="compass-outline" label="Explore" badge="NEW" onPress={() => router.push("/explore")} />
           <LinkRow icon="speedometer-outline" label="Crew score" onPress={() => router.push("/crew-score")} />
           <LinkRow icon="stats-chart-outline" label="Insights" badge="NEW" onPress={() => router.push("/insights")} />
           <LinkRow icon="ribbon-outline" label="Badges" onPress={() => router.push("/badges")} />

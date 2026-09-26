@@ -418,6 +418,30 @@ Deletes the caller's own `item_outcomes` rows for that day and outcome (not undo
 Deletes one entry of an automation's run history (the machine owner/editor only; 404 if the run
 belongs to another machine). Returns 204. Items the run removed stay removed - only the log entry goes.
 
+## Explore
+
+The catalogue behind the Explore page (Profile → Settings → Explore): recipes, Kitchen Lab Machines, meal-plan
+templates and food icons. Rows live in `explore_items` and are curated in the admin panel (Content → Explore:
+feature, reorder, hide, edit tags, sync new recipes/icons in). Phase 1 is read-only for users: nothing is submitted.
+
+### `GET /explore?q=&type=` 🔒
+
+`type` is `icon | recipe | machine | meal_plan` (optional). Without `q`: `featured` (the admin's featured items, in
+order) and `items` (everything published, in order, up to 120). With `q`: `items` are the ranked matches (best
+first) and `featured` is empty. Ranking (`ExploreSearch`): every word must match; title beats tag beats blurb;
+exact > prefix > substring; plurals and one-letter typos still match; an exact title wins. Icons and recipes whose
+row was deleted are left out. Not wrapped in `data`. Each item: `id, type, title, blurb, tags, featured`, plus
+`imageUrl` (icons), `recipe {minutes, calories, mealType, icon, iconUrl, ingredients}` (recipes) or `payload`
+(Machine draft, or `{ days: [{ day, slot, title }] }`). Throttled 60/min.
+
+### `POST /explore/{id}/use` 🔒
+
+Takes an item as your own (404 if it is not published). Recipe: a copy in your recipe book (`{ type, recipe }`,
+201). Machine: `{ type, draft }` to review in Kitchen Lab - nothing is saved or run. Meal plan: body `start`
+(`YYYY-MM-DD`) and optional `fridge_id`; puts its meals on your plan from that day into empty slots, skipping
+slots you already filled (`{ type, created, skipped }`, 201). Icon: `{ type }` only - shared icons are already in
+the icon picker. Throttled 30/min.
+
 ## Meal plan
 
 Entries appear in `GET /calendar` as `kind: "meal"` (with `slot`, `status`, `note`, `by`, and

@@ -2,6 +2,9 @@ import { ApiError, type HttpClient, type TokenStore } from "./http";
 import type {
   CalendarResult,
   MealEntry,
+  ExploreResult,
+  ExploreType,
+  ExploreUseResult,
   MealAutofillResult,
   MealEntryInput,
   BadgeKey,
@@ -906,6 +909,21 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.post<MealAutofillResult>("/meal-entries/autofill", params);
   }
 
+  /** Browse (no `q`) or search the Explore catalogue; `type` narrows to one library. */
+  function getExplore(params: { q?: string; type?: ExploreType } = {}): Promise<ExploreResult> {
+    const query = new URLSearchParams();
+    if (params.q) query.set("q", params.q);
+    if (params.type) query.set("type", params.type);
+    const qs = query.toString();
+    return http.get<ExploreResult>(`/explore${qs ? `?${qs}` : ""}`);
+  }
+
+  /** Take an Explore item as your own: copies a recipe, returns a Machine draft, or puts a meal plan on
+   *  your plan from `start` (YYYY-MM-DD). */
+  function useExploreItem(id: string, body?: { start?: string; fridge_id?: string | null }): Promise<ExploreUseResult> {
+    return http.post<ExploreUseResult>(`/explore/${id}/use`, body);
+  }
+
   function deleteMealEntry(id: string): Promise<void> {
     return http.del<void>(`/meal-entries/${id}`);
   }
@@ -1323,6 +1341,8 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     deleteMachineRun,
     createMealEntry,
     autofillMealPlan,
+    getExplore,
+    useExploreItem,
     updateMealEntry,
     deleteMealEntry,
     estimateMealCalories,
