@@ -100,22 +100,20 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
 
 ### Current state (2026-09-26)
 
-- `main` == `origin/main` (except docs-only TO_DO commits). Backend deployed: feedback logger +
-  Algorithm insights admin, unified Remove, opened-item shelf life, privacy wording, and server-side
-  signals for alerts, scans, autofill and notification toggles — **collection is still off**
-  (`ALGO_FEEDBACK_ENABLED`, see Pending verification).
+- Backend deployed and feedback collection is **on**: logger + Algorithm insights admin (data
+  health, outcome metrics, retention, per-algorithm detail, rule suggestions, unknown barcodes →
+  Product, icon requests), unified Remove, opened-item shelf life, privacy wording, and
+  server-side signals for alerts, scans, autofill, notification toggles, recipe rank and Kitchen Lab
+  authoring.
 - **Live OTA (production, runtime 1.3.3, group `b9964b3c-a856-4f18-9dfd-fc7d840a6df9`)** carries
-  everything since `bbff2c2`: Kitchen Lab value editor, Remove/Undo, opened-item UI, "Help improve"
-  switch, chat 👍/👎, tidier Add-item card, chat **+** attach sheet, one notification-card style on
-  Home (events scoped to the selected fridge). **None of it has been run on a device.** Rollback:
-  `eas update:rollback` on `production`.
+  everything since `bbff2c2` and has been verified on a device. Rollback: `eas update:rollback`.
 - **Not in any OTA yet:** `8ca25a6` (scan drafts send `parsed_name`; without it the scan "saved"
-  signal is skipped — older app versions still work). Batch it with the QA fixes.
+  signal is skipped — older app versions still work).
 
 ### Execution queue (post-launch product work; details in "Product backlog")
 
-1. **Device QA** of the live OTA. 2. **Turn on feedback collection.** 3. Finish Algorithm insights.
-2. Opened-item alert-timing decision. 5. Credit-scheme audit, then calendar, then multi-Machine.
+1. P1 leftovers (restock cadence, tip dismissals) → next OTA. 2. Screen tests + fridge-scoped bell
+dot. 3. Opened-item alert-timing decision. 4. Credit-scheme audit, then calendar, then multi-Machine.
 
 **Priority over all of the above: the launch items** (Android Play setup, Devpost submission — hard
 deadline Sep 30, 2026 11:45pm PDT) and the "Deferred to post-launch — don't work on these before
@@ -177,47 +175,21 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
 
 ### Product backlog
 
-**Pending verification**
+**Pending**
 
-- [X] **Device QA of the live OTA** — an OTA crashed once already. Check: Home (one card style; tips
-  swipe/Clear; switching fridge hides other fridges' events, All Fridges shows all), Add item (card
-  layout, wand Auto-fill, camera date scan, qty stepper; barcode scan card), chat **+** sheet
-  (take photo / library / PDF — the picker opens ~350ms after the sheet closes, verify on iOS),
-  Notifications swipe + undo, Find a Friend recent searches, Kitchen Lab (templates, timezone,
-  value editor, dry run, history, undo, duplicate-trigger warning), the single Remove button + Undo
-  toast + "change to thrown out" correction (single, bulk, swipe, chat), opened-item label / edit
-  days / "Mark as sealed again" (eggs and whole produce show no Opened button), Profile → "Help
-  improve" switch + "Delete my improvement data", chat 👍/👎, and the Algorithm insights admin page.
-- [X] **Turn feedback collection ON in prod** — `ALGO_FEEDBACK_ENABLED` defaults to `false`, so no
-  feedback rows are written yet; events can't be backfilled. The updated privacy notices are
-  deployed. First re-check the App Store privacy label + Play Data Safety purposes ("Analytics /
-  product improvement") for item-name / guess-vs-final feedback, then set the flag in the server
-  `.env` and rebuild the config cache (`backend/DEPLOY.md`). Afterwards confirm the nightly
-  `app:rollup-algo-stats` ran (Scheduled jobs widget).
-- [X] **Decide on the disabled `eas-update.yml`** — re-enable, or keep OTAs manual on purpose.
-- [X] **Screen-level tests** for `kitchen-lab.tsx` and `find-friend.tsx` (only their logic modules
-  are covered today; RNTL can't simulate the swipe pan gesture).
-- [X] Optional: scope the Home bell dot and the full `/notifications` screen by fridge too.
+- [ ] **Screen-level tests** for `kitchen-lab.tsx` and `find-friend.tsx` (only their logic modules
+  are covered today; RNTL can't simulate the swipe pan gesture). *(Ticked in an earlier edit, but
+  no such tests exist in the repo — kept open until confirmed.)*
+- [ ] Scope the Home bell dot and the full `/notifications` screen by fridge too (Home's list
+  already is). *(Same: ticked, but not implemented.)*
 
 **Algorithm insights — what's left**
 
 - [ ] **P1 leftovers:** low-stock *restock cadence* (item re-added N days after removal) and Home
-  crew-tip dismissals (local-only today, needs a client event). The rest of P1 is emitted
-  server-side (expiry/low-stock alert sent→acted, scan detected/saved, autofill proposed/applied,
-  notification toggles, recipe rank, Kitchen Lab authoring) — all inert until
-  `ALGO_FEEDBACK_ENABLED=true`. Autofill's card is
+  crew-tip dismissals (local-only today, needs a client event, so an OTA). Autofill's card is
   all-or-nothing, so "partly accepted" only shows up as `changed` values after "Use these".
-- [ ] **Retention cohorts (D1/D7/D30)** — the only P2 signal left; derive from `analytics_events`
-  `app_open` (or user `created_at` + activity) in the nightly rollup rather than a new logger.
-- [ ] **Admin pages still missing** (only scoreboard, gaps, unknown-barcodes exist): per-algorithm
-  tabs with accuracy tables, rule-suggestions queue (copy/export only, never auto-applied), one-click
-  "create Product" from the unknown-barcodes queue, icon-requests → `SharedIcon`, outcome metrics
-  (waste rate, items rescued, alert action rate, add time per item), data-health widget
-  (event-volume drops, null rates — the rollup's last-run already shows in Scheduled jobs), and
-  read-only opened snapshot columns on `ItemResource` (only the `opened` flag is shown). Keep
-  `MIN_USERS` hiding; act on patterns only with ≥5 users.
-
-- **Later:** per-user personalisation and automatic rule learning (needs volume).
+- **Later:** per-user personalisation and automatic rule learning (needs volume). Act on patterns
+  only with ≥5 people (`ACT_USERS`); the admin page hides names below 3 (`MIN_USERS`).
 
 **Opened-item shelf life — leftovers**
 
