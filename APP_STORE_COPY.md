@@ -16,7 +16,7 @@ category Food & Drink. Treat the rest of that report with caution: it listed fit
 | **Subtitle** (recommended) | 30 | `Meal Plan, Pantry & Recipes` | 27 |
 | Subtitle, alternative | 30 | `AI Chef, Meals & Less Waste` | 27 |
 | **Keywords** (with the recommended title + subtitle) | 100 | `expiry,tracker,ai,chef,grocery,inventory,leftovers,waste,shopping,calories,nutrition,freezer,barcode` | 100 |
-| Keywords, if you use the alternative subtitle | 100 | `expiry,tracker,grocery,inventory,leftovers,waste,shopping,calories,nutrition,household,freezer,barcode,fridge,food` | 114 |
+| Keywords, if you use the alternative subtitle | 100 | `expiry,tracker,pantry,recipes,grocery,inventory,leftovers,shopping,calories,nutrition,freezer,barcode` | 101 |
 | **Promotional text** (editable any time, not indexed) | 170 | `Know what's in your fridge, use it before it expires, and plan meals from it. Scan, get reminders, ask Chef, and waste less food with your household.` | 149 |
 
 The title and subtitle are deliberately broad. ThatFridge is now an inventory, meal planner, recipe book, AI chef and
@@ -25,7 +25,7 @@ keyword field, and the promo text and screenshots still lead with it.
 
 Why these words:
 - Title + subtitle already carry "kitchen", "assistant", "meal", "plan", "pantry" and "recipes", so those are **not** repeated in the keyword field.
-- "Fridge" is in the brand name; if you want the plain word indexed too, use the second keyword string (with the alternative subtitle).
+- With the alternative subtitle, "pantry" and "recipes" move into the keyword field and "waste" comes out (the subtitle has it), so the second string is different, not just longer.
 - "AI" and "chef" are high-interest words; they live in the keyword field with the recommended subtitle, and in the subtitle itself with the alternative.
 - No spaces after commas, and no plurals of a word you already have (Apple matches both).
 
