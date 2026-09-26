@@ -10,19 +10,24 @@ category Food & Drink. Treat the rest of that report with caution: it listed fit
 
 | Field | Limit | Text | Length |
 |---|---|---|---|
-| **Title** (pick one) | 30 | `ThatFridge: Expiry Tracker` | 26 |
-| | | `ThatFridge: Food Expiry` | 23 |
-| **Subtitle** (pick one) | 30 | `Meal Plan, Recipes & AI Chef` | 28 |
-| | | `Track, Cook & Waste Less` | 24 |
-| **Keywords** | 100 | `grocery,pantry,inventory,leftovers,waste,shopping,list,calories,nutrition,household,freezer,barcode` | 99 |
-| **Keywords, if you want "fridge" and "kitchen"** | 100 | `grocery,pantry,inventory,leftovers,waste,shopping,calories,nutrition,freezer,barcode,fridge,kitchen` | 99 |
+| **Title** (recommended) | 30 | `ThatFridge: Kitchen Assistant` | 29 |
+| Title, alternatives | 30 | `ThatFridge: Kitchen Planner` | 27 |
+| | | `ThatFridge: Meal & Pantry` | 25 |
+| **Subtitle** (recommended) | 30 | `Meal Plan, Pantry & Recipes` | 27 |
+| Subtitle, alternative | 30 | `AI Chef, Meals & Less Waste` | 27 |
+| **Keywords** (with the recommended title + subtitle) | 100 | `expiry,tracker,ai,chef,grocery,inventory,leftovers,waste,shopping,calories,nutrition,freezer,barcode` | 100 |
+| Keywords, if you use the alternative subtitle | 100 | `expiry,tracker,grocery,inventory,leftovers,waste,shopping,calories,nutrition,household,freezer,barcode,fridge,food` | 114 |
 | **Promotional text** (editable any time, not indexed) | 170 | `Know what's in your fridge, use it before it expires, and plan meals from it. Scan, get reminders, ask Chef, and waste less food with your household.` | 149 |
 
+The title and subtitle are deliberately broad. ThatFridge is now an inventory, meal planner, recipe book, AI chef and
+kitchen insights, so "expiry" alone under-sells it. Expiry stays searchable: it (and "tracker", "waste", "leftovers") sits in the
+keyword field, and the promo text and screenshots still lead with it.
+
 Why these words:
-- "Expiry", "tracker", "meal", "plan", "recipes", "AI", "chef", "waste", "food" are covered by the title/subtitle, so they are **not** repeated in the keyword field.
-- The old subtitle spent its space on "fridge" and "kitchen". Users who search those still find you through "ThatFridge" and the keyword field alternative above.
-- Use the first keyword string if the title/subtitle already say what the app is; use the second if you want the literal words "fridge" and "kitchen" indexed.
-- No spaces after commas, no plurals of a word you already have (Apple matches both).
+- Title + subtitle already carry "kitchen", "assistant", "meal", "plan", "pantry" and "recipes", so those are **not** repeated in the keyword field.
+- "Fridge" is in the brand name; if you want the plain word indexed too, use the second keyword string (with the alternative subtitle).
+- "AI" and "chef" are high-interest words; they live in the keyword field with the recommended subtitle, and in the subtitle itself with the alternative.
+- No spaces after commas, and no plurals of a word you already have (Apple matches both).
 
 ## What's New (limit 4000) — 778 characters
 
