@@ -242,6 +242,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Each call writes a file (up to 20MB) - throttle so a script can't fill the disk.
     Route::middleware('throttle:20,1')->post('/recipes/attachments', [RecipeController::class, 'uploadAttachment']);
     Route::post('/recipes/import-link', [RecipeController::class, 'importFromLink']);
+    Route::middleware('throttle:10,1')->post('/recipes/ask-chef', [RecipeController::class, 'askChef']);
     // After /suggest so that literal path still wins; before the {recipe} write routes.
     Route::get('/recipes/{recipe}', [RecipeController::class, 'show']);
     Route::patch('/recipes/{recipe}', [RecipeController::class, 'update']);

@@ -314,6 +314,19 @@ available, reverses or adds usage credit, and records the correction. `POST .../
 restores the original item and reverses any usage credit within ten minutes. Only the
 user who removed the item can correct or undo it.
 
+### `POST /chat` - attached context 🔒
+
+Besides `message`, images and a PDF, a message can carry `contexts`: up to 6 of
+`{ "type": "item|fridge|recipe|day|meal_plan|shopping|expiring", "id": ... }` (a JSON array, or a JSON string in a multipart
+send) and optionally `tz` (the device timezone, so a `day` is the user's local day). `id` is the item / fridge / recipe id, a
+`YYYY-MM-DD` date (`day`; for `meal_plan` the week's first day, default this week), a fridge id or omitted for the shopping list,
+and omitted for `expiring`. `ChatContextService` turns each into a text block the model reads (an item's details, a fridge's items
+soonest-to-expire first, a recipe's ingredients and steps, a day's meals / expiries / activity, a week of the meal plan with
+calories, the unticked shopping list, items within 3 days of expiry). Every id is checked against what the caller may see - other
+people's items, fridges, recipes and shopping lists are silently left out ("N attachment(s) could not be read"). The blocks are
+wrapped as data (`<<<CONTEXT>>>`), item ids are included so tools can act on them, and the saved / returned `user_message` stays
+exactly what was typed. No extra credit: it is a normal chat turn. Ignored on compact tip-card calls.
+
 ### `PATCH /chat/{chatHistory}/feedback` 🔒
 
 Rate one saved assistant reply with `{ "rating": "up" }` or
@@ -471,7 +484,7 @@ sending `calories: null` drops a typed number and re-estimates. A cooked log mad
 ### `POST /meal-entries/autofill` 🔒
 
 AI-fills the **empty** slots of the meal plan. Body: `from`, `to` (`YYYY-MM-DD`, at most 14 days apart), optional
-`fridge_id` (membership-checked, else 404; default the caller's own fridge). The slots are the user's own
+`fridge_id` (membership-checked, else 404; default the caller's own fridge). Optional `prompt` (max 300 chars): what the user wants this plan to be ("vegetarian, high protein"), given to the model as data; blank is a plain autofill. The app calls this "Ask Chef". The slots are the user's own
 `meal_slots` (default Lunch + Dinner) with no meal yet on that day, at most 21, oldest first. One model
 call gets the slots, what is in the fridge (soonest to expire first), the recipe book and what is already
 planned; each proposed meal is only accepted for an offered date + slot and goes through `MealPlanService`
@@ -713,6 +726,16 @@ Owner only. Same body fields as `POST` (all optional on `PATCH`). Tags (`mealTyp
 ### `POST /recipes/{recipe}/favorite` 🔒 · `DELETE /recipes/{recipe}/favorite` 🔒
 
 Any visible recipe (curated or own). Toggles the current user's favorite. **200**, updated recipe.
+
+### `POST /recipes/ask-chef` 🔒
+
+"Ask Chef" on the recipe form: drafts a recipe from a typed request. Body: `prompt` (3-400 chars), optional `use_fridge`
+(bool: lean on what is in the caller's fridges, soonest to expire first). Nothing is saved - the form fills itself and the user
+saves. Same `{ found, recipe: { name, minutes, category, ingredients: [{name}], steps }, reason? }` shape as the link import,
+plus `creditsUsed` and `balance` (not wrapped in `data`). **Metered: 2 credits** (`CreditCost::RECIPE_CHEF`, ledger
+`recipe_chef`), charged before the call and refunded (`recipe_chef_refund`) when no usable recipe comes back (`found: false`);
+nothing is charged when AI isn't configured (`reason: "no_api_key"`); 402 when the balance is short. The request text is passed
+to the model as data. Throttled 10/min.
 
 ### `POST /recipes/attachments` 🔒 · `POST /recipes/import-link` 🔒
 

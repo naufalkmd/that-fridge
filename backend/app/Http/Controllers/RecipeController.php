@@ -7,7 +7,10 @@ use App\Models\Item;
 use App\Models\MealEntry;
 use App\Models\Recipe;
 use App\Services\AgentService;
+use App\Services\CreditService;
+use App\Services\RecipeChefService;
 use App\Services\RecipeLinkImportService;
+use App\Support\CreditCost;
 use App\Support\ItemFreshness;
 use App\Support\RecipeFeedback;
 use Illuminate\Http\Request;
@@ -372,6 +375,37 @@ class RecipeController extends Controller
             // a bogus relative "/storage/..." URL instead of an absolute one.
             'url' => Storage::disk($disk)->url($path),
         ]);
+    }
+
+    /**
+     * "Ask Chef" on the recipe form: draft a recipe from a typed request. Nothing is saved; the form fills itself
+     * and the user edits and saves. Metered in AI credits, charged before the call and refunded when no usable
+     * recipe comes back; nothing is charged when AI isn't configured. Not wrapped in `data`, so the credit
+     * figures sit beside the recipe.
+     */
+    public function askChef(Request $request, RecipeChefService $chef, CreditService $credits)
+    {
+        $data = $request->validate([
+            'prompt' => ['required', 'string', 'min:3', 'max:400'],
+            'use_fridge' => ['sometimes', 'boolean'],
+        ]);
+        $user = $request->user();
+        $reply = fn (array $result, int $used) => response()->json($result + ['creditsUsed' => $used, 'balance' => $credits->balance($user)]);
+
+        if (! $chef->available()) {
+            return $reply(['found' => false, 'reason' => 'no_api_key'], 0);
+        }
+
+        $credits->spend($user, CreditCost::RECIPE_CHEF, 'recipe_chef');
+        $result = $chef->draft($user, trim($data['prompt']), $request->boolean('use_fridge'));
+
+        if (! $result['found']) {
+            $credits->grant($user, CreditCost::RECIPE_CHEF, 'recipe_chef_refund');
+
+            return $reply($result, 0);
+        }
+
+        return $reply($result, CreditCost::RECIPE_CHEF);
     }
 
     public function importFromLink(Request $request, RecipeLinkImportService $importer)

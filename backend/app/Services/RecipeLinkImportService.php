@@ -82,7 +82,7 @@ PROMPT;
      * incomplete model reply degrades to "not found" instead of handing the frontend a
      * half-populated recipe.
      */
-    private function parseRecipe(?string $content): ?array
+    public function parseRecipe(?string $content): ?array
     {
         if (! $content) {
             return null;

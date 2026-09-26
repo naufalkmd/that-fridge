@@ -722,6 +722,15 @@ export interface MealAutofillResult {
   message: string | null;
 }
 
+/** What can be pinned to a Quick Chat message. `id` is the item / fridge / recipe id, a YYYY-MM-DD date (day, meal_plan:
+ *  the week's first day), or omitted for "everything" (shopping list) and the parameterless `expiring`. */
+export type ChatContextType = "item" | "fridge" | "recipe" | "day" | "meal_plan" | "shopping" | "expiring";
+
+export interface ChatContextRef {
+  type: ChatContextType;
+  id?: string | null;
+}
+
 export type ExploreType = "icon" | "recipe" | "machine" | "meal_plan";
 
 /** One meal of a meal-plan template: `day` counts from the day the plan is started (0 = that day). */

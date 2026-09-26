@@ -653,7 +653,7 @@ describe("Calendar + Add menu", () => {
 
     expect(mockPush).toHaveBeenLastCalledWith({
       pathname: "/chat",
-      params: { prefill: expect.stringMatching(/^Add to .*: $/) },
+      params: { prefill: expect.stringMatching(/^Add to .*: $/), contextDay: "2026-09-18" },
     });
   });
 

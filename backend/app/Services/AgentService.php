@@ -47,7 +47,7 @@ class AgentService
      * string to the multimodal `content` array format OpenRouterVisionService already uses
      * for the fridge-photo scan flow - same underlying model, just a different call shape.
      */
-    public function chat($message, $agent = 'Chef', $inventory = null, $usageHistory = null, $compact = false, $memory = null, $history = [], $streakContext = null, array $images = [], ?UploadedFile $pdf = null, ?User $user = null, ?int $fridgeId = null)
+    public function chat($message, $agent = 'Chef', $inventory = null, $usageHistory = null, $compact = false, $memory = null, $history = [], $streakContext = null, array $images = [], ?UploadedFile $pdf = null, ?User $user = null, ?int $fridgeId = null, ?string $contextBlock = null)
     {
         // Mock response if no API key (for testing)
         if (! $this->client->available()) {
@@ -67,7 +67,10 @@ class AgentService
             // runs longer than a plain-text reply.
             $maxTokens = (! $compact && ($agent === 'Chef' || $hasAttachment)) ? 1300 : 1000;
 
-            $userContent = $hasAttachment ? $this->buildAttachmentContent($message, $images, $pdf) : $message;
+            // Attached kitchen context rides along with what the model reads, but the saved / returned
+            // `user_message` stays exactly what the user typed.
+            $modelMessage = $contextBlock ? $message."\n\n".$contextBlock : $message;
+            $userContent = $hasAttachment ? $this->buildAttachmentContent($modelMessage, $images, $pdf) : $modelMessage;
 
             $messages = [
                 ['role' => 'system', 'content' => $systemPrompt],

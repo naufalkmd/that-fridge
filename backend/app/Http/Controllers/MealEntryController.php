@@ -69,6 +69,8 @@ class MealEntryController extends Controller
             'from' => ['required', 'date_format:Y-m-d'],
             'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from'],
             'fridge_id' => ['sometimes', 'nullable', 'integer'],
+            // "Ask Chef": what the user wants this plan to be. Optional - blank is a plain autofill.
+            'prompt' => ['sometimes', 'nullable', 'string', 'max:300'],
         ]);
         abort_if(Carbon::parse($data['from'])->diffInDays(Carbon::parse($data['to'])) > 13, 422, 'Pick a range of at most two weeks.');
 
@@ -92,7 +94,7 @@ class MealEntryController extends Controller
         }
 
         $this->credits->spend($user, CreditCost::MEAL_AUTOFILL, 'meal_autofill');
-        $created = $this->autofill->fill($user, $open, $fridgeId, $user->memberFridges()->pluck('fridges.id')->all());
+        $created = $this->autofill->fill($user, $open, $fridgeId, $user->memberFridges()->pluck('fridges.id')->all(), trim((string) ($data['prompt'] ?? '')));
 
         if ($created === []) {
             $this->credits->grant($user, CreditCost::MEAL_AUTOFILL, 'meal_autofill_refund');

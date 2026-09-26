@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ChatHistory;
 use App\Services\AgentService;
+use App\Services\ChatContextService;
 use App\Services\CreditService;
 use App\Support\AlgoFeedback;
 use App\Support\CreditCost;
@@ -190,9 +191,25 @@ class AgentController extends Controller
      * conversation - generate one and hand it back so the client can reuse it for
      * every subsequent message in that same conversation.
      */
-    public function send(Request $request)
+    public function send(Request $request, ChatContextService $contextService)
     {
+        // Attached kitchen context (items, a fridge, a recipe, a day...). Multipart sends carry it as a JSON
+        // string; ids are normalised to strings so a numeric id from a JSON body validates the same way.
+        $rawContexts = $request->input('contexts');
+        if (is_string($rawContexts)) {
+            $rawContexts = json_decode($rawContexts, true);
+        }
+        if (is_array($rawContexts)) {
+            $rawContexts = array_map(fn ($c) => is_array($c) && isset($c['id']) ? array_merge($c, ['id' => (string) $c['id']]) : $c, $rawContexts);
+        }
+        $request->merge(['contexts' => is_array($rawContexts) ? $rawContexts : null]);
+
         $request->validate([
+            'contexts' => 'nullable|array|max:'.ChatContextService::MAX_CONTEXTS,
+            'contexts.*.type' => ['required', Rule::in(ChatContextService::TYPES)],
+            'contexts.*.id' => 'nullable|string|max:40',
+            // The device's timezone, so a "day" attachment lands on the user's local day.
+            'tz' => 'nullable|timezone:all',
             'message' => 'required|string|max:1000',
             'agent' => 'required|in:Chef,Guardian,Organizer,Shopkeeper',
             'inventory' => 'nullable|string', // JSON string of inventory for context
@@ -272,6 +289,10 @@ class AgentController extends Controller
         // this way they can't drift or go stale on the client.
         $memory = $request->user()->userMemory?->facts ?? [];
 
+        $contextBlock = ! $compact && $request->input('contexts')
+            ? $contextService->render($request->user(), $request->input('contexts'), $request->input('tz') ?: 'UTC')
+            : '';
+
         $result = $this->agentService->chat(
             $request->input('message'),
             $request->input('agent'),
@@ -285,6 +306,7 @@ class AgentController extends Controller
             $pdf,
             $request->user(),
             $request->input('fridge_id') ? (int) $request->input('fridge_id') : null,
+            $contextBlock,
         );
 
         if (! $result) {

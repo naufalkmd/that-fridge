@@ -95,7 +95,7 @@ final class CalendarService
         // whatever their printed date; everything else must have its printed date in range.
         $items = Item::query()
             ->whereHas('section', fn ($q) => $q->whereIn('fridge_id', $fridgeIds))
-            ->where(fn ($q) => $q->whereBetween('expiry_date', [$from, $to])->orWhere('opened', true))
+            ->where(fn ($q) => $q->where(fn ($d) => $d->whereDate('expiry_date', '>=', $from)->whereDate('expiry_date', '<=', $to))->orWhere('opened', true))
             ->with('section.fridge:id,name')
             ->get();
 

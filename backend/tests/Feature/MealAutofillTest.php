@@ -110,6 +110,24 @@ class MealAutofillTest extends TestCase
         });
     }
 
+    public function test_what_the_user_asked_for_reaches_the_model_and_a_blank_ask_adds_nothing(): void
+    {
+        $user = $this->userWithSlots();
+        $this->modelSays([['date' => $this->day(1), 'slot' => 'Dinner', 'title' => 'Tofu bowl']]);
+
+        $this->autofill($user, ['prompt' => 'vegetarian, high protein, under 500 kcal'])->assertOk();
+        Http::assertSent(fn ($r) => str_contains($r['messages'][0]['content'], '<<<ASK>>>vegetarian, high protein, under 500 kcal<<<END_ASK>>>'));
+
+        $this->modelSays([['date' => $this->day(2), 'slot' => 'Dinner', 'title' => 'Soup']]);
+        $this->autofill($user, ['prompt' => '   '])->assertOk();
+        Http::assertSent(fn ($r) => ! str_contains($r['messages'][0]['content'], '<<<ASK>>>'));
+    }
+
+    public function test_an_overlong_ask_is_refused(): void
+    {
+        $this->autofill($this->userWithSlots(), ['prompt' => str_repeat('x', 301)])->assertStatus(422);
+    }
+
     public function test_nothing_is_charged_when_every_slot_is_taken(): void
     {
         $user = $this->userWithSlots();

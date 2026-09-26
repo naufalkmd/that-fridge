@@ -17,6 +17,8 @@ import { getDeviceTimezone } from "@/lib/timezone";
 import { useMealActions } from "@/lib/useMealActions";
 import { SheetHeader } from "@/components/sheet";
 import { MealRow } from "@/components/calendar/rows";
+import { AskChef } from "@/components/ask-chef";
+import { BottomSheet } from "@/components/bottom-sheet";
 import { MealSheet } from "@/components/meal-plan/meal-sheet";
 
 /**
@@ -40,6 +42,7 @@ export default function MealPlanScreen() {
   const [reload, setReload] = useState(0);
   const [sheet, setSheet] = useState<MealDraft | null>(null);
   const [autofilling, setAutofilling] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
 
   const meals = useMealActions(useCallback(() => setReload((n) => n + 1), []));
   const days = useMemo(() => weekDays(anchor), [anchor]);
@@ -69,40 +72,36 @@ export default function MealPlanScreen() {
   const order = useMemo(() => compareMeals(meals.slots), [meals.slots]);
   const weekTotal = mealsTotal(entries);
 
-  // Autofill covers the rest of the visible week: today onward, never days that have passed.
+  // Ask Chef covers the rest of the visible week: today onward, never days that have passed.
   const fillFrom = days.find((d) => d >= today) ?? null;
 
-  function confirmAutofill() {
+  function openAskChef() {
     if (!fillFrom || autofilling) return;
     if (credits !== null && credits < MEAL_AUTOFILL_COST) {
-      Alert.alert("Not enough credits", `Autofill costs ${MEAL_AUTOFILL_COST} credits and you have ${credits}.`, [
+      Alert.alert("Not enough credits", `Asking Chef to plan costs ${MEAL_AUTOFILL_COST} credits and you have ${credits}.`, [
         { text: "Not now", style: "cancel" },
         { text: "Get credits", onPress: () => router.push("/credits") },
       ]);
       return;
     }
-    Alert.alert(
-      "Autofill this week?",
-      `AI fills the empty meal slots from ${shortDayLabel(fillFrom).weekday} ${shortDayLabel(fillFrom).day} to ${shortDayLabel(days[6]).weekday} ${shortDayLabel(days[6]).day}, using what's expiring and your recipes. Meals you already planned stay as they are.\n\nThis uses ${MEAL_AUTOFILL_COST} credits${credits !== null ? ` (you have ${credits})` : ""}, and nothing is charged if it can't plan anything.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Autofill", onPress: () => void autofill(fillFrom) },
-      ],
-    );
+    setAskOpen(true);
   }
 
-  async function autofill(from: string) {
+  /** Chef plans the empty slots from `fillFrom` to the end of the week, following what was typed (if anything). */
+  async function askChef(prompt: string) {
+    if (!fillFrom) return;
     setAutofilling(true);
     try {
-      const res = await api.autofillMealPlan({ from, to: days[6], fridge_id: meals.fridgeId });
+      const res = await api.autofillMealPlan({ from: fillFrom, to: days[6], fridge_id: meals.fridgeId, prompt: prompt || undefined });
       setCredits(res.balance);
       setReload((n) => n + 1);
       if (res.created.length === 0) {
         toast.show(res.message ?? "Nothing to plan.");
         return;
       }
+      setAskOpen(false);
       const n = res.created.length;
-      toast.show(`Planned ${n} meal${n === 1 ? "" : "s"} · used ${res.creditsUsed} credits · ${res.balance} left`, {
+      toast.show(`Chef planned ${n} meal${n === 1 ? "" : "s"} · used ${res.creditsUsed} credits · ${res.balance} left`, {
         actionLabel: "Undo",
         onAction: () => {
           // Removes the meals it added; the credits are not refunded.
@@ -111,9 +110,10 @@ export default function MealPlanScreen() {
       });
     } catch (e) {
       if (e instanceof ApiError && e.status === 402) {
+        setAskOpen(false);
         router.push("/credits");
       } else {
-        Alert.alert("Couldn't autofill", describeError(e, "Please try again."));
+        Alert.alert("Chef couldn't plan that", describeError(e, "Please try again."));
       }
     } finally {
       setAutofilling(false);
@@ -158,26 +158,22 @@ export default function MealPlanScreen() {
 
         {fillFrom && (
           <Pressable
-            onPress={confirmAutofill}
-            disabled={autofilling}
+            onPress={openAskChef}
             accessibilityRole="button"
-            accessibilityLabel="Autofill this week"
+            accessibilityLabel="Ask Chef to plan"
             style={{
               flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, marginBottom: 14,
-              borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, opacity: autofilling ? 0.6 : 1,
+              borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface,
             }}
           >
-            {autofilling ? (
-              <ActivityIndicator color={colors.accent} />
-            ) : (
-              <MaterialCommunityIcons name="auto-fix" size={22} color={colors.accent} />
-            )}
+            <MaterialCommunityIcons name="chef-hat" size={22} color={colors.accent} />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: "800", color: colors.ink }}>{autofilling ? "Planning your week…" : "Autofill"}</Text>
+              <Text style={{ fontSize: 14, fontWeight: "800", color: colors.ink }}>Ask Chef</Text>
               <Text style={{ fontSize: 12, color: colors.faint, marginTop: 1 }}>
-                AI fills the empty slots · {MEAL_AUTOFILL_COST} credits
+                Say what you want this week, or let Chef fill the empty slots
               </Text>
             </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.faint} />
           </Pressable>
         )}
 
@@ -235,6 +231,23 @@ export default function MealPlanScreen() {
 
         {loading && <ActivityIndicator color={colors.accent} style={{ marginTop: 16 }} />}
       </ScrollView>
+
+      <BottomSheet visible={askOpen} onClose={() => (autofilling ? undefined : setAskOpen(false))}>
+        <View style={{ padding: 16, gap: 10 }}>
+          <AskChef
+            placeholder="e.g. vegetarian dinners, high protein, use up my spinach"
+            examples={["Light dinners under 500 kcal", "Use up what's expiring", "Kid-friendly, nothing spicy"]}
+            cost={MEAL_AUTOFILL_COST}
+            busy={autofilling}
+            allowEmpty
+            onSubmit={askChef}
+          />
+          <Text style={{ fontSize: 11.5, color: colors.faint, textAlign: "center", lineHeight: 16 }}>
+            Fills the empty slots from {fillFrom ? `${shortDayLabel(fillFrom).weekday} ${shortDayLabel(fillFrom).day}` : "today"} to{" "}
+            {shortDayLabel(days[6]).weekday} {shortDayLabel(days[6]).day}. Meals you already planned stay. Nothing is charged if Chef can&apos;t plan anything.
+          </Text>
+        </View>
+      </BottomSheet>
 
       <MealSheet
         initial={sheet}

@@ -2,6 +2,7 @@ import { ApiError, type HttpClient, type TokenStore } from "./http";
 import type {
   CalendarResult,
   MealEntry,
+  ChatContextRef,
   ExploreResult,
   ExploreType,
   ExploreUseResult,
@@ -278,6 +279,13 @@ export interface RecipeInput {
   attachments?: RecipeAttachment[];
 }
 
+/** POST /recipes/ask-chef: a recipe drafted from a typed request (nothing saved), plus what it cost. */
+export interface AskChefRecipeResult extends RecipeLinkImportResult {
+  /** Credits charged (0 when nothing usable came back: it is refunded or never charged). */
+  creditsUsed: number;
+  balance: number;
+}
+
 export interface RecipeLinkImportResult {
   found: boolean;
   recipe?: {
@@ -542,6 +550,11 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       /** The chat's active fridge — the default target for tool writes (add to shopping,
        * leave a note, clear expired). Omit when chatting across all fridges. */
       fridgeId?: string;
+      /** Things from the user's kitchen pinned to this message (items, a fridge, a recipe, a day...). The server
+       *  reads each one (only what the caller may see) and gives the model a text summary. */
+      contexts?: ChatContextRef[];
+      /** The device timezone, so a "day" context lands on the local day. */
+      tz?: string;
     } = {},
   ): Promise<SendChatResult> {
     if ((opts.images?.length || opts.pdf) && typeof FormData !== "undefined") {
@@ -552,6 +565,8 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       if (opts.sessionId) fd.append("session_id", opts.sessionId);
       if (opts.compact) fd.append("compact", "1");
       if (opts.fridgeId) fd.append("fridge_id", opts.fridgeId);
+      if (opts.contexts?.length) fd.append("contexts", JSON.stringify(opts.contexts));
+      if (opts.tz) fd.append("tz", opts.tz);
       opts.images?.forEach((image, i) => fd.append("images[]", image as never, `photo${i}.jpg`));
       if (opts.pdf) fd.append("pdf", opts.pdf.blob as never, opts.pdf.name);
       return http.post<SendChatResult>("/chat", fd);
@@ -563,6 +578,8 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       session_id: opts.sessionId || undefined,
       compact: opts.compact || undefined,
       fridge_id: opts.fridgeId || undefined,
+      contexts: opts.contexts?.length ? opts.contexts : undefined,
+      tz: opts.tz || undefined,
     });
   }
 
@@ -905,7 +922,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   }
 
   /** AI-fill the empty meal slots in a date range (max two weeks). Costs credits; see MealAutofillResult. */
-  function autofillMealPlan(params: { from: string; to: string; fridge_id?: string | null }): Promise<MealAutofillResult> {
+  function autofillMealPlan(params: { from: string; to: string; fridge_id?: string | null; prompt?: string }): Promise<MealAutofillResult> {
     return http.post<MealAutofillResult>("/meal-entries/autofill", params);
   }
 
@@ -979,6 +996,11 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   function unfavoriteRecipe(id: string): Promise<Recipe> {
     return http.del<Recipe>(`/recipes/${id}/favorite`);
   }
+  /** "Ask Chef": draft a recipe from what the user typed. Costs 2 credits (refunded when no recipe comes back). */
+  function askChefRecipe(prompt: string, useFridge = false): Promise<AskChefRecipeResult> {
+    return http.post<AskChefRecipeResult>("/recipes/ask-chef", { prompt, use_fridge: useFridge });
+  }
+
   function importRecipeFromLink(url: string): Promise<RecipeLinkImportResult> {
     return http.post<RecipeLinkImportResult>("/recipes/import-link", { url });
   }
@@ -1298,6 +1320,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     favoriteRecipe,
     unfavoriteRecipe,
     importRecipeFromLink,
+    askChefRecipe,
     updateFridge,
     deleteFridge,
     listFridgeMembers,

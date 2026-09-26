@@ -16,12 +16,16 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import {
+  ApiError,
   describeError,
   guessFoodIcon,
   type RecipeAttachment,
   type RecipeCategory,
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
+import { useCredits } from "@/lib/credits";
+import { useToast } from "@/lib/toast";
+import { AskChef } from "@/components/ask-chef";
 import { takeRecipeIconPick, takeRecipeSuggestion, useRecipes } from "@/lib/recipes";
 import { FoodIcon } from "@/components/food-icon";
 import { SheetHeader } from "@/components/sheet";
@@ -82,6 +86,10 @@ export default function RecipeForm() {
     }, []),
   );
   const [importing, setImporting] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const [useFridge, setUseFridge] = useState(false);
+  const toast = useToast();
+  const { setBalance: setCredits } = useCredits();
   const [uploadingAtt, setUploadingAtt] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -103,6 +111,35 @@ export default function RecipeForm() {
       Alert.alert("Error", describeError(e, "Couldn't upload that."));
     } finally {
       setUploadingAtt(false);
+    }
+  }
+
+  /** Ask Chef: write the recipe from what was typed and drop it into the form to review and save. */
+  async function askChef(prompt: string) {
+    setAsking(true);
+    try {
+      const res = await api.askChefRecipe(prompt, useFridge);
+      setCredits(res.balance);
+      if (res.found && res.recipe) {
+        setName(res.recipe.name);
+        setMinutes(String(res.recipe.minutes || 20));
+        setCategory(res.recipe.category);
+        setIngredients(res.recipe.ingredients.map((i) => i.name));
+        setSteps(res.recipe.steps);
+        toast.show(`Chef wrote "${res.recipe.name}" · used ${res.creditsUsed} credits · ${res.balance} left`);
+      } else {
+        Alert.alert(
+          "Chef couldn't write that",
+          res.reason === "no_api_key"
+            ? "Chef isn't available right now."
+            : "Try describing the dish a bit differently. You weren't charged.",
+        );
+      }
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 402) router.push("/credits");
+      else Alert.alert("Error", describeError(e, "Couldn't reach Chef."));
+    } finally {
+      setAsking(false);
     }
   }
 
@@ -177,6 +214,18 @@ export default function RecipeForm() {
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 4, paddingBottom: 40, gap: 16 }}
         keyboardShouldPersistTaps="handled"
       >
+        {!existing && !seed && (
+          <AskChef
+            placeholder="Tell Chef what you feel like, e.g. a quick vegetarian dinner"
+            examples={["High-protein dinner under 30 min", "Something with my expiring veg", "Easy dessert for kids"]}
+            cost={2}
+            busy={asking}
+            maxLength={400}
+            toggle={{ label: "Use what's in my fridge", value: useFridge, onChange: setUseFridge }}
+            onSubmit={askChef}
+          />
+        )}
+
         {!existing && !seed && (
           <View style={{ flexDirection: "row", gap: 8 }}>
             <TextInput

@@ -160,7 +160,7 @@ export default function CalendarScreen() {
 
   function askChat(date: string) {
     closeSheet();
-    router.push({ pathname: "/chat", params: { prefill: `Add to ${dayTitle(date)}: ` } });
+    router.push({ pathname: "/chat", params: { prefill: `Add to ${dayTitle(date)}: `, contextDay: date } });
   }
 
   function closeSheet() {

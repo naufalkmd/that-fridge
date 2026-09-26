@@ -122,6 +122,9 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   Merged: Settings lost Recipe book / Shopping list / Organizer (the Crew tab already has them; the orphan /recipes and /organizer
   screens are deleted, /shopping stays for Home's tip) and the blurb card; AI Data + Privacy became one "Privacy & data" page.
   Left alone on purpose: Crew score / Insights / Badges, Calendar / Meal plan, the credits + subscription cards.
+- **Ask Chef + chat context** (committed, unpublished): "Ask Chef" box on the recipe form (`POST /recipes/ask-chef`, 2 credits) and
+  on the Meal plan (replaces Autofill; same endpoint, now takes a typed `prompt`, 3 credits); Quick Chat can pin items, a fridge,
+  a recipe, a day, a meal-plan week, the shopping list or what's expiring (`contexts` on `POST /chat`, no extra credit).
 - **Explore** Phase 1 (search + icon / recipe / Machine / meal-plan libraries, admin-curated, read-only) is live. Phase 2 (user contributions) needs UGC moderation (App Store 1.2) first: see `EXPLORE_PLAN.md`.
 
 ### Execution queue (post-launch product work; details in "Product backlog")

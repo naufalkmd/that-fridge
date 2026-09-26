@@ -55,6 +55,7 @@ Meal planning is now its own feature, and **What should I eat? no longer exists 
 ## Third pass (built, unpublished)
 
 - **Fridge picker** on the calendar, same pill as Home and Crew, sharing the one scope.
+- (Superseded: Autofill became **Ask Chef** - a card that opens a sheet with a writable request, e.g. "vegetarian, high protein", or blank to let Chef choose; same endpoint with an optional `prompt`, cost shown on the button, no separate confirm.)
 - **Autofill** on the Meal plan screen: fills the week's empty slots (today onward) with one AI call
   (`MealAutofillService`, `POST /meal-entries/autofill`, 3 credits, refunded on an empty result). It asks first
   with the cost and balance, then reports "Planned N meals · used 3 credits · X left" with Undo (removes the

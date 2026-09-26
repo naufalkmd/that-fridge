@@ -234,7 +234,7 @@ describe("Meal plan: from a recipe", () => {
   });
 });
 
-describe("Meal plan: Autofill", () => {
+describe("Meal plan: Ask Chef", () => {
   const confirm = (spy: jest.SpyInstance, label: string) => {
     const buttons = spy.mock.calls.at(-1)![2] as { text: string; onPress?: () => void }[];
     buttons.find((b) => b.text === label)!.onPress?.();
@@ -243,92 +243,96 @@ describe("Meal plan: Autofill", () => {
     { id: "61", date: "2026-09-16", slot: "Dinner", title: "Chicken rice" },
     { id: "62", date: "2026-09-17", slot: "Dinner", title: "Stir fry" },
   ];
-
-  test("asks first, saying what it does, what it costs and the balance; cancelling calls nothing", async () => {
-    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+  const openSheet = async () => {
     await render(<MealPlanScreen />);
     await loaded();
+    await fireEvent.press(await screen.findByLabelText("Ask Chef to plan"));
+  };
 
-    await fireEvent.press(await screen.findByLabelText("Autofill this week"));
+  test("the card opens a writable box that says what it costs on the button", async () => {
+    await openSheet();
 
-    expect(alert.mock.calls[0][0]).toBe("Autofill this week?");
-    expect(alert.mock.calls[0][1]).toMatch(/uses 3 credits \(you have 20\)/);
-    confirm(alert, "Cancel");
-    expect(mockAutofill).not.toHaveBeenCalled();
-    alert.mockRestore();
+    expect(screen.getByPlaceholderText(/vegetarian dinners/)).toBeTruthy();
+    expect(screen.getByText("Ask Chef · 3 credits")).toBeTruthy();
+    expect(mockAutofill).not.toHaveBeenCalled(); // nothing until the button is pressed
   });
 
-  test("confirming fills from today to the end of the week and reports the usage, with Undo", async () => {
-    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+  test("what was typed goes to Chef with the rest of the week, and the usage is reported with Undo", async () => {
     mockAutofill.mockResolvedValue({ created, creditsUsed: 3, balance: 17, message: null });
     mockScope = "2";
-    await render(<MealPlanScreen />);
-    await loaded();
+    await openSheet();
 
-    await fireEvent.press(await screen.findByLabelText("Autofill this week"));
-    confirm(alert, "Autofill");
+    await fireEvent.changeText(screen.getByLabelText("Ask Chef"), "vegetarian, high protein");
+    await fireEvent.press(screen.getByLabelText("Send to Chef"));
 
-    await waitFor(() => expect(mockAutofill).toHaveBeenCalledWith({ from: "2026-09-15", to: "2026-09-19", fridge_id: "2" }));
-    await waitFor(() => expect(mockToast).toHaveBeenCalledWith("Planned 2 meals · used 3 credits · 17 left", expect.objectContaining({ actionLabel: "Undo" })));
+    await waitFor(() =>
+      expect(mockAutofill).toHaveBeenCalledWith({ from: "2026-09-15", to: "2026-09-19", fridge_id: "2", prompt: "vegetarian, high protein" }),
+    );
+    await waitFor(() => expect(mockToast).toHaveBeenCalledWith("Chef planned 2 meals · used 3 credits · 17 left", expect.objectContaining({ actionLabel: "Undo" })));
     expect(mockSetCredits).toHaveBeenCalledWith(17);
     await waitFor(() => expect(mockGetCalendar).toHaveBeenCalledTimes(2)); // the week is reloaded
 
     mockToast.mock.calls.at(-1)![1].onAction();
     await waitFor(() => expect(mockDeleteMeal).toHaveBeenCalledTimes(2));
-    expect(mockDeleteMeal).toHaveBeenCalledWith("61");
-    alert.mockRestore();
   });
 
-  test("when nothing could be planned it says why and shows no charge", async () => {
-    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
-    mockAutofill.mockResolvedValue({ created: [], creditsUsed: 0, balance: 20, message: "Couldn't come up with a plan this time - nothing was charged." });
-    await render(<MealPlanScreen />);
-    await loaded();
+  test("a tap-to-fill example fills the box; leaving it blank still works (Chef chooses)", async () => {
+    mockAutofill.mockResolvedValue({ created, creditsUsed: 3, balance: 17, message: null });
+    await openSheet();
 
-    await fireEvent.press(await screen.findByLabelText("Autofill this week"));
-    confirm(alert, "Autofill");
+    await fireEvent.press(screen.getByLabelText("Use example: Use up what's expiring"));
+    expect(screen.getByDisplayValue("Use up what's expiring")).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText("Ask Chef"), "");
+    await fireEvent.press(screen.getByLabelText("Send to Chef"));
+
+    await waitFor(() => expect(mockAutofill).toHaveBeenCalledWith(expect.objectContaining({ prompt: undefined })));
+  });
+
+  test("when nothing could be planned it says why and keeps the sheet open", async () => {
+    mockAutofill.mockResolvedValue({ created: [], creditsUsed: 0, balance: 20, message: "Couldn't come up with a plan this time - nothing was charged." });
+    await openSheet();
+
+    await fireEvent.press(screen.getByLabelText("Send to Chef"));
 
     await waitFor(() => expect(mockToast).toHaveBeenCalledWith("Couldn't come up with a plan this time - nothing was charged."));
-    alert.mockRestore();
+    expect(screen.getByLabelText("Send to Chef")).toBeTruthy();
   });
 
-  test("with too few credits it offers to get more instead of calling the API", async () => {
+  test("with too few credits it offers to get more instead of opening", async () => {
     const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     mockCredits = 2;
     await render(<MealPlanScreen />);
     await loaded();
 
-    await fireEvent.press(await screen.findByLabelText("Autofill this week"));
+    await fireEvent.press(await screen.findByLabelText("Ask Chef to plan"));
 
     expect(alert.mock.calls[0][0]).toBe("Not enough credits");
     confirm(alert, "Get credits");
     expect(mockPush).toHaveBeenLastCalledWith("/credits");
-    expect(mockAutofill).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText("Send to Chef")).toBeNull();
     alert.mockRestore();
   });
 
   test("a 402 from the server routes to Credits; other failures are shown", async () => {
     const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     mockAutofill.mockRejectedValueOnce(new ApiError(402, "no"));
-    await render(<MealPlanScreen />);
-    await loaded();
-    await fireEvent.press(await screen.findByLabelText("Autofill this week"));
-    confirm(alert, "Autofill");
+    await openSheet();
+    await fireEvent.press(screen.getByLabelText("Send to Chef"));
     await waitFor(() => expect(mockPush).toHaveBeenLastCalledWith("/credits"));
 
     mockAutofill.mockRejectedValueOnce(new Error("boom"));
-    await fireEvent.press(await screen.findByLabelText("Autofill this week"));
-    confirm(alert, "Autofill");
-    await waitFor(() => expect(alert).toHaveBeenLastCalledWith("Couldn't autofill", expect.any(String)));
+    await fireEvent.press(await screen.findByLabelText("Ask Chef to plan"));
+    await fireEvent.press(screen.getByLabelText("Send to Chef"));
+    await waitFor(() => expect(alert).toHaveBeenLastCalledWith("Chef couldn't plan that", expect.any(String)));
     alert.mockRestore();
   });
 
-  test("a week that has already passed has nothing to fill, so the button is hidden", async () => {
+  test("a week that has already passed has nothing to plan, so the card is hidden", async () => {
     await render(<MealPlanScreen />);
     await loaded();
     await fireEvent.press(screen.getByLabelText("Previous week"));
     await waitFor(() => expect(mockGetCalendar).toHaveBeenCalledTimes(2));
 
-    expect(screen.queryByLabelText("Autofill this week")).toBeNull();
+    expect(screen.queryByLabelText("Ask Chef to plan")).toBeNull();
   });
 });

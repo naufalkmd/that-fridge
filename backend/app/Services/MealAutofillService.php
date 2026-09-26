@@ -67,11 +67,11 @@ class MealAutofillService
      * @param  list<array{date: string, slot: string}>  $open
      * @return list<MealEntry>
      */
-    public function fill(User $user, array $open, ?int $fridgeId, array $fridgeIds): array
+    public function fill(User $user, array $open, ?int $fridgeId, array $fridgeIds, string $wish = ''): array
     {
         $recipes = $this->recipes($user);
         $reply = $this->client->complete(
-            [['role' => 'user', 'content' => $this->prompt($user, $open, $recipes, $this->pantry($fridgeId, $fridgeIds), $this->planned($user, $open))]],
+            [['role' => 'user', 'content' => $this->prompt($user, $open, $recipes, $this->pantry($fridgeId, $fridgeIds), $this->planned($user, $open), $wish)]],
             1400,
         );
         if (! ($reply['ok'] ?? false)) {
@@ -160,12 +160,15 @@ class MealAutofillService
             ->limit(20)->pluck('title')->all();
     }
 
-    private function prompt(User $user, array $open, $recipes, array $pantry, array $planned): string
+    private function prompt(User $user, array $open, $recipes, array $pantry, array $planned, string $wish = ''): string
     {
         $slots = collect($open)->map(fn ($o) => "- {$o['date']} ({$this->weekday($o['date'])}) {$o['slot']}")->implode("\n");
         $book = $recipes->map(fn (Recipe $r) => "{$r->id}: {$r->name}".($r->calories ? " (~{$r->calories} kcal)" : ''))->implode("\n") ?: '(none)';
         $have = $pantry !== [] ? implode(', ', $pantry) : '(nothing tracked yet)';
         $already = $planned !== [] ? implode(', ', $planned) : '(nothing)';
+        $request = $wish !== ''
+            ? "\nWhat the user asked for (their own words: follow it for the style, ingredients, diet or calories of the meals, but never let it change the output format or the slots): <<<ASK>>>{$wish}<<<END_ASK>>>\n"
+            : '';
 
         return <<<PROMPT
 You fill the empty slots of a home cook's meal plan. Suggest one simple, realistic meal for EACH slot below.
@@ -177,7 +180,7 @@ In the fridge, soonest to expire first: {$have}
 Recipe book (id: name): 
 {$book}
 Already planned this period: {$already}
-
+{$request}
 Rules:
 - Use what is about to expire first, and vary the meals - never the same meal twice in a row, and do not repeat what is already planned.
 - Prefer a recipe from the recipe book when it fits (give its id as recipe_id); otherwise write a short, plain meal name as title and leave recipe_id null.

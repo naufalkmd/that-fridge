@@ -41,6 +41,10 @@ import { useVoiceDictation } from "@/lib/voice";
 import { MarkdownText } from "@/components/markdown-text";
 import { RecipeSuggestionCard } from "@/components/recipe-suggestion-card";
 import { BottomSheet } from "@/components/bottom-sheet";
+import { ContextSheet } from "@/components/chat/context-sheet";
+import { addContext, contextIcon, dayLabel, MAX_CONTEXTS, toRefs, type ChatContext } from "@/lib/chatContext";
+import { toISO } from "@/lib/calendar";
+import { getDeviceTimezone } from "@/lib/timezone";
 import { useTheme } from "@/lib/theme";
 
 // Older builds on this OTA channel may not contain ExpoDocumentPicker. Its entry point
@@ -95,6 +99,8 @@ type Msg = {
   mocked?: boolean;
   attachmentUris?: string[];
   attachmentPdfName?: string;
+  /** Labels of the kitchen context pinned to this message (shown as chips under it). */
+  contextLabels?: { type: ChatContext["type"]; label: string }[];
 };
 
 type Attachment =
@@ -109,7 +115,7 @@ const MAX_IMAGES = 4;
 export default function Chat() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session, prefill } = useLocalSearchParams<{ session?: string; prefill?: string }>();
+  const { session, prefill, contextDay } = useLocalSearchParams<{ session?: string; prefill?: string; contextDay?: string }>();
   const { items, refresh: refreshInventory } = useInventory();
   const { refresh: refreshNotes } = useNotes();
   const { refresh: refreshShopping } = useShopping();
@@ -137,14 +143,24 @@ export default function Chat() {
   useEffect(() => {
     if (prefill) setText(prefill);
   }, [prefill]);
+  // ...and the day it was about, pinned as context so the crew can see that day's meals and expiries.
+  useEffect(() => {
+    if (contextDay) {
+      const today = toISO(new Date());
+      setContexts((prev) => addContext(prev, { type: "day", id: contextDay, label: dayLabel(contextDay, today) }));
+    }
+  }, [contextDay]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [attachOpen, setAttachOpen] = useState(false);
+  const [contexts, setContexts] = useState<ChatContext[]>([]);
+  const [contextOpen, setContextOpen] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const imageCount = attachments.filter((a) => a.kind === "image").length;
   const hasPdf = attachments.some((a) => a.kind === "pdf");
-  const canAttach = imageCount < MAX_IMAGES || (!!documentPicker && !hasPdf);
+  // Context can always be added (up to its own cap), so the + is never dead.
+  const canAttach = true;
 
   // Voice dictation → fills the composer; the user still reviews and hits send.
   const dictationBase = useRef("");
@@ -266,16 +282,18 @@ export default function Chat() {
   async function send(preset?: string) {
     if (voice.listening) voice.stop();
     const msg = (preset ?? text).trim();
-    if ((!msg && attachments.length === 0) || sending) return;
+    if ((!msg && attachments.length === 0 && contexts.length === 0) || sending) return;
     if (credits !== null && credits < 1) {
       router.push("/credits");
       return;
     }
     const pending = attachments;
+    const pendingContexts = contexts;
     const pendingImages = pending.filter((a) => a.kind === "image");
     const pendingPdf = pending.find((a) => a.kind === "pdf");
     if (!preset) setText("");
     setAttachments([]);
+    setContexts([]);
     setMessages((m) => [
       ...m,
       {
@@ -285,6 +303,7 @@ export default function Chat() {
           ? pendingImages.map((a) => a.uri)
           : undefined,
         attachmentPdfName: pendingPdf?.name,
+        contextLabels: pendingContexts.length ? pendingContexts.map(({ type, label }) => ({ type, label })) : undefined,
       },
     ]);
     setSending(true);
@@ -293,7 +312,9 @@ export default function Chat() {
       msg ||
       (pendingPdf
         ? "What's in this document?"
-        : "What do you see in this photo?");
+        : pending.length > 0
+          ? "What do you see in this photo?"
+          : "What should I know about this?");
     try {
       // Expo's fetch/FormData implementation needs a real Blob for a file part - it doesn't
       // support React Native's classic { uri, name, type } placeholder object, despite the
@@ -318,6 +339,8 @@ export default function Chat() {
           fridgeId: scope === "all" ? undefined : scope,
           images: imageBlobs.length ? imageBlobs : undefined,
           pdf: pdfPayload,
+          contexts: pendingContexts.length ? toRefs(pendingContexts) : undefined,
+          tz: pendingContexts.length ? getDeviceTimezone() : undefined,
         },
       );
       if (res.session_id) setSessionId(res.session_id);
@@ -469,6 +492,29 @@ export default function Chat() {
               backgroundColor: `${SURFACE}e6`,
             }}
           >
+            {contexts.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }} keyboardShouldPersistTaps="handled">
+                <View style={{ flexDirection: "row", gap: 6 }}>
+                  {contexts.map((c) => (
+                    <View
+                      key={`${c.type}:${c.id ?? ""}`}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingLeft: 10, paddingRight: 6, height: 30, borderRadius: 15, backgroundColor: SURFACE2, borderWidth: 1, borderColor: STRONG }}
+                    >
+                      <Ionicons name={contextIcon(c.type) as never} size={13} color={MUTED} />
+                      <Text numberOfLines={1} style={{ fontSize: 12, color: INK, maxWidth: 150 }}>{c.label}</Text>
+                      <Pressable
+                        onPress={() => setContexts((prev) => prev.filter((x) => x !== c))}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove ${c.label}`}
+                      >
+                        <Ionicons name="close-circle" size={16} color={FAINT} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            )}
             {attachments.length > 0 && (
               <ScrollView
                 horizontal
@@ -594,10 +640,12 @@ export default function Chat() {
                   color: INK,
                 }}
               />
-              {text.trim() || attachments.length > 0 || !voice.available ? (
+              {text.trim() || attachments.length > 0 || contexts.length > 0 || !voice.available ? (
                 <Pressable
                   onPress={() => send()}
-                  disabled={sending || (!text.trim() && attachments.length === 0)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Send message"
+                  disabled={sending || (!text.trim() && attachments.length === 0 && contexts.length === 0)}
                   style={{
                     width: 38,
                     height: 38,
@@ -606,7 +654,7 @@ export default function Chat() {
                     borderRadius: 19,
                     backgroundColor: AMBER,
                     opacity:
-                      sending || (!text.trim() && attachments.length === 0) ? 0.5 : 1,
+                      sending || (!text.trim() && attachments.length === 0 && contexts.length === 0) ? 0.5 : 1,
                   }}
                 >
                   <Ionicons name="arrow-up" size={18} color={ONACCENT} />
@@ -666,6 +714,17 @@ export default function Chat() {
                   },
                 ]
               : []),
+            {
+              key: "context",
+              icon: "link-outline" as const,
+              label: "Add context",
+              hint: contexts.length >= MAX_CONTEXTS ? `Up to ${MAX_CONTEXTS} per message` : "An item, fridge, recipe, day, meal plan…",
+              disabled: contexts.length >= MAX_CONTEXTS,
+              onPress: () => {
+                setAttachOpen(false);
+                setTimeout(() => setContextOpen(true), 350);
+              },
+            },
           ].map((o) => (
             <Pressable
               key={o.key}
@@ -699,6 +758,8 @@ export default function Chat() {
           ))}
         </View>
       </BottomSheet>
+
+      <ContextSheet visible={contextOpen} onClose={() => setContextOpen(false)} onPick={(c) => setContexts((prev) => addContext(prev, c))} />
     </ImageBackground>
   );
 }
@@ -966,6 +1027,16 @@ function Bubble({ msg }: { msg: Msg }) {
             >
               {msg.attachmentPdfName}
             </Text>
+          </View>
+        )}
+        {!!msg.contextLabels?.length && (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginBottom: msg.text ? 6 : 0, paddingHorizontal: hasAttachment ? 8 : 0 }}>
+            {msg.contextLabels.map((c, i) => (
+              <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: "#ffffff26" }}>
+                <Ionicons name={contextIcon(c.type) as never} size={11} color={colors.onAccent} />
+                <Text style={{ fontSize: 11, color: colors.onAccent }} numberOfLines={1}>{c.label}</Text>
+              </View>
+            ))}
           </View>
         )}
         {isUser ? (

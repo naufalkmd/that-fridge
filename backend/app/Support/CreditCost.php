@@ -51,6 +51,10 @@ final class CreditCost
      *  afterward are AI-free and cost nothing. Refunded if no valid draft comes back. */
     public const MACHINE_BUILD = 2;
 
+    /** "Ask Chef" on the recipe form: one AI call that writes a recipe from what the user typed.
+     *  Refunded when no usable recipe comes back. */
+    public const RECIPE_CHEF = 2;
+
     /** One AI call that fills a week's empty meal-plan slots from what's expiring and the recipe book.
      *  Refunded if no meal comes back; nothing is charged when there is nothing to fill. */
     public const MEAL_AUTOFILL = 3;
