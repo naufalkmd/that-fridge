@@ -89,8 +89,8 @@ ThatFridge is free to use. AI features run on credits: free accounts get 50 ever
 
 Pro is available as a monthly or yearly subscription, each with a 7-day free trial. Prices are shown in the app in your local currency. Payment is charged to your Apple ID at confirmation of purchase. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel any time in your Apple ID account settings.
 
-Terms of Use: https://thatfridge.com/terms
-Privacy Policy: https://thatfridge.com/privacy
+Terms of Use (EULA): https://thatfridge.com/terms/
+Privacy Policy: https://thatfridge.com/privacy/
 ```
 
 ## Description, every feature (limit 4000) — 3663 characters
@@ -156,9 +156,19 @@ ThatFridge is free to use. AI features run on credits: free accounts get 50 ever
 
 Pro is a monthly or yearly subscription, each with a 7-day free trial. Prices are shown in the app in your local currency. Payment is charged to your Apple ID at confirmation of purchase. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel any time in your Apple ID account settings.
 
-Terms of Use: https://thatfridge.com/terms
-Privacy Policy: https://thatfridge.com/privacy
+Terms of Use (EULA): https://thatfridge.com/terms/
+Privacy Policy: https://thatfridge.com/privacy/
 ```
+
+## Legal links for a subscription app (Apple requires all three)
+
+1. **In the description** (already at the bottom of both versions): a working link to the **Terms of Use (EULA)** and to the **Privacy Policy**.
+   Use the trailing-slash URLs so they open without a redirect: `https://thatfridge.com/terms/` and `https://thatfridge.com/privacy/`.
+2. **App Store Connect → App Information → Privacy Policy URL**: `https://thatfridge.com/privacy/` (required).
+3. **App Store Connect → App Information → License Agreement**: either leave Apple's standard EULA, or choose *Custom* and paste the link/text of
+   `https://thatfridge.com/terms/` (its page is titled "Terms of Service & EULA" and already covers the subscription terms). If you keep
+   Apple's standard EULA, still keep the Terms link in the description.
+4. **In the app**: the paywall already shows "Terms" and "Privacy" links (both open the same pages), which is the other place Apple checks.
 
 ## Screenshots (first three decide most taps)
 
