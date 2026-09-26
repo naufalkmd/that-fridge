@@ -1,6 +1,9 @@
 import type { CalendarEntry, UsageHistoryEntry } from "@thatfridge/core";
 
-import { calorieSummary, foodGroupShares, freshnessAtUse, topUsed, wasteSummary } from "@/lib/insights";
+import {
+  balanceHint, calorieHeadline, calorieSummary, dayInitial, foodGroupShares, freshnessAtUse, roundKcal, scoreBand, topUsed,
+  wasteHeadline, wasteSummary, weekColumnLabel,
+} from "@/lib/insights";
 
 const entry = (over: Partial<CalendarEntry> & Pick<CalendarEntry, "kind" | "date">): CalendarEntry => ({
   id: `${over.kind}:${over.date}:${Math.random()}`, time: null, title: "x", meta: null, tone: null, refs: {}, ...over,
@@ -87,5 +90,49 @@ describe("usage helpers", () => {
   test("freshness at use averages over samples", () => {
     expect(freshnessAtUse([usage({})])).toBeNull();
     expect(freshnessAtUse([usage({ freshnessSum: 150, freshnessSampleCount: 2 }), usage({ id: "2", freshnessSum: 30, freshnessSampleCount: 1 })])).toBe(60);
+  });
+});
+
+describe("plain-language summaries", () => {
+  test("score bands", () => {
+    expect(scoreBand(null)).toEqual({ label: "Building", tone: "none" });
+    expect(scoreBand(80).tone).toBe("good");
+    expect(scoreBand(79).tone).toBe("warn");
+    expect(scoreBand(55).tone).toBe("warn");
+    expect(scoreBand(54)).toEqual({ label: "Needs care", tone: "bad" });
+  });
+
+  test("the waste sentence says what happened, or that nothing has", () => {
+    const base = { used: 0, wasted: 0, wasteRate: null, weeks: [] };
+    expect(wasteHeadline(base)).toBeNull();
+    expect(wasteHeadline({ ...base, used: 8, wasted: 2 })).toBe("You used up 8 of 10 items. 2 were thrown out.");
+    expect(wasteHeadline({ ...base, used: 4, wasted: 1 })).toBe("You used up 4 of 5 items. 1 was thrown out.");
+    expect(wasteHeadline({ ...base, used: 3, wasted: 0 })).toBe("You used up all 3 items. Nothing wasted.");
+    expect(wasteHeadline({ ...base, used: 1, wasted: 0 })).toBe("You used up all 1 item. Nothing wasted.");
+  });
+
+  test("calories round to the nearest 50 and say what the number is", () => {
+    expect(roundKcal(1847)).toBe(1850);
+    expect(roundKcal(1824)).toBe(1800);
+    const summary = { days: [], plannedTotal: 1000, cookedTotal: 0, dailyAverage: 1847, unknown: 0 };
+    expect(calorieHeadline(summary)).toEqual({ value: 1850, caption: "kcal a day, as planned" });
+    expect(calorieHeadline({ ...summary, cookedTotal: 500 })?.caption).toBe("kcal a day, planned and cooked");
+    expect(calorieHeadline({ ...summary, dailyAverage: null })).toBeNull();
+  });
+
+  test("the balance hint names a missing group first, then the lightest", () => {
+    const share = (key: string, label: string, count: number, percent: number) => ({ key, label, count, percent }) as never;
+    expect(balanceHint([])).toBeNull();
+    expect(balanceHint([share("protein", "Protein", 5, 50), share("fruit", "Fruit", 0, 0), share("dairy", "Dairy", 3, 30)])).toBe("Fruit hasn't come up yet. Adding some would round out your plate.");
+    const all = ["protein", "vegetables", "fruit", "grains", "dairy"].map((k, i) => share(k, k[0].toUpperCase() + k.slice(1), 1, 10 + i * 5));
+    expect(balanceHint(all)).toBe("All five groups are covered. Protein is the lightest.");
+    expect(balanceHint([share("other_extras", "Other", 4, 100)])).toBeNull(); // extras don't count as a group
+  });
+
+  test("chart labels", () => {
+    expect(dayInitial("2026-09-15")).toBe("T"); // Tuesday
+    expect(weekColumnLabel(3, 4)).toBe("This");
+    expect(weekColumnLabel(2, 4)).toBe("Last");
+    expect(weekColumnLabel(0, 4)).toBe("3w ago");
   });
 });

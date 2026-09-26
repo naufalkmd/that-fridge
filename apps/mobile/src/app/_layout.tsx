@@ -271,10 +271,6 @@ function AppShell({
                                       options={{ headerShown: false }}
                                     />
                                     <Stack.Screen
-                                      name="crew-score"
-                                      options={{ headerShown: false }}
-                                    />
-                                    <Stack.Screen
                                       name="chat-history"
                                       options={{ headerShown: false }}
                                     />

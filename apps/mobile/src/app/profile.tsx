@@ -208,7 +208,6 @@ export default function Profile() {
       </SettingsGroup>
 
       <SettingsGroup title="Your progress">
-        <LinkRow icon="speedometer-outline" label="Crew score" onPress={() => router.push("/crew-score")} />
         <LinkRow icon="stats-chart-outline" label="Insights" badge="NEW" onPress={() => router.push("/insights")} />
         <LinkRow icon="ribbon-outline" label="Badges" onPress={() => router.push("/badges")} last />
       </SettingsGroup>

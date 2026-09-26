@@ -124,3 +124,63 @@ export function freshnessAtUse(usage: UsageHistoryEntry[]): number | null {
   if (samples === 0) return null;
   return Math.round(usage.reduce((n, u) => n + u.freshnessSum, 0) / samples);
 }
+
+// ---- plain-language summaries: the page shows a sentence and a shape, not a table of numbers -------------------
+
+/** The word for a 0-100 score, and its colour family. */
+export function scoreBand(score: number | null): { label: string; tone: "good" | "warn" | "bad" | "none" } {
+  if (score === null) return { label: "Building", tone: "none" };
+  if (score >= 80) return { label: "Great", tone: "good" };
+  if (score >= 55) return { label: "Okay", tone: "warn" };
+  return { label: "Needs care", tone: "bad" };
+}
+
+/** "You used up 8 of 10 items." - null when nothing has been removed yet. */
+export function wasteHeadline(w: WasteSummary): string | null {
+  const total = w.used + w.wasted;
+  if (total === 0) return null;
+  if (w.wasted === 0) return `You used up all ${total} item${total === 1 ? "" : "s"}. Nothing wasted.`;
+
+  return `You used up ${w.used} of ${total} items. ${w.wasted} ${w.wasted === 1 ? "was" : "were"} thrown out.`;
+}
+
+/** Calories are estimates, so round to the nearest 50: "≈ 1,850" reads truer than "1,847". */
+export function roundKcal(n: number): number {
+  return Math.round(n / 50) * 50;
+}
+
+/** The one calorie number worth showing: the daily average on days that have meals. */
+export function calorieHeadline(c: CalorieSummary): { value: number; caption: string } | null {
+  if (c.dailyAverage === null) return null;
+  const cooked = c.cookedTotal > 0;
+
+  return { value: roundKcal(c.dailyAverage), caption: cooked ? "kcal a day, planned and cooked" : "kcal a day, as planned" };
+}
+
+/** The five food groups that count towards a balanced plate. */
+export const CORE_GROUPS: NutritionCategory[] = ["protein", "vegetables", "fruit", "grains", "dairy"];
+
+/** A friendly nudge from the food-group mix: the first group not used at all, else the lightest. null with no data. */
+export function balanceHint(shares: GroupShare[]): string | null {
+  const core = shares.filter((g) => CORE_GROUPS.includes(g.key));
+  if (core.length === 0) return null;
+  const missing = core.find((g) => g.count === 0);
+  if (missing) return `${missing.label} hasn't come up yet. Adding some would round out your plate.`;
+  const lightest = [...core].sort((a, b) => a.percent - b.percent)[0];
+
+  return `All five groups are covered. ${lightest.label} is the lightest.`;
+}
+
+/** "T" for a Tuesday: single-letter labels keep a 7-column chart readable. */
+export function dayInitial(date: string): string {
+  const [y, m, d] = date.split("-").map(Number);
+
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "narrow" });
+}
+
+/** Short column label for a waste week, newest last: "3w ago", "2w ago", "Last", "This". */
+export function weekColumnLabel(index: number, total: number): string {
+  const back = total - 1 - index;
+
+  return back === 0 ? "This" : back === 1 ? "Last" : `${back}w ago`;
+}
