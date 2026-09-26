@@ -9,6 +9,7 @@ use App\Models\Recipe;
 use App\Models\ShoppingItem;
 use App\Models\User;
 use App\Support\ItemFreshness;
+use App\Support\PromptData;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 
@@ -52,7 +53,7 @@ class ChatContextService
 
                 continue;
             }
-            $text = Str::limit($text, self::BLOCK_CHARS, "\n…(shortened)");
+            $text = Str::limit(PromptData::clean($text), self::BLOCK_CHARS, "\n…(shortened)");
             $total += mb_strlen($text);
             $blocks[] = $text;
         }

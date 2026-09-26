@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Item;
 use App\Models\User;
 use App\Support\ItemFreshness;
+use App\Support\PromptData;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -61,6 +62,7 @@ class RecipeChefService
     /** @param  list<string>  $pantry */
     private function prompt(string $request, array $pantry): string
     {
+        $request = PromptData::clean($request);
         $fridge = $pantry !== []
             ? "\n\nThe user's fridge, soonest to expire first (use these where they fit, use up what is about to expire, and do not force items that do not belong):\n".implode(', ', $pantry)
             : '';

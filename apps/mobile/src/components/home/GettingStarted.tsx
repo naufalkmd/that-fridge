@@ -17,7 +17,7 @@ const NODE_COL = 26;
 const LINE_X = NODE_COL / 2 - 1;
 const NODE_CENTER_Y = 10; // node marginTop (3) + radius (7)
 
-type Route = "/add" | "/chat" | "/recipes" | "/shopping" | "/fridges";
+type Route = "/add" | "/chat" | "/eat?tab=recipes" | "/shopping" | "/fridges";
 type NodeState = "done" | "current" | "future";
 
 type Step = {
@@ -92,7 +92,7 @@ export function GettingStarted() {
         id: "recipe",
         label: "Save a recipe to your book",
         hint: "Keep the ones you'll make again",
-        route: "/recipes",
+        route: "/eat?tab=recipes",
         // Every book ships with the curated starter set, so "has recipes" is always
         // true — this step only counts a recipe the user added or favorited themselves.
         done: recipes.some((r) => r.isMine || r.isFavorite),
