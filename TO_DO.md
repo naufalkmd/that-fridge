@@ -105,15 +105,15 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   Product, icon requests), unified Remove, opened-item shelf life, privacy wording, and
   server-side signals for alerts, scans, autofill, notification toggles, recipe rank and Kitchen Lab
   authoring.
-- **Live OTA (production, runtime 1.3.3, group `b9964b3c-a856-4f18-9dfd-fc7d840a6df9`)** carries
-  everything since `bbff2c2` and has been verified on a device. Rollback: `eas update:rollback`.
-- **Not in any OTA yet:** scan drafts send `parsed_name` (`8ca25a6`), Home tip taps/dismissals are
-  reported (`/tip-feedback`), and the Home bell dot follows the selected fridge. Older app versions
-  keep working; those signals just stay empty until the next OTA.
+- **Live OTA (production, runtime 1.3.3, latest group `ca80b1f4-3b2f-455d-b155-b3aa332c5ee0`, commit
+  `2631931`)** carries everything since `bbff2c2`. The earlier batch was verified on a device; the
+  latest three changes (scan `parsed_name`, Home tip taps/dismissals via `/tip-feedback`, fridge-scoped
+  Home bell dot) have **not** been device-checked yet. Rollback: `eas update:rollback`.
 
 ### Execution queue (post-launch product work; details in "Product backlog")
 
-1. **Ship an OTA** (scan `parsed_name`, tip taps/dismissals, fridge-scoped bell dot). 2. Opened-item alert-timing decision. 3. Credit-scheme audit, then calendar, then multi-Machine.
+1. Device-check the latest OTA (Home tips + bell dot, a receipt scan → save). 2. Opened-item
+alert-timing decision. 3. Credit-scheme audit, then calendar, then multi-Machine.
 
 **Priority over all of the above: the launch items** (Android Play setup, Devpost submission — hard
 deadline Sep 30, 2026 11:45pm PDT) and the "Deferred to post-launch — don't work on these before
@@ -190,7 +190,7 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
   owner's call.
 - [ ] Later, only if people actually correct values often: per-name learning store, AI estimate for
   `default` items (piggyback on the autofill call, cached by name like the food-group answers).
-- [ ] Open question: which specific items besides eggs looked wrong (become first test cases).
+- [X] Open question: which specific items besides eggs looked wrong (become first test cases).
 
 **Larger scope, tackle last**
 
