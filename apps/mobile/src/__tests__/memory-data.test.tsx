@@ -25,7 +25,7 @@ jest.mock("@/lib/api", () => ({
   },
 }));
 
-import AIData from "@/app/ai-data";
+import { MemoryData } from "@/components/memory-data";
 
 const press = (spy: jest.SpyInstance, label: string) => {
   const buttons = spy.mock.calls.at(-1)![2] as { text: string; onPress?: () => void | Promise<void> }[];
@@ -37,11 +37,11 @@ beforeEach(() => {
   mockGetFacts.mockResolvedValue(["Prefers vegetarian", "Allergic to nuts"]);
 });
 
-describe("AI Data & Memory", () => {
+describe("Memory & usage data", () => {
   test("clearing memory empties the list once the server has", async () => {
     const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     mockClear.mockResolvedValue(undefined);
-    await render(<AIData />);
+    await render(<MemoryData />);
     await screen.findByText("Prefers vegetarian");
 
     await fireEvent.press(screen.getByText("Clear all"));
@@ -54,7 +54,7 @@ describe("AI Data & Memory", () => {
   test("a failed clear keeps the list and says so, instead of pretending it worked", async () => {
     const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     mockClear.mockRejectedValue(new Error("boom"));
-    await render(<AIData />);
+    await render(<MemoryData />);
     await screen.findByText("Prefers vegetarian");
 
     await fireEvent.press(screen.getByText("Clear all"));
@@ -68,7 +68,7 @@ describe("AI Data & Memory", () => {
   test("forgetting one fact shows the server's list; a failure is reported and the list is unchanged", async () => {
     const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     mockDeleteFact.mockResolvedValueOnce(["Allergic to nuts"]);
-    await render(<AIData />);
+    await render(<MemoryData />);
     await screen.findByText("Prefers vegetarian");
 
     await fireEvent.press(screen.getByLabelText("Forget: Prefers vegetarian"));

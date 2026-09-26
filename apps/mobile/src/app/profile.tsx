@@ -15,7 +15,6 @@ import { usePro } from "@/lib/pro";
 import { useCredits } from "@/lib/credits";
 import { api } from "@/lib/api";
 import { openStoreReviewPage } from "@/lib/rate";
-import { PixelText } from "@/components/brand";
 import { LinkRow } from "@/components/link-row";
 import { Eyebrow, SectionHeader } from "@/components/ui";
 
@@ -205,28 +204,24 @@ export default function Profile() {
       <View>
         <SectionHeader>Settings</SectionHeader>
         <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
-          <LinkRow icon="restaurant-outline" label="Recipe book" onPress={() => router.push("/recipes")} />
           <LinkRow icon="calendar-number-outline" label="Calendar" badge="NEW" onPress={() => router.push("/calendar")} />
           <LinkRow icon="calendar-outline" label="Meal plan" onPress={() => router.push("/meal-plan")} />
           <LinkRow icon="compass-outline" label="Explore" badge="NEW" onPress={() => router.push("/explore")} />
           <LinkRow icon="speedometer-outline" label="Crew score" onPress={() => router.push("/crew-score")} />
           <LinkRow icon="stats-chart-outline" label="Insights" badge="NEW" onPress={() => router.push("/insights")} />
           <LinkRow icon="ribbon-outline" label="Badges" onPress={() => router.push("/badges")} />
-          <LinkRow icon="sync-outline" label="Organizer" onPress={() => router.push("/organizer")} />
           <LinkRow
             icon="flask-outline"
             label="Kitchen Lab"
             badge="NEW"
             onPress={() => router.push("/kitchen-lab")}
           />
-          <LinkRow icon="sparkles-outline" label="AI Data & Memory" onPress={() => router.push("/ai-data")} />
-          <LinkRow icon="shield-checkmark-outline" label="Privacy" onPress={() => router.push("/privacy")} />
+          <LinkRow icon="shield-checkmark-outline" label="Privacy & data" onPress={() => router.push("/privacy")} />
           <LinkRow
             icon="notifications-outline"
             label="Notification settings"
             onPress={() => router.push("/notification-settings")}
           />
-          <LinkRow icon="cart-outline" label="Shopping list" onPress={() => router.push("/shopping")} />
           <LinkRow
             icon="contrast-outline"
             label="Appearance"
@@ -268,17 +263,6 @@ export default function Profile() {
             last
           />
         </View>
-      </View>
-
-      <View className="rounded-[10px] border border-hairline bg-surface p-4">
-        <View className="mb-1.5 flex-row items-center gap-2">
-          <PixelText style={{ fontSize: 12, color: colors.ink }}>ThatFridge</PixelText>
-        </View>
-        <Text className="text-[12.5px] leading-5 text-muted">
-          Know what&apos;s inside before you open the door. Track groceries and freshness,
-          get pinged before things go bad, and see what you can cook with what you have —
-          so less food ends up in the bin.
-        </Text>
       </View>
 
       <View>

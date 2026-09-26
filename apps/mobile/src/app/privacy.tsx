@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { LinkRow as Row } from "@/components/link-row";
+import { MemoryData } from "@/components/memory-data";
 import { SectionHeader } from "@/components/ui";
 
 const SHARED = [
@@ -16,8 +17,9 @@ const SHARED = [
 const NEVER = ["Notes, photos, or chat text.", "Names of your items, recipes or meals."];
 
 /**
- * Settings → Privacy: the improvement-sharing switch, the policy link and deleting what's been
- * shared, with a plain-language summary of what's collected. (Was a section on the Profile screen.)
+ * Settings → Privacy & data, in one place: the improvement-sharing switch, the policy link and deleting what's
+ * been shared, a plain-language summary of what's collected, and what the crew remembers (past chats, memory,
+ * usage history) with the controls to delete it.
  */
 export default function Privacy() {
   const { colors } = useTheme();
@@ -105,6 +107,11 @@ export default function Privacy() {
             delete the existing ones at any time.
           </Text>
         </View>
+      </View>
+
+      <View>
+        <SectionHeader>What the crew remembers</SectionHeader>
+        <MemoryData />
       </View>
     </ScrollView>
   );

@@ -182,7 +182,7 @@ function AppShell({
                                     />
                                     <Stack.Screen
                                       name="privacy"
-                                      options={{ title: "Privacy" }}
+                                      options={{ title: "Privacy & data" }}
                                     />
                                     <Stack.Screen
                                       name="edit-profile"
@@ -209,10 +209,6 @@ function AppShell({
                                         headerShown: false,
                                         presentation: "modal",
                                       }}
-                                    />
-                                    <Stack.Screen
-                                      name="recipes"
-                                      options={{ headerShown: false }}
                                     />
                                     <Stack.Screen
                                       name="recipe/[id]"
@@ -248,10 +244,6 @@ function AppShell({
                                       options={{ headerShown: false }}
                                     />
                                     <Stack.Screen
-                                      name="organizer"
-                                      options={{ headerShown: false }}
-                                    />
-                                    <Stack.Screen
                                       name="kitchen-lab"
                                       options={{ headerShown: false }}
                                     />
@@ -272,10 +264,6 @@ function AppShell({
                                     />
                                     <Stack.Screen
                                       name="crew-score"
-                                      options={{ headerShown: false }}
-                                    />
-                                    <Stack.Screen
-                                      name="ai-data"
                                       options={{ headerShown: false }}
                                     />
                                     <Stack.Screen

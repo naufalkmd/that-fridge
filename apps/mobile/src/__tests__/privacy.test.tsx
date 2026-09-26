@@ -14,7 +14,14 @@ let mockUser: { preferences: { help_improve?: boolean } } = { preferences: {} };
 const mockUpdate = jest.fn();
 jest.mock("@/lib/auth", () => ({ useAuth: () => ({ user: mockUser, updateImprovementPreferences: mockUpdate }) }));
 const mockDeleteData = jest.fn();
-jest.mock("@/lib/api", () => ({ api: { deleteImprovementData: (...a: unknown[]) => mockDeleteData(...a) } }));
+jest.mock("@/lib/api", () => ({
+  api: {
+    deleteImprovementData: (...a: unknown[]) => mockDeleteData(...a),
+    getMemoryFacts: () => Promise.resolve(["Prefers vegetarian"]),
+  },
+}));
+jest.mock("@/components/food-icon", () => ({ FoodIcon: () => null }));
+jest.mock("@/lib/kitchenScore", () => ({ useKitchenScore: () => ({ usageHistory: [], refresh: jest.fn() }) }));
 
 import Privacy from "@/app/privacy";
 
@@ -54,6 +61,14 @@ describe("Privacy screen", () => {
 
     await waitFor(() => expect(mockDeleteData).toHaveBeenCalled());
     alert.mockRestore();
+  });
+
+  test("what the crew remembers is on the same page", async () => {
+    await render(<Privacy />);
+
+    expect(screen.getByText("What the crew remembers")).toBeTruthy();
+    expect(await screen.findByText("Prefers vegetarian")).toBeTruthy();
+    expect(screen.getByText("Past conversations")).toBeTruthy();
   });
 
   test("the privacy policy opens in the browser, and the screen explains what is shared", async () => {

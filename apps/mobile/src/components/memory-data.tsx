@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -10,10 +9,13 @@ import { describeError, timeAgo } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useKitchenScore } from "@/lib/kitchenScore";
 import { useTheme } from "@/lib/theme";
-import { PageHeader } from "@/components/ui";
 import { FoodIcon } from "@/components/food-icon";
 
-export default function AIData() {
+/**
+ * What the crew has learned about you, and the controls to see and delete it: past chats, remembered facts
+ * and usage history. Lives inside the Privacy & data screen.
+ */
+export function MemoryData() {
   const router = useRouter();
   const { usageHistory, refresh } = useKitchenScore();
   const {
@@ -80,9 +82,7 @@ export default function AIData() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-      <PageHeader title="AI Data & Memory" subtitle="See and manage what your crew remembers" />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 60 }}>
+    <View>
         <Section label="CHAT HISTORY" />
         <Pressable
           onPress={() => router.push("/chat-history")}
@@ -177,8 +177,7 @@ export default function AIData() {
             ))}
           </View>
         )}
-      </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

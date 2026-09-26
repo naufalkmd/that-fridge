@@ -119,7 +119,9 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   checks (shared by the Organizer screen and the Crew tab); the Crew tab no longer reuses the shared-fridge "Crew activity"
   pref to gate sweeping; Home tips honour the Expiry / Low stock / Recipe switches; the dead Weekly digest switch is
   removed (no digest sender exists - build one before bringing it back); AI Data no longer fakes a successful clear.
-  Not done: merging redundant Settings rows (Recipe book / Shopping list / Organizer duplicate Crew tab tabs, AI Data + Privacy, Crew score + Insights + Badges).
+  Merged: Settings lost Recipe book / Shopping list / Organizer (the Crew tab already has them; the orphan /recipes and /organizer
+  screens are deleted, /shopping stays for Home's tip) and the blurb card; AI Data + Privacy became one "Privacy & data" page.
+  Left alone on purpose: Crew score / Insights / Badges, Calendar / Meal plan, the credits + subscription cards.
 - **Explore** Phase 1 (search + icon / recipe / Machine / meal-plan libraries, admin-curated, read-only) is live. Phase 2 (user contributions) needs UGC moderation (App Store 1.2) first: see `EXPLORE_PLAN.md`.
 
 ### Execution queue (post-launch product work; details in "Product backlog")
