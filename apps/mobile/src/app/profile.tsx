@@ -95,9 +95,7 @@ export default function Profile() {
         className="flex-row items-center gap-3.5 active:opacity-70"
       >
         <View className="h-14 w-14 items-center justify-center rounded-full border border-hairline bg-surface">
-          <Text className="text-lg font-bold text-ink">
-            {user?.name?.slice(0, 1).toUpperCase() ?? "?"}
-          </Text>
+          <Ionicons name="person" size={26} color={colors.muted} />
         </View>
         <View className="flex-1 gap-0.5">
           <Text className="text-xl font-extrabold text-ink">{user?.name ?? "—"}</Text>
@@ -205,6 +203,8 @@ export default function Profile() {
           <LinkRow icon="restaurant-outline" label="Recipe book" onPress={() => router.push("/recipes")} />
           <LinkRow icon="calendar-number-outline" label="Calendar" badge="NEW" onPress={() => router.push("/calendar")} />
           <LinkRow icon="calendar-outline" label="Meal plan" onPress={() => router.push("/meal-plan")} />
+          <LinkRow icon="speedometer-outline" label="Crew score" onPress={() => router.push("/crew-score")} />
+          <LinkRow icon="stats-chart-outline" label="Insights" badge="NEW" onPress={() => router.push("/insights")} />
           <LinkRow icon="ribbon-outline" label="Badges" onPress={() => router.push("/badges")} />
           <LinkRow icon="sync-outline" label="Organizer" onPress={() => router.push("/organizer")} />
           <LinkRow

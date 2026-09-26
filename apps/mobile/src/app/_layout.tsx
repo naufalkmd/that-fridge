@@ -263,6 +263,14 @@ function AppShell({
                                       }}
                                     />
                                     <Stack.Screen
+                                      name="insights"
+                                      options={{ headerShown: false }}
+                                    />
+                                    <Stack.Screen
+                                      name="crew-score"
+                                      options={{ headerShown: false }}
+                                    />
+                                    <Stack.Screen
                                       name="ai-data"
                                       options={{ headerShown: false }}
                                     />

@@ -260,14 +260,17 @@ export function KitchenScore({
   input,
   snapshots = [],
   streak = 0,
+  defaultExpanded = false,
 }: {
   input: KitchenScoreInput;
   snapshots?: ScoreSnapshot[];
   /** Daily "opened the app" streak from CurrentUser.streak, not derived from snapshots. */
   streak?: number;
+  /** Open with the four agent cards already showing (the Crew score screen). */
+  defaultExpanded?: boolean;
 }) {
   const { colors } = useTheme();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
 
   const ordered = useMemo(() => {
     const r = kitchenScoreResults(input);

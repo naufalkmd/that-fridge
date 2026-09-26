@@ -116,7 +116,9 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   filter dropdown / Ask Quick Chat, Meal plan without the ideas card, Privacy + Meal plan as Settings rows.
   Not device-checked yet.
 - **Committed next, unpublished**: fridge picker on the Calendar, Autofill on Meal plan (3 credits), change a Machine's
-  fridge, Calendar + Kitchen Lab tagged NEW in Settings.
+  fridge, Calendar + Kitchen Lab tagged NEW in Settings, Insights + Crew score screens (Settings rows), profile avatar icon.
+- **Explore** (search + icon / recipe / Machine / meal-plan libraries, admin-curated, user contributions): planned in
+  `EXPLORE_PLAN.md`; needs UGC moderation (App Store 1.2) before contributions, so it is post-launch.
 
 ### Execution queue (post-launch product work; details in "Product backlog")
 
