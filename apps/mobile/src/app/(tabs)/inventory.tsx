@@ -50,6 +50,8 @@ import { FoodIcon } from "@/components/food-icon";
 import { SkeletonList } from "@/components/ui";
 import { useTheme } from "@/lib/theme";
 import { useToast } from "@/lib/toast";
+import { useKitchenScore } from "@/lib/kitchenScore";
+import { summarizeRemovals } from "@/lib/removalSummary";
 
 const UNCATEGORIZED = "__uncat__";
 
@@ -69,6 +71,7 @@ export default function Inventory() {
   const insets = useSafeAreaInsets();
   const { items, loading, error, refresh, removeManyItems, undoRemoval } = useInventory();
   const toast = useToast();
+  const { refresh: refreshScore } = useKitchenScore();
   const { categories, assign } = useCategories();
   const { scope } = useScope();
   const {
@@ -380,9 +383,13 @@ export default function Inventory() {
     void removeManyItems(ids).then((outcomes) => {
       if (outcomes.length > 0) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        toast.show(`Removed ${outcomes.length} item${outcomes.length === 1 ? "" : "s"}`, {
+        // Removals change usage history / badges server-side, so the Kitchen Score is stale now.
+        void refreshScore();
+        toast.show(summarizeRemovals(outcomes), {
           actionLabel: "Undo",
-          onAction: () => { void Promise.allSettled(outcomes.map((o) => undoRemoval(o.id))).then(refresh); },
+          onAction: () => {
+            void Promise.allSettled(outcomes.map((o) => undoRemoval(o.id))).then(refresh).then(refreshScore);
+          },
         });
       }
       if (outcomes.length < ids.length) Alert.alert("Some items weren't removed", "Please try again.");
