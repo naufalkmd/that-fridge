@@ -88,6 +88,7 @@ export default function RecipeForm() {
   const [importing, setImporting] = useState(false);
   const [asking, setAsking] = useState(false);
   const [useFridge, setUseFridge] = useState(false);
+  const [chefOpen, setChefOpen] = useState(false);
   const toast = useToast();
   const { setBalance: setCredits } = useCredits();
   const [uploadingAtt, setUploadingAtt] = useState(false);
@@ -126,6 +127,7 @@ export default function RecipeForm() {
         setCategory(res.recipe.category);
         setIngredients(res.recipe.ingredients.map((i) => i.name));
         setSteps(res.recipe.steps);
+        setChefOpen(false); // the recipe is in the form below: tuck the box away
         toast.show(`Chef wrote "${res.recipe.name}" · used ${res.creditsUsed} credits · ${res.balance} left`);
       } else {
         Alert.alert(
@@ -222,6 +224,10 @@ export default function RecipeForm() {
             busy={asking}
             maxLength={400}
             toggle={{ label: "Use what's in my fridge", value: useFridge, onChange: setUseFridge }}
+            collapsible
+            open={chefOpen}
+            onOpenChange={setChefOpen}
+            summary="Describe a dish and Chef writes the recipe · 2 credits"
             onSubmit={askChef}
           />
         )}

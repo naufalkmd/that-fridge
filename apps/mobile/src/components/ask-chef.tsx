@@ -17,6 +17,10 @@ export function AskChef({
   allowEmpty = false,
   maxLength = 300,
   toggle,
+  collapsible,
+  open: openProp,
+  onOpenChange,
+  summary,
   onSubmit,
 }: {
   placeholder: string;
@@ -29,19 +33,45 @@ export function AskChef({
   maxLength?: number;
   /** An optional yes/no under the box, e.g. "Use what's in my fridge". */
   toggle?: { label: string; value: boolean; onChange: (v: boolean) => void };
+  /** Show only a header row that opens like a dropdown (the recipe form keeps it tucked away until wanted). */
+  collapsible?: boolean;
+  /** Controlled open state for a collapsible box; uncontrolled (starts closed) when omitted. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** The line under the title while it is collapsed. */
+  summary?: string;
   onSubmit: (prompt: string) => void;
 }) {
   const { colors } = useTheme();
   const [text, setText] = useState("");
+  const [openState, setOpenState] = useState(false);
+  const open = !collapsible || (openProp ?? openState);
+  const setOpen = (next: boolean) => {
+    setOpenState(next);
+    onOpenChange?.(next);
+  };
   const ready = allowEmpty || text.trim().length >= 3;
 
   return (
     <View style={{ gap: 10, padding: 14, borderRadius: 10, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+      <Pressable
+        onPress={collapsible ? () => setOpen(!open) : undefined}
+        disabled={!collapsible}
+        accessibilityRole={collapsible ? "button" : undefined}
+        accessibilityLabel={collapsible ? (open ? "Close Ask Chef" : "Open Ask Chef") : undefined}
+        accessibilityState={collapsible ? { expanded: open } : undefined}
+        style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+      >
         <MaterialCommunityIcons name="chef-hat" size={18} color={colors.accent} />
-        <Text style={{ fontSize: 14, fontWeight: "800", color: colors.ink }}>Ask Chef</Text>
-      </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 14, fontWeight: "800", color: colors.ink }}>Ask Chef</Text>
+          {collapsible && !open && summary ? <Text style={{ fontSize: 12, color: colors.faint, marginTop: 1 }}>{summary}</Text> : null}
+        </View>
+        {collapsible && <MaterialCommunityIcons name={open ? "chevron-up" : "chevron-down"} size={20} color={colors.faint} />}
+      </Pressable>
 
+      {open && (
+        <>
       <TextInput
         value={text}
         onChangeText={setText}
@@ -101,6 +131,8 @@ export function AskChef({
           </Text>
         )}
       </Pressable>
+        </>
+      )}
     </View>
   );
 }

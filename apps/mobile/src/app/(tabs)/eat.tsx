@@ -3,6 +3,7 @@ import {
   Linking,
   Pressable,
   ScrollView,
+  Switch,
   Text,
   TextInput,
   View,
@@ -43,6 +44,7 @@ import { useScope, scopeItems } from "@/lib/scope";
 import { useShopping } from "@/lib/shopping";
 import { SWEEP_BATCH, SWEEP_COST_PER_ITEM } from "@/lib/organizerSweep";
 import { locationLabel, useOrganizerSweep } from "@/lib/useOrganizerSweep";
+import { useOrganizerAuto } from "@/lib/organizerPref";
 import { useRecipes } from "@/lib/recipes";
 import { useKitchenScore } from "@/lib/kitchenScore";
 import { useNotifications } from "@/lib/notifications";
@@ -293,6 +295,7 @@ export default function Crew() {
 
   // Organizer's on-demand "misplaced items" sweep (asks first: it costs credits).
   const sweep = useOrganizerSweep();
+  const { auto: organizerAuto, setAuto: setOrganizerAuto } = useOrganizerAuto();
 
   // This agent's Kitchen Score — same inputs as Home's gauge.
   const scoreInput = useMemo<KitchenScoreInput>(
@@ -395,6 +398,8 @@ export default function Crew() {
     } finally {
       setActivating(false);
     }
+    // With the switch on, Activate also offers to check where things are stored (it asks about the credits first).
+    if (tab === "organizer" && organizerAuto) sweep.start(scoped);
   }
 
   return (
@@ -556,38 +561,29 @@ export default function Crew() {
             {tab === "organizer" && (
               <View
                 style={{
-                  gap: 8,
                   marginTop: 2,
                   paddingTop: 8,
                   borderTopWidth: 1,
                   borderTopColor: HAIRLINE,
+                  gap: 6,
                 }}
               >
-                <Pressable
-                  onPress={sweep.status === "checking" ? undefined : () => sweep.start(scoped)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Check where my items are stored"
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    paddingVertical: 8,
-                    borderRadius: 6,
-                    borderWidth: 1,
-                    borderColor: tabColor,
-                    opacity: sweep.status === "checking" ? 0.6 : 1,
-                  }}
-                >
-                  <MaterialCommunityIcons name="broom" size={13} color={tabColor} />
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: tabColor }}>
-                    {sweep.status === "checking"
-                      ? `Checking ${sweep.batchSize} items…`
-                      : `Check where things are stored · up to ${SWEEP_BATCH} items`}
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <Text style={{ flex: 1, fontSize: 11, fontWeight: "600", color: MUTED }}>
+                    Let Organizer move items for you
                   </Text>
-                </Pressable>
-                <Text style={{ fontSize: 10.5, color: FAINT, textAlign: "center" }}>
-                  {SWEEP_COST_PER_ITEM} credit per item checked
+                  <Switch
+                    value={organizerAuto}
+                    onValueChange={setOrganizerAuto}
+                    accessibilityLabel="Let Organizer move items for you"
+                    trackColor={{ true: tabColor, false: HAIRLINE }}
+                    thumbColor={INK}
+                  />
+                </View>
+                <Text style={{ fontSize: 11, color: FAINT }}>
+                  {sweep.status === "checking"
+                    ? `Checking ${sweep.batchSize} items…`
+                    : `When on, Activate also checks up to ${SWEEP_BATCH} items (asks first · ${SWEEP_COST_PER_ITEM} credit each).`}
                 </Text>
               </View>
             )}

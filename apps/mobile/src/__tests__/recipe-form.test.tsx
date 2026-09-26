@@ -41,17 +41,36 @@ beforeEach(() => {
   mockAsk.mockResolvedValue({ found: true, recipe, creditsUsed: 2, balance: 18 });
 });
 
+/** Ask Chef is a dropdown on this form: it starts tucked away. */
+const openChef = async () => fireEvent.press(screen.getByLabelText("Open Ask Chef"));
+
 describe("Recipe form: Ask Chef", () => {
+  test("it starts as a closed dropdown that says what it does, and opens on tap", async () => {
+    await render(<RecipeForm />);
+
+    expect(screen.getByText("Describe a dish and Chef writes the recipe · 2 credits")).toBeTruthy();
+    expect(screen.queryByPlaceholderText(/Tell Chef what you feel like/)).toBeNull();
+
+    await openChef();
+    expect(screen.getByPlaceholderText(/Tell Chef what you feel like/)).toBeTruthy();
+    expect(screen.queryByText("Describe a dish and Chef writes the recipe · 2 credits")).toBeNull();
+
+    await fireEvent.press(screen.getByLabelText("Close Ask Chef")); // and closes again
+    expect(screen.queryByPlaceholderText(/Tell Chef what you feel like/)).toBeNull();
+  });
+
   test("the button shows the cost and stays off until something is typed", async () => {
     await render(<RecipeForm />);
+    await openChef();
 
     expect(screen.getByText("Ask Chef · 2 credits")).toBeTruthy();
     await fireEvent.press(screen.getByLabelText("Send to Chef"));
     expect(mockAsk).not.toHaveBeenCalled();
   });
 
-  test("what was typed writes a recipe into the form, and the usage is reported", async () => {
+  test("what was typed writes a recipe into the form, the dropdown closes, and the usage is reported", async () => {
     await render(<RecipeForm />);
+    await openChef();
 
     await fireEvent.changeText(screen.getByLabelText("Ask Chef"), "a quick vegetarian dinner");
     await fireEvent.press(screen.getByLabelText("Send to Chef"));
@@ -61,11 +80,13 @@ describe("Recipe form: Ask Chef", () => {
     expect(screen.getByDisplayValue("Eggs")).toBeTruthy();
     expect(screen.getByDisplayValue("Cook.")).toBeTruthy();
     expect(mockSetCredits).toHaveBeenCalledWith(18);
+    expect(screen.queryByPlaceholderText(/Tell Chef what you feel like/)).toBeNull(); // tucked away again
     expect(mockToast).toHaveBeenCalledWith('Chef wrote "Spinach omelette" · used 2 credits · 18 left');
   });
 
   test("'Use what's in my fridge' is passed along", async () => {
     await render(<RecipeForm />);
+    await openChef();
 
     await fireEvent.press(screen.getByLabelText("Use what's in my fridge"));
     await fireEvent.changeText(screen.getByLabelText("Ask Chef"), "something with spinach");
@@ -78,6 +99,7 @@ describe("Recipe form: Ask Chef", () => {
     const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     mockAsk.mockResolvedValue({ found: false, reason: "not_recognized", creditsUsed: 0, balance: 20 });
     await render(<RecipeForm />);
+    await openChef();
 
     await fireEvent.changeText(screen.getByLabelText("Ask Chef"), "capital of France");
     await fireEvent.press(screen.getByLabelText("Send to Chef"));
@@ -90,6 +112,7 @@ describe("Recipe form: Ask Chef", () => {
   test("out of credits goes to the Credits screen", async () => {
     mockAsk.mockRejectedValue(new ApiError(402, "insufficient_credits"));
     await render(<RecipeForm />);
+    await openChef();
 
     await fireEvent.changeText(screen.getByLabelText("Ask Chef"), "soup please");
     await fireEvent.press(screen.getByLabelText("Send to Chef"));

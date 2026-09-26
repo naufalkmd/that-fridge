@@ -115,7 +115,7 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
 - **Latest OTA** (group `4b8d196f-7efc-4326-a593-5303e0409906`, commit `7455a5e`, API deployed; earlier groups `38644aea`, `5bcdff86`, `ab975687`):
   Ask Chef (recipe form + Meal plan), Quick Chat context, custom-field autofill, item page in sections, Settings in groups, Getting
   Started recipe link fix. Not device-checked yet.
-- **Faster start** (committed, unpublished): the native splash now stays up until the session and the fridges are ready (max 2.5s), the app
+- **Faster start** (committed, unpublished; also: Organizer toggle restored on its own local setting, Ask Chef is a dropdown on the recipe form): the native splash now stays up until the session and the fridges are ready (max 2.5s), the app
   opens signed in from a saved profile while the server confirms it (and being offline at launch no longer signs you out), and
   fridges / recipes / shopping / notes / categories / notifications / score / Home's Chef pick are saved on the device and painted
   first, then refreshed (`lib/persist.ts`, `useStaleCache`; expo-file-system, best-effort - falls back to network-only). Spinners on
