@@ -33,6 +33,7 @@ use App\Http\Controllers\RevenueCatWebhookController;
 use App\Http\Controllers\ScoreSnapshotController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\ShoppingItemController;
+use App\Http\Controllers\TipFeedbackController;
 use App\Http\Controllers\UsageHistoryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserGoalController;
@@ -66,6 +67,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/me/credits', [CreditController::class, 'show']);
     Route::patch('/me/improvement-preferences', [AuthController::class, 'updateImprovementPreferences']);
+    Route::middleware('throttle:60,1')->post('/tip-feedback', [TipFeedbackController::class, 'store']);
     Route::delete('/me/improvement-data', [AuthController::class, 'deleteImprovementData']);
     Route::patch('/item-outcomes/{itemOutcome}', [ItemOutcomeController::class, 'correct']);
     Route::post('/item-outcomes/{itemOutcome}/undo', [ItemOutcomeController::class, 'undo']);

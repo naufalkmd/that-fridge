@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Item;
+use App\Models\ItemOutcome;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -37,6 +38,7 @@ final class ItemFeedback
             'source' => $item->source ?? 'manual', 'final_number' => $seconds,
             'outcome' => $suggested ? 'autofill_used' : 'no_autofill',
         ]);
+        self::restocked($user, $item, $group['category']);
         $hasSuggestedCategory = array_key_exists('suggested_nutrition_category', $suggested);
         $guess = $hasSuggestedCategory
             ? $suggested['suggested_nutrition_category']
@@ -100,6 +102,33 @@ final class ItemFeedback
             'class' => FoodGroupClassifier::classify($item->name, $item->icon),
             'guess' => $changed ? $guess : null, 'final' => $changed ? $final : null,
             'source' => $item->source, 'outcome' => $changed ? 'corrected' : 'accepted',
+        ]);
+    }
+
+    /**
+     * Restock cadence: a new item matching one this user removed recently. Matched on the same
+     * normalized name the removal recorded (only kept while sharing is on, never for entry
+     * mistakes), so this needs no extra data.
+     */
+    private static function restocked(User $user, Item $item, ?string $class): void
+    {
+        $key = AlgoFeedback::nameKey($item->name);
+        if ($key === null) {
+            return;
+        }
+
+        $previous = ItemOutcome::where('user_id', $user->id)->where('name_key', $key)
+            ->whereIn('outcome', ['used', 'wasted'])->whereNull('undone_at')
+            ->where('created_at', '>=', now()->subDays(90))
+            ->latest('created_at')->first();
+        if (! $previous) {
+            return;
+        }
+
+        AlgoFeedback::record($user, 'restock', [
+            'kind' => 'readded', 'name' => $item->name, 'class' => $class,
+            'final_number' => (int) $previous->created_at->diffInDays(now()),
+            'outcome' => $previous->outcome,
         ]);
     }
 

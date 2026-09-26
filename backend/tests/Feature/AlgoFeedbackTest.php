@@ -438,4 +438,48 @@ class AlgoFeedbackTest extends TestCase
         $this->assertSame(0, AlgoFeedbackEvent::where('algo', 'kitchen_lab')->whereNotNull('name_key')->count());
         $this->assertSame(0, AlgoFeedbackEvent::where('guess', 'like', '%secret%')->count());
     }
+
+    public function test_restock_logs_days_since_the_same_item_was_removed(): void
+    {
+        config(['app.algo_feedback_enabled' => true]);
+        $user = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
+        $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'Top']);
+        $milk = $section->items()->create(['name' => 'Milk 2L', 'icon' => 'milk', 'nutrition_category' => 'dairy']);
+        $milk->forceFill(['created_at' => now()->subDays(20)])->saveQuietly();
+
+        $this->actingAs($user)->deleteJson("/api/items/{$milk->id}")->assertSuccessful();
+        ItemOutcome::query()->update(['created_at' => now()->subDays(6)]);
+
+        $this->postJson("/api/sections/{$section->id}/items", ['name' => 'milk 1l', 'icon' => 'milk'])->assertCreated();
+        $this->assertDatabaseHas('algo_feedback_events', [
+            'algo' => 'restock', 'kind' => 'readded', 'final_number' => 6, 'outcome' => 'used', 'class' => 'dairy',
+        ]);
+
+        // Something never removed before is not a restock.
+        $this->postJson("/api/sections/{$section->id}/items", ['name' => 'Tofu', 'icon' => 'tofu'])->assertCreated();
+        $this->assertSame(1, AlgoFeedbackEvent::where('algo', 'restock')->count());
+    }
+
+    public function test_home_tip_taps_are_logged_as_fixed_enums_and_respect_the_switch(): void
+    {
+        config(['app.algo_feedback_enabled' => true]);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/tip-feedback', ['tip' => 'guardian', 'action' => 'dismissed'])->assertNoContent();
+        $this->postJson('/api/tip-feedback', ['tip' => 'chef', 'action' => 'opened'])->assertNoContent();
+        $this->postJson('/api/tip-feedback', ['tip' => 'anything typed', 'action' => 'opened'])->assertStatus(422);
+
+        $this->assertDatabaseHas('algo_feedback_events', ['algo' => 'home_tip', 'kind' => 'dismissed', 'class' => 'guardian']);
+        $this->assertDatabaseHas('algo_feedback_events', ['algo' => 'home_tip', 'kind' => 'opened', 'class' => 'chef']);
+
+        $user->preferences = ['help_improve' => false];
+        $user->save();
+        $this->postJson('/api/tip-feedback', ['tip' => 'lowStock', 'action' => 'opened'])->assertNoContent();
+        $this->assertSame(2, AlgoFeedbackEvent::where('algo', 'home_tip')->count());
+
+        auth()->forgetGuards();
+        $this->app['auth']->forgetGuards();
+        $this->postJson('/api/tip-feedback', ['tip' => 'chef', 'action' => 'opened'])->assertUnauthorized();
+    }
 }

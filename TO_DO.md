@@ -107,13 +107,13 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   authoring.
 - **Live OTA (production, runtime 1.3.3, group `b9964b3c-a856-4f18-9dfd-fc7d840a6df9`)** carries
   everything since `bbff2c2` and has been verified on a device. Rollback: `eas update:rollback`.
-- **Not in any OTA yet:** `8ca25a6` (scan drafts send `parsed_name`; without it the scan "saved"
-  signal is skipped — older app versions still work).
+- **Not in any OTA yet:** scan drafts send `parsed_name` (`8ca25a6`), Home tip taps/dismissals are
+  reported (`/tip-feedback`), and the Home bell dot follows the selected fridge. Older app versions
+  keep working; those signals just stay empty until the next OTA.
 
 ### Execution queue (post-launch product work; details in "Product backlog")
 
-1. P1 leftovers (restock cadence, tip dismissals) → next OTA. 2. Screen tests + fridge-scoped bell
-dot. 3. Opened-item alert-timing decision. 4. Credit-scheme audit, then calendar, then multi-Machine.
+1. **Ship an OTA** (scan `parsed_name`, tip taps/dismissals, fridge-scoped bell dot). 2. Opened-item alert-timing decision. 3. Credit-scheme audit, then calendar, then multi-Machine.
 
 **Priority over all of the above: the launch items** (Android Play setup, Devpost submission — hard
 deadline Sep 30, 2026 11:45pm PDT) and the "Deferred to post-launch — don't work on these before
@@ -175,21 +175,12 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
 
 ### Product backlog
 
-**Pending**
-
-- [ ] **Screen-level tests** for `kitchen-lab.tsx` and `find-friend.tsx` (only their logic modules
-  are covered today; RNTL can't simulate the swipe pan gesture). *(Ticked in an earlier edit, but
-  no such tests exist in the repo — kept open until confirmed.)*
-- [ ] Scope the Home bell dot and the full `/notifications` screen by fridge too (Home's list
-  already is). *(Same: ticked, but not implemented.)*
-
 **Algorithm insights — what's left**
 
-- [ ] **P1 leftovers:** low-stock *restock cadence* (item re-added N days after removal) and Home
-  crew-tip dismissals (local-only today, needs a client event, so an OTA). Autofill's card is
-  all-or-nothing, so "partly accepted" only shows up as `changed` values after "Use these".
-- **Later:** per-user personalisation and automatic rule learning (needs volume). Act on patterns
-  only with ≥5 people (`ACT_USERS`); the admin page hides names below 3 (`MIN_USERS`).
+- [ ] Nothing required; extend only if the data shows gaps. Autofill's card is all-or-nothing, so
+  "partly accepted" only shows up as `changed` values after "Use these". Later: per-user
+  personalisation and automatic rule learning (needs volume). Act on patterns only with ≥5 people
+  (`ACT_USERS`); the admin page hides names below 3 (`MIN_USERS`).
 
 **Opened-item shelf life — leftovers**
 

@@ -68,7 +68,7 @@ export default function Home() {
   const router = useRouter();
   const { user } = useAuth();
   const { items, fridges, loading, refresh } = useInventory();
-  const { events, unread, requestRemove } = useNotifications();
+  const { events, requestRemove } = useNotifications();
   const { items: shoppingItems } = useShopping();
   const { scope, setScope } = useScope();
   const { usageHistory, organizerTally, scoreSnapshots } = useKitchenScore();
@@ -93,6 +93,16 @@ export default function Home() {
   const [heroWidth, setHeroWidth] = useState(0);
   const [heroSlide, setHeroSlide] = useState(0);
   const heroRef = useRef<ScrollView>(null);
+
+  // Crew-tip interactions feed the Algorithm insights (server logs only with "Help improve" on).
+  const dismissTip = (tip: "guardian" | "lowStock" | "chef") => {
+    setDismissed((d) => ({ ...d, [tip]: true }));
+    api.tipFeedback(tip, "dismissed").catch(() => {});
+  };
+  const openTip = (tip: "guardian" | "lowStock" | "chef", go: () => void) => {
+    api.tipFeedback(tip, "opened").catch(() => {});
+    go();
+  };
 
   const openProfile = () => router.push("/profile");
   // Swipe right anywhere on Home to jump to Profile — a shortcut alongside the header
@@ -263,7 +273,7 @@ export default function Home() {
               />
               <HeaderIcon
                 icon="notifications-outline"
-                dot={unread > 0}
+                dot={scopedEvents.some((e) => !e.done)}
                 onPress={() => router.navigate("/notifications")}
               />
             </View>
@@ -530,13 +540,13 @@ export default function Home() {
                 </SwipeRow>
               ))}
               {showGuardian && guardian && (
-                <SwipeRow onDelete={() => setDismissed((d) => ({ ...d, guardian: true }))}>
+                <SwipeRow onDelete={() => dismissTip("guardian")}>
                   <CrewTip
                     meta="Guardian · Expiring soon"
                     agent="Guardian"
                     items={scoped}
-                    onPress={() => router.push(`/item/${guardian.id}`)}
-                    onDismiss={() => setDismissed((d) => ({ ...d, guardian: true }))}
+                    onPress={() => openTip("guardian", () => router.push(`/item/${guardian.id}`))}
+                    onDismiss={() => dismissTip("guardian")}
                     fallback={
                       <Text style={{ fontSize: 13, color: INK }}>
                         <Text style={{ fontWeight: "700" }}>{guardian.name}</Text>
@@ -550,13 +560,13 @@ export default function Home() {
                 </SwipeRow>
               )}
               {showLowStock && lowStock && (
-                <SwipeRow onDelete={() => setDismissed((d) => ({ ...d, lowStock: true }))}>
+                <SwipeRow onDelete={() => dismissTip("lowStock")}>
                   <CrewTip
                     meta="Shopkeeper · Low stock"
                     agent="Shopkeeper"
                     items={scoped}
-                    onPress={() => router.push("/shopping")}
-                    onDismiss={() => setDismissed((d) => ({ ...d, lowStock: true }))}
+                    onPress={() => openTip("lowStock", () => router.push("/shopping"))}
+                    onDismiss={() => dismissTip("lowStock")}
                     fallback={
                       <Text style={{ fontSize: 13, color: INK }}>
                         <Text style={{ fontWeight: "700" }}>{lowStock.name}</Text>
@@ -570,13 +580,13 @@ export default function Home() {
                 </SwipeRow>
               )}
               {!dismissed.chef && (
-                <SwipeRow onDelete={() => setDismissed((d) => ({ ...d, chef: true }))}>
+                <SwipeRow onDelete={() => dismissTip("chef")}>
                   <CrewTip
                     meta="Chef · Chef's pick"
                     agent="Chef"
                     items={scoped}
-                    onPress={() => router.navigate("/eat")}
-                    onDismiss={() => setDismissed((d) => ({ ...d, chef: true }))}
+                    onPress={() => openTip("chef", () => router.navigate("/eat"))}
+                    onDismiss={() => dismissTip("chef")}
                     fallback={
                       <Text style={{ fontSize: 13, color: INK }}>
                         {chefPick ? (

@@ -494,6 +494,11 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.post<void>("/feedback", { email, message });
   }
 
+  /** Home crew-tip interaction (fire-and-forget; logged only when "Help improve" is on). */
+  function tipFeedback(tip: "guardian" | "lowStock" | "chef", action: "opened" | "dismissed"): Promise<unknown> {
+    return http.post("/tip-feedback", { tip, action });
+  }
+
   /** Fire-and-forget batch of first-party analytics events. */
   function trackEvents(events: AnalyticsEventInput[]): Promise<unknown> {
     return http.post("/events", { events });
@@ -1251,6 +1256,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     deleteAllChatSessions,
     saveOnboardingProfile,
     sendFeedback,
+    tipFeedback,
     trackEvents,
   };
 }
