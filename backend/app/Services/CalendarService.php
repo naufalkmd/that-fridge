@@ -78,7 +78,7 @@ final class CalendarService
             ->map(fn (MealEntry $e) => [
                 'id' => "meal:{$e->id}", 'kind' => 'meal', 'date' => $e->date->toDateString(), 'time' => $e->time,
                 'title' => $e->title, 'meta' => $e->slot, 'tone' => null,
-                'slot' => $e->slot, 'status' => $e->status, 'note' => $e->note,
+                'slot' => $e->slot, 'status' => $e->status, 'note' => $e->note, 'calories' => $e->calories, 'caloriesSource' => $e->calories_source,
                 'by' => $e->user_id !== $user->id ? $e->user?->username : null,
                 'refs' => array_filter([
                     'mealEntryId' => (string) $e->id,

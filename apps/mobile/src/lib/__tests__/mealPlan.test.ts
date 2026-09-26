@@ -1,6 +1,10 @@
 import type { CalendarEntry } from "@thatfridge/core";
 import {
   MAX_SLOTS,
+  isValidCalories,
+  kcalLabel,
+  mealsTotal,
+  withThousands,
   MEAL_TEMPLATES,
   compareMeals,
   defaultFridgeId,
@@ -87,7 +91,7 @@ describe("drafts", () => {
 
   test("draftToInput trims, nulls blanks, and sends fridge_id only on create", () => {
     const created = draftToInput({ ...newDraft("2026-10-02", ["Dinner"], "3"), title: " Tacos ", note: " ", time: "" });
-    expect(created).toEqual({ date: "2026-10-02", slot: "Dinner", time: null, recipe_id: null, title: "Tacos", note: null, status: "planned", fridge_id: "3" });
+    expect(created).toEqual({ date: "2026-10-02", slot: "Dinner", time: null, recipe_id: null, title: "Tacos", note: null, calories: null, status: "planned", fridge_id: "3" });
 
     const edited = draftToInput({ ...draftFromEntry(meal()), title: "Curry", time: "19:00" });
     expect(edited).not.toHaveProperty("fridge_id");
@@ -106,5 +110,43 @@ describe("compareMeals", () => {
       meal({ id: "f", title: "Apple", slot: "Dinner" }),
     ];
     expect([...list].sort(compareMeals(["Breakfast", "Lunch", "Dinner"])).map((m) => m.id)).toEqual(["d", "b", "c", "f", "a", "e"]);
+  });
+});
+
+describe("calories", () => {
+  test("a typed number is validated as a whole number and sent as a number; blank lets the server estimate", () => {
+    const base = { ...newDraft("2026-10-02", ["Dinner"], null), title: "Tacos" };
+    expect(validateDraft({ ...base, calories: "450" })).toBeNull();
+    expect(validateDraft({ ...base, calories: "" })).toBeNull();
+    for (const bad of ["abc", "-5", "4.5", "5001", "12345", " 3"]) expect(validateDraft({ ...base, calories: bad })).toMatch(/whole number up to 5000/);
+    expect(draftToInput({ ...base, calories: "450" }).calories).toBe(450);
+    expect(draftToInput({ ...base, calories: "" }).calories).toBeNull();
+    expect(["0", "5000", "120"].every(isValidCalories)).toBe(true);
+  });
+
+  test("editing shows only a typed number in the field; an estimate is not put in as if it were typed", () => {
+    expect(draftFromEntry(meal({ calories: 300, caloriesSource: "manual" })).calories).toBe("300");
+    expect(draftFromEntry(meal({ calories: 300, caloriesSource: "estimate" })).calories).toBe("");
+    expect(draftFromEntry(meal({ calories: 300, caloriesSource: "recipe" })).calories).toBe("");
+    expect(draftFromEntry(meal({ calories: null, caloriesSource: null })).calories).toBe("");
+  });
+
+  test("formatting", () => {
+    expect(withThousands(1240)).toBe("1,240");
+    expect(withThousands(98.4)).toBe("98");
+    expect(withThousands(1234567)).toBe("1,234,567");
+    expect(kcalLabel(1240)).toBe("≈ 1,240 kcal");
+  });
+
+  test("a day's total skips skipped meals and reports how many had an estimate", () => {
+    const day = [
+      meal({ id: "a", calories: 400 }),
+      meal({ id: "b", calories: 250, status: "cooked" }),
+      meal({ id: "c", calories: 900, status: "skipped" }),
+      meal({ id: "d", calories: null }),
+    ];
+    expect(mealsTotal(day)).toEqual({ kcal: 650, counted: 2, total: 3 });
+    expect(mealsTotal([])).toEqual({ kcal: 0, counted: 0, total: 0 });
+    expect(mealsTotal([meal({ calories: null })])).toEqual({ kcal: 0, counted: 0, total: 1 });
   });
 });

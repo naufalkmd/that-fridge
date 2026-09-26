@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { CalendarEntry, MealStatus } from "@thatfridge/core";
@@ -7,7 +7,7 @@ import type { CalendarEntry, MealStatus } from "@thatfridge/core";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { Eyebrow } from "@/components/ui";
 import { dayTitle, GROUP_LABEL, sectionsForDay } from "@/lib/calendar";
-import { compareMeals, draftFromEntry, newDraft, STATUS_LABEL, type MealDraft } from "@/lib/mealPlan";
+import { compareMeals, draftFromEntry, kcalLabel, mealsTotal, newDraft, STATUS_LABEL, type MealDraft } from "@/lib/mealPlan";
 import { useTheme } from "@/lib/theme";
 import { KIND_ICON, kindColor } from "./kind-meta";
 import { MealForm } from "./meal-form";
@@ -19,7 +19,7 @@ export function isOpenable(entry: CalendarEntry): boolean {
 /**
  * One day's entries, grouped by kind, plus meal planning: "Plan a meal" and tapping a meal open the
  * form in this same sheet (a second modal over a modal is unreliable on iOS). Opens over the grid
- * when a day is tapped.
+ * when a day is tapped. Keyboard handling lives in BottomSheet, which sits on top of the keyboard.
  */
 export function DaySheet({
   date,
@@ -88,7 +88,7 @@ export function DaySheet({
   return (
     <BottomSheet visible={date !== null} onClose={onClose} maxHeight={620}>
       {date !== null && (
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <View>
           {draft ? (
             <MealForm
               draft={draft}
@@ -112,7 +112,10 @@ export function DaySheet({
                 ) : (
                   sections.map((section) => (
                     <View key={section.group} style={{ marginBottom: 14 }}>
-                      <Eyebrow color={colors.faint}>{GROUP_LABEL[section.group]}</Eyebrow>
+                      <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" }}>
+                        <Eyebrow color={colors.faint}>{GROUP_LABEL[section.group]}</Eyebrow>
+                        {section.group === "meals" && <MealsTotal entries={section.entries} />}
+                      </View>
                       <View style={{ marginTop: 8, gap: 8 }}>
                         {section.entries.map((entry) =>
                           entry.kind === "meal" ? (
@@ -144,7 +147,7 @@ export function DaySheet({
               </Pressable>
             </View>
           )}
-        </KeyboardAvoidingView>
+        </View>
       )}
     </BottomSheet>
   );
@@ -190,7 +193,13 @@ function MealRow({
   const color = kindColor("meal", colors);
   const status = entry.status ?? "planned";
   const done = status === "cooked";
-  const meta = [entry.slot, entry.time, entry.by ? `by @${entry.by}` : null, status !== "planned" ? STATUS_LABEL[status] : null]
+  const meta = [
+    entry.slot,
+    entry.time,
+    typeof entry.calories === "number" ? kcalLabel(entry.calories) : null,
+    entry.by ? `by @${entry.by}` : null,
+    status !== "planned" ? STATUS_LABEL[status] : null,
+  ]
     .filter(Boolean)
     .join(" · ");
   return (
@@ -220,5 +229,18 @@ function MealRow({
         done && <MaterialCommunityIcons name="check-circle" size={24} color={colors.good} />
       )}
     </Pressable>
+  );
+}
+
+/** The day's meals added up ("≈ 1,240 kcal"), noting how many had an estimate when some did not. */
+function MealsTotal({ entries }: { entries: CalendarEntry[] }) {
+  const { colors } = useTheme();
+  const { kcal, counted, total } = mealsTotal(entries);
+  if (counted === 0) return null;
+  return (
+    <Text style={{ fontSize: 12, fontWeight: "700", color: colors.muted }} accessibilityLabel={`Meals total ${kcal} kilocalories`}>
+      {kcalLabel(kcal)}
+      {counted < total ? ` · ${counted} of ${total} counted` : ""}
+    </Text>
   );
 }

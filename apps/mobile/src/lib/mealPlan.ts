@@ -67,6 +67,8 @@ export interface MealDraft {
   title: string;
   recipeId: string | null;
   note: string;
+  /** A number the user typed (whole kcal), or "" to let the server estimate it. */
+  calories: string;
   status: MealStatus;
   fridgeId: string | null;
 }
@@ -79,7 +81,7 @@ export function newDraft(
 ): MealDraft {
   return {
     id: null, date, slot: slots[0] ?? "", time: "", title: recipe?.name ?? "", recipeId: recipe?.id ?? null,
-    note: "", status: "planned", fridgeId,
+    note: "", calories: "", status: "planned", fridgeId,
   };
 }
 
@@ -92,6 +94,8 @@ export function draftFromEntry(entry: CalendarEntry): MealDraft {
     title: entry.title,
     recipeId: entry.refs.recipeId ?? null,
     note: entry.note ?? "",
+    // Only a typed number is editable; an estimate shows as the field's placeholder instead.
+    calories: entry.caloriesSource === "manual" && entry.calories != null ? String(entry.calories) : "",
     status: entry.status ?? "planned",
     fridgeId: entry.refs.fridgeId ?? null,
   };
@@ -99,11 +103,15 @@ export function draftFromEntry(entry: CalendarEntry): MealDraft {
 
 export const isValidTime = (t: string): boolean => /^([01]\d|2[0-3]):[0-5]\d$/.test(t);
 
+export const MAX_MEAL_KCAL = 5000;
+export const isValidCalories = (c: string): boolean => /^\d{1,4}$/.test(c) && Number(c) <= MAX_MEAL_KCAL;
+
 /** A user-facing message for the first problem, or null when the draft can be saved. */
 export function validateDraft(d: MealDraft): string | null {
   if (d.title.trim() === "") return "Add a name or choose a recipe.";
   if (d.slot.trim() === "") return "Pick a meal slot.";
   if (d.time !== "" && !isValidTime(d.time)) return "Use a 24-hour time like 18:30, or leave it blank.";
+  if (d.calories !== "" && !isValidCalories(d.calories)) return `Calories must be a whole number up to ${MAX_MEAL_KCAL}, or leave it blank.`;
   return null;
 }
 
@@ -116,6 +124,8 @@ export function draftToInput(d: MealDraft): MealEntryInput {
     recipe_id: d.recipeId,
     title: d.title.trim(),
     note: d.note.trim() === "" ? null : d.note.trim(),
+    // Blank = let the server (re)work it out; a typed number is kept as-is.
+    calories: d.calories.trim() === "" ? null : Number(d.calories),
     status: d.status,
   };
   if (d.id === null) input.fridge_id = d.fridgeId;
@@ -137,4 +147,17 @@ export function compareMeals(slots: readonly string[]): (a: CalendarEntry, b: Ca
     const bySlot = rank(a.slot) - rank(b.slot);
     return bySlot !== 0 ? bySlot : a.title.localeCompare(b.title);
   };
+}
+
+/** "1,240" - thousands separators without depending on the device locale. */
+export const withThousands = (n: number): string => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+export const kcalLabel = (kcal: number): string => `≈ ${withThousands(kcal)} kcal`;
+
+/** What a day's meals add up to: skipped meals do not count, and meals with no estimate are reported
+ *  rather than silently treated as zero. */
+export function mealsTotal(entries: readonly CalendarEntry[]): { kcal: number; counted: number; total: number } {
+  const eaten = entries.filter((e) => e.kind === "meal" && e.status !== "skipped");
+  const counted = eaten.filter((e) => typeof e.calories === "number");
+  return { kcal: counted.reduce((sum, e) => sum + (e.calories as number), 0), counted: counted.length, total: eaten.length };
 }

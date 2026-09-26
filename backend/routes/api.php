@@ -72,6 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('throttle:60,1')->post('/tip-feedback', [TipFeedbackController::class, 'store']);
     Route::middleware('throttle:60,1')->get('/calendar', [CalendarController::class, 'index']);
     Route::middleware('throttle:60,1')->group(function () {
+        Route::get('/meal-entries/estimate', [MealEntryController::class, 'estimate']);
         Route::post('/meal-entries', [MealEntryController::class, 'store']);
         Route::patch('/meal-entries/{mealEntry}', [MealEntryController::class, 'update']);
         Route::delete('/meal-entries/{mealEntry}', [MealEntryController::class, 'destroy']);

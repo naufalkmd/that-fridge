@@ -422,9 +422,20 @@ for a device reminder), `recipe_id` (its name is copied into `title` when `title
 (required when there is no recipe, ≤120), `note` (≤255), `status` (`planned|cooked|skipped`,
 default `planned`; `cooked` stamps `cooked_at`), `fridge_id` (create only; you must be a member,
 else 404). PATCH takes any subset. Returns the entry (`id, date, slot, time, title, note, status,
-recipeId, fridgeId, cookedAt, by, isMine`). A deleted recipe keeps the entry (its title is
+recipeId, fridgeId, calories, caloriesSource, cookedAt, by, isMine`). A deleted recipe keeps the entry (its title is
 already copied); a deleted fridge leaves the author's entry personal; deleting an account deletes
 the user's entries. Throttled 60/min.
+
+**Calories.** Each entry carries `calories` and `caloriesSource`. A number sent in `calories` (0-5000) is kept
+as-is (`manual`) and never recomputed. Otherwise it is the linked recipe's per-serving estimate (`recipe`), else the
+nutrition table run over the meal's name (`estimate` - "Chicken rice" counts both foods; null when nothing is
+recognised). It is recomputed on create and when `title` or `recipe_id` changes, and left alone by other edits;
+sending `calories: null` drops a typed number and re-estimates. A cooked log made by mark-made takes the recipe's number.
+
+### `GET /meal-entries/estimate?title=...` 🔒
+
+`{ "calories": 341 | null }` - the table-only estimate for a meal name (instant, no model, no credits), used for the
+form's live hint. Throttled 60/min.
 
 ### `PATCH /me/meal-slots` 🔒
 

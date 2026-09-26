@@ -18,6 +18,8 @@ class MealEntryResource extends JsonResource
             'time' => $this->time,
             'title' => $this->title,
             'note' => $this->note,
+            'calories' => $this->calories,
+            'caloriesSource' => $this->calories_source,
             'status' => $this->status,
             'recipeId' => $this->recipe_id !== null ? (string) $this->recipe_id : null,
             'fridgeId' => $this->fridge_id !== null ? (string) $this->fridge_id : null,

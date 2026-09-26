@@ -75,6 +75,38 @@ final class RecipeCalories
         return $hit !== null ? $hit['kcal'] / 100 * $hit['grams'] : null;
     }
 
+    /**
+     * kcal for a meal TITLE ("Banana", "Chicken rice", "Egg fried rice"): unlike one ingredient it may
+     * name several foods, so every recognised food adds a typical portion - the longest keyword first,
+     * removed from the text, then the next. "or" still averages; "and" / "," / "+" separate foods.
+     * Null when nothing is recognised (the caller then shows no estimate rather than a guess).
+     */
+    public static function mealKcal(string $title): ?float
+    {
+        $options = [];
+        foreach (preg_split('/\s+or\s+|\s*\/\s*/u', self::normalize($title)) ?: [] as $alternative) {
+            $sum = 0.0;
+            $any = false;
+            foreach (preg_split('/\s+and\s+|\s*[,&+]\s*/u', $alternative) ?: [] as $part) {
+                $remaining = $part;
+                for ($i = 0; $i < 6; $i++) {
+                    $row = self::lookup($remaining);
+                    if ($row === null) {
+                        break;
+                    }
+                    $sum += $row['kcal'] / 100 * $row['grams'];
+                    $any = true;
+                    $remaining = trim(preg_replace($row['pattern'], ' ', $remaining, 1) ?? '');
+                }
+            }
+            if ($any) {
+                $options[] = $sum;
+            }
+        }
+
+        return $options === [] ? null : array_sum($options) / count($options);
+    }
+
     /** Lowercase, drop "(...)" notes, a leading quantity + unit, and size / prep words that change nothing here. */
     private static function normalize(string $name): string
     {
@@ -86,7 +118,7 @@ final class RecipeCalories
         return trim(preg_replace('/\s+/u', ' ', $name) ?? $name);
     }
 
-    /** @return array{kcal: int, grams: int}|null the longest matching keyword's entry */
+    /** @return array{kcal: int, grams: int, pattern: string}|null the longest matching keyword's entry */
     private static function lookup(string $text): ?array
     {
         $text = trim($text);
@@ -96,7 +128,7 @@ final class RecipeCalories
 
         foreach (self::index() as $row) {
             if (preg_match($row['pattern'], $text) === 1) {
-                return ['kcal' => $row['kcal'], 'grams' => $row['grams']];
+                return ['kcal' => $row['kcal'], 'grams' => $row['grams'], 'pattern' => $row['pattern']];
             }
         }
 

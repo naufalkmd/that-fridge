@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Modal, Pressable, View, type ViewStyle } from "react-native";
+import { Modal, Pressable, View, useWindowDimensions, type ViewStyle } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { useKeyboardHeight } from "@/lib/keyboard";
 import { useTheme } from "@/lib/theme";
 
 // Drag the handle down past this far, or flick it fast enough, and it counts as a dismiss.
@@ -22,6 +23,9 @@ const DISMISS_VELOCITY = 800;
  *
  * The gesture only lives on the handle, not the whole sheet, so a ScrollView/list inside
  * `children` keeps scrolling normally instead of fighting the drag for the same pan gesture.
+ *
+ * It sits on top of the on-screen keyboard while one is up (a sheet with a text field would
+ * otherwise be covered by it), and shrinks to the space left so its top never leaves the screen.
  */
 export function BottomSheet({
   visible,
@@ -36,6 +40,10 @@ export function BottomSheet({
 }) {
   const translateY = useSharedValue(0);
   const { surface: SURFACE, hairline: HAIRLINE } = useTheme().colors;
+  const keyboard = useKeyboardHeight();
+  const window = useWindowDimensions();
+  // Leave room above for the status bar and a sliver of the screen behind the sheet.
+  const roomAboveKeyboard = window.height - keyboard - 64;
 
   useEffect(() => {
     if (visible) translateY.value = 0;
@@ -61,8 +69,8 @@ export function BottomSheet({
     backgroundColor: SURFACE,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
-    paddingBottom: 34,
-    maxHeight,
+    paddingBottom: keyboard > 0 ? 12 : 34,
+    maxHeight: keyboard > 0 ? Math.min(maxHeight ?? roomAboveKeyboard, roomAboveKeyboard) : maxHeight,
   };
 
   return (
@@ -73,10 +81,12 @@ export function BottomSheet({
       onRequestClose={onClose}
     >
       <Pressable
+        testID="bottom-sheet-overlay"
         onPress={onClose}
         style={{
           flex: 1,
           justifyContent: "flex-end",
+          paddingBottom: keyboard,
           backgroundColor: "rgba(0,0,0,0.55)",
         }}
       >

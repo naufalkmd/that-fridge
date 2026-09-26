@@ -8,6 +8,7 @@ use App\Models\MealEntry;
 use App\Models\Recipe;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class MealEntryTest extends TestCase
@@ -371,5 +372,124 @@ class MealEntryTest extends TestCase
         $user->save();
         $this->postJson('/api/meal-entries', ['date' => now()->toDateString(), 'slot' => 'Lunch', 'title' => 'x'])->assertCreated();
         $this->assertSame(2, AlgoFeedbackEvent::where('algo', 'meal_plan')->count());
+    }
+
+    // ---- calories --------------------------------------------------------------------------
+
+    private function plan(User $user, array $over = [])
+    {
+        return $this->actingAs($user)->postJson('/api/meal-entries', array_merge(['date' => '2026-10-02', 'slot' => 'Dinner', 'title' => 'Banana'], $over));
+    }
+
+    public function test_a_free_text_meal_gets_an_estimate_from_its_name(): void
+    {
+        $user = User::factory()->create();
+
+        $banana = $this->plan($user)->assertCreated()->json('data');
+        $this->assertEqualsWithDelta(98, $banana['calories'], 2);
+        $this->assertSame('estimate', $banana['caloriesSource']);
+
+        $two = $this->plan($user, ['title' => 'Chicken rice'])->json('data');
+        $this->assertEqualsWithDelta(474, $two['calories'], 6); // every recognised food counts
+
+        $unknown = $this->plan($user, ['title' => 'Zorblax surprise'])->json('data');
+        $this->assertNull($unknown['calories']);
+        $this->assertNull($unknown['caloriesSource']);
+    }
+
+    public function test_a_recipe_meal_uses_the_recipes_per_serving_number(): void
+    {
+        $user = User::factory()->create();
+        $recipe = $this->recipe($user);
+        $recipe->forceFill(['calories' => 640, 'calories_source' => 'ai'])->saveQuietly();
+
+        $entry = $this->plan($user, ['recipe_id' => $recipe->id, 'title' => 'Banana'])->assertCreated()->json('data');
+
+        $this->assertSame(640, $entry['calories']); // the recipe wins over the name
+        $this->assertSame('recipe', $entry['caloriesSource']);
+    }
+
+    public function test_a_typed_number_wins_and_survives_renames(): void
+    {
+        $user = User::factory()->create();
+        $entry = $this->plan($user, ['calories' => 300])->assertCreated()->json('data');
+        $this->assertSame(300, $entry['calories']);
+        $this->assertSame('manual', $entry['caloriesSource']);
+
+        $renamed = $this->patchJson("/api/meal-entries/{$entry['id']}", ['title' => 'Chicken rice'])->assertOk()->json('data');
+        $this->assertSame(300, $renamed['calories']); // a manual number is never recomputed
+
+        $status = $this->patchJson("/api/meal-entries/{$entry['id']}", ['status' => 'cooked'])->assertOk()->json('data');
+        $this->assertSame(300, $status['calories']);
+    }
+
+    public function test_clearing_a_typed_number_goes_back_to_the_estimate(): void
+    {
+        $user = User::factory()->create();
+        $entry = $this->plan($user, ['title' => 'Chicken rice', 'calories' => 300])->json('data');
+
+        $cleared = $this->patchJson("/api/meal-entries/{$entry['id']}", ['calories' => null])->assertOk()->json('data');
+
+        $this->assertEqualsWithDelta(474, $cleared['calories'], 6);
+        $this->assertSame('estimate', $cleared['caloriesSource']);
+    }
+
+    public function test_renaming_or_changing_the_recipe_recomputes_an_estimate_but_other_edits_do_not(): void
+    {
+        $user = User::factory()->create();
+        $entry = $this->plan($user)->json('data'); // Banana, estimate
+
+        $same = $this->patchJson("/api/meal-entries/{$entry['id']}", ['note' => 'ripe', 'slot' => 'Lunch'])->json('data');
+        $this->assertSame($entry['calories'], $same['calories']);
+
+        $renamed = $this->patchJson("/api/meal-entries/{$entry['id']}", ['title' => 'Chicken rice'])->json('data');
+        $this->assertEqualsWithDelta(474, $renamed['calories'], 6);
+
+        $recipe = $this->recipe($user);
+        $recipe->forceFill(['calories' => 555, 'calories_source' => 'algorithm'])->saveQuietly();
+        $withRecipe = $this->patchJson("/api/meal-entries/{$entry['id']}", ['recipe_id' => $recipe->id])->json('data');
+        $this->assertSame(555, $withRecipe['calories']);
+        $this->assertSame('recipe', $withRecipe['caloriesSource']);
+    }
+
+    public function test_calories_are_validated(): void
+    {
+        $user = User::factory()->create();
+
+        $this->plan($user, ['calories' => -1])->assertStatus(422);
+        $this->plan($user, ['calories' => 5001])->assertStatus(422);
+        $this->plan($user, ['calories' => 'lots'])->assertStatus(422);
+        $this->plan($user, ['calories' => 0])->assertCreated()->assertJsonPath('data.calories', 0);
+    }
+
+    public function test_the_estimate_endpoint_is_the_table_only_and_needs_no_model(): void
+    {
+        Http::fake();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->getJson('/api/meal-entries/estimate?title=Egg+fried+rice')->assertOk()->assertJson(['calories' => 341]);
+        $this->getJson('/api/meal-entries/estimate?title=Zorblax')->assertOk()->assertJson(['calories' => null]);
+        $this->getJson('/api/meal-entries/estimate')->assertStatus(422);
+        Http::assertNothingSent();
+
+        auth()->forgetGuards();
+        $this->app['auth']->forgetGuards();
+        $this->getJson('/api/meal-entries/estimate?title=Banana')->assertUnauthorized();
+    }
+
+    public function test_the_calendar_carries_each_meals_calories_and_a_cooked_log_takes_the_recipes(): void
+    {
+        $user = User::factory()->create();
+        $recipe = $this->recipe($user);
+        $recipe->forceFill(['calories' => 480, 'calories_source' => 'algorithm'])->saveQuietly();
+        $this->plan($user, ['date' => now()->addDay()->toDateString(), 'title' => 'Banana']);
+
+        $entries = collect($this->getJson('/api/calendar?'.http_build_query(['from' => now()->toDateString(), 'to' => now()->addDays(3)->toDateString()]))->json('entries'))->where('kind', 'meal');
+        $this->assertEqualsWithDelta(98, $entries->first()['calories'], 2);
+
+        $this->postJson("/api/recipes/{$recipe->id}/mark-made", ['date' => '2026-10-05'])->assertOk();
+        $log = MealEntry::where('date', '2026-10-05')->first();
+        $this->assertSame(480, $log->calories);
+        $this->assertSame('recipe', $log->calories_source);
     }
 }

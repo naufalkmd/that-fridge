@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'fridge_id', 'date', 'slot', 'time', 'recipe_id', 'title', 'note', 'status', 'cooked_at'])]
+#[Fillable(['user_id', 'fridge_id', 'date', 'slot', 'time', 'recipe_id', 'title', 'note', 'calories', 'calories_source', 'status', 'cooked_at'])]
 class MealEntry extends Model
 {
     public const STATUSES = ['planned', 'cooked', 'skipped'];

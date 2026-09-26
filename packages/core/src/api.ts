@@ -890,6 +890,11 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.patch<MealEntry>(`/meal-entries/${id}`, input);
   }
 
+  /** Table-only calorie estimate for a meal name (instant, free, no credits); `calories` null when unrecognised. */
+  function estimateMealCalories(title: string): Promise<{ calories: number | null }> {
+    return http.get<{ calories: number | null }>(`/meal-entries/estimate?title=${encodeURIComponent(title)}`);
+  }
+
   function deleteMealEntry(id: string): Promise<void> {
     return http.del<void>(`/meal-entries/${id}`);
   }
@@ -1301,6 +1306,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     createMealEntry,
     updateMealEntry,
     deleteMealEntry,
+    estimateMealCalories,
     updateMealSlots,
     trackEvents,
   };

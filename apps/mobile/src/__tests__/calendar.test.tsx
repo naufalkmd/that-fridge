@@ -27,7 +27,7 @@ jest.mock("@/lib/auth", () => ({ useAuth: () => ({ user: mockUser, updateMealSlo
 let mockFridges = [{ id: "1", role: "member" }, { id: "2", role: "owner" }];
 jest.mock("@/lib/inventory", () => ({ useInventory: () => ({ fridges: mockFridges }) }));
 jest.mock("@/lib/recipes", () => ({
-  useRecipes: () => ({ recipes: [{ id: "9", name: "Pad Thai" }, { id: "10", name: "Green Curry" }] }),
+  useRecipes: () => ({ recipes: [{ id: "9", name: "Pad Thai", calories: 640 }, { id: "10", name: "Green Curry", calories: null }] }),
 }));
 const mockSyncReminder = jest.fn();
 const mockCancelReminder = jest.fn();
@@ -40,8 +40,10 @@ const mockGetCalendar = jest.fn();
 const mockCreateMeal = jest.fn();
 const mockUpdateMeal = jest.fn();
 const mockDeleteMeal = jest.fn();
+const mockEstimate = jest.fn();
 jest.mock("@/lib/api", () => ({
   api: {
+    estimateMealCalories: (...a: unknown[]) => mockEstimate(...a),
     getCalendar: (...a: unknown[]) => mockGetCalendar(...a),
     createMealEntry: (...a: unknown[]) => mockCreateMeal(...a),
     updateMealEntry: (...a: unknown[]) => mockUpdateMeal(...a),
@@ -75,6 +77,7 @@ beforeEach(() => {
   mockCreateMeal.mockImplementation(async (input) => ({ id: "50", by: null, isMine: true, cookedAt: null, recipeId: input.recipe_id ?? null, fridgeId: input.fridge_id ?? null, note: null, ...input }));
   mockUpdateMeal.mockImplementation(async (id, input) => ({ id, slot: "Dinner", title: "Tacos", date: "2026-09-18", time: null, status: "planned", ...input }));
   mockDeleteMeal.mockResolvedValue(undefined);
+  mockEstimate.mockResolvedValue({ calories: null });
 });
 
 describe("Calendar screen", () => {
@@ -237,14 +240,14 @@ describe("Calendar meal planning", () => {
     await openDay("2026-09-18");
     await fireEvent.press(await screen.findByText("Plan a meal"));
 
-    await fireEvent.changeText(screen.getByPlaceholderText("What are you having?"), "Leftover curry");
+    await fireEvent.changeText(screen.getByPlaceholderText("e.g. Chicken rice"), "Leftover curry");
     await fireEvent.changeText(screen.getByPlaceholderText("18:30 (optional)"), "19:00");
     await fireEvent.press(screen.getByText("Save"));
 
     await waitFor(() => expect(mockCreateMeal).toHaveBeenCalledTimes(1));
     expect(mockCreateMeal).toHaveBeenCalledWith({
       date: "2026-09-18", slot: "Breakfast", time: "19:00", recipe_id: null, title: "Leftover curry", note: null,
-      status: "planned", fridge_id: "2", // the fridge the user owns
+      calories: null, status: "planned", fridge_id: "2", // the fridge the user owns; blank calories = the server estimates
     });
     expect(mockSyncReminder).toHaveBeenCalledWith(expect.objectContaining({ id: "50", time: "19:00" }));
     await waitFor(() => expect(mockGetCalendar).toHaveBeenCalledTimes(2)); // refreshed
@@ -276,7 +279,7 @@ describe("Calendar meal planning", () => {
     expect(await screen.findByText("Add a name or choose a recipe.")).toBeTruthy();
     expect(mockCreateMeal).not.toHaveBeenCalled();
 
-    await fireEvent.changeText(screen.getByPlaceholderText("What are you having?"), "x");
+    await fireEvent.changeText(screen.getByPlaceholderText("e.g. Chicken rice"), "x");
     await fireEvent.changeText(screen.getByPlaceholderText("18:30 (optional)"), "6pm");
     await fireEvent.press(screen.getByText("Save"));
     expect(await screen.findByText(/24-hour time/)).toBeTruthy();
@@ -288,12 +291,12 @@ describe("Calendar meal planning", () => {
     await render(<CalendarScreen />);
     await openDay("2026-09-18");
     await fireEvent.press(await screen.findByText("Plan a meal"));
-    await fireEvent.changeText(screen.getByPlaceholderText("What are you having?"), "x");
+    await fireEvent.changeText(screen.getByPlaceholderText("e.g. Chicken rice"), "x");
 
     await fireEvent.press(screen.getByText("Save"));
 
     expect(await screen.findByText(/Couldn't save that meal|boom/)).toBeTruthy();
-    expect(screen.getByPlaceholderText("What are you having?")).toBeTruthy();
+    expect(screen.getByPlaceholderText("e.g. Chicken rice")).toBeTruthy();
   });
 
   test("with no slots yet it offers templates; choosing one saves the slots", async () => {
@@ -352,7 +355,7 @@ describe("Calendar meal planning", () => {
 
     await waitFor(() => expect(mockUpdateMeal).toHaveBeenCalledWith("7", { status: "cooked" }));
     expect(mockSyncReminder).toHaveBeenCalled();
-    expect(screen.queryByPlaceholderText("What are you having?")).toBeNull();
+    expect(screen.queryByPlaceholderText("e.g. Chicken rice")).toBeNull();
   });
 
   test("Add to plan from a recipe: pick any day and the form opens with that recipe", async () => {
@@ -376,5 +379,120 @@ describe("Calendar meal planning", () => {
     await openDay("2026-09-21");
     expect(await screen.findByText("Nothing on this day.")).toBeTruthy();
     expect(screen.queryByDisplayValue("Pad Thai")).toBeNull();
+  });
+});
+
+// ---- calories in meal planning ---------------------------------------------------------------
+
+describe("Calendar meal calories", () => {
+  test("typing a name shows the estimate as the calories hint; saving without a number leaves it to the server", async () => {
+    mockEstimate.mockResolvedValue({ calories: 98 });
+    await render(<CalendarScreen />);
+    await openDay("2026-09-18");
+    await fireEvent.press(await screen.findByText("Plan a meal"));
+
+    await fireEvent.changeText(screen.getByPlaceholderText("e.g. Chicken rice"), "Banana");
+
+    expect(await screen.findByPlaceholderText("≈ 98 kcal")).toBeTruthy();
+    expect(screen.getByText("Estimated from the name. Type a number to change it.")).toBeTruthy();
+    expect(mockEstimate).toHaveBeenLastCalledWith("Banana");
+
+    await fireEvent.press(screen.getByText("Save"));
+    await waitFor(() => expect(mockCreateMeal).toHaveBeenCalledWith(expect.objectContaining({ title: "Banana", calories: null })));
+  });
+
+  test("a typed number is sent as-is and only digits are accepted", async () => {
+    await render(<CalendarScreen />);
+    await openDay("2026-09-18");
+    await fireEvent.press(await screen.findByText("Plan a meal"));
+    await fireEvent.changeText(screen.getByPlaceholderText("e.g. Chicken rice"), "Mum's stew");
+
+    await fireEvent.changeText(screen.getByLabelText("Calories"), "4a5b0");
+    expect(screen.getByDisplayValue("450")).toBeTruthy();
+    expect(screen.getByText("Using the number you typed.")).toBeTruthy();
+    await fireEvent.press(screen.getByText("Save"));
+
+    await waitFor(() => expect(mockCreateMeal).toHaveBeenCalledWith(expect.objectContaining({ calories: 450 })));
+  });
+
+  test("choosing a recipe shows its calories in the list and as the hint, without asking the server", async () => {
+    await render(<CalendarScreen />);
+    await openDay("2026-09-18");
+    await fireEvent.press(await screen.findByText("Plan a meal"));
+
+    await fireEvent.press(screen.getByText("Choose from your recipes"));
+    expect(screen.getByText("≈ 640 kcal")).toBeTruthy(); // Pad Thai's number beside its name
+    await fireEvent.press(screen.getByText("Pad Thai"));
+
+    expect(await screen.findByPlaceholderText("≈ 640 kcal")).toBeTruthy();
+    expect(screen.getByText("Estimated from the recipe. Type a number to change it.")).toBeTruthy();
+    expect(mockEstimate).not.toHaveBeenCalled();
+  });
+
+  test("a name we cannot estimate says so instead of showing a made-up number", async () => {
+    mockEstimate.mockResolvedValue({ calories: null });
+    await render(<CalendarScreen />);
+    await openDay("2026-09-18");
+    await fireEvent.press(await screen.findByText("Plan a meal"));
+
+    await fireEvent.changeText(screen.getByPlaceholderText("e.g. Chicken rice"), "Zorblax surprise");
+
+    expect(await screen.findByText(/No estimate for this name/)).toBeTruthy();
+    expect(screen.getByPlaceholderText("kcal (optional)")).toBeTruthy();
+  });
+
+  test("a failing estimate call never blocks planning", async () => {
+    mockEstimate.mockRejectedValue(new Error("offline"));
+    await render(<CalendarScreen />);
+    await openDay("2026-09-18");
+    await fireEvent.press(await screen.findByText("Plan a meal"));
+    await fireEvent.changeText(screen.getByPlaceholderText("e.g. Chicken rice"), "Banana");
+
+    await waitFor(() => expect(mockEstimate).toHaveBeenCalled());
+    await fireEvent.press(screen.getByText("Save"));
+    await waitFor(() => expect(mockCreateMeal).toHaveBeenCalled());
+  });
+
+  test("meals show their calories and the day shows a total, noting meals without an estimate", async () => {
+    mockGetCalendar.mockResolvedValue({
+      entries: [
+        meal({ calories: 400, caloriesSource: "estimate" }),
+        meal({ id: "meal:8", title: "Oats", slot: "Breakfast", calories: 250, caloriesSource: "recipe", status: "cooked", refs: { mealEntryId: "8" } }),
+        meal({ id: "meal:9", title: "Mystery", calories: null, refs: { mealEntryId: "9" } }),
+        meal({ id: "meal:10", title: "Skipped cake", calories: 900, status: "skipped", refs: { mealEntryId: "10" } }),
+      ],
+      truncated: false, from: "", to: "",
+    });
+    await render(<CalendarScreen />);
+    await openDay("2026-09-18");
+
+    expect(await screen.findByText("Dinner · ≈ 400 kcal")).toBeTruthy();
+    expect(screen.getByText("≈ 650 kcal · 2 of 3 counted")).toBeTruthy(); // the skipped meal is left out
+  });
+
+  test("editing shows a typed number, and clearing it hands the meal back to the estimate", async () => {
+    mockGetCalendar.mockResolvedValue({ entries: [meal({ calories: 300, caloriesSource: "manual" })], truncated: false, from: "", to: "" });
+    await render(<CalendarScreen />);
+    await openDay("2026-09-18");
+    await fireEvent.press(await screen.findByLabelText("Edit Tacos"));
+
+    expect(screen.getByDisplayValue("300")).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText("Calories"), "");
+    await fireEvent.press(screen.getByText("Save"));
+
+    await waitFor(() => expect(mockUpdateMeal).toHaveBeenCalledWith("7", expect.objectContaining({ calories: null })));
+  });
+
+  test("a bad calories value is refused with a clear message", async () => {
+    await render(<CalendarScreen />);
+    await openDay("2026-09-18");
+    await fireEvent.press(await screen.findByText("Plan a meal"));
+    await fireEvent.changeText(screen.getByPlaceholderText("e.g. Chicken rice"), "x");
+    await fireEvent.changeText(screen.getByLabelText("Calories"), "9999");
+
+    await fireEvent.press(screen.getByText("Save"));
+
+    expect(await screen.findByText(/whole number up to 5000/)).toBeTruthy();
+    expect(mockCreateMeal).not.toHaveBeenCalled();
   });
 });

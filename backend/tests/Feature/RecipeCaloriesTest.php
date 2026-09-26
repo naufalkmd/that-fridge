@@ -69,6 +69,21 @@ class RecipeCaloriesTest extends TestCase
         $this->assertNull(RecipeCalories::ingredientKcal('   '));
     }
 
+    public function test_meal_titles_count_every_recognised_food(): void
+    {
+        $cases = [
+            'Banana' => 98, 'Chicken rice' => 474, 'Egg fried rice' => 341, 'Toast and eggs' => 266,
+            'Coconut milk rice' => 352, 'Chicken or beef' => 270, 'Nasi lemak' => 234,
+        ];
+        foreach ($cases as $title => $expected) {
+            $this->assertEqualsWithDelta($expected, RecipeCalories::mealKcal($title), 6, $title);
+        }
+        $this->assertNull(RecipeCalories::mealKcal('Zorblax surprise'));
+        $this->assertNull(RecipeCalories::mealKcal('  '));
+        // A single ingredient still resolves as before - the phrase estimator is only for meal titles.
+        $this->assertEqualsWithDelta(107, RecipeCalories::mealKcal('Eggs'), 3);
+    }
+
     public function test_an_unknown_name_falls_back_to_a_curated_icon_hint(): void
     {
         $this->assertNull(RecipeCalories::ingredientKcal('Something obscure', 'generic'));

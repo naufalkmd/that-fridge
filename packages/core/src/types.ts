@@ -663,6 +663,9 @@ export interface CalendarEntry {
   slot?: string;
   status?: MealStatus;
   note?: string | null;
+  /** Meal entries: estimated kcal (`caloriesSource` recipe | estimate | manual), null if unknown. */
+  calories?: number | null;
+  caloriesSource?: "recipe" | "estimate" | "manual" | null;
   by?: string | null;
   refs: {
     itemId?: string;
@@ -682,6 +685,8 @@ export interface MealEntry {
   time: string | null; // "HH:MM", only for a reminder
   title: string;
   note: string | null;
+  calories: number | null;
+  caloriesSource: "recipe" | "estimate" | "manual" | null;
   status: MealStatus;
   recipeId: string | null;
   fridgeId: string | null;
@@ -698,6 +703,8 @@ export interface MealEntryInput {
   recipe_id?: string | null;
   title?: string | null;
   note?: string | null;
+  /** A number typed by the user is kept as-is; null / omitted = the server works it out. */
+  calories?: number | null;
   status?: MealStatus;
   fridge_id?: string | null;
 }

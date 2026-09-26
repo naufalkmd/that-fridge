@@ -320,6 +320,7 @@ class RecipeController extends Controller
         MealEntry::create([
             'user_id' => $user->id, 'date' => $today, 'slot' => 'Cooked', 'recipe_id' => $recipe->id,
             'title' => $recipe->name, 'status' => 'cooked', 'cooked_at' => now(),
+            'calories' => $recipe->calories, 'calories_source' => $recipe->calories !== null ? 'recipe' : null,
         ]);
     }
 

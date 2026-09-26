@@ -222,7 +222,8 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
   other members of a Pro-owned fridge without ever saying "household" in the UI; meal slots are
   user-defined with suggested templates; AI weekly planner later (after the credit audit). All
   OTA — no native rebuild, no Apple/Google Calendar. **Phases 1 (read-only calendar) and 2 (meal plan + recipe log) are
-  PUBLISHED (OTA `0a92e78c`) but not device-checked yet** — check on a phone: Home button under the bell,
+  PUBLISHED (OTA `0a92e78c`); a first device pass found the meal form hidden by the keyboard —
+  fixed in the next OTA (sheet now rides above the keyboard, name field first, calories added).** Still to check on a phone: Home button under the bell,
   tap days incl. empty ones, filters, month arrows, plan / edit / delete / tick a meal, first-time slot
   templates, a reminder time, "Add to plan" on a recipe, and the sharing rule with a second account
   (Pro-owned fridge shares, free-owned stays personal). Phase 3 (AI/automation hooks) not started.
