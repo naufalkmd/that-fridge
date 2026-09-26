@@ -1,5 +1,6 @@
 import { ApiError, type HttpClient, type TokenStore } from "./http";
 import type {
+  CalendarResult,
   BadgeKey,
   BadgeProgress,
   Category,
@@ -856,6 +857,20 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.get<WhatToEatResult>(`/recipes/suggest${qs ? `?${qs}` : ""}`);
   }
 
+  /** The in-app calendar's composed entries for a local date range (max 62 days). Not wrapped in
+   *  { data } server-side - the `truncated` sibling would be stripped by the unwrap. */
+  function getCalendar(params: {
+    from: string;
+    to: string;
+    fridgeId?: string;
+    tz?: string;
+  }): Promise<CalendarResult> {
+    const q = new URLSearchParams({ from: params.from, to: params.to });
+    if (params.fridgeId) q.set("fridge", params.fridgeId);
+    if (params.tz) q.set("tz", params.tz);
+    return http.get<CalendarResult>(`/calendar?${q.toString()}`);
+  }
+
   function markRecipeMade(id: string): Promise<Recipe> {
     return http.post<Recipe>(`/recipes/${id}/mark-made`);
   }
@@ -1257,6 +1272,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     saveOnboardingProfile,
     sendFeedback,
     tipFeedback,
+    getCalendar,
     trackEvents,
   };
 }

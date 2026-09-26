@@ -200,6 +200,13 @@ function AppShell({
                                       options={{ headerShown: false }}
                                     />
                                     <Stack.Screen
+                                      name="calendar"
+                                      options={{
+                                        headerShown: false,
+                                        presentation: "modal",
+                                      }}
+                                    />
+                                    <Stack.Screen
                                       name="recipes"
                                       options={{ headerShown: false }}
                                     />

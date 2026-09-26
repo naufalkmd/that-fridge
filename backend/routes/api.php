@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\BlockController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CalorieController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CreditController;
@@ -68,6 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me/credits', [CreditController::class, 'show']);
     Route::patch('/me/improvement-preferences', [AuthController::class, 'updateImprovementPreferences']);
     Route::middleware('throttle:60,1')->post('/tip-feedback', [TipFeedbackController::class, 'store']);
+    Route::middleware('throttle:60,1')->get('/calendar', [CalendarController::class, 'index']);
     Route::delete('/me/improvement-data', [AuthController::class, 'deleteImprovementData']);
     Route::patch('/item-outcomes/{itemOutcome}', [ItemOutcomeController::class, 'correct']);
     Route::post('/item-outcomes/{itemOutcome}/undo', [ItemOutcomeController::class, 'undo']);

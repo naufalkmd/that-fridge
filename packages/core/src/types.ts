@@ -626,3 +626,36 @@ export interface FridgeNote {
   createdAt: number;
   updatedAt: number;
 }
+
+// ---- Calendar (GET /calendar) -------------------------------------------------------------
+
+export type CalendarEntryKind =
+  | "expiry"
+  | "machine_scheduled"
+  | "machine_run"
+  | "used"
+  | "wasted"
+  | "added";
+
+/** One dated entry from the server's composed calendar read model. `date` is a local calendar
+ *  day (YYYY-MM-DD, in the timezone the client asked for); `used` / `wasted` / `added` are
+ *  per-day summaries (`count`), never per-item rows. */
+export interface CalendarEntry {
+  id: string;
+  kind: CalendarEntryKind;
+  date: string;
+  time: string | null; // "HH:MM" local, only for machine entries
+  title: string;
+  meta: string | null;
+  tone: "overdue" | null;
+  count?: number;
+  refs: { itemId?: string; fridgeId?: string; machineId?: string; runId?: string };
+}
+
+export interface CalendarResult {
+  entries: CalendarEntry[];
+  /** True when the server hit its entry cap for this range. */
+  truncated: boolean;
+  from: string;
+  to: string;
+}

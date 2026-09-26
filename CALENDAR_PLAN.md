@@ -1,6 +1,8 @@
 # In-app calendar — plan
 
-Status: **planned, nothing built.** Post-launch work (do not start before Sep 30, 2026).
+Status: **phase 1 built and committed, not yet published** (2026-09-26): `GET /api/calendar`, the
+calendar screen, and the Home button. Phases 2-3 not started. Publish only after a device check -
+an OTA near the Sep 30 deadline needs QA first.
 Decided 2026-09-26. Everything below ships over OTA — no native module, no permission, no rebuild.
 
 One calendar screen inside the app showing everything ThatFridge knows about time: expiry dates,
@@ -93,7 +95,9 @@ then the viewer's slot order, then label.
 
 ## Phases
 
-1. **Read-only calendar (2–3 days).** `GET /api/calendar` (expiry, machines, activity), the screen,
+1. **Read-only calendar (2–3 days) — BUILT.** (`CalendarService`, `CalendarController`, `app/calendar.tsx`,
+   `components/calendar/*`, `lib/calendar.ts`; `used`/`wasted`/`added` are per-day counts because
+   outcome rows keep no item name.) `GET /api/calendar` (expiry, machines, activity), the screen,
    the Home button. *Done when:* the endpoint respects fridge membership and `effectiveExpiry`;
    180-day cap; timezone placement tested; scope filter matches Home; every day cell opens its
    day detail (past, today, future, adjacent-month days); jest screen test.

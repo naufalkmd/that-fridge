@@ -383,6 +383,29 @@ Calls the same OpenRouter model as `/chat`. Without `OPENROUTER_API_KEY` configu
 
 ---
 
+## Calendar
+
+### `GET /calendar` 🔒
+
+The in-app calendar's read model: dated entries across the caller's fridges for a local date range.
+Query: `from`, `to` (`YYYY-MM-DD`, `to >= from`, at most 62 days apart), optional `fridge` (a fridge
+the caller belongs to, else 404) and `tz` (IANA timezone; default `UTC` - history timestamps are
+placed on the local day in this zone). Response (deliberately **not** wrapped in `{ data }`, so the
+`truncated` sibling survives the client's unwrap):
+
+```json
+{ "entries": [ { "id": "expiry:42", "kind": "expiry", "date": "2026-09-18", "time": null,
+    "title": "Yogurt", "meta": "Home", "tone": null,
+    "refs": { "itemId": "42", "fridgeId": "3" } } ],
+  "truncated": false, "from": "2026-08-30", "to": "2026-10-10" }
+```
+
+Kinds: `expiry` (uses the *effective* date, so an opened item lands on its opened date),
+`machine_scheduled` (enabled schedule Machines projected from `next_run_at`), `machine_run`,
+and per-day summaries `used` / `wasted` / `added` (with `count`; an outcome row keeps no item name).
+History kinds are limited to the last 180 days. `tone: "overdue"` marks an overdue expiry, a failed
+run, or thrown-out items. At most 500 entries (`truncated: true` past that). Throttled 60/min.
+
 ## Shopping list
 
 Flat list, scoped directly to the user (not nested under a fridge).

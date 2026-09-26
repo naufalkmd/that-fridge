@@ -279,8 +279,11 @@ export default function Home() {
             </View>
           </View>
 
-          {/* fridge scope picker */}
-          <FridgeScopePicker />
+          {/* fridge scope picker + calendar button (right-aligned, directly under the bell) */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <FridgeScopePicker />
+            <HeaderIcon icon="calendar-outline" dot={false} onPress={() => router.push("/calendar")} />
+          </View>
 
           {/* first-run checklist — hides itself once complete or dismissed */}
           <GettingStarted />
