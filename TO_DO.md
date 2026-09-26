@@ -213,9 +213,11 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
   activity (180 days). New `meal_entries` table + `GET /api/calendar`; meal plans are shared with
   other members of a Pro-owned fridge without ever saying "household" in the UI; meal slots are
   user-defined with suggested templates; AI weekly planner later (after the credit audit). All
-  OTA — no native rebuild, no Apple/Google Calendar. **Phase 1 (read-only calendar) is built and committed but NOT
-  published** — device-check it (Home button under the bell, tap days incl. empty ones, filters, month
-  arrows) before an OTA; phases 2–3 not started.
+  OTA — no native rebuild, no Apple/Google Calendar. **Phases 1 (read-only calendar) and 2 (meal plan + recipe log) are
+  built and committed but NOT published** — device-check before an OTA: Home button under the bell,
+  tap days incl. empty ones, filters, month arrows, plan / edit / delete / tick a meal, first-time slot
+  templates, a reminder time, "Add to plan" on a recipe, and the sharing rule with a second account
+  (Pro-owned fridge shares, free-owned stays personal). Phase 3 (AI/automation hooks) not started.
 - [ ] **Kitchen Lab multi-Machine generation** — later allow one prompt to propose several
   independent Machines, but return and validate them as separate drafts. Review each trigger
   and action independently, detect duplicates, charge per saved Machine, and save atomically or

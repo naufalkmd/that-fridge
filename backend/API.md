@@ -406,6 +406,38 @@ and per-day summaries `used` / `wasted` / `added` (with `count`; an outcome row 
 History kinds are limited to the last 180 days. `tone: "overdue"` marks an overdue expiry, a failed
 run, or thrown-out items. At most 500 entries (`truncated: true` past that). Throttled 60/min.
 
+## Meal plan
+
+Entries appear in `GET /calendar` as `kind: "meal"` (with `slot`, `status`, `note`, `by`, and
+`refs.mealEntryId` / `recipeId` / `fridgeId`). **Sharing:** an entry is visible to its author, and -
+when it is attached to a fridge - to the other members of that fridge only while the fridge's
+**owner is Pro** (`User::isPro()`, evaluated on read). Those members can also edit and delete it.
+Otherwise it is personal. Nothing is deleted when Pro lapses; visibility just narrows. `by` is the
+author's username when the viewer is someone else (null for your own entries).
+
+### `POST /meal-entries` 🔒 · `PATCH /meal-entries/{id}` 🔒 · `DELETE /meal-entries/{id}` 🔒
+
+Body: `date` (`YYYY-MM-DD`), `slot` (the user's own free label, ≤40), optional `time` (`HH:MM`, used
+for a device reminder), `recipe_id` (its name is copied into `title` when `title` is omitted), `title`
+(required when there is no recipe, ≤120), `note` (≤255), `status` (`planned|cooked|skipped`,
+default `planned`; `cooked` stamps `cooked_at`), `fridge_id` (create only; you must be a member,
+else 404). PATCH takes any subset. Returns the entry (`id, date, slot, time, title, note, status,
+recipeId, fridgeId, cookedAt, by, isMine`). A deleted recipe keeps the entry (its title is
+already copied); a deleted fridge leaves the author's entry personal; deleting an account deletes
+the user's entries. Throttled 60/min.
+
+### `PATCH /me/meal-slots` 🔒
+
+`{ "slots": ["Breakfast", "Dinner"] }` - the user's own ordered slot labels, stored in
+`preferences.meal_slots` (trimmed, case-insensitive de-duplicated, blanks dropped, at most 8, each
+≤40). Returns `{ "user": ... }` like the other preference endpoints.
+
+### `POST /recipes/{recipe}/mark-made` 🔒
+
+Now also keeps the recipe log: optional `date` (the device's local today) and `meal_entry_id`.
+It flips the named planned entry to cooked, else a planned entry for that recipe on that day the
+caller can see, else records a personal cooked entry ("Cooked") so the calendar shows what was made.
+
 ## Shopping list
 
 Flat list, scoped directly to the user (not nested under a fridge).

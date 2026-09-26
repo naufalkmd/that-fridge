@@ -1,7 +1,8 @@
 # In-app calendar — plan
 
-Status: **phase 1 built and committed, not yet published** (2026-09-26): `GET /api/calendar`, the
-calendar screen, and the Home button. Phases 2-3 not started. Publish only after a device check -
+Status: **phases 1 and 2 built and committed, not yet published** (2026-09-26): `GET /api/calendar`,
+the calendar screen and Home button, and the meal plan / recipe log (`meal_entries`, sharing rules,
+slot templates, reminders, "Add to plan", mark-made logging, privacy policy). Phase 3 not started. Publish only after a device check -
 an OTA near the Sep 30 deadline needs QA first.
 Decided 2026-09-26. Everything below ships over OTA — no native module, no permission, no rebuild.
 
@@ -101,7 +102,9 @@ then the viewer's slot order, then label.
    the Home button. *Done when:* the endpoint respects fridge membership and `effectiveExpiry`;
    180-day cap; timezone placement tested; scope filter matches Home; every day cell opens its
    day detail (past, today, future, adjacent-month days); jest screen test.
-2. **Meal plan + recipe log (~3 days).** Migration, policy, CRUD, templates, "Add to plan",
+2. **Meal plan + recipe log (~3 days) — BUILT.** (`MealEntry` + policy, `MealEntryController`,
+   `PATCH /me/meal-slots`, `components/calendar/meal-form.tsx` inside the day sheet, `lib/mealPlan.ts`,
+   `syncMealReminder`. Reminders are scheduled on the device that saves the entry only.) Migration, policy, CRUD, templates, "Add to plan",
    mark-made integration, meal reminders, sharing rules + attribution. *Done when:* the sharing
    rules are covered by tests (author / Pro-owner member / non-Pro owner / lapsed Pro), account
    deletion removes the user's entries, admin user-delete audit unaffected.

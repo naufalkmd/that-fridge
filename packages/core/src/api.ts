@@ -1,6 +1,8 @@
 import { ApiError, type HttpClient, type TokenStore } from "./http";
 import type {
   CalendarResult,
+  MealEntry,
+  MealEntryInput,
   BadgeKey,
   BadgeProgress,
   Category,
@@ -871,8 +873,31 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.get<CalendarResult>(`/calendar?${q.toString()}`);
   }
 
-  function markRecipeMade(id: string): Promise<Recipe> {
-    return http.post<Recipe>(`/recipes/${id}/mark-made`);
+  /** `date` is the device's local today (the server can't know the timezone); `mealEntryId`
+   *  marks a specific planned entry cooked instead of matching today's plan by recipe. */
+  function markRecipeMade(id: string, opts?: { date?: string; mealEntryId?: string }): Promise<Recipe> {
+    const body: Record<string, string> = {};
+    if (opts?.date) body.date = opts.date;
+    if (opts?.mealEntryId) body.meal_entry_id = opts.mealEntryId;
+    return http.post<Recipe>(`/recipes/${id}/mark-made`, Object.keys(body).length ? body : undefined);
+  }
+
+  function createMealEntry(input: MealEntryInput): Promise<MealEntry> {
+    return http.post<MealEntry>("/meal-entries", input);
+  }
+
+  function updateMealEntry(id: string, input: MealEntryInput): Promise<MealEntry> {
+    return http.patch<MealEntry>(`/meal-entries/${id}`, input);
+  }
+
+  function deleteMealEntry(id: string): Promise<void> {
+    return http.del<void>(`/meal-entries/${id}`);
+  }
+
+  /** The user's own ordered meal-slot labels (kept in `preferences.meal_slots`). */
+  async function updateMealSlots(slots: string[]): Promise<CurrentUser> {
+    const res = await http.patch<{ user: CurrentUser }>("/me/meal-slots", { slots });
+    return res.user;
   }
 
   // "Your Kitchen This Week" inputs — read-only on mobile. The API Resources already return
@@ -1273,6 +1298,10 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     sendFeedback,
     tipFeedback,
     getCalendar,
+    createMealEntry,
+    updateMealEntry,
+    deleteMealEntry,
+    updateMealSlots,
     trackEvents,
   };
 }

@@ -35,6 +35,8 @@ interface AuthContextValue {
   deleteAccount: () => Promise<void>;
   updateProfile: (fields: ProfileFields) => Promise<void>;
   updateImprovementPreferences: (fields: { helpImprove?: boolean; noticeSeen?: boolean }) => Promise<void>;
+  /** Save the user's own ordered meal-slot labels (the server trims / dedupes / caps them). */
+  updateMealSlots: (slots: string[]) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -152,6 +154,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(await api.updateImprovementPreferences(fields));
   }, []);
 
+  const updateMealSlots = useCallback(async (slots: string[]) => {
+    setUser(await api.updateMealSlots(slots));
+  }, []);
+
   const deleteAccount = useCallback(async () => {
     await unregisterPush().catch(() => {});
     await api.deleteAccount(); // must succeed — the account is really being deleted
@@ -172,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       deleteAccount,
       updateProfile,
       updateImprovementPreferences,
+      updateMealSlots,
     }),
     [
       status,
@@ -185,6 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       deleteAccount,
       updateProfile,
       updateImprovementPreferences,
+      updateMealSlots,
     ],
   );
 

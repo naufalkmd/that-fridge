@@ -531,6 +531,8 @@ export interface OnboardingPrefs {
   household?: "solo" | "partner" | "household" | "roommates";
   help_improve?: boolean;
   help_improve_notice_seen?: boolean;
+  /** The user's own ordered meal-slot labels for the calendar's meal plan (server-normalised). */
+  meal_slots?: string[];
 }
 
 /** One event for the first-party analytics ingest (`POST /events`). */
@@ -629,7 +631,10 @@ export interface FridgeNote {
 
 // ---- Calendar (GET /calendar) -------------------------------------------------------------
 
+export type MealStatus = "planned" | "cooked" | "skipped";
+
 export type CalendarEntryKind =
+  | "meal"
   | "expiry"
   | "machine_scheduled"
   | "machine_run"
@@ -649,7 +654,48 @@ export interface CalendarEntry {
   meta: string | null;
   tone: "overdue" | null;
   count?: number;
-  refs: { itemId?: string; fridgeId?: string; machineId?: string; runId?: string };
+  /** Meal entries only: the user's own slot label, cook status, note, and - when someone else
+   *  made it - their username (the only visible cue of a shared plan). */
+  slot?: string;
+  status?: MealStatus;
+  note?: string | null;
+  by?: string | null;
+  refs: {
+    itemId?: string;
+    fridgeId?: string;
+    machineId?: string;
+    runId?: string;
+    mealEntryId?: string;
+    recipeId?: string;
+  };
+}
+
+/** A meal plan / recipe-log entry as returned by POST/PATCH /meal-entries. */
+export interface MealEntry {
+  id: string;
+  date: string; // YYYY-MM-DD
+  slot: string;
+  time: string | null; // "HH:MM", only for a reminder
+  title: string;
+  note: string | null;
+  status: MealStatus;
+  recipeId: string | null;
+  fridgeId: string | null;
+  cookedAt: string | null;
+  by: string | null;
+  isMine: boolean;
+}
+
+/** The POST/PATCH /meal-entries body (snake_case, like the other create inputs). */
+export interface MealEntryInput {
+  date?: string;
+  slot?: string;
+  time?: string | null;
+  recipe_id?: string | null;
+  title?: string | null;
+  note?: string | null;
+  status?: MealStatus;
+  fridge_id?: string | null;
 }
 
 export interface CalendarResult {

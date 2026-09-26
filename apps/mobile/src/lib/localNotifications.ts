@@ -90,3 +90,55 @@ export async function cancelAllExpiryReminders(): Promise<void> {
     /* noop */
   }
 }
+
+// ---- meal-plan reminders ---------------------------------------------------------------------
+// One local notification per planned meal that has a time. Scheduled on the device that saves the
+// entry (household members' devices don't get one - they'd need the plan fetched on launch).
+
+const mealId = (entryId: string) => `meal:${entryId}`;
+
+export async function cancelMealReminder(entryId: string): Promise<void> {
+  try {
+    const all = await Notifications.getAllScheduledNotificationsAsync();
+    await Promise.all(
+      all
+        .filter((n) => n.content.data?.kind === "meal" && n.content.data?.entryId === entryId)
+        .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
+    );
+  } catch {
+    /* best effort - see file header */
+  }
+}
+
+/** Replace any reminder for this entry with one at its date + time (only while it is still
+ *  planned, timed and in the future). Asks for notification permission at the point a time is set. */
+export async function syncMealReminder(entry: {
+  id: string;
+  title: string;
+  slot: string;
+  date: string;
+  time: string | null;
+  status: "planned" | "cooked" | "skipped";
+}): Promise<void> {
+  try {
+    await cancelMealReminder(entry.id);
+    if (entry.status !== "planned" || !entry.time) return;
+
+    const [y, m, d] = entry.date.split("-").map(Number);
+    const [hh, mm] = entry.time.split(":").map(Number);
+    const fireAt = new Date(y, m - 1, d, hh, mm, 0, 0);
+    if (fireAt.getTime() < Date.now() + 60_000) return; // never schedule in the past
+
+    if (!(await ensureNotificationPermission())) return;
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: entry.title,
+        body: `${entry.slot} · ${entry.time}`,
+        data: { kind: "meal", entryId: entry.id, id: mealId(entry.id) },
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fireAt },
+    });
+  } catch {
+    /* best effort - see file header */
+  }
+}

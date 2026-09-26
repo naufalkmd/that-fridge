@@ -59,9 +59,10 @@ export function weekdayLabels(weekStartsOn: number = WEEK_STARTS_ON): string[] {
 
 // ---- entries ----------------------------------------------------------------------------
 
-export type CalendarGroup = "expiry" | "automation" | "activity";
+export type CalendarGroup = "meals" | "expiry" | "automation" | "activity";
 
 export const KIND_GROUP: Record<CalendarEntryKind, CalendarGroup> = {
+  meal: "meals",
   expiry: "expiry",
   machine_scheduled: "automation",
   machine_run: "automation",
@@ -71,12 +72,13 @@ export const KIND_GROUP: Record<CalendarEntryKind, CalendarGroup> = {
 };
 
 export const GROUP_LABEL: Record<CalendarGroup, string> = {
+  meals: "Meals",
   expiry: "Expiry",
   automation: "Automations",
   activity: "Activity",
 };
 
-export const GROUPS: CalendarGroup[] = ["expiry", "automation", "activity"];
+export const GROUPS: CalendarGroup[] = ["meals", "expiry", "automation", "activity"];
 
 export function filterEntries(entries: CalendarEntry[], hidden: ReadonlySet<CalendarGroup>): CalendarEntry[] {
   return entries.filter((e) => !hidden.has(KIND_GROUP[e.kind]));
@@ -91,7 +93,7 @@ export function groupByDate(entries: CalendarEntry[]): Record<string, CalendarEn
 /** Kinds to draw as dots under a day number: distinct, in a fixed order, at most 3. */
 export function dayDots(entries: CalendarEntry[] | undefined): CalendarEntryKind[] {
   if (!entries?.length) return [];
-  const order: CalendarEntryKind[] = ["expiry", "machine_scheduled", "machine_run", "wasted", "used", "added"];
+  const order: CalendarEntryKind[] = ["meal", "expiry", "machine_scheduled", "machine_run", "wasted", "used", "added"];
   const present = new Set(entries.map((e) => e.kind));
   return order.filter((k) => present.has(k)).slice(0, 3);
 }

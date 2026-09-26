@@ -249,6 +249,34 @@ class AuthController extends Controller
     }
 
     /** Set the product-improvement sharing switch and acknowledge the one-time notice. */
+    /** The user's own ordered meal-slot labels (Breakfast, Meal prep...), kept in `preferences`. */
+    public function updateMealSlots(Request $request)
+    {
+        $data = $request->validate([
+            'slots' => ['present', 'array', 'max:8'],
+            // Blank labels arrive as null (empty strings are converted) and are simply dropped.
+            'slots.*' => ['nullable', 'string', 'max:40'],
+        ]);
+
+        $seen = [];
+        $slots = [];
+        foreach ($data['slots'] as $label) {
+            $label = trim((string) $label);
+            if ($label !== '' && ! isset($seen[mb_strtolower($label)])) {
+                $seen[mb_strtolower($label)] = true;
+                $slots[] = $label;
+            }
+        }
+
+        $user = $request->user();
+        $prefs = $user->preferences ?? [];
+        $prefs['meal_slots'] = $slots;
+        $user->preferences = $prefs;
+        $user->save();
+
+        return response()->json(['user' => $this->userPayload($user)]);
+    }
+
     public function updateImprovementPreferences(Request $request)
     {
         $data = $request->validate([

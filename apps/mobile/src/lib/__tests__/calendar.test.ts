@@ -96,18 +96,21 @@ describe("entries", () => {
       "machine_run",
       "wasted",
     ]);
+    // Meals always lead, since planned meals are what people look for first.
+    expect(dayDots([entry("expiry"), entry("added"), entry("meal")])).toEqual(["meal", "expiry", "added"]);
   });
 
   test("filterEntries hides whole groups", () => {
     const all = [entry("expiry"), entry("machine_run"), entry("machine_scheduled"), entry("used")];
     expect(filterEntries(all, new Set()).length).toBe(4);
     expect(filterEntries(all, new Set(["automation"])).map((e) => e.kind)).toEqual(["expiry", "used"]);
-    expect(filterEntries(all, new Set(["expiry", "automation", "activity"]))).toEqual([]);
+    expect(filterEntries(all, new Set(["meals", "expiry", "automation", "activity"]))).toEqual([]);
+    expect(filterEntries([...all, entry("meal")], new Set(["meals"])).map((e) => e.kind)).not.toContain("meal");
   });
 
   test("sectionsForDay keeps group order and drops empty groups", () => {
-    const sections = sectionsForDay([entry("added"), entry("machine_run"), entry("expiry")]);
-    expect(sections.map((s) => s.group)).toEqual(["expiry", "automation", "activity"]);
+    const sections = sectionsForDay([entry("added"), entry("machine_run"), entry("expiry"), entry("meal")]);
+    expect(sections.map((s) => s.group)).toEqual(["meals", "expiry", "automation", "activity"]);
     expect(sectionsForDay([entry("used")]).map((s) => s.group)).toEqual(["activity"]);
     expect(sectionsForDay([])).toEqual([]);
   });

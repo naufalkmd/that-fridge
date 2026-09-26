@@ -22,6 +22,7 @@ use App\Http\Controllers\IngestionController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ItemOutcomeController;
 use App\Http\Controllers\MachineController;
+use App\Http\Controllers\MealEntryController;
 use App\Http\Controllers\MemoryController;
 use App\Http\Controllers\NotificationEventController;
 use App\Http\Controllers\NotificationPrefController;
@@ -70,6 +71,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/me/improvement-preferences', [AuthController::class, 'updateImprovementPreferences']);
     Route::middleware('throttle:60,1')->post('/tip-feedback', [TipFeedbackController::class, 'store']);
     Route::middleware('throttle:60,1')->get('/calendar', [CalendarController::class, 'index']);
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::post('/meal-entries', [MealEntryController::class, 'store']);
+        Route::patch('/meal-entries/{mealEntry}', [MealEntryController::class, 'update']);
+        Route::delete('/meal-entries/{mealEntry}', [MealEntryController::class, 'destroy']);
+    });
+    Route::patch('/me/meal-slots', [AuthController::class, 'updateMealSlots']);
     Route::delete('/me/improvement-data', [AuthController::class, 'deleteImprovementData']);
     Route::patch('/item-outcomes/{itemOutcome}', [ItemOutcomeController::class, 'correct']);
     Route::post('/item-outcomes/{itemOutcome}/undo', [ItemOutcomeController::class, 'undo']);

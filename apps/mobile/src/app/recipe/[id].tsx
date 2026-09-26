@@ -247,12 +247,33 @@ export default function RecipeDetail() {
             paddingVertical: 13,
             borderRadius: 8,
             backgroundColor: AMBER,
-            marginBottom: recipe.attachments.length ? 20 : 8,
+            marginBottom: 10,
           }}
         >
           <MaterialCommunityIcons name="chef-hat" size={15} color={CANVAS} />
           <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: CANVAS }}>
             Mark as made
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push({ pathname: "/calendar", params: { recipeId: recipe.id, recipeName: recipe.name } })}
+          accessibilityRole="button"
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            paddingVertical: 12,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: AMBER,
+            marginBottom: recipe.attachments.length ? 20 : 8,
+          }}
+        >
+          <MaterialCommunityIcons name="calendar-plus" size={15} color={AMBER} />
+          <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: AMBER }}>
+            Add to plan
           </Text>
         </Pressable>
 

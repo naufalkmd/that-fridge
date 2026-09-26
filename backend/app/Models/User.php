@@ -8,6 +8,7 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -209,6 +210,12 @@ class User extends Authenticatable implements FilamentUser
     public function isPro(): bool
     {
         return $this->pro_granted || ($this->pro_expires_at !== null && $this->pro_expires_at->isFuture());
+    }
+
+    /** SQL form of isPro() - keep the two in step (a test pins them together). */
+    public function scopePro(Builder $query): Builder
+    {
+        return $query->where(fn ($q) => $q->where('pro_granted', true)->orWhere('pro_expires_at', '>', now()));
     }
 
     /**

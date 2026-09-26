@@ -25,12 +25,14 @@ class CalendarController extends Controller
         abort_if(Carbon::parse($data['from'])->diffInDays(Carbon::parse($data['to'])) > CalendarService::MAX_DAYS, 422, 'Range too long.');
 
         $mine = $request->user()->memberFridges()->pluck('fridges.id')->all();
+        $onlyFridge = null;
         if (! empty($data['fridge'])) {
             abort_unless(in_array((int) $data['fridge'], array_map('intval', $mine), true), 404);
             $mine = [(int) $data['fridge']];
+            $onlyFridge = (int) $data['fridge'];
         }
 
-        $result = $calendar->entries($request->user(), $data['from'], $data['to'], $data['tz'] ?? 'UTC', $mine);
+        $result = $calendar->entries($request->user(), $data['from'], $data['to'], $data['tz'] ?? 'UTC', $mine, $onlyFridge);
 
         return response()->json($result + ['from' => $data['from'], 'to' => $data['to']]);
     }

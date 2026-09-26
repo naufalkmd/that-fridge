@@ -13,6 +13,7 @@ import { SheetHeader } from "@/components/sheet";
 import { useToast } from "@/lib/toast";
 import { useTheme } from "@/lib/theme";
 import { maybeRequestReview } from "@/lib/rate";
+import { toISO } from "@/lib/calendar";
 
 type Row = { id: string; ingredientName: string; itemId: string; itemName: string; icon: string };
 type Status = "finished" | "remaining";
@@ -78,7 +79,7 @@ export default function MarkRecipeMade() {
   async function confirm() {
     setBusy(true);
     try {
-      await api.markRecipeMade(recipe!.id);
+      await api.markRecipeMade(recipe!.id, { date: toISO(new Date()) });
 
       // "finished" wins if the same physical item is referenced by two rows — it can't be
       // both used up and still in the fridge.

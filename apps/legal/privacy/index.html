@@ -87,7 +87,8 @@
         <li><strong>AI-generated icons</strong> — the short prompt you type and the resulting image, kept in your icon library.</li>
         <li><strong>Fridge notes</strong>, <strong>goals</strong>, and earned <strong>badges</strong>.</li>
         <li><strong>Kitchen Lab automations</strong> — the sentence you type to describe an automation, the trigger and steps it becomes (which you can edit), and a log of each run and what it did. The sentence is sent to the AI provider to draft the automation (see &sect;4); once saved, it runs on our server without further AI use.</li>
-        <li><strong>Fridge sharing</strong> — if you invite someone to a fridge or request to join one, we store that request and the members list. People who share a fridge can see its contents, notes and items.</li>
+        <li><strong>Meal plans and cooked-recipe logs</strong> — what you plan or log for a day: a name, an optional recipe, a meal label you choose (such as &ldquo;Dinner&rdquo;), an optional reminder time and note, and whether you cooked it. You can attach an entry to a fridge; when that fridge is owned by a ThatFridge Pro user, the other members of that fridge can see and edit those entries, and your username is shown on the ones you add. Otherwise an entry is visible only to you.</li>
+        <li><strong>Fridge sharing</strong> — if you invite someone to a fridge or request to join one, we store that request and the members list. People who share a fridge can see its contents, notes and items (and its meal plans, as described above).</li>
         <li><strong>Blocking</strong> — if you block another user, we store that block so it can stop future contact between you (search, invites and join requests) in both directions. Blocking someone doesn't affect any fridge membership or content that already existed.</li>
       </ul>
 
@@ -132,9 +133,9 @@
           switch on or off, the filters you pick for recipe suggestions and where in the list the
           recipe you cooked appeared, how you author Kitchen Lab automations (trigger type, number
           of steps, whether you edited the draft, ran a dry run or enabled it &mdash; never the text
-          you wrote or the step contents), how long adding an item took and by which method, and
+          you wrote or the step contents), how many days ahead you plan a meal and whether you then cook or skip it (never its name, label or note), how long adding an item took and by which method, and
           ratings of app answers. These structured records are linked to your account for up to
-          180 days. They do not contain notes, chat text, photos, receipts, contacts or the text of
+          180 days. They do not contain notes, chat text, photos, receipts, contacts, meal names or the text of
           Kitchen Lab automations. Statistics combined across users, without account or device IDs,
           may be kept longer. We only act on patterns seen across multiple users.</li>
         <li><strong>Undo copies</strong> — so you can undo removing an item, we keep a copy of it
@@ -156,7 +157,7 @@
       whether your Pro access is active and keep your balance in sync.</p>
 
       <h3>Notifications</h3>
-      <p>Expiry and low-stock reminders are scheduled <strong>locally on your device</strong>. Our
+      <p>Expiry and low-stock reminders, and any reminder time you set on a planned meal, are scheduled <strong>locally on your device</strong>. Our
       server also creates matching in-app notification entries (the item name and fridge) that appear
       in your Notifications feed; they are deleted automatically after 60&ndash;180 days. Separately,
       activity notifications — invites, fridge membership changes,
@@ -219,7 +220,7 @@
       (see &sect;6) we <strong>hard-delete</strong> your user record, authentication tokens, chat
       history, remembered facts, your AI-credit balance and transaction log, and the
       fridges you own together with their items, notes, sections and shopping lists, and your
-      AI-generated icon library, and your Kitchen Lab automations and their run logs. Suggestion-improvement
+      AI-generated icon library, your Kitchen Lab automations and their run logs, and the meal-plan entries you added (entries you added to someone else's fridge go with your account; entries other people added to a fridge you owned become their personal entries if that fridge is deleted). Suggestion-improvement
       records that were linked to you are unlinked from your account at that point and then deleted
       automatically after 180 days. Backups containing residual copies are rotated out within 30 days.
       Fridges owned by other people that you were merely a member of are not deleted, but your

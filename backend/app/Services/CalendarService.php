@@ -6,6 +6,7 @@ use App\Models\Item;
 use App\Models\ItemOutcome;
 use App\Models\Machine;
 use App\Models\MachineRun;
+use App\Models\MealEntry;
 use App\Models\User;
 use App\Support\ItemFreshness;
 use App\Support\MachineSchedule;
@@ -26,13 +27,13 @@ final class CalendarService
 
     public const HISTORY_DAYS = 180;
 
-    private const KIND_ORDER = ['expiry' => 0, 'machine_scheduled' => 1, 'machine_run' => 2, 'used' => 3, 'wasted' => 4, 'added' => 5];
+    private const KIND_ORDER = ['meal' => 0, 'expiry' => 1, 'machine_scheduled' => 2, 'machine_run' => 3, 'used' => 4, 'wasted' => 5, 'added' => 6];
 
     /**
      * @param  list<int|string>  $fridgeIds  fridges the caller may see (already membership-checked)
      * @return array{entries: list<array<string, mixed>>, truncated: bool}
      */
-    public function entries(User $user, string $from, string $to, string $tz, array $fridgeIds): array
+    public function entries(User $user, string $from, string $to, string $tz, array $fridgeIds, ?int $onlyFridge = null): array
     {
         $startLocal = Carbon::parse($from, $tz)->startOfDay();
         $endLocal = Carbon::parse($to, $tz)->endOfDay();
@@ -43,6 +44,7 @@ final class CalendarService
         $todayLocal = now($tz)->toDateString();
 
         $entries = collect()
+            ->merge($this->meals($user, $from, $to, $onlyFridge))
             ->merge($this->expiry($fridgeIds, $from, $to, $todayLocal))
             ->merge($this->machineScheduled($user, $fridgeIds, $startUtc, $endUtc, $tz))
             ->merge($this->machineRuns($user, $fridgeIds, $startUtc, $endUtc, $historyFloor, $tz, $day))
@@ -55,6 +57,35 @@ final class CalendarService
             'entries' => $sorted->take(self::MAX_ENTRIES)->all(),
             'truncated' => $sorted->count() > self::MAX_ENTRIES,
         ];
+    }
+
+    /**
+     * The meal plan / recipe log: the viewer's own entries plus those shared through a Pro-owned
+     * fridge (MealEntry::visibleTo). With a single fridge selected, that fridge's entries and the
+     * viewer's personal (fridge-less) ones - a personal entry belongs to no fridge, so it shows in
+     * every scope.
+     */
+    private function meals(User $user, string $from, string $to, ?int $onlyFridge): Collection
+    {
+        return MealEntry::query()
+            ->visibleTo($user)
+            ->whereBetween('date', [$from, $to])
+            ->when($onlyFridge !== null, fn ($q) => $q->where(fn ($w) => $w
+                ->where('fridge_id', $onlyFridge)
+                ->orWhere(fn ($p) => $p->whereNull('fridge_id')->where('user_id', $user->id))))
+            ->with('user:id,username')
+            ->orderBy('date')->limit(self::MAX_ENTRIES)->get()
+            ->map(fn (MealEntry $e) => [
+                'id' => "meal:{$e->id}", 'kind' => 'meal', 'date' => $e->date->toDateString(), 'time' => $e->time,
+                'title' => $e->title, 'meta' => $e->slot, 'tone' => null,
+                'slot' => $e->slot, 'status' => $e->status, 'note' => $e->note,
+                'by' => $e->user_id !== $user->id ? $e->user?->username : null,
+                'refs' => array_filter([
+                    'mealEntryId' => (string) $e->id,
+                    'recipeId' => $e->recipe_id !== null ? (string) $e->recipe_id : null,
+                    'fridgeId' => $e->fridge_id !== null ? (string) $e->fridge_id : null,
+                ]),
+            ]);
     }
 
     /** Effective expiry (opened items land on the opened date), not just the printed one. */

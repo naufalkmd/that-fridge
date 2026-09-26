@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\RecipeResource;
 use App\Models\Item;
+use App\Models\MealEntry;
 use App\Models\Recipe;
 use App\Services\AgentService;
 use App\Services\RecipeLinkImportService;
@@ -281,10 +282,45 @@ class RecipeController extends Controller
     {
         $this->authorize('view', $recipe);
 
+        $data = $request->validate([
+            'meal_entry_id' => ['sometimes', 'nullable', 'integer'],
+            // The device's local today; the server can't know the user's timezone.
+            'date' => ['sometimes', 'date_format:Y-m-d'],
+        ]);
+
         $recipe->increment('made_count');
         RecipeFeedback::made($request->user(), $recipe);
+        $this->logCooked($request, $recipe, $data['meal_entry_id'] ?? null, $data['date'] ?? now()->toDateString());
 
         return new RecipeResource($recipe);
+    }
+
+    /**
+     * The recipe log: cooking a recipe flips the planned entry it was planned as (the one named
+     * by `meal_entry_id`, else one planned for that day that the user can see), or - when nothing
+     * was planned - records a personal cooked entry, so the calendar shows what was actually made.
+     */
+    private function logCooked(Request $request, Recipe $recipe, ?int $entryId, string $today): void
+    {
+        $user = $request->user();
+        $entry = null;
+        if ($entryId !== null) {
+            $entry = MealEntry::find($entryId);
+            abort_if($entry !== null && ! $user->can('update', $entry), 403);
+        }
+        $entry ??= MealEntry::query()->visibleTo($user)
+            ->where('recipe_id', $recipe->id)->where('date', $today)->where('status', 'planned')->first();
+
+        if ($entry) {
+            $entry->update(['status' => 'cooked', 'cooked_at' => now()]);
+
+            return;
+        }
+
+        MealEntry::create([
+            'user_id' => $user->id, 'date' => $today, 'slot' => 'Cooked', 'recipe_id' => $recipe->id,
+            'title' => $recipe->name, 'status' => 'cooked', 'cooked_at' => now(),
+        ]);
     }
 
     private function validated(Request $request, bool $sometimes = false): array

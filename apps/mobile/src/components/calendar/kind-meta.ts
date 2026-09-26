@@ -5,8 +5,13 @@ import type { ThemeColors } from "@/lib/theme";
 
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
+/** Meals get their own hue (the palette has no free one; this is the app's existing Pro purple). */
+export const MEAL_COLOR = "#a78bfa";
+
 export function kindColor(kind: CalendarEntryKind, colors: ThemeColors): string {
   switch (kind) {
+    case "meal":
+      return MEAL_COLOR;
     case "expiry":
       return colors.warn;
     case "machine_scheduled":
@@ -22,6 +27,7 @@ export function kindColor(kind: CalendarEntryKind, colors: ThemeColors): string 
 }
 
 export const KIND_ICON: Record<CalendarEntryKind, IconName> = {
+  meal: "silverware-fork-knife",
   expiry: "timer-sand",
   machine_scheduled: "clock-outline",
   machine_run: "cog-outline",
