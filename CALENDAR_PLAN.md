@@ -2,7 +2,7 @@
 
 Status: **phases 1 and 2 built and published via OTA `0a92e78c`, not yet device-checked** (2026-09-26): `GET /api/calendar`,
 the calendar screen and Home button, and the meal plan / recipe log (`meal_entries`, sharing rules,
-slot templates, reminders, "Add to plan", mark-made logging, privacy policy). Phase 3 not started.
+slot templates, reminders, "Add to plan", mark-made logging, privacy policy). Phase 3: chat tools built (backend only), the rest not started.
 Decided 2026-09-26. Everything below ships over OTA — no native module, no permission, no rebuild.
 
 One calendar screen inside the app showing everything ThatFridge knows about time: expiry dates,
@@ -107,8 +107,9 @@ then the viewer's slot order, then label.
    mark-made integration, meal reminders, sharing rules + attribution. *Done when:* the sharing
    rules are covered by tests (author / Pro-owner member / non-Pro owner / lapsed Pro), account
    deletion removes the user's entries, admin user-delete audit unaffected.
-3. **AI + automation hooks (3–4 days).** Chat tools, Chef weekly planner (needs a `CreditCost`
-   entry — after the credit audit), optional Kitchen Lab step.
+3. **AI + automation hooks (3–4 days).** Chat tools — **BUILT** (`plan_meals`, `list_plan`, `remove_meal`
+   in `AgentToolbox`, sharing `MealPlanService` with the REST controller; chat-only). Still to do: Chef
+   weekly planner (needs a `CreditCost` entry — after the credit audit), optional Kitchen Lab step.
 4. **Later:** read-only `.ics` subscription feed from the same endpoint.
 
 ## Privacy / policy (same release as phase 2)

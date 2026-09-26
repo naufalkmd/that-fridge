@@ -7,6 +7,7 @@ use App\Models\FridgeNote;
 use App\Models\Item;
 use App\Models\ItemOutcome;
 use App\Models\Machine;
+use App\Models\MealEntry;
 use App\Models\Recipe;
 use App\Models\Section;
 use App\Models\ShoppingItem;
@@ -115,6 +116,7 @@ class AgentToolbox
         protected RecipeLinkImportService $recipeImport,
         protected CreditService $credits,
         protected ItemRemovalService $removals,
+        protected MealPlanService $meals,
     ) {}
 
     /**
@@ -141,6 +143,34 @@ class AgentToolbox
                 'location' => ['type' => 'string', 'enum' => ['fridge', 'freezer', 'pantry']],
                 'search' => ['type' => 'string', 'description' => 'Case-insensitive name substring.'],
                 'fridge_id' => ['type' => 'integer', 'description' => 'From list_fridges. Omit to include every fridge the user belongs to.'],
+            ]),
+            $fn('list_plan', "List the user's meal plan (the meals on their calendar) for a date range, with each meal's id, meal label, calories and whether it is planned, cooked or skipped, plus each day's total and the meal labels the user uses. Defaults to today and the next 13 days. Call this before planning so you do not double-book, and to answer \"what's for dinner Friday?\".", [
+                'from' => ['type' => 'string', 'description' => 'YYYY-MM-DD. Defaults to today.'],
+                'to' => ['type' => 'string', 'description' => 'YYYY-MM-DD. Defaults to 13 days after from; at most 62 days after it.'],
+                'fridge_id' => ['type' => 'integer', 'description' => 'From list_fridges. Omit for every fridge the user belongs to.'],
+            ]),
+            $fn('plan_meals', "Put meals on the user's calendar meal plan - one, or several at once (use it to plan a whole week in a single call). Each meal needs a date (YYYY-MM-DD, worked out from today's date - never guess one) and either a title or a recipe_id from list_recipes. slot is the user's own meal label such as \"Dinner\": reuse the labels list_plan shows, and leave it out to use their first label (or \"Dinner\"). time (HH:MM) only if they want a reminder. Calories are worked out automatically from the recipe or the name, so never invent them. Meals go on the user's fridge plan; a meal already planned for that day and slot is skipped. Planning is reversible with remove_meal.", [
+                'meals' => [
+                    'type' => 'array', 'maxItems' => 21, 'description' => 'The meals to plan (at most 21 per call).',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'date' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
+                            'title' => ['type' => 'string', 'description' => 'What they are having. Optional when recipe_id is given.'],
+                            'recipe_id' => ['type' => 'integer', 'description' => 'From list_recipes.'],
+                            'slot' => ['type' => 'string', 'description' => 'The user\'s own meal label, e.g. Breakfast, Dinner, Meal prep.'],
+                            'time' => ['type' => 'string', 'description' => 'HH:MM (24-hour), only for a reminder.'],
+                            'note' => ['type' => 'string'],
+                        ],
+                        'required' => ['date'],
+                    ],
+                ],
+            ], ['meals']),
+            $fn('remove_meal', 'Delete a meal from the meal plan. Pass meal_id from list_plan, or a title fragment (optionally with the date) to match - if the fragment matches more than one meal it will not guess, so read them back and ask which. Call once with confirm:false to preview, then again with confirm:true only after the user agrees.', [
+                'meal_id' => ['type' => 'integer'],
+                'text' => ['type' => 'string', 'description' => 'A fragment of the meal title.'],
+                'date' => ['type' => 'string', 'description' => 'YYYY-MM-DD, to narrow a title match.'],
+                'confirm' => ['type' => 'boolean'],
             ]),
             $fn('list_notes', 'List the sticky notes on the fridge(s) - free-text reminders household members leave for each other.', []),
             $fn('list_shopping', 'List what is currently on the shopping list, with any buy links.', []),
@@ -343,6 +373,9 @@ class AgentToolbox
         try {
             $content = match ($name) {
                 'list_items' => $this->listItems($user, $args),
+                'list_plan' => $this->listPlan($user, $args),
+                'plan_meals' => $this->planMeals($user, $fridgeId, $args),
+                'remove_meal' => $this->removeMeal($user, $args),
                 'list_notes' => $this->listNotes($user),
                 'list_shopping' => $this->listShopping($user),
                 'list_recipes' => $this->listRecipes($user, $args),
@@ -931,6 +964,210 @@ class AgentToolbox
     public function fieldTotal(User $user, array $args): float
     {
         return $this->computeFieldTotal($user, $args)['total'];
+    }
+
+    // ---- meal plan ----------------------------------------------------------
+
+    /** A strict YYYY-MM-DD, or null. */
+    private function parseDay(mixed $value): ?Carbon
+    {
+        if (! is_string($value) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return null;
+        }
+        try {
+            $day = Carbon::createFromFormat('Y-m-d', $value)->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $day->toDateString() === $value ? $day : null;
+    }
+
+    /** The user's own meal labels (preferences.meal_slots), in their order. */
+    private function mealSlots(User $user): array
+    {
+        $slots = $user->preferences['meal_slots'] ?? [];
+
+        return is_array($slots) ? array_values(array_filter($slots, 'is_string')) : [];
+    }
+
+    private function planMeals(User $user, ?int $fridgeId, array $args): string
+    {
+        $meals = $args['meals'] ?? null;
+        if (! is_array($meals) || $meals === []) {
+            return 'Error: pass a non-empty "meals" array (each with a date and a title or recipe_id).';
+        }
+
+        $fridge = $this->targetFridge($user, $fridgeId);
+        $defaultSlot = $this->mealSlots($user)[0] ?? 'Dinner';
+        $today = now()->startOfDay();
+        $planned = [];
+        $skipped = [];
+
+        foreach (array_slice($meals, 0, 21) as $i => $meal) {
+            $n = $i + 1;
+            $meal = is_array($meal) ? $meal : [];
+            $day = $this->parseDay($meal['date'] ?? null);
+            if ($day === null || $day->lt($today->copy()->subDay()) || $day->gt($today->copy()->addDays(400))) {
+                $skipped[] = "meal {$n}: needs a real date as YYYY-MM-DD (from yesterday to a year ahead)";
+
+                continue;
+            }
+
+            $recipe = null;
+            if (isset($meal['recipe_id'])) {
+                $recipe = $this->recipesFor($user)->find((int) $meal['recipe_id']);
+                if (! $recipe) {
+                    $skipped[] = "meal {$n}: no recipe with that id (call list_recipes for valid ids)";
+
+                    continue;
+                }
+            }
+            $title = trim((string) ($meal['title'] ?? ''));
+            if ($title === '' && ! $recipe) {
+                $skipped[] = "meal {$n}: needs a title or a recipe_id";
+
+                continue;
+            }
+            $title = Str::limit($title !== '' ? $title : $recipe->name, 120, '');
+
+            $slot = Str::limit(trim((string) ($meal['slot'] ?? '')) ?: $defaultSlot, 40, '');
+            $time = isset($meal['time']) && preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string) $meal['time']) ? (string) $meal['time'] : null;
+            $note = isset($meal['note']) && trim((string) $meal['note']) !== '' ? Str::limit(trim((string) $meal['note']), 255, '') : null;
+
+            $duplicate = MealEntry::where('user_id', $user->id)->where('date', $day->toDateString())
+                ->whereRaw('lower(slot) = ?', [Str::lower($slot)])->whereRaw('lower(title) = ?', [Str::lower($title)])->exists();
+            if ($duplicate) {
+                $skipped[] = "meal {$n}: \"{$title}\" is already planned for {$day->format('D j M')} ({$slot})";
+
+                continue;
+            }
+
+            $entry = $this->meals->create($user, [
+                'fridge_id' => $fridge->id, 'date' => $day->toDateString(), 'slot' => $slot, 'time' => $time,
+                'recipe_id' => $recipe?->id, 'title' => $title, 'note' => $note,
+            ]);
+            $this->mutated = true;
+            $planned[] = $this->describeMeal($entry);
+        }
+
+        if ($planned === []) {
+            return 'Nothing was planned: '.implode('; ', $skipped).'.';
+        }
+
+        return 'Planned '.count($planned).' meal'.(count($planned) === 1 ? '' : 's').' on '.$fridge->name."'s plan:\n"
+            .implode("\n", $planned)
+            .($skipped !== [] ? "\nSkipped: ".implode('; ', $skipped).'.' : '')
+            ."\nCalories are estimates. The user can see and edit these in the calendar.";
+    }
+
+    /** "#12 Fri 2 Oct · Dinner · Chicken rice · ≈474 kcal · planned" */
+    private function describeMeal(MealEntry $e, bool $withDate = true): string
+    {
+        return collect([
+            '#'.$e->id,
+            $withDate ? $e->date->format('D j M') : null,
+            $e->slot,
+            $e->time,
+            $e->title,
+            $e->calories !== null ? '≈'.$e->calories.' kcal' : null,
+            $e->status !== 'planned' ? $e->status : null,
+        ])->filter()->implode(' · ');
+    }
+
+    private function listPlan(User $user, array $args): string
+    {
+        $from = $this->parseDay($args['from'] ?? null) ?? now()->startOfDay();
+        $to = $this->parseDay($args['to'] ?? null) ?? $from->copy()->addDays(13);
+        if ($to->lt($from)) {
+            return 'Error: "to" is before "from".';
+        }
+        if ($from->diffInDays($to) > 62) {
+            $to = $from->copy()->addDays(62);
+        }
+
+        $fridgeId = isset($args['fridge_id']) ? (int) $args['fridge_id'] : null;
+        if ($fridgeId !== null && ! $this->fridgeIds($user)->contains($fridgeId)) {
+            return 'Error: that is not one of your fridges. Call list_fridges for valid ids.';
+        }
+
+        $entries = MealEntry::query()->visibleTo($user)
+            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->when($fridgeId !== null, fn ($q) => $q->where(fn ($w) => $w->where('fridge_id', $fridgeId)
+                ->orWhere(fn ($p) => $p->whereNull('fridge_id')->where('user_id', $user->id))))
+            ->with('user:id,username')
+            ->orderBy('date')->orderByRaw('time is null')->orderBy('time')->orderBy('id')
+            ->limit(120)->get();
+
+        $labels = $this->mealSlots($user);
+        $footer = $labels !== []
+            ? "The user's meal labels: ".implode(', ', $labels).'.'
+            : 'The user has no meal labels set yet; "Dinner" is the default.';
+        $range = $from->format('D j M').' to '.$to->format('D j M');
+
+        if ($entries->isEmpty()) {
+            return "Nothing is planned from {$range}. {$footer}";
+        }
+
+        $lines = [];
+        foreach ($entries->groupBy(fn ($e) => $e->date->toDateString()) as $day => $group) {
+            $lines[] = Carbon::parse($day)->format('D j M').':';
+            foreach ($group as $e) {
+                $lines[] = '  '.$this->describeMeal($e, false).($e->user_id !== $user->id ? ' · by @'.($e->user?->username ?? 'someone') : '');
+            }
+            $counted = $group->where('status', '!=', 'skipped')->whereNotNull('calories');
+            if ($counted->count() > 0) {
+                $lines[] = '  Day total ≈'.$counted->sum('calories').' kcal'.($counted->count() < $group->where('status', '!=', 'skipped')->count() ? ' (some meals have no estimate)' : '');
+            }
+        }
+
+        return "Meal plan {$range}:\n".implode("\n", $lines)."\n{$footer}";
+    }
+
+    private function removeMeal(User $user, array $args): string
+    {
+        $entries = MealEntry::query()->visibleTo($user)->where('date', '>=', now()->subDays(14)->toDateString());
+
+        if (isset($args['meal_id'])) {
+            $entry = MealEntry::query()->visibleTo($user)->find((int) $args['meal_id']);
+            if (! $entry) {
+                return 'Error: no meal with that id. Call list_plan for valid ids.';
+            }
+        } else {
+            $fragment = trim((string) ($args['text'] ?? ''));
+            if ($fragment === '') {
+                return 'Error: pass meal_id or a title fragment to match.';
+            }
+            if (($day = $this->parseDay($args['date'] ?? null)) !== null) {
+                $entries->where('date', $day->toDateString());
+            }
+            $matches = $entries->whereRaw('lower(title) like ?', ['%'.Str::lower($fragment).'%'])->get()
+                ->filter(fn ($e) => $user->can('delete', $e))->values();
+            if ($matches->isEmpty()) {
+                return "No planned meal matches \"{$fragment}\".";
+            }
+            if ($matches->count() > 1) {
+                $list = $matches->map(fn ($e) => $this->describeMeal($e))->implode('; ');
+
+                return "That matches {$matches->count()} meals: {$list}. Ask the user which one, then call remove_meal with its meal_id.";
+            }
+            $entry = $matches->first();
+        }
+
+        if (! $user->can('delete', $entry)) {
+            return 'Error: you cannot remove that meal.';
+        }
+        if (empty($args['confirm'])) {
+            return 'Not removed yet. This will delete the meal '.$this->describeMeal($entry).' from the plan. '.
+                'Tell the user exactly what will be removed and ask them to confirm, then call remove_meal again with confirm:true (and meal_id set to '.$entry->id.', so it deletes the same one).';
+        }
+
+        $described = $this->describeMeal($entry);
+        $this->meals->feedback($user, $entry, 'deleted');
+        $entry->delete();
+        $this->mutated = true;
+
+        return "Removed {$described} from the meal plan.";
     }
 
     private function listNotes(User $user): string

@@ -438,15 +438,18 @@ with no `user_id`, so it survives the generator deleting their icon or account. 
 
 ### Quick Chat tools (`AgentToolbox`)
 
-27 tools on top of `fetch_url` browsing:
+30 tools on top of `fetch_url` browsing:
 
-- **Reads:** `list_items`, `list_notes`, `list_shopping`, `list_recipes`, `list_fridges`,
+- **Reads:** `list_items`, `list_plan`, `list_notes`, `list_shopping`, `list_recipes`, `list_fridges`,
   `get_recipe`, `get_kitchen_score`, `list_facts`
 - **Writes (direct, reversible):** `add_item`, `bulk_add_items`, `update_item`, `move_item`,
   `mark_item_used`, `add_to_shopping`, `check_off_shopping`, `remove_from_shopping`, `add_note`,
   `update_note`, `remove_note`, `remember_fact`, `forget_fact`, `save_recipe`,
-  `mark_recipe_made`, `import_recipe_from_link`
-- **Deletes (confirm-first):** `remove_item`, `clear_expired_items`, `delete_recipe` (own only)
+  `mark_recipe_made`, `import_recipe_from_link`, `plan_meals` (one or up to 21 meals on the calendar)
+- **Deletes (confirm-first):** `remove_item`, `clear_expired_items`, `delete_recipe` (own only), `remove_meal`
+
+The meal tools are chat-only (never offered to a Kitchen Lab Machine) and share `MealPlanService` with the
+REST controller, so chat and app follow the same rules (recipe title copy, calories, sharing).
 
 Loop bounded by `MAX_TOOL_ROUNDS = 5` + `MAX_TOOL_CALLS = 10` (`fetch_url` keeps its own
 `MAX_FETCHES = 2`). A tool exchange costs the 1-credit message + a best-effort `+2` surcharge
