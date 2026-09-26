@@ -39,6 +39,9 @@ class ItemResource extends Resource
                 Infolists\Components\TextEntry::make('quantity')->numeric(),
                 Infolists\Components\TextEntry::make('expiry_date')->date()->placeholder('-'),
                 Infolists\Components\IconEntry::make('opened')->boolean(),
+                Infolists\Components\TextEntry::make('opened_at')->dateTime()->placeholder('-'),
+                Infolists\Components\TextEntry::make('opened_shelf_life_days')->label('Opened shelf life (days)')->placeholder('-'),
+                Infolists\Components\TextEntry::make('opened_shelf_life_source')->label('Opened estimate source')->placeholder('-'),
                 Infolists\Components\TextEntry::make('source')->placeholder('-'),
                 Infolists\Components\TextEntry::make('note')->placeholder('-')->columnSpanFull(),
             ]);
@@ -56,6 +59,8 @@ class ItemResource extends Resource
                 Tables\Columns\TextColumn::make('quantity')->numeric(),
                 Tables\Columns\TextColumn::make('expiry_date')->date()->sortable()->placeholder('-'),
                 Tables\Columns\IconColumn::make('opened')->boolean()->toggleable(),
+                Tables\Columns\TextColumn::make('opened_shelf_life_days')->label('Opened days')->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('opened_shelf_life_source')->label('Opened source')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('source')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable(),
             ])

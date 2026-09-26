@@ -17,6 +17,12 @@ final class AdminCacheKeys
 
     public const ALGORITHM_GAPS = 'admin:algorithm-gaps:180';
 
+    public const ALGORITHM_METRICS = 'admin:algorithm-metrics:30';
+
+    public const ALGORITHM_HEALTH = 'admin:algorithm-health';
+
+    public const RETENTION = 'admin:retention:8w';
+
     public const FEEDBACK_BADGE = 'admin:badge:feedback';
 
     public const FAILED_JOBS_BADGE = 'admin:badge:failed-jobs';
