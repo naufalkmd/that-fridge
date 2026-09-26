@@ -112,9 +112,9 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   toast summary + Kitchen Score refresh, and the app following server-side Pro (admin-granted Pro), and the in-app calendar
   (phases 1-2).
   Rollback: `eas update:rollback`.
-- **Latest OTA** (group `38644aea-0ad3-4e3a-8b21-452e40816d4a`, commit `1b3c374`, API deployed; earlier groups `5bcdff86`, `ab975687`): calendar delete / filter
-  dropdown / Ask Quick Chat, Meal plan Autofill (3 credits), calendar fridge picker, change a Machine's fridge,
-  Insights + Crew score + Privacy + Meal plan + Calendar Settings rows, profile avatar icon. Plus Explore Phase 1. Not device-checked yet.
+- **Latest OTA** (group `4b8d196f-7efc-4326-a593-5303e0409906`, commit `7455a5e`, API deployed; earlier groups `38644aea`, `5bcdff86`, `ab975687`):
+  Ask Chef (recipe form + Meal plan), Quick Chat context, custom-field autofill, item page in sections, Settings in groups, Getting
+  Started recipe link fix. Not device-checked yet.
 - **Settings audit fixes** (live in the latest OTA): Organizer sweep asks first, is capped at 15 items and only counts answered
   checks (shared by the Organizer screen and the Crew tab); the Crew tab no longer reuses the shared-fridge "Crew activity"
   pref to gate sweeping; Home tips honour the Expiry / Low stock / Recipe switches; the dead Weekly digest switch is
@@ -122,10 +122,10 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   Merged: Settings lost Recipe book / Shopping list / Organizer (the Crew tab already has them; the orphan /recipes and /organizer
   screens are deleted, /shopping stays for Home's tip) and the blurb card; AI Data + Privacy became one "Privacy & data" page.
   Left alone on purpose: Crew score / Insights / Badges, Calendar / Meal plan, the credits + subscription cards.
-- **Ask Chef + chat context** (committed, unpublished): "Ask Chef" box on the recipe form (`POST /recipes/ask-chef`, 2 credits) and
+- **Ask Chef + chat context** (live): "Ask Chef" box on the recipe form (`POST /recipes/ask-chef`, 2 credits) and
   on the Meal plan (replaces Autofill; same endpoint, now takes a typed `prompt`, 3 credits); Quick Chat can pin items, a fridge,
   a recipe, a day, a meal-plan week, the shopping list or what's expiring (`contexts` on `POST /chat`, no extra credit).
-- **Custom-field autofill** (committed, unpublished): item-page Autofill also fills empty custom fields ("Protein"...) from history, a built-in
+- **Custom-field autofill** (live): item-page Autofill also fills empty custom fields ("Protein"...) from history, a built-in
   nutrient table, then the one AI call; Chat and Machines can filter/sum/set custom fields ("25 g" now counts as 25).
 - **Explore** Phase 1 (search + icon / recipe / Machine / meal-plan libraries, admin-curated, read-only) is live. Phase 2 (user contributions) needs UGC moderation (App Store 1.2) first: see `EXPLORE_PLAN.md`.
 
