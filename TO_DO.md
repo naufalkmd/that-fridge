@@ -105,8 +105,8 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   Product, icon requests), unified Remove, opened-item shelf life, privacy wording, and
   server-side signals for alerts, scans, autofill, notification toggles, recipe rank and Kitchen Lab
   authoring.
-- **Live OTA (production, runtime 1.3.3, latest group `b1402ef0-135f-4f79-8225-f6b104ce0e3e`, commit
-  `1f95d31`)** carries everything since `bbff2c2`. The earlier batch was verified on a device; the
+- **Live OTA (production, runtime 1.3.3, latest group `f9ccc24b-3d9c-48f1-8a1b-fbf050697a7e`, commit
+  `7319eb2`)** carries everything since `bbff2c2`. The earlier batch was verified on a device; the
   latest changes have **not** been device-checked yet: scan `parsed_name`, Home tip taps/dismissals
   (`/tip-feedback`), fridge-scoped Home bell dot, Profile → Privacy as list rows, and the bulk-remove
   toast summary + Kitchen Score refresh, and the app following server-side Pro (admin-granted Pro), and the in-app calendar
@@ -223,8 +223,9 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
   user-defined with suggested templates; AI weekly planner later (after the credit audit). All
   OTA — no native rebuild, no Apple/Google Calendar. **Phases 1 (read-only calendar) and 2 (meal plan + recipe log) are
   PUBLISHED (OTA `0a92e78c`); a first device pass found the meal form hidden by the keyboard —
-  fixed in OTA `b1402ef0` (sheet now rides above the keyboard, name field first, calories on meals).** Since then (committed, **not yet published**): Meal plan became its own screen replacing What should I eat?
-  (`CALENDAR_PLAN.md` → "Restructure"), and the calendar's Plan a meal button is now a general + Add menu.
+  fixed in OTA `b1402ef0` (sheet now rides above the keyboard, name field first, calories on meals).** Since then (published in OTA `f9ccc24b`, not device-checked): Meal plan became its own screen replacing
+  What should I eat? (`CALENDAR_PLAN.md` → "Restructure"), and the calendar's Plan a meal button is now a
+  general + Add menu. Quick Chat can plan meals too (`plan_meals` / `list_plan` / `remove_meal`, live on the API).
   Still to check on a phone: Home button under the bell,
   tap days incl. empty ones, filters, month arrows, plan / edit / delete / tick a meal, first-time slot
   templates, a reminder time, "Add to plan" on a recipe, and the sharing rule with a second account
