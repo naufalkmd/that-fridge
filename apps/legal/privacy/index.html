@@ -53,7 +53,7 @@
     <div class="doc-card">
       <p class="eyebrow">Privacy Policy</p>
       <h1 id="doc-title">Privacy Policy</h1>
-      <p class="updated">Effective 28 August 2026 · Last updated 25 September 2026 ·
+      <p class="updated">Effective 28 August 2026 · Last updated 26 September 2026 ·
   <a href="/privacy/pdpa/">Notis PDPA (Bahasa Malaysia)</a></p>
     </div>
   </section>
@@ -86,6 +86,7 @@
         <li><strong>Recipes</strong> — titles, ingredients, steps, tags, links you import, and any photo or video attachments you add.</li>
         <li><strong>AI-generated icons</strong> — the short prompt you type and the resulting image, kept in your icon library.</li>
         <li><strong>Fridge notes</strong>, <strong>goals</strong>, and earned <strong>badges</strong>.</li>
+        <li><strong>Kitchen Lab automations</strong> — the sentence you type to describe an automation, the trigger and steps it becomes (which you can edit), and a log of each run and what it did. The sentence is sent to the AI provider to draft the automation (see &sect;4); once saved, it runs on our server without further AI use.</li>
         <li><strong>Fridge sharing</strong> — if you invite someone to a fridge or request to join one, we store that request and the members list. People who share a fridge can see its contents, notes and items.</li>
         <li><strong>Blocking</strong> — if you block another user, we store that block so it can stop future contact between you (search, invites and join requests) in both directions. Blocking someone doesn't affect any fridge membership or content that already existed.</li>
       </ul>
@@ -107,6 +108,7 @@
           account — add or edit an item, tick off the shopping list, leave or remove a note, save a
           recipe. It only ever changes your own data, and it asks you to confirm before deleting
           anything.</li>
+        <li><strong>Photos and PDFs you attach to a chat message</strong> are sent to the AI provider with that message so it can read them. We do not keep a copy on our server.</li>
         <li><strong>Links you share.</strong> If you paste a recipe or article link, our server fetches
           that page, reduces it to plain text, and sends the text to the AI provider so it can read
           the recipe. We fetch only the address you provided.</li>
@@ -123,11 +125,22 @@
           after 180 days.</li>
         <li><strong>Suggestion-improvement data</strong> — when you use an app feature, we may record
           a food type or item name, our icon, food-group, shelf-life or storage guess and the value
-          you kept, whether you accepted or corrected an estimate, scan and barcode outcomes,
-          item-removal outcomes, and ratings of app answers. These structured records are linked
-          to your account for up to 180 days. They do not contain notes, chat text, photos,
-          receipts or contacts. Statistics combined across users, without account or device IDs,
+          you kept, whether you accepted or corrected an estimate (including Autofill), scan and
+          barcode outcomes (for a scanned receipt or photo, the name we proposed if you changed it),
+          item-removal outcomes and how long after removing an item you added it again, how you
+          respond to expiry and low-stock alerts and to the tips on Home, which alert types you
+          switch on or off, the filters you pick for recipe suggestions and where in the list the
+          recipe you cooked appeared, how you author Kitchen Lab automations (trigger type, number
+          of steps, whether you edited the draft, ran a dry run or enabled it &mdash; never the text
+          you wrote or the step contents), how long adding an item took and by which method, and
+          ratings of app answers. These structured records are linked to your account for up to
+          180 days. They do not contain notes, chat text, photos, receipts, contacts or the text of
+          Kitchen Lab automations. Statistics combined across users, without account or device IDs,
           may be kept longer. We only act on patterns seen across multiple users.</li>
+        <li><strong>Undo copies</strong> — so you can undo removing an item, we keep a copy of it
+          (including any note you added) for about a day; after that only the outcome (used or
+          thrown out) and timing remain, for up to 180 days. Items removed by a Kitchen Lab
+          automation keep their copy for up to 180 days so that run can be undone.</li>
         <li><strong>Server logs</strong> — IP address, device/browser user-agent and timestamps, kept for security and debugging.</li>
       </ul>
 
@@ -143,8 +156,10 @@
       whether your Pro access is active and keep your balance in sync.</p>
 
       <h3>Notifications</h3>
-      <p>Expiry and low-stock reminders are scheduled <strong>locally on your device</strong> and
-      never leave it. Separately, activity notifications — invites, fridge membership changes,
+      <p>Expiry and low-stock reminders are scheduled <strong>locally on your device</strong>. Our
+      server also creates matching in-app notification entries (the item name and fridge) that appear
+      in your Notifications feed; they are deleted automatically after 60&ndash;180 days. Separately,
+      activity notifications — invites, fridge membership changes,
       notes, and item activity from people you share a fridge with — are delivered as
       <strong>push notifications</strong>. This requires registering a <strong>push token</strong>
       (an identifier tied to your device, issued by Expo's push service) with our server; when a
@@ -158,6 +173,7 @@
         <li><strong>No location data.</strong></li>
         <li><strong>No third-party analytics SDKs</strong> in the current version.</li>
         <li><strong>No access to your contacts or photo library</strong> beyond the specific images you choose to add.</li>
+        <li><strong>No audio.</strong> Voice dictation runs on your device; only the text it produces is put in the message box.</li>
       </ul>
 
       <h2>3. How your data is used</h2>
@@ -185,7 +201,7 @@
         <tr><th>Provider</th><th>Purpose</th><th>Data shared</th></tr>
         <tr><td>DigitalOcean, LLC (servers in Singapore)</td><td>Runs our servers and database</td><td>All application data, at rest</td></tr>
         <tr><td>Cloudflare, Inc.</td><td>DNS and hosting for our public website (this page)</td><td>Standard web request logs (IP, user-agent); no account content</td></tr>
-        <tr><td>OpenRouter</td><td>Routes AI chat / recipe requests to large-language-model providers</td><td>Your message text and the kitchen context for that question (inventory, and where relevant your notes, shopping list, recipes, remembered facts, usage history); the text of any link you ask the crew to read</td></tr>
+        <tr><td>OpenRouter</td><td>Routes AI chat / recipe requests to large-language-model providers</td><td>Your message text and the kitchen context for that question (inventory, and where relevant your notes, shopping list, recipes, remembered facts, usage history); the text of any link you ask the crew to read; any photo or PDF you attach to a message; the sentence you type to draft a Kitchen Lab automation</td></tr>
         <tr><td>Downstream LLM providers (via OpenRouter)</td><td>Generate the AI responses</td><td>Same as above, per OpenRouter's routing</td></tr>
         <tr><td>fal.ai</td><td>Receipt / fridge-photo vision parsing and food-icon image generation</td><td>The image you submitted and short prompts</td></tr>
         <tr><td>RevenueCat</td><td>Subscription and in-app-purchase entitlement management</td><td>Account ID, purchase / receipt data, device info, AI-credit balance</td></tr>
@@ -203,7 +219,9 @@
       (see &sect;6) we <strong>hard-delete</strong> your user record, authentication tokens, chat
       history, remembered facts, your AI-credit balance and transaction log, and the
       fridges you own together with their items, notes, sections and shopping lists, and your
-      AI-generated icon library. Backups containing residual copies are rotated out within 30 days.
+      AI-generated icon library, and your Kitchen Lab automations and their run logs. Suggestion-improvement
+      records that were linked to you are unlinked from your account at that point and then deleted
+      automatically after 180 days. Backups containing residual copies are rotated out within 30 days.
       Fridges owned by other people that you were merely a member of are not deleted, but your
       membership is removed. If one of your generated icons was previously curated into the shared
       icon set, that de-identified copy carries no link to you and remains in the shared set.</p>
@@ -211,7 +229,7 @@
       <h2 id="delete-account">6. Your choices and rights</h2>
       <ul>
         <li id="how-to-delete"><strong>Delete your account</strong> — in the app: <em>Profile → Delete account</em>. This is immediate and permanent.</li>
-        <li id="delete-data"><strong>Delete some of your data without deleting your account</strong> — <em>Profile → AI Data &amp; Memory</em> to remove remembered facts, chat history and usage history at any time; individual items, recipes, notes and shopping-list entries can each be deleted from their own screen. See &sect;5 above for what's kept and for how long.</li>
+        <li id="delete-data"><strong>Delete some of your data without deleting your account</strong> — <em>Profile → AI Data &amp; Memory</em> to remove remembered facts, chat history and usage history at any time; individual items, recipes, notes and shopping-list entries can each be deleted from their own screen. To remove the suggestion-improvement records linked to you, use <em>Profile → Privacy → Delete my improvement data</em> (this erases those records and the item names kept with your removal history; the timing and used/thrown-out outcome of each removal remain for up to 180 days). You can also switch improvement sharing off in the same place. See &sect;5 above for what's kept and for how long.</li>
         <li><strong>Access / correct / export</strong> your data — email <a href="mailto:support@thatfridge.com">support@thatfridge.com</a> and we will respond within 30 days.</li>
         <li>Depending on where you live (e.g. EEA/UK GDPR, California CCPA/CPRA) you may have additional rights to object to or restrict processing, or to lodge a complaint with your data-protection authority. Our legal bases for processing are performance of our contract with you, your consent (for optional AI features), and our legitimate interests in securing and improving the service.</li>
       </ul>
