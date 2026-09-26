@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
@@ -292,6 +292,172 @@ export default function Profile() {
 
       <View>
         <SectionHeader>Privacy</SectionHeader>
+        <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
+          <LinkRow
+            icon="analytics-outline"
+            label="Help improve suggestions"
+            subtitle="Share structured corrections and outcomes. No notes, photos or chat text."
+            right={
+              <Switch
+                accessibilityLabel="Help improve ThatFridge's suggestions"
+                value={user?.preferences?.help_improve !== false}
+                onValueChange={setImprovementSharing}
+                disabled={improvementWorking}
+              />
+            }
+          />
+          <LinkRow
+            icon="document-text-outline"
+            label="Privacy policy"
+            onPress={() => Linking.openURL("https://thatfridge.com/privacy")}
+          />
+          <LinkRow
+            icon="trash-outline"
+            label="Delete my improvement data"
+            destructive
+            hideChevron
+            disabled={improvementWorking}
+            onPress={confirmDeleteImprovementData}
+            last
+          />
+        </View>
+      </View>
+
+      <View className="rounded-[10px] border border-hairline bg-surface p-4">
+        <Eyebrow color={colors.faint}>Subscription</Eyebrow>
+        <Text className="mt-1.5 text-[15px] font-semibold text-ink">
+          {user?.isDemo
+            ? "ThatFridge Pro — demo account"
+            : isPro
+              ? "ThatFridge Pro — active"
+              : "Free plan"}
+        </Text>
+        {user?.isDemo ? (
+          <Pressable
+            onPress={() => router.push({ pathname: "/paywall", params: { force: "1" } })}
+            className="mt-3 items-center rounded-lg border border-hairline py-2.5 active:opacity-70"
+          >
+            <Text className="font-semibold text-ink">View plans</Text>
+          </Pressable>
+        ) : isPro && available ? (
+          <Pressable
+            onPress={openCustomerCenter}
+            className="mt-3 items-center rounded-lg border border-hairline py-2.5 active:opacity-70"
+          >
+            <Text className="font-semibold text-ink">Manage subscription</Text>
+          </Pressable>
+        ) : !isPro ? (
+          <Pressable
+            onPress={() => router.push("/paywall")}
+            className="mt-3 items-center rounded-lg bg-accent py-2.5 active:opacity-80"
+          >
+            <Text className="font-bold uppercase tracking-wide text-on-accent">Go Pro</Text>
+          </Pressable>
+        ) : null}
+        {available && !isPro && (
+          <Pressable onPress={doRestore} className="mt-2 items-center py-1">
+            <Text className="text-[12.5px] font-semibold text-accent">Restore purchases</Text>
+          </Pressable>
+        )}
+      </View>
+
+      {fridges.length > 0 && (
+        <View>
+          <SectionHeader>Your fridges</SectionHeader>
+          <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
+            {fridges.map((f, i) => {
+              const count = f.sections.reduce((n, s) => n + s.items.length, 0);
+              const active = scope === f.id;
+              return (
+                <View
+                  key={f.id}
+                  className={`flex-row items-center px-4 py-3.5 ${
+                    i === fridges.length - 1 ? "" : "border-b border-hairline"
+                  }`}
+                >
+                  <Pressable
+                    onPress={() => {
+                      setScope(f.id);
+                      router.navigate("/inventory");
+                    }}
+                    className="flex-1 flex-row items-center justify-between"
+                  >
+                    <Text
+                      className="text-[14px] font-semibold"
+                      style={{ color: active ? colors.blue : colors.ink }}
+                    >
+                      {f.name}
+                    </Text>
+                    <Text className="mr-3 text-[11.5px] text-faint">{count} items</Text>
+                  </Pressable>
+                  <Pressable onPress={() => router.push(`/fridge/${f.id}`)} hitSlop={8}>
+                    <Ionicons name="settings-outline" size={15} color={colors.faint} />
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
+      <View>
+        <SectionHeader>Settings</SectionHeader>
+        <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
+          <LinkRow icon="restaurant-outline" label="Recipe book" onPress={() => router.push("/recipes")} />
+          <LinkRow icon="ribbon-outline" label="Badges" onPress={() => router.push("/badges")} />
+          <LinkRow icon="sync-outline" label="Organizer" onPress={() => router.push("/organizer")} />
+          <LinkRow
+            icon="flask-outline"
+            label="Kitchen Lab"
+            badge="BETA"
+            onPress={() => router.push("/kitchen-lab")}
+          />
+          <LinkRow icon="sparkles-outline" label="AI Data & Memory" onPress={() => router.push("/ai-data")} />
+          <LinkRow
+            icon="notifications-outline"
+            label="Notification settings"
+            onPress={() => router.push("/notification-settings")}
+          />
+          <LinkRow icon="cart-outline" label="Shopping list" onPress={() => router.push("/shopping")} />
+          <LinkRow
+            icon="contrast-outline"
+            label="Appearance"
+            value={THEME_LABELS[mode]}
+            onPress={() =>
+              Alert.alert("Appearance", "Choose how ThatFridge looks.", [
+                { text: "Light", onPress: () => setMode("light") },
+                { text: "Dark", onPress: () => setMode("dark") },
+                { text: "System", onPress: () => setMode("system") },
+                { text: "Cancel", style: "cancel" },
+              ])
+            }
+          />
+          <LinkRow
+            icon="refresh-outline"
+            label="Replay intro & tips"
+            onPress={replayIntro}
+          />
+          <LinkRow
+            icon="star-outline"
+            label="Rate ThatFridge"
+            onPress={openStoreReviewPage}
+          />
+          <LinkRow
+            icon="chatbubble-ellipses-outline"
+            label="Send feedback"
+            onPress={() => router.push("/feedback")}
+          />
+          <LinkRow
+            icon="information-circle-outline"
+            label="About ThatFridge"
+            onPress={() => router.push("/about")}
+            last
+          />
+        </View>
+      </View>
+
+      <View>
+        <SectionHeader>Privacy</SectionHeader>
         <View className="rounded-xl border border-hairline bg-surface p-4">
           <View className="flex-row items-center gap-3">
             <View className="flex-1">
@@ -362,47 +528,71 @@ const THEME_LABELS: Record<ThemeMode, string> = {
 function LinkRow({
   icon,
   label,
+  subtitle,
   value,
   badge,
+  right,
+  destructive,
+  hideChevron,
+  disabled,
   onPress,
   last,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
+  /** A muted explanation line under the label. */
+  subtitle?: string;
   value?: string;
   /** A short uppercase tag next to the label, e.g. "BETA" - for a feature that's live but
    *  still being finished. */
   badge?: string;
-  onPress: () => void;
+  /** A control on the right (e.g. a Switch) instead of a chevron. */
+  right?: React.ReactNode;
+  destructive?: boolean;
+  hideChevron?: boolean;
+  disabled?: boolean;
+  /** Omit for a row that isn't tappable itself (its `right` control is). */
+  onPress?: () => void;
   last?: boolean;
 }) {
   const { colors } = useTheme();
+  const tint = destructive ? colors.bad : colors.muted;
+  const rowClass = `flex-row items-center gap-3 px-4 py-3.5 ${last ? "" : "border-b border-hairline"}`;
+  const content = (
+    <>
+      <Ionicons name={icon} size={18} color={tint} />
+      <View className="flex-1">
+        <View className="flex-row items-center gap-2">
+          <Text className={`text-[14px] ${destructive ? "text-bad" : "text-ink"}`}>{label}</Text>
+          {badge && (
+            <View
+              className="rounded-full px-1.5 py-0.5"
+              style={{ backgroundColor: `${colors.accent}26` }}
+            >
+              <Text
+                className="text-[9.5px] font-extrabold tracking-wide"
+                style={{ color: colors.accent }}
+              >
+                {badge}
+              </Text>
+            </View>
+          )}
+        </View>
+        {subtitle && <Text className="mt-0.5 text-[12px] leading-[17px] text-muted">{subtitle}</Text>}
+      </View>
+      {value && <Text className="text-[13px] text-faint">{value}</Text>}
+      {right ?? (!hideChevron && onPress && <Ionicons name="chevron-forward" size={16} color={colors.faint} />)}
+    </>
+  );
+
+  if (!onPress) return <View className={rowClass}>{content}</View>;
   return (
     <Pressable
       onPress={onPress}
-      className={`flex-row items-center gap-3 px-4 py-3.5 active:bg-canvas ${
-        last ? "" : "border-b border-hairline"
-      }`}
+      disabled={disabled}
+      className={`${rowClass} active:bg-canvas ${disabled ? "opacity-50" : ""}`}
     >
-      <Ionicons name={icon} size={18} color={colors.muted} />
-      <View className="flex-1 flex-row items-center gap-2">
-        <Text className="text-[14px] text-ink">{label}</Text>
-        {badge && (
-          <View
-            className="rounded-full px-1.5 py-0.5"
-            style={{ backgroundColor: `${colors.accent}26` }}
-          >
-            <Text
-              className="text-[9.5px] font-extrabold tracking-wide"
-              style={{ color: colors.accent }}
-            >
-              {badge}
-            </Text>
-          </View>
-        )}
-      </View>
-      {value && <Text className="text-[13px] text-faint">{value}</Text>}
-      <Ionicons name="chevron-forward" size={16} color={colors.faint} />
+      {content}
     </Pressable>
   );
 }
