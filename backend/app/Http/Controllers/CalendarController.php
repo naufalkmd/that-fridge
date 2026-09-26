@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ItemOutcome;
 use App\Services\CalendarService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -35,5 +36,32 @@ class CalendarController extends Controller
         $result = $calendar->entries($request->user(), $data['from'], $data['to'], $data['tz'] ?? 'UTC', $mine, $onlyFridge);
 
         return response()->json($result + ['from' => $data['from'], 'to' => $data['to']]);
+    }
+
+    /**
+     * Clear one day's "used up" or "thrown out" history - what the calendar shows as a per-day count.
+     * Removes those outcome rows only: it does not change the Kitchen Score (which reads usage history,
+     * not these rows), and the items are already gone. `tz` places the day the same way GET /calendar does.
+     */
+    public function clearHistory(Request $request)
+    {
+        $data = $request->validate([
+            'date' => ['required', 'date_format:Y-m-d'],
+            'outcome' => ['required', 'in:used,wasted'],
+            'tz' => ['sometimes', 'timezone:all'],
+        ]);
+
+        $tz = $data['tz'] ?? 'UTC';
+        $start = Carbon::parse($data['date'], $tz)->startOfDay()->utc();
+        $end = $start->copy()->setTimezone($tz)->endOfDay()->utc();
+
+        $deleted = ItemOutcome::query()
+            ->where('user_id', $request->user()->id)
+            ->where('outcome', $data['outcome'])
+            ->whereNull('undone_at')
+            ->where('created_at', '>=', $start)->where('created_at', '<=', $end)
+            ->delete();
+
+        return response()->json(['deleted' => $deleted]);
     }
 }

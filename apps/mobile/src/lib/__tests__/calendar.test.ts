@@ -1,5 +1,7 @@
 import type { CalendarEntry } from "@thatfridge/core";
 import {
+  TAGS,
+  entryTag,
   addDays,
   addMonths,
   shortDayLabel,
@@ -104,12 +106,26 @@ describe("entries", () => {
     expect(dayDots([entry("expiry"), entry("added"), entry("meal")])).toEqual(["meal", "expiry", "added"]);
   });
 
-  test("filterEntries hides whole groups", () => {
-    const all = [entry("expiry"), entry("machine_run"), entry("machine_scheduled"), entry("used")];
-    expect(filterEntries(all, new Set()).length).toBe(4);
-    expect(filterEntries(all, new Set(["automation"])).map((e) => e.kind)).toEqual(["expiry", "used"]);
-    expect(filterEntries(all, new Set(["meals", "expiry", "automation", "activity"]))).toEqual([]);
-    expect(filterEntries([...all, entry("meal")], new Set(["meals"])).map((e) => e.kind)).not.toContain("meal");
+  test("filterEntries hides by tag, and a meal's tag follows its status", () => {
+    const meals = [
+      { ...entry("meal", "2026-09-10", "m1"), status: "planned" as const },
+      { ...entry("meal", "2026-09-10", "m2"), status: "cooked" as const },
+      { ...entry("meal", "2026-09-10", "m3"), status: "skipped" as const },
+    ];
+    const all = [entry("expiry"), entry("machine_run"), entry("machine_scheduled"), entry("used"), entry("wasted"), entry("added"), ...meals];
+    expect(filterEntries(all, new Set()).length).toBe(all.length);
+    expect(filterEntries(all, new Set(["runs"])).map((e) => e.kind)).not.toContain("machine_run");
+    expect(filterEntries(all, new Set(["runs"])).map((e) => e.kind)).toContain("machine_scheduled"); // the other automation tag stays
+    expect(filterEntries(all, new Set(["cooked", "skipped"])).filter((e) => e.kind === "meal").map((e) => e.id)).toEqual(["m1"]);
+    expect(filterEntries(all, new Set(TAGS.map((t) => t.key)))).toEqual([]);
+  });
+
+  test("every tag is reachable from some entry, and entryTag maps each kind", () => {
+    expect(TAGS).toHaveLength(9);
+    expect(new Set(TAGS.map((t) => t.key)).size).toBe(9);
+    const kinds = ["expiry", "machine_scheduled", "machine_run", "used", "wasted", "added"] as const;
+    expect(kinds.map((k) => entryTag(entry(k)))).toEqual(["expiry", "scheduled", "runs", "used", "wasted", "added"]);
+    expect(entryTag({ ...entry("meal"), status: undefined })).toBe("planned"); // no status = planned
   });
 
   test("sectionsForDay keeps group order and drops empty groups", () => {

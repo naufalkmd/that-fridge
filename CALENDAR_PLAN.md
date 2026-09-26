@@ -39,6 +39,19 @@ Meal planning is now its own feature, and **What should I eat? no longer exists 
   an item, new automation. The two screens link to each other.
 - One `useMealActions` hook and one meal form back both screens, so they cannot drift apart.
 
+## Second device pass (built, unpublished)
+
+- **Filter**: the chips row became one Filter button with a dropdown of nine tags (planned / cooked /
+  skipped meals, expiring, scheduled automations, automation runs, items added, used up, thrown out);
+  the section headings in a day are unchanged.
+- **Delete from the calendar**: an expiring item (normal remove flow, with Undo), an automation's log
+  entry (`DELETE /machines/{m}/runs/{r}`) and a day's used-up / thrown-out history
+  (`DELETE /calendar/history`, no Kitchen Score change), each after a confirm where it can't be undone.
+  Meals were already deletable; "items added" and scheduled automations stay read-only.
+- **+ Add → Ask Quick Chat** opens Chat with "Add to <day>: " in the composer.
+- **What should I eat?** is gone from the Meal plan screen (Home still has its suggestions).
+- **Settings**: Meal plan and Privacy are list rows (Profile → Settings → Privacy → details screen).
+
 ## What the calendar shows
 
 | Kind | Source | Notes |

@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { describeError, type CalendarEntry } from "@thatfridge/core";
 import { api } from "@/lib/api";
+import { useInventory } from "@/lib/inventory";
+import { useKitchenScore } from "@/lib/kitchenScore";
+import { useToast } from "@/lib/toast";
 import { useMealActions } from "@/lib/useMealActions";
 import { useScope } from "@/lib/scope";
 import { useTheme } from "@/lib/theme";
@@ -13,18 +16,18 @@ import { getDeviceTimezone } from "@/lib/timezone";
 import {
   addMonths,
   filterEntries,
-  GROUPS,
-  GROUP_LABEL,
   groupByDate,
   monthGrid,
   monthTitle,
   toISO,
+  dayTitle,
   weekdayLabels,
-  type CalendarGroup,
+  type CalendarTag,
 } from "@/lib/calendar";
 import { SheetHeader } from "@/components/sheet";
 import { MonthGrid } from "@/components/calendar/month-grid";
 import { DaySheet } from "@/components/calendar/day-sheet";
+import { FilterMenu } from "@/components/calendar/filter-menu";
 
 /**
  * The in-app calendar: everything ThatFridge knows about time in one month grid. Every day is
@@ -34,6 +37,9 @@ export default function CalendarScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { scope } = useScope();
+  const toast = useToast();
+  const { removeItem, undoRemoval } = useInventory();
+  const { refresh: refreshScore } = useKitchenScore();
   const [startAtMenu, setStartAtMenu] = useState(false);
   const meals = useMealActions(useCallback(() => setReload((n) => n + 1), []));
 
@@ -41,7 +47,7 @@ export default function CalendarScreen() {
   const now = new Date();
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() });
   const [selected, setSelected] = useState<string | null>(null);
-  const [hidden, setHidden] = useState<ReadonlySet<CalendarGroup>>(new Set());
+  const [hidden, setHidden] = useState<ReadonlySet<CalendarTag>>(new Set());
   const [entries, setEntries] = useState<CalendarEntry[]>([]);
   const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -76,11 +82,11 @@ export default function CalendarScreen() {
   const visible = useMemo(() => filterEntries(entries, hidden), [entries, hidden]);
   const byDate = useMemo(() => groupByDate(visible), [visible]);
 
-  const toggleGroup = useCallback((group: CalendarGroup) => {
+  const toggleTag = useCallback((tag: CalendarTag) => {
     setHidden((prev) => {
       const next = new Set(prev);
-      if (next.has(group)) next.delete(group);
-      else next.add(group);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
       return next;
     });
   }, []);
@@ -89,6 +95,71 @@ export default function CalendarScreen() {
     setSelected(null);
     if (entry.refs.itemId) router.push(`/item/${entry.refs.itemId}`);
     else if (entry.refs.machineId) router.push("/kitchen-lab");
+  }
+
+  /** Remove something from the calendar. Items go through the normal remove flow (with Undo); an
+   *  automation's log entry and a day's used / thrown-out history are cleared after a confirm. */
+  function deleteEntry(entry: CalendarEntry) {
+    const fail = (e: unknown) => Alert.alert("Couldn't delete that", describeError(e, "Please try again."));
+    if (entry.kind === "expiry" && entry.refs.itemId) {
+      removeItem(entry.refs.itemId)
+        .then((result) => {
+          refreshScore();
+          setReload((n) => n + 1);
+          toast.show(`Removed · ${entry.title}`, {
+            actionLabel: "Undo",
+            onAction: () => {
+              void undoRemoval(result.id)
+                .then(() => {
+                  refreshScore();
+                  setReload((n) => n + 1);
+                })
+                .catch(fail);
+            },
+          });
+        })
+        .catch(fail);
+      return;
+    }
+    const { machineId, runId } = entry.refs;
+    if (entry.kind === "machine_run" && machineId && runId) {
+      Alert.alert("Delete this log entry?", "It only removes the entry from the run history.", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            api.deleteMachineRun(machineId, runId).then(() => setReload((n) => n + 1)).catch(fail);
+          },
+        },
+      ]);
+      return;
+    }
+    if (entry.kind === "used" || entry.kind === "wasted") {
+      const outcome = entry.kind;
+      Alert.alert(
+        outcome === "used" ? "Clear used-up items?" : "Clear thrown-out items?",
+        `This removes ${dayTitle(entry.date)}'s history from the calendar. It doesn't change your Kitchen Score.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Clear",
+            style: "destructive",
+            onPress: () => {
+              api
+                .clearCalendarHistory({ date: entry.date, outcome, tz: getDeviceTimezone() })
+                .then(() => setReload((n) => n + 1))
+                .catch(fail);
+            },
+          },
+        ],
+      );
+    }
+  }
+
+  function askChat(date: string) {
+    closeSheet();
+    router.push({ pathname: "/chat", params: { prefill: `Add to ${dayTitle(date)}: ` } });
   }
 
   function closeSheet() {
@@ -132,30 +203,8 @@ export default function CalendarScreen() {
           </Pressable>
         </View>
 
-        <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
-          {GROUPS.map((group) => {
-            const on = !hidden.has(group);
-            return (
-              <Pressable
-                key={group}
-                onPress={() => toggleGroup(group)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 999,
-                  backgroundColor: on ? `${colors.accent}26` : colors.surface2,
-                  borderWidth: 1,
-                  borderColor: on ? colors.accent : colors.hairline,
-                }}
-              >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: on ? colors.accent : colors.faint }}>
-                  {GROUP_LABEL[group]}
-                </Text>
-              </Pressable>
-            );
-          })}
+        <View style={{ marginBottom: 12 }}>
+          <FilterMenu hidden={hidden} onToggle={toggleTag} onReset={() => setHidden(new Set())} />
         </View>
 
         <View style={{ flexDirection: "row", marginBottom: 4 }}>
@@ -195,6 +244,8 @@ export default function CalendarScreen() {
         startAtMenu={startAtMenu}
         onClose={closeSheet}
         onOpenEntry={openEntry}
+        onAskChat={askChat}
+        onDeleteEntry={deleteEntry}
         onAddItem={() => {
           closeSheet();
           router.push("/add");

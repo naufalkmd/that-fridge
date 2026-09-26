@@ -11,7 +11,33 @@ export function isOpenable(entry: CalendarEntry): boolean {
   return !!(entry.refs.itemId || entry.refs.machineId);
 }
 
-export function EntryRow({ entry, onOpen }: { entry: CalendarEntry; onOpen: (e: CalendarEntry) => void }) {
+/** What can be removed straight from the calendar: your expiring items, an automation's log entry, and a
+ *  day's used-up / thrown-out history. (Meals are edited and deleted in their own form; "items added" are
+ *  your real items and stay read-only here.) */
+export function isDeletable(entry: CalendarEntry): boolean {
+  return (
+    (entry.kind === "expiry" && !!entry.refs.itemId) ||
+    (entry.kind === "machine_run" && !!entry.refs.machineId && !!entry.refs.runId) ||
+    entry.kind === "used" ||
+    entry.kind === "wasted"
+  );
+}
+
+export function deleteLabel(entry: CalendarEntry): string {
+  if (entry.kind === "expiry") return `Remove ${entry.title}`;
+  if (entry.kind === "machine_run") return `Delete log entry ${entry.title}`;
+  return `Clear ${entry.title}`;
+}
+
+export function EntryRow({
+  entry,
+  onOpen,
+  onDelete,
+}: {
+  entry: CalendarEntry;
+  onOpen: (e: CalendarEntry) => void;
+  onDelete?: (e: CalendarEntry) => void;
+}) {
   const { colors } = useTheme();
   const color = entry.tone === "overdue" ? colors.bad : kindColor(entry.kind, colors);
   const openable = isOpenable(entry);
@@ -33,6 +59,11 @@ export function EntryRow({ entry, onOpen }: { entry: CalendarEntry; onOpen: (e: 
           <Text style={{ fontSize: 11.5, color: colors.faint, marginTop: 2 }}>{[entry.time, entry.meta].filter(Boolean).join(" · ")}</Text>
         )}
       </View>
+      {onDelete && isDeletable(entry) && (
+        <Pressable hitSlop={8} accessibilityRole="button" accessibilityLabel={deleteLabel(entry)} onPress={() => onDelete(entry)}>
+          <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.faint} />
+        </Pressable>
+      )}
       {openable && <Ionicons name="chevron-forward" size={16} color={colors.faint} />}
     </Pressable>
   );

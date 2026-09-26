@@ -406,6 +406,18 @@ and per-day summaries `used` / `wasted` / `added` (with `count`; an outcome row 
 History kinds are limited to the last 180 days. `tone: "overdue"` marks an overdue expiry, a failed
 run, or thrown-out items. At most 500 entries (`truncated: true` past that). Throttled 60/min.
 
+### `DELETE /calendar/history` 🔒
+
+Clears one day's used-up or thrown-out history from the calendar. Body: `date` (`YYYY-MM-DD`),
+`outcome` (`used` | `wasted`), optional `tz` (the same day boundaries `GET /calendar` uses).
+Deletes the caller's own `item_outcomes` rows for that day and outcome (not undone ones) and returns
+`{ "deleted": n }`. It does **not** touch items, and Kitchen Score is unaffected. Throttled 30/min.
+
+### `DELETE /machines/{machine}/runs/{run}` 🔒
+
+Deletes one entry of an automation's run history (the machine owner/editor only; 404 if the run
+belongs to another machine). Returns 204. Items the run removed stay removed - only the log entry goes.
+
 ## Meal plan
 
 Entries appear in `GET /calendar` as `kind: "meal"` (with `slot`, `status`, `note`, `by`, and

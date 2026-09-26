@@ -109,7 +109,7 @@ const MAX_IMAGES = 4;
 export default function Chat() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session } = useLocalSearchParams<{ session?: string }>();
+  const { session, prefill } = useLocalSearchParams<{ session?: string; prefill?: string }>();
   const { items, refresh: refreshInventory } = useInventory();
   const { refresh: refreshNotes } = useNotes();
   const { refresh: refreshShopping } = useShopping();
@@ -133,6 +133,10 @@ export default function Chat() {
   const [messages, setMessages] = useState<Msg[]>([GREETING]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [text, setText] = useState("");
+  // Handed over from elsewhere (e.g. the calendar's "Ask Quick Chat"): drop it in the composer once.
+  useEffect(() => {
+    if (prefill) setText(prefill);
+  }, [prefill]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);

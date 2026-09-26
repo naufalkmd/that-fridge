@@ -9,6 +9,7 @@ use App\Models\MachineRun;
 use App\Models\Section;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class CalendarControllerTest extends TestCase
@@ -172,5 +173,103 @@ class CalendarControllerTest extends TestCase
         ItemOutcome::create(['user_id' => $other->id, 'original_item_id' => 1, 'outcome' => 'used', 'confidence' => 'high', 'predicted_days' => 1, 'actual_days' => 3]);
 
         $this->assertSame([], $this->calendar($me)->assertOk()->json('entries'));
+    }
+
+    // ---- deleting things from the calendar --------------------------------------------------------
+
+    private function outcome(User $user, string $outcome, $when): ItemOutcome
+    {
+        $row = ItemOutcome::create(['user_id' => $user->id, 'original_item_id' => 1, 'outcome' => $outcome, 'confidence' => 'high', 'predicted_days' => 1, 'actual_days' => 3]);
+        $row->forceFill(['created_at' => $when])->saveQuietly();
+
+        return $row;
+    }
+
+    public function test_clearing_history_removes_only_that_users_outcome_for_that_local_day(): void
+    {
+        $me = User::factory()->create();
+        $other = User::factory()->create();
+        $noon = now('UTC')->startOfDay()->subDay()->setTime(12, 0);
+        $day = $noon->toDateString();
+
+        $target = [$this->outcome($me, 'used', $noon), $this->outcome($me, 'used', $noon->copy()->addHour())];
+        $keep = [
+            $this->outcome($me, 'wasted', $noon),                       // other outcome, same day
+            $this->outcome($me, 'used', $noon->copy()->subDays(2)),     // other day
+            $this->outcome($other, 'used', $noon),                      // someone else's
+        ];
+
+        $this->actingAs($me)->deleteJson('/api/calendar/history', ['date' => $day, 'outcome' => 'used'])
+            ->assertOk()->assertJson(['deleted' => 2]);
+
+        foreach ($target as $row) {
+            $this->assertDatabaseMissing('item_outcomes', ['id' => $row->id]);
+        }
+        foreach ($keep as $row) {
+            $this->assertDatabaseHas('item_outcomes', ['id' => $row->id]);
+        }
+
+        // ...and the calendar no longer shows that day's "used up" summary.
+        $entries = collect($this->calendar($me, ['from' => $day, 'to' => $day])->json('entries'));
+        $this->assertNull($entries->firstWhere('kind', 'used'));
+        $this->assertNotNull($entries->firstWhere('kind', 'wasted'));
+    }
+
+    public function test_clearing_history_uses_the_callers_timezone_for_the_day(): void
+    {
+        $me = User::factory()->create();
+        // 23:30 UTC on the 10th is 07:30 on the 11th in Kuala Lumpur.
+        $row = $this->outcome($me, 'wasted', Carbon::parse('2026-09-10 23:30:00', 'UTC'));
+
+        $this->actingAs($me)->deleteJson('/api/calendar/history', ['date' => '2026-09-10', 'outcome' => 'wasted', 'tz' => 'Asia/Kuala_Lumpur'])
+            ->assertOk()->assertJson(['deleted' => 0]);
+        $this->assertDatabaseHas('item_outcomes', ['id' => $row->id]);
+
+        $this->deleteJson('/api/calendar/history', ['date' => '2026-09-11', 'outcome' => 'wasted', 'tz' => 'Asia/Kuala_Lumpur'])
+            ->assertOk()->assertJson(['deleted' => 1]);
+        $this->assertDatabaseMissing('item_outcomes', ['id' => $row->id]);
+    }
+
+    public function test_clearing_history_validates_and_needs_auth(): void
+    {
+        $this->deleteJson('/api/calendar/history', ['date' => '2026-09-10', 'outcome' => 'used'])->assertUnauthorized();
+
+        $me = User::factory()->create();
+        $this->actingAs($me);
+        $this->deleteJson('/api/calendar/history', ['outcome' => 'used'])->assertStatus(422);
+        $this->deleteJson('/api/calendar/history', ['date' => '2026-09-10'])->assertStatus(422);
+        $this->deleteJson('/api/calendar/history', ['date' => '2026-09-10', 'outcome' => 'entry_mistake'])->assertStatus(422);
+        $this->deleteJson('/api/calendar/history', ['date' => 'yesterday', 'outcome' => 'used'])->assertStatus(422);
+        $this->deleteJson('/api/calendar/history', ['date' => '2026-09-10', 'outcome' => 'used', 'tz' => 'Not/AZone'])->assertStatus(422);
+    }
+
+    public function test_deleting_an_automation_run_removes_only_that_log_entry(): void
+    {
+        $me = User::factory()->create();
+        [$fridge] = $this->fridgeFor($me);
+        $machine = $this->machine($me, $fridge);
+        $run = MachineRun::create(['machine_id' => $machine->id, 'machine_version' => 1, 'status' => 'success', 'steps_run' => []]);
+        $keep = MachineRun::create(['machine_id' => $machine->id, 'machine_version' => 1, 'status' => 'success', 'steps_run' => []]);
+
+        $this->actingAs($me)->deleteJson("/api/machines/{$machine->id}/runs/{$run->id}")->assertNoContent();
+
+        $this->assertDatabaseMissing('machine_runs', ['id' => $run->id]);
+        $this->assertDatabaseHas('machine_runs', ['id' => $keep->id]);
+        $this->assertDatabaseHas('machines', ['id' => $machine->id]); // the automation itself is untouched
+    }
+
+    public function test_a_run_cannot_be_deleted_by_someone_else_or_through_the_wrong_machine(): void
+    {
+        $me = User::factory()->create();
+        $stranger = User::factory()->create();
+        [$fridge] = $this->fridgeFor($me);
+        $mine = $this->machine($me, $fridge);
+        $other = $this->machine($me, $fridge, ['name' => 'Second']);
+        $run = MachineRun::create(['machine_id' => $mine->id, 'machine_version' => 1, 'status' => 'success', 'steps_run' => []]);
+
+        $this->actingAs($stranger)->deleteJson("/api/machines/{$mine->id}/runs/{$run->id}")->assertForbidden();
+        $this->actingAs($me)->deleteJson("/api/machines/{$other->id}/runs/{$run->id}")->assertNotFound();
+
+        $this->assertDatabaseHas('machine_runs', ['id' => $run->id]);
     }
 }

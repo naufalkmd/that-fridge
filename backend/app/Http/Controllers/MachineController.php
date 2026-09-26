@@ -273,6 +273,23 @@ class MachineController extends Controller
         return response()->json(['summaries' => $summaries]);
     }
 
+    /**
+     * Delete one entry from a Machine's run log. Only the log row goes - anything the run changed
+     * stays - and the run can no longer be undone afterwards.
+     */
+    public function destroyRun(Request $request, Machine $machine, MachineRun $run)
+    {
+        $this->authorize('update', $machine);
+
+        if ($run->machine_id !== $machine->id) {
+            abort(404);
+        }
+
+        $run->delete();
+
+        return response()->noContent();
+    }
+
     public function destroy(Request $request, Machine $machine)
     {
         $this->authorize('delete', $machine);

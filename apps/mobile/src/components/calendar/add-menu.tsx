@@ -3,7 +3,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { useTheme } from "@/lib/theme";
 
-export type AddAction = "meal" | "shopping" | "note" | "item" | "automation";
+export type AddAction = "meal" | "shopping" | "note" | "item" | "automation" | "chat";
 
 const ACTIONS: { key: AddAction; title: string; hint: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
   { key: "meal", title: "Plan a meal", hint: "Put a meal on this day", icon: "silverware-fork-knife" },
@@ -11,6 +11,7 @@ const ACTIONS: { key: AddAction; title: string; hint: string; icon: keyof typeof
   { key: "note", title: "Leave a note", hint: "A sticky note on the fridge", icon: "note-text-outline" },
   { key: "item", title: "Add an item", hint: "Put something in the fridge", icon: "plus-box-outline" },
   { key: "automation", title: "New automation", hint: "Something that runs on its own", icon: "flask-outline" },
+  { key: "chat", title: "Ask Quick Chat", hint: "Describe it and the crew adds it", icon: "chat-processing-outline" },
 ];
 
 /** The general "+" menu: everything you can add from the calendar, one tap each. */

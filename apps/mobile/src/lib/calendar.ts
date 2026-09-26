@@ -109,8 +109,39 @@ export const GROUP_LABEL: Record<CalendarGroup, string> = {
 
 export const GROUPS: CalendarGroup[] = ["meals", "expiry", "automation", "activity"];
 
-export function filterEntries(entries: CalendarEntry[], hidden: ReadonlySet<CalendarGroup>): CalendarEntry[] {
-  return entries.filter((e) => !hidden.has(KIND_GROUP[e.kind]));
+/**
+ * Filter tags: finer than the section headings. Meals split by status (a cooked meal is a log, a planned
+ * one is a plan), automations into upcoming vs ran, and the history kinds each get their own.
+ */
+export type CalendarTag = "planned" | "cooked" | "skipped" | "expiry" | "scheduled" | "runs" | "added" | "used" | "wasted";
+
+export const TAGS: { key: CalendarTag; label: string }[] = [
+  { key: "planned", label: "Planned meals" },
+  { key: "cooked", label: "Cooked meals" },
+  { key: "skipped", label: "Skipped meals" },
+  { key: "expiry", label: "Expiring" },
+  { key: "scheduled", label: "Scheduled automations" },
+  { key: "runs", label: "Automation runs" },
+  { key: "added", label: "Items added" },
+  { key: "used", label: "Used up" },
+  { key: "wasted", label: "Thrown out" },
+];
+
+export function entryTag(entry: CalendarEntry): CalendarTag {
+  switch (entry.kind) {
+    case "meal":
+      return entry.status === "cooked" ? "cooked" : entry.status === "skipped" ? "skipped" : "planned";
+    case "machine_scheduled":
+      return "scheduled";
+    case "machine_run":
+      return "runs";
+    default:
+      return entry.kind; // expiry | added | used | wasted
+  }
+}
+
+export function filterEntries(entries: CalendarEntry[], hidden: ReadonlySet<CalendarTag>): CalendarEntry[] {
+  return entries.filter((e) => !hidden.has(entryTag(e)));
 }
 
 export function groupByDate(entries: CalendarEntry[]): Record<string, CalendarEntry[]> {

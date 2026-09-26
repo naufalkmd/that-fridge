@@ -181,6 +181,10 @@ function AppShell({
                                       options={{ title: "Notification settings" }}
                                     />
                                     <Stack.Screen
+                                      name="privacy"
+                                      options={{ title: "Privacy" }}
+                                    />
+                                    <Stack.Screen
                                       name="edit-profile"
                                       options={{ title: "Edit profile" }}
                                     />

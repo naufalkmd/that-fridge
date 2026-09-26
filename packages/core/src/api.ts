@@ -875,6 +875,11 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
 
   /** `date` is the device's local today (the server can't know the timezone); `mealEntryId`
    *  marks a specific planned entry cooked instead of matching today's plan by recipe. */
+  /** Clear one day's "used up" or "thrown out" history from the calendar (does not touch the Kitchen Score). */
+  function clearCalendarHistory(params: { date: string; outcome: "used" | "wasted"; tz?: string }): Promise<{ deleted: number }> {
+    return http.del<{ deleted: number }>("/calendar/history", params);
+  }
+
   function markRecipeMade(id: string, opts?: { date?: string; mealEntryId?: string }): Promise<Recipe> {
     const body: Record<string, string> = {};
     if (opts?.date) body.date = opts.date;
@@ -992,6 +997,11 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
   }
   /** Reverses one run's undoable steps (see MachineRun.undoable) - throws (ApiError, status
    *  409) if it was already undone, or 422 if it turns out nothing on it was undoable. */
+  /** Delete one entry from a Machine's run log (the run can no longer be undone afterwards). */
+  function deleteMachineRun(machineId: string, runId: string): Promise<void> {
+    return http.del<void>(`/machines/${machineId}/runs/${runId}`);
+  }
+
   function undoMachineRun(machineId: string, runId: string): Promise<{ summaries: string[] }> {
     return http.post<{ summaries: string[] }>(`/machines/${machineId}/runs/${runId}/undo`);
   }
@@ -1303,6 +1313,8 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     sendFeedback,
     tipFeedback,
     getCalendar,
+    clearCalendarHistory,
+    deleteMachineRun,
     createMealEntry,
     updateMealEntry,
     deleteMealEntry,

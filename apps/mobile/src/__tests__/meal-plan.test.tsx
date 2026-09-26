@@ -44,7 +44,6 @@ const mockCreateMeal = jest.fn();
 const mockUpdateMeal = jest.fn();
 const mockDeleteMeal = jest.fn();
 const mockEstimate = jest.fn();
-const mockSuggest = jest.fn();
 jest.mock("@/lib/api", () => ({
   api: {
     getCalendar: (...a: unknown[]) => mockGetCalendar(...a),
@@ -52,7 +51,6 @@ jest.mock("@/lib/api", () => ({
     updateMealEntry: (...a: unknown[]) => mockUpdateMeal(...a),
     deleteMealEntry: (...a: unknown[]) => mockDeleteMeal(...a),
     estimateMealCalories: (...a: unknown[]) => mockEstimate(...a),
-    suggestRecipes: (...a: unknown[]) => mockSuggest(...a),
     markRecipeMade: jest.fn(),
   },
 }));
@@ -84,7 +82,6 @@ beforeEach(() => {
   mockUpdateMeal.mockImplementation(async (id, input) => ({ id, slot: "Dinner", title: "Tacos", date: "2026-09-17", time: null, status: "planned", ...input }));
   mockDeleteMeal.mockResolvedValue(undefined);
   mockEstimate.mockResolvedValue({ calories: null });
-  mockSuggest.mockResolvedValue({ exact: [recipe], similar: [], exhausted: false });
 });
 
 const loaded = () => waitFor(() => expect(mockGetCalendar).toHaveBeenCalled());
@@ -217,60 +214,7 @@ describe("Meal plan screen", () => {
   });
 });
 
-describe("Meal plan: What should I eat? built in", () => {
-  test("the ideas are tucked away until asked for", async () => {
-    await render(<MealPlanScreen />);
-    await loaded();
-
-    expect(screen.getByText("What should I eat?")).toBeTruthy();
-    expect(mockSuggest).not.toHaveBeenCalled();
-    expect(screen.queryByText("Find meals")).toBeNull();
-  });
-
-  test("opening it gets suggestions with the same filters as before, and Plan it opens the form on today with the recipe", async () => {
-    await render(<MealPlanScreen />);
-    await loaded();
-
-    await fireEvent.press(await screen.findByText("What should I eat?"));
-    await waitFor(() => expect(mockSuggest).toHaveBeenCalledWith({ mealType: null, vibes: [], foodFocus: [] }));
-    expect(await screen.findByText("Pad Thai")).toBeTruthy();
-    expect(screen.getByText(/≈ 640 kcal/)).toBeTruthy();
-
-    await fireEvent.press(screen.getByLabelText("Plan Pad Thai"));
-
-    expect(await screen.findByDisplayValue("Pad Thai")).toBeTruthy(); // the name comes from the recipe
-    expect(screen.getByTestId("day-chip-2026-09-15").props.accessibilityState.selected).toBe(true);
-    expect(await screen.findByPlaceholderText("≈ 640 kcal")).toBeTruthy(); // its calories, no server call
-    await fireEvent.press(screen.getByText("Save"));
-
-    await waitFor(() => expect(mockCreateMeal).toHaveBeenCalledWith(expect.objectContaining({ recipe_id: "9", title: "Pad Thai", date: "2026-09-15" })));
-  });
-
-  test("the meal-type / vibe / focus chips narrow the suggestions", async () => {
-    await render(<MealPlanScreen />);
-    await loaded();
-    await fireEvent.press(await screen.findByText("What should I eat?"));
-    await waitFor(() => expect(mockSuggest).toHaveBeenCalledTimes(1));
-
-    await fireEvent.press(screen.getByText("Dinner"));
-    await fireEvent.press(screen.getByText("Comfort"));
-    await fireEvent.press(screen.getByText("High Protein"));
-    await fireEvent.press(screen.getByText("Find meals"));
-
-    await waitFor(() => expect(mockSuggest).toHaveBeenLastCalledWith({ mealType: "dinner", vibes: ["comfort"], foodFocus: ["high_protein"] }));
-  });
-
-  test("with nothing to suggest it points to Chef", async () => {
-    mockSuggest.mockResolvedValue({ exact: [], similar: [], exhausted: true });
-    await render(<MealPlanScreen />);
-    await loaded();
-    await fireEvent.press(await screen.findByText("What should I eat?"));
-
-    expect(await screen.findByText(/Nothing in your saved recipes matches/)).toBeTruthy();
-    await fireEvent.press(screen.getByText("Ask Chef instead"));
-    expect(mockPush).toHaveBeenLastCalledWith("/chat");
-  });
-
+describe("Meal plan: from a recipe", () => {
   test("opened from a recipe's Add to plan, the meal form is already open with it", async () => {
     mockParams = { recipeId: "9", recipeName: "Pad Thai" };
     await render(<MealPlanScreen />);

@@ -16,11 +16,12 @@ import { useCredits } from "@/lib/credits";
 import { api } from "@/lib/api";
 import { openStoreReviewPage } from "@/lib/rate";
 import { PixelText } from "@/components/brand";
+import { LinkRow } from "@/components/link-row";
 import { Eyebrow, SectionHeader } from "@/components/ui";
 
 export default function Profile() {
   const router = useRouter();
-  const { user, signOut, deleteAccount, updateImprovementPreferences } = useAuth();
+  const { user, signOut, deleteAccount } = useAuth();
   const { mode, setMode, colors } = useTheme();
   const { isPro, available, restore, openCustomerCenter } = usePro();
   const { balance: credits } = useCredits();
@@ -28,44 +29,6 @@ export default function Profile() {
   const { replayOnboarding } = useOnboarding();
   const { scope, setScope } = useScope();
   const [working, setWorking] = useState(false);
-  const [improvementWorking, setImprovementWorking] = useState(false);
-
-  async function setImprovementSharing(value: boolean) {
-    setImprovementWorking(true);
-    try {
-      await updateImprovementPreferences({ helpImprove: value });
-    } catch (e) {
-      Alert.alert("Couldn't save preference", describeError(e, "Please try again."));
-    } finally {
-      setImprovementWorking(false);
-    }
-  }
-
-  function confirmDeleteImprovementData() {
-    Alert.alert(
-      "Delete improvement data?",
-      "This deletes the feedback records linked to your account. Anonymous combined statistics may remain.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete data",
-          style: "destructive",
-          onPress: async () => {
-            setImprovementWorking(true);
-            try {
-              await api.deleteImprovementData();
-              Alert.alert("Deleted", "Your improvement data has been deleted.");
-            } catch (e) {
-              Alert.alert("Couldn't delete data", describeError(e, "Please try again."));
-            } finally {
-              setImprovementWorking(false);
-            }
-          },
-        },
-      ],
-    );
-  }
-
   async function replayIntro() {
     // Bring back the Home spotlight / tour / checklist, then walk the full pre-sign-in
     // intro in preview (non-destructive — no auth, no draft, no re-signup).
@@ -240,6 +203,7 @@ export default function Profile() {
         <SectionHeader>Settings</SectionHeader>
         <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
           <LinkRow icon="restaurant-outline" label="Recipe book" onPress={() => router.push("/recipes")} />
+          <LinkRow icon="calendar-outline" label="Meal plan" onPress={() => router.push("/meal-plan")} />
           <LinkRow icon="ribbon-outline" label="Badges" onPress={() => router.push("/badges")} />
           <LinkRow icon="sync-outline" label="Organizer" onPress={() => router.push("/organizer")} />
           <LinkRow
@@ -249,6 +213,7 @@ export default function Profile() {
             onPress={() => router.push("/kitchen-lab")}
           />
           <LinkRow icon="sparkles-outline" label="AI Data & Memory" onPress={() => router.push("/ai-data")} />
+          <LinkRow icon="shield-checkmark-outline" label="Privacy" onPress={() => router.push("/privacy")} />
           <LinkRow
             icon="notifications-outline"
             label="Notification settings"
@@ -287,39 +252,6 @@ export default function Profile() {
             icon="information-circle-outline"
             label="About ThatFridge"
             onPress={() => router.push("/about")}
-            last
-          />
-        </View>
-      </View>
-
-      <View>
-        <SectionHeader>Privacy</SectionHeader>
-        <View className="overflow-hidden rounded-xl border border-hairline bg-surface">
-          <LinkRow
-            icon="analytics-outline"
-            label="Help improve suggestions"
-            subtitle="Share structured corrections and outcomes. No notes, photos or chat text."
-            right={
-              <Switch
-                accessibilityLabel="Help improve ThatFridge's suggestions"
-                value={user?.preferences?.help_improve !== false}
-                onValueChange={setImprovementSharing}
-                disabled={improvementWorking}
-              />
-            }
-          />
-          <LinkRow
-            icon="document-text-outline"
-            label="Privacy policy"
-            onPress={() => Linking.openURL("https://thatfridge.com/privacy")}
-          />
-          <LinkRow
-            icon="trash-outline"
-            label="Delete my improvement data"
-            destructive
-            hideChevron
-            disabled={improvementWorking}
-            onPress={confirmDeleteImprovementData}
             last
           />
         </View>
@@ -366,75 +298,3 @@ const THEME_LABELS: Record<ThemeMode, string> = {
   dark: "Dark",
   system: "System",
 };
-
-function LinkRow({
-  icon,
-  label,
-  subtitle,
-  value,
-  badge,
-  right,
-  destructive,
-  hideChevron,
-  disabled,
-  onPress,
-  last,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  /** A muted explanation line under the label. */
-  subtitle?: string;
-  value?: string;
-  /** A short uppercase tag next to the label, e.g. "BETA" - for a feature that's live but
-   *  still being finished. */
-  badge?: string;
-  /** A control on the right (e.g. a Switch) instead of a chevron. */
-  right?: React.ReactNode;
-  destructive?: boolean;
-  hideChevron?: boolean;
-  disabled?: boolean;
-  /** Omit for a row that isn't tappable itself (its `right` control is). */
-  onPress?: () => void;
-  last?: boolean;
-}) {
-  const { colors } = useTheme();
-  const tint = destructive ? colors.bad : colors.muted;
-  const rowClass = `flex-row items-center gap-3 px-4 py-3.5 ${last ? "" : "border-b border-hairline"}`;
-  const content = (
-    <>
-      <Ionicons name={icon} size={18} color={tint} />
-      <View className="flex-1">
-        <View className="flex-row items-center gap-2">
-          <Text className={`text-[14px] ${destructive ? "text-bad" : "text-ink"}`}>{label}</Text>
-          {badge && (
-            <View
-              className="rounded-full px-1.5 py-0.5"
-              style={{ backgroundColor: `${colors.accent}26` }}
-            >
-              <Text
-                className="text-[9.5px] font-extrabold tracking-wide"
-                style={{ color: colors.accent }}
-              >
-                {badge}
-              </Text>
-            </View>
-          )}
-        </View>
-        {subtitle && <Text className="mt-0.5 text-[12px] leading-[17px] text-muted">{subtitle}</Text>}
-      </View>
-      {value && <Text className="text-[13px] text-faint">{value}</Text>}
-      {right ?? (!hideChevron && onPress && <Ionicons name="chevron-forward" size={16} color={colors.faint} />)}
-    </>
-  );
-
-  if (!onPress) return <View className={rowClass}>{content}</View>;
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      className={`${rowClass} active:bg-canvas ${disabled ? "opacity-50" : ""}`}
-    >
-      {content}
-    </Pressable>
-  );
-}

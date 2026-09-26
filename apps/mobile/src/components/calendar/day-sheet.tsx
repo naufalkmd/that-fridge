@@ -32,6 +32,8 @@ export function DaySheet({
   onOpenEntry,
   onAddItem,
   onNewAutomation,
+  onAskChat,
+  onDeleteEntry,
   onSaveMeal,
   onDeleteMeal,
   onQuickStatus,
@@ -48,6 +50,10 @@ export function DaySheet({
   onOpenEntry: (entry: CalendarEntry) => void;
   onAddItem: () => void;
   onNewAutomation: () => void;
+  /** Hand the day over to Quick Chat to add something by describing it. */
+  onAskChat: (date: string) => void;
+  /** Delete an expiring item, an automation's log entry, or a day's history from the calendar. */
+  onDeleteEntry: (entry: CalendarEntry) => void;
   /** Resolves to an error message, or null on success. */
   onSaveMeal: (draft: MealDraft) => Promise<string | null>;
   onDeleteMeal: (entry: { id: string; title: string }) => Promise<void>;
@@ -78,6 +84,7 @@ export function DaySheet({
     if (action === "meal") setView({ type: "meal", draft: newDraft(date, slots, fridgeId) });
     else if (action === "shopping" || action === "note") setView({ type: action });
     else if (action === "item") onAddItem();
+    else if (action === "chat") onAskChat(date);
     else onNewAutomation();
   }
 
@@ -144,7 +151,7 @@ export function DaySheet({
                               onQuickStatus={onQuickStatus}
                             />
                           ) : (
-                            <EntryRow key={entry.id} entry={entry} onOpen={onOpenEntry} />
+                            <EntryRow key={entry.id} entry={entry} onOpen={onOpenEntry} onDelete={onDeleteEntry} />
                           ),
                         )}
                       </View>

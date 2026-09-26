@@ -15,13 +15,11 @@ import { getDeviceTimezone } from "@/lib/timezone";
 import { useMealActions } from "@/lib/useMealActions";
 import { SheetHeader } from "@/components/sheet";
 import { MealRow } from "@/components/calendar/rows";
-import { MealIdeas } from "@/components/meal-plan/ideas";
 import { MealSheet } from "@/components/meal-plan/meal-sheet";
 
 /**
  * The meal plan: this week, day by day. Tap "+" on a day to plan a meal, tap a meal to edit it, tick
- * it when cooked. "Get ideas" opens What should I eat? right here, and "Plan it" on any suggestion
- * puts it on the plan. The month view lives in the Calendar.
+ * it when cooked. The month view lives in the Calendar.
  */
 export default function MealPlanScreen() {
   const router = useRouter();
@@ -36,7 +34,6 @@ export default function MealPlanScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
-  const [ideasOpen, setIdeasOpen] = useState(false);
   const [sheet, setSheet] = useState<MealDraft | null>(null);
 
   const meals = useMealActions(useCallback(() => setReload((n) => n + 1), []));
@@ -102,28 +99,6 @@ export default function MealPlanScreen() {
             <Text style={{ fontSize: 12.5, fontWeight: "700", color: colors.accent }}>Calendar ›</Text>
           </Pressable>
         </View>
-
-        <Pressable
-          onPress={() => setIdeasOpen((v) => !v)}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: ideasOpen }}
-          style={{
-            flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, marginBottom: ideasOpen ? 12 : 16,
-            borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface,
-          }}
-        >
-          <MaterialCommunityIcons name="chef-hat" size={22} color={colors.accent} />
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: "800", color: colors.ink }}>What should I eat?</Text>
-            <Text style={{ fontSize: 12, color: colors.faint, marginTop: 1 }}>Get ideas from your recipes and plan one</Text>
-          </View>
-          <Ionicons name={ideasOpen ? "chevron-up" : "chevron-down"} size={18} color={colors.faint} />
-        </Pressable>
-        {ideasOpen && (
-          <View style={{ marginBottom: 18 }}>
-            <MealIdeas onPlan={(recipe) => planFor(days.includes(today) ? today : days[0], recipe)} />
-          </View>
-        )}
 
         {error && (
           <Pressable onPress={() => setReload((n) => n + 1)} style={{ marginBottom: 12 }}>

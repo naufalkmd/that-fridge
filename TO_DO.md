@@ -112,6 +112,8 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   toast summary + Kitchen Score refresh, and the app following server-side Pro (admin-granted Pro), and the in-app calendar
   (phases 1-2).
   Rollback: `eas update:rollback`.
+- **Committed, not yet published**: calendar delete / filter dropdown / Ask Quick Chat, ideas card removed from
+  Meal plan, Privacy + Meal plan as Settings rows. Needs a push (two new API routes) and an OTA.
 
 ### Execution queue (post-launch product work; details in "Product backlog")
 

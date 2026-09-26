@@ -1,3 +1,4 @@
+import { Alert } from "react-native";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { CalendarEntry } from "@thatfridge/core";
 
@@ -32,7 +33,17 @@ let mockUser: { preferences: { meal_slots?: string[] } } = { preferences: { meal
 const mockUpdateSlots = jest.fn();
 jest.mock("@/lib/auth", () => ({ useAuth: () => ({ user: mockUser, updateMealSlots: mockUpdateSlots }) }));
 let mockFridges = [{ id: "1", role: "member" }, { id: "2", role: "owner" }];
-jest.mock("@/lib/inventory", () => ({ useInventory: () => ({ fridges: mockFridges }) }));
+const mockRemoveItem = jest.fn();
+const mockUndoRemoval = jest.fn();
+jest.mock("@/lib/inventory", () => ({
+  useInventory: () => ({
+    fridges: mockFridges,
+    removeItem: (...a: unknown[]) => mockRemoveItem(...a),
+    undoRemoval: (...a: unknown[]) => mockUndoRemoval(...a),
+  }),
+}));
+const mockRefreshScore = jest.fn();
+jest.mock("@/lib/kitchenScore", () => ({ useKitchenScore: () => ({ refresh: mockRefreshScore }) }));
 jest.mock("@/lib/recipes", () => ({
   useRecipes: () => ({ recipes: [{ id: "9", name: "Pad Thai", calories: 640 }, { id: "10", name: "Green Curry", calories: null }] }),
 }));
@@ -48,8 +59,12 @@ const mockCreateMeal = jest.fn();
 const mockUpdateMeal = jest.fn();
 const mockDeleteMeal = jest.fn();
 const mockEstimate = jest.fn();
+const mockDeleteRun = jest.fn();
+const mockClearHistory = jest.fn();
 jest.mock("@/lib/api", () => ({
   api: {
+    deleteMachineRun: (...a: unknown[]) => mockDeleteRun(...a),
+    clearCalendarHistory: (...a: unknown[]) => mockClearHistory(...a),
     estimateMealCalories: (...a: unknown[]) => mockEstimate(...a),
     getCalendar: (...a: unknown[]) => mockGetCalendar(...a),
     createMealEntry: (...a: unknown[]) => mockCreateMeal(...a),
@@ -87,6 +102,10 @@ beforeEach(() => {
   mockEstimate.mockResolvedValue({ calories: null });
   mockAddShopping.mockResolvedValue(undefined);
   mockAddNote.mockResolvedValue(undefined);
+  mockRemoveItem.mockResolvedValue({ id: "77", outcome: "used" });
+  mockUndoRemoval.mockResolvedValue(undefined);
+  mockDeleteRun.mockResolvedValue(undefined);
+  mockClearHistory.mockResolvedValue({ deleted: 2 });
 });
 
 describe("Calendar screen", () => {
@@ -125,7 +144,7 @@ describe("Calendar screen", () => {
     expect(await screen.findByText("Yogurt")).toBeTruthy();
     expect(screen.getByText("Morning check")).toBeTruthy();
     expect(screen.getByText("3 items used up")).toBeTruthy();
-    expect(screen.getAllByText("Expiry")).toHaveLength(2); // the filter chip + this day's section heading
+    expect(screen.getByText("Expiry")).toBeTruthy(); // this day's section heading
     expect(screen.queryByText("1 item added")).toBeNull(); // that's the 19th
   });
 
@@ -167,7 +186,7 @@ describe("Calendar screen", () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  test("a filter chip hides its group from the grid and the day detail", async () => {
+  test("one Filter button opens a tag dropdown; unticking a tag hides it from the grid and the day", async () => {
     mockGetCalendar.mockResolvedValue({
       entries: [
         entry({ kind: "expiry", date: "2026-09-18", title: "Yogurt", refs: { itemId: "42" } }),
@@ -178,11 +197,55 @@ describe("Calendar screen", () => {
     await render(<CalendarScreen />);
     await waitFor(() => expect(mockGetCalendar).toHaveBeenCalled());
 
-    await fireEvent.press(await screen.findByText("Expiry")); // switch the Expiry group off
-    await fireEvent.press(screen.getByTestId("day-2026-09-18"));
+    await fireEvent.press(await screen.findByLabelText("Filter"));
+    for (const label of ["Planned meals", "Cooked meals", "Skipped meals", "Expiring", "Scheduled automations", "Automation runs", "Items added", "Used up", "Thrown out"]) {
+      expect(screen.getByLabelText(label)).toBeTruthy();
+    }
+    await fireEvent.press(screen.getByLabelText("Expiring"));
+    await fireEvent.press(screen.getByTestId("filter-backdrop"));
+    expect(screen.getByLabelText("Filter, 1 hidden")).toBeTruthy();
 
+    await fireEvent.press(screen.getByTestId("day-2026-09-18"));
     expect(await screen.findByText("1 item added")).toBeTruthy();
     expect(screen.queryByText("Yogurt")).toBeNull();
+  });
+
+  test("Show all puts every tag back", async () => {
+    mockGetCalendar.mockResolvedValue({
+      entries: [entry({ kind: "expiry", date: "2026-09-18", title: "Yogurt", refs: { itemId: "42" } })],
+      truncated: false, from: "", to: "",
+    });
+    await render(<CalendarScreen />);
+    await waitFor(() => expect(mockGetCalendar).toHaveBeenCalled());
+
+    await fireEvent.press(await screen.findByLabelText("Filter"));
+    await fireEvent.press(screen.getByLabelText("Expiring"));
+    await fireEvent.press(screen.getByLabelText("Show everything"));
+    await fireEvent.press(screen.getByTestId("filter-backdrop"));
+
+    await fireEvent.press(screen.getByTestId("day-2026-09-18"));
+    expect(await screen.findByText("Yogurt")).toBeTruthy();
+    expect(screen.getByLabelText("Filter")).toBeTruthy();
+  });
+
+  test("tags split meals by status, so a cooked meal can be hidden on its own", async () => {
+    mockGetCalendar.mockResolvedValue({
+      entries: [
+        entry({ kind: "meal", date: "2026-09-18", title: "Tacos", slot: "Dinner", status: "planned", refs: { mealEntryId: "1" } }),
+        entry({ kind: "meal", date: "2026-09-18", title: "Soup", slot: "Lunch", status: "cooked", refs: { mealEntryId: "2" } }),
+      ],
+      truncated: false, from: "", to: "",
+    });
+    await render(<CalendarScreen />);
+    await waitFor(() => expect(mockGetCalendar).toHaveBeenCalled());
+
+    await fireEvent.press(await screen.findByLabelText("Filter"));
+    await fireEvent.press(screen.getByLabelText("Cooked meals"));
+    await fireEvent.press(screen.getByTestId("filter-backdrop"));
+    await fireEvent.press(screen.getByTestId("day-2026-09-18"));
+
+    expect(await screen.findByText("Tacos")).toBeTruthy();
+    expect(screen.queryByText("Soup")).toBeNull();
   });
 
   test("next / previous month fetch that month's grid; Today returns", async () => {
@@ -247,7 +310,7 @@ describe("Calendar meal planning", () => {
     expect(await screen.findByText("Tacos")).toBeTruthy();
     expect(screen.getByText("Dinner · 18:30 · by @sam")).toBeTruthy();
     expect(screen.getByText("Dinner · Cooked")).toBeTruthy();
-    expect(screen.getAllByText("Meals")).toHaveLength(2); // the filter chip + this day's section heading
+    expect(screen.getByText("Meals")).toBeTruthy(); // this day's section heading
   });
 
   test("Plan a meal saves a new entry on the first slot and the user's own fridge, then refetches", async () => {
@@ -501,7 +564,7 @@ describe("Calendar + Add menu", () => {
   test("lists everything you can add", async () => {
     await openMenu();
 
-    for (const label of ["Plan a meal", "Add to shopping list", "Leave a note", "Add an item", "New automation"]) {
+    for (const label of ["Plan a meal", "Add to shopping list", "Leave a note", "Add an item", "New automation", "Ask Quick Chat"]) {
       expect(await screen.findByLabelText(label)).toBeTruthy();
     }
   });
@@ -584,6 +647,16 @@ describe("Calendar + Add menu", () => {
     expect(mockPush).toHaveBeenLastCalledWith({ pathname: "/kitchen-lab", params: { new: "1" } });
   });
 
+  test("Ask Quick Chat hands the day over to the chat composer", async () => {
+    await openMenu("2026-09-18");
+    await fireEvent.press(await screen.findByLabelText("Ask Quick Chat"));
+
+    expect(mockPush).toHaveBeenLastCalledWith({
+      pathname: "/chat",
+      params: { prefill: expect.stringMatching(/^Add to .*: $/) },
+    });
+  });
+
   test("the floating + opens the menu for today, without picking a day first", async () => {
     await render(<CalendarScreen />);
     await waitFor(() => expect(mockGetCalendar).toHaveBeenCalled());
@@ -602,5 +675,90 @@ describe("Calendar + Add menu", () => {
     await fireEvent.press(await screen.findByLabelText("Open the meal plan"));
 
     expect(mockPush).toHaveBeenLastCalledWith("/meal-plan");
+  });
+});
+
+describe("Calendar deletes", () => {
+  const seed = (entries: CalendarEntry[]) =>
+    mockGetCalendar.mockResolvedValue({ entries, truncated: false, from: "", to: "" });
+  const openDayOf = async (date: string) => {
+    await render(<CalendarScreen />);
+    await waitFor(() => expect(mockGetCalendar).toHaveBeenCalled());
+    await fireEvent.press(await screen.findByTestId(`day-${date}`));
+  };
+  /** Press the button of the confirm alert with this label. */
+  const confirm = (spy: jest.SpyInstance, label: string) => {
+    const buttons = spy.mock.calls.at(-1)![2] as { text: string; onPress?: () => void }[];
+    buttons.find((b) => b.text === label)!.onPress?.();
+  };
+
+  test("an expiring item is removed through the normal flow, with Undo", async () => {
+    seed([entry({ kind: "expiry", date: "2026-09-18", title: "Yogurt", refs: { itemId: "42" } })]);
+    await openDayOf("2026-09-18");
+
+    await fireEvent.press(await screen.findByLabelText("Remove Yogurt"));
+
+    await waitFor(() => expect(mockRemoveItem).toHaveBeenCalledWith("42"));
+    await waitFor(() => expect(mockGetCalendar).toHaveBeenCalledTimes(2)); // refetched
+    expect(mockRefreshScore).toHaveBeenCalled();
+    const [message, options] = mockToast.mock.calls.at(-1)!;
+    expect(message).toBe("Removed · Yogurt");
+    options.onAction();
+    await waitFor(() => expect(mockUndoRemoval).toHaveBeenCalledWith("77"));
+  });
+
+  test("an automation's log entry is deleted after a confirm", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    seed([entry({ kind: "machine_run", date: "2026-09-19", title: "Morning check", refs: { machineId: "9", runId: "5" } })]);
+    await openDayOf("2026-09-19");
+
+    await fireEvent.press(await screen.findByLabelText("Delete log entry Morning check"));
+    expect(mockDeleteRun).not.toHaveBeenCalled(); // nothing until confirmed
+    confirm(alert, "Delete");
+
+    await waitFor(() => expect(mockDeleteRun).toHaveBeenCalledWith("9", "5"));
+    await waitFor(() => expect(mockGetCalendar).toHaveBeenCalledTimes(2));
+    alert.mockRestore();
+  });
+
+  test("a day's used-up / thrown-out history is cleared for that day and outcome, in the device timezone", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    seed([
+      entry({ kind: "used", date: "2026-09-20", title: "2 items used up", count: 2 }),
+      entry({ kind: "wasted", date: "2026-09-20", title: "1 item thrown out", count: 1 }),
+    ]);
+    await openDayOf("2026-09-20");
+
+    await fireEvent.press(await screen.findByLabelText("Clear 1 item thrown out"));
+    expect(alert.mock.calls.at(-1)![1]).toMatch(/doesn't change your Kitchen Score/);
+    confirm(alert, "Clear");
+
+    await waitFor(() => expect(mockClearHistory).toHaveBeenCalledWith({ date: "2026-09-20", outcome: "wasted", tz: "Asia/Kuala_Lumpur" }));
+    alert.mockRestore();
+  });
+
+  test("cancelling a confirm deletes nothing; a failure is reported", async () => {
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    seed([entry({ kind: "machine_run", date: "2026-09-19", title: "Morning check", refs: { machineId: "9", runId: "5" } })]);
+    await openDayOf("2026-09-19");
+    await fireEvent.press(await screen.findByLabelText("Delete log entry Morning check"));
+    confirm(alert, "Cancel");
+    expect(mockDeleteRun).not.toHaveBeenCalled();
+
+    mockDeleteRun.mockRejectedValueOnce(new Error("boom"));
+    confirm(alert, "Delete");
+    await waitFor(() => expect(alert).toHaveBeenLastCalledWith("Couldn't delete that", expect.any(String)));
+    alert.mockRestore();
+  });
+
+  test("items added and scheduled automations are read-only; meals keep their own delete", async () => {
+    seed([
+      entry({ kind: "added", date: "2026-09-18", title: "3 items added", count: 3 }),
+      entry({ kind: "machine_scheduled", date: "2026-09-18", title: "Weekly sweep", refs: { machineId: "9" } }),
+    ]);
+    await openDayOf("2026-09-18");
+
+    expect(await screen.findByText("3 items added")).toBeTruthy();
+    expect(screen.queryByLabelText(/^(Remove|Clear|Delete log entry)/)).toBeNull();
   });
 });

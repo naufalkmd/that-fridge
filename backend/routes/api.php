@@ -71,6 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/me/improvement-preferences', [AuthController::class, 'updateImprovementPreferences']);
     Route::middleware('throttle:60,1')->post('/tip-feedback', [TipFeedbackController::class, 'store']);
     Route::middleware('throttle:60,1')->get('/calendar', [CalendarController::class, 'index']);
+    Route::middleware('throttle:30,1')->delete('/calendar/history', [CalendarController::class, 'clearHistory']);
     Route::middleware('throttle:60,1')->group(function () {
         Route::get('/meal-entries/estimate', [MealEntryController::class, 'estimate']);
         Route::post('/meal-entries', [MealEntryController::class, 'store']);
@@ -190,6 +191,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('throttle:20,1')->post('/machines/{machine}/dry-run', [MachineController::class, 'dryRun']);
     Route::get('/machines/{machine}/runs', [MachineController::class, 'runs']);
     Route::post('/machines/{machine}/runs/{run}/undo', [MachineController::class, 'undoRun']);
+    Route::delete('/machines/{machine}/runs/{run}', [MachineController::class, 'destroyRun']);
     Route::delete('/machines/{machine}', [MachineController::class, 'destroy']);
 
     Route::get('/shopping-items', [ShoppingItemController::class, 'index']);
