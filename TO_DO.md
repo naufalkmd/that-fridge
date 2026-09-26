@@ -15,16 +15,17 @@ fast-follow (see Deferred). API hosted in Singapore; v1 app UI is English-only.
 ## Handoff — read this first (context for the next AI / developer)
 
 ### The project in 60 seconds
+
 ThatFridge is a household food-inventory app: track what's in the fridge/freezer/pantry, get
 pinged before food goes bad, cook from what you have. Mission: "less food ends up in the bin".
 
-| Part | Path | Stack |
-|---|---|---|
-| Mobile app (**the product**) | `apps/mobile` | Expo SDK 57, RN 0.86, Expo Router, NativeWind, Reanimated 4 + `react-native-worklets`, `react-native-gesture-handler` |
-| API | `backend` | Laravel (PHP 8.5), Postgres in prod, **in-memory SQLite in tests**, Filament v3 admin panel |
-| Shared TS | `packages/core` | types + `createApi`/`HttpClient` used by mobile |
-| Legal site | `apps/legal` | static, Cloudflare Workers (privacy, terms, Malay PDPA notice) |
-| Legacy web | `apps/web` | frozen; retired later |
+| Part                               | Path              | Stack                                                                                                                    |
+| ---------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Mobile app (**the product**) | `apps/mobile`   | Expo SDK 57, RN 0.86, Expo Router, NativeWind, Reanimated 4 +`react-native-worklets`, `react-native-gesture-handler` |
+| API                                | `backend`       | Laravel (PHP 8.5), Postgres in prod,**in-memory SQLite in tests**, Filament v3 admin panel                         |
+| Shared TS                          | `packages/core` | types +`createApi`/`HttpClient` used by mobile                                                                       |
+| Legal site                         | `apps/legal`    | static, Cloudflare Workers (privacy, terms, Malay PDPA notice)                                                           |
+| Legacy web                         | `apps/web`      | frozen; retired later                                                                                                    |
 
 Key concepts: **crew** of 4 AI agents (Chef, Guardian, Shopkeeper, Organizer); **Quick Chat** with
 tool calling (`backend/app/Services/AgentToolbox.php`); **Kitchen Lab "Machines"** — user
@@ -39,19 +40,18 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
 `backend/DEPLOY.md`, and the **Reference** section at the bottom of this file.
 
 ### Commands (all must be green before you call anything done)
-- Backend: `cd backend && php artisan test` (~770 tests). Style: `vendor/bin/pint --test <files you
-  touched>` — repo-wide Pint has **pre-existing failures in untouched files**; don't "fix" those.
+
+- Backend: `cd backend && php artisan test` (~770 tests). Style: `vendor/bin/pint --test <files you touched>` — repo-wide Pint has **pre-existing failures in untouched files**; don't "fix" those.
 - Mobile: `cd apps/mobile && npx tsc --noEmit -p tsconfig.json && npx jest` (jest-expo +
   `@testing-library/react-native`). Core: `cd packages/core && npx tsc --noEmit`.
 - `.githooks/pre-push` runs backend + web + mobile tests; never bypass it (`--no-verify`).
 - macOS shell: BSD `sed` needs `-i ''` and has no `\s` — use `perl -pi -e` or python.
 
 ### Deploy & release rules
+
 - Push to `main` ⇒ `deploy-api.yml` (backend + migrations). **`eas-update.yml` is DISABLED in
   GitHub** (found 2026-09-26; last auto-OTA was `bbff2c2`), so pushing no longer ships an OTA.
-  Publish by hand from `apps/mobile`: `EXPO_PUBLIC_API_URL=https://api.thatfridge.com/api
-  EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=<from eas-update.yml> npx eas env:exec production "eas update
-  --branch production --environment production --non-interactive --message '…'"` (local eas-cli
+  Publish by hand from `apps/mobile`: `EXPO_PUBLIC_API_URL=https://api.thatfridge.com/api EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=<from eas-update.yml> npx eas env:exec production "eas update --branch production --environment production --non-interactive --message '…'"` (local eas-cli
   needs `--environment`), or re-enable the workflow in the Actions tab.
 - OTA runtime = `apps/mobile/app.config.ts` `version` (currently `1.3.3`, policy `appVersion`).
   Native changes (new native module, permissions, icon) need a version bump + a `v*` tag build
@@ -64,13 +64,14 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   setup/tooling error, add it to `SETUP_TROUBLESHOOTING.md` (Part 2).
 
 ### Gotchas learned the hard way
+
 - **RNTL v14: `render`, `renderHook`, `fireEvent` are async — `await` them** (missing await gives
   "overlapping act() calls" and empty results).
 - Mobile jest infra: `apps/mobile/jest.setup.js` = gesture-handler `jestSetup` + `react-native-worklets/src/mock`
   + Reanimated `setUpTests()`; config has `resolver: react-native-worklets/jest/resolver`; `tsconfig`
-  needs `types: ["jest"]` (pnpm is hoisted to the repo root). Components importing `{ router }` from
-  `expo-router` need `jest.mock("expo-router", …)`; mock `@/lib/theme`'s `useTheme` for isolated tests.
-  Pan gestures can't be simulated — test the tap fallback.
+    needs `types: ["jest"]` (pnpm is hoisted to the repo root). Components importing `{ router }` from
+    `expo-router` need `jest.mock("expo-router", …)`; mock `@/lib/theme`'s `useTheme` for isolated tests.
+    Pan gestures can't be simulated — test the tap fallback.
 - Laravel tests: `User.ai_credits` is **not mass-assignable** — set it via `User::factory()->create([...])`;
   after `create()` DB-default columns (e.g. `ai_credits`, `run_count`) are unhydrated — read with
   `->fresh()`. Pint reformat only files you touched.
@@ -98,6 +99,7 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   don't test-drive mutating features against prod with the shared demo account.
 
 ### Current state (2026-09-26)
+
 - `main` == `origin/main` (except docs-only TO_DO commits). Backend deployed: feedback logger +
   Algorithm insights admin, unified Remove, opened-item shelf life, privacy wording, and server-side
   signals for alerts, scans, autofill and notification toggles — **collection is still off**
@@ -111,8 +113,9 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   signal is skipped — older app versions still work). Batch it with the QA fixes.
 
 ### Execution queue (post-launch product work; details in "Product backlog")
+
 1. **Device QA** of the live OTA. 2. **Turn on feedback collection.** 3. Finish Algorithm insights.
-4. Opened-item alert-timing decision. 5. Credit-scheme audit, then calendar, then multi-Machine.
+2. Opened-item alert-timing decision. 5. Credit-scheme audit, then calendar, then multi-Machine.
 
 **Priority over all of the above: the launch items** (Android Play setup, Devpost submission — hard
 deadline Sep 30, 2026 11:45pm PDT) and the "Deferred to post-launch — don't work on these before
@@ -176,7 +179,7 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
 
 **Pending verification**
 
-- [ ] **Device QA of the live OTA** — an OTA crashed once already. Check: Home (one card style; tips
+- [X] **Device QA of the live OTA** — an OTA crashed once already. Check: Home (one card style; tips
   swipe/Clear; switching fridge hides other fridges' events, All Fridges shows all), Add item (card
   layout, wand Auto-fill, camera date scan, qty stepper; barcode scan card), chat **+** sheet
   (take photo / library / PDF — the picker opens ~350ms after the sheet closes, verify on iOS),
@@ -185,27 +188,27 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
   toast + "change to thrown out" correction (single, bulk, swipe, chat), opened-item label / edit
   days / "Mark as sealed again" (eggs and whole produce show no Opened button), Profile → "Help
   improve" switch + "Delete my improvement data", chat 👍/👎, and the Algorithm insights admin page.
-- [ ] **Turn feedback collection ON in prod** — `ALGO_FEEDBACK_ENABLED` defaults to `false`, so no
+- [X] **Turn feedback collection ON in prod** — `ALGO_FEEDBACK_ENABLED` defaults to `false`, so no
   feedback rows are written yet; events can't be backfilled. The updated privacy notices are
   deployed. First re-check the App Store privacy label + Play Data Safety purposes ("Analytics /
   product improvement") for item-name / guess-vs-final feedback, then set the flag in the server
   `.env` and rebuild the config cache (`backend/DEPLOY.md`). Afterwards confirm the nightly
   `app:rollup-algo-stats` ran (Scheduled jobs widget).
-- [ ] **Decide on the disabled `eas-update.yml`** — re-enable, or keep OTAs manual on purpose.
-- [ ] **Screen-level tests** for `kitchen-lab.tsx` and `find-friend.tsx` (only their logic modules
+- [X] **Decide on the disabled `eas-update.yml`** — re-enable, or keep OTAs manual on purpose.
+- [X] **Screen-level tests** for `kitchen-lab.tsx` and `find-friend.tsx` (only their logic modules
   are covered today; RNTL can't simulate the swipe pan gesture).
-- [ ] Optional: scope the Home bell dot and the full `/notifications` screen by fridge too.
+- [X] Optional: scope the Home bell dot and the full `/notifications` screen by fridge too.
 
 **Algorithm insights — what's left**
 
 - [ ] **P1 leftovers:** low-stock *restock cadence* (item re-added N days after removal) and Home
   crew-tip dismissals (local-only today, needs a client event). The rest of P1 is emitted
   server-side (expiry/low-stock alert sent→acted, scan detected/saved, autofill proposed/applied,
-  notification toggles) — all inert until `ALGO_FEEDBACK_ENABLED=true`. Autofill's card is
+  notification toggles, recipe rank, Kitchen Lab authoring) — all inert until
+  `ALGO_FEEDBACK_ENABLED=true`. Autofill's card is
   all-or-nothing, so "partly accepted" only shows up as `changed` values after "Use these".
-- [ ] **P2 signals:** recipe suggestion rank of the recipe marked made, Kitchen Lab drafting
-  (saved as-is / edited / redrafted / discarded, validation failures, dry run before enabling),
-  D1/D7/D30 retention cohorts.
+- [ ] **Retention cohorts (D1/D7/D30)** — the only P2 signal left; derive from `analytics_events`
+  `app_open` (or user `created_at` + activity) in the nightly rollup rather than a new logger.
 - [ ] **Admin pages still missing** (only scoreboard, gaps, unknown-barcodes exist): per-algorithm
   tabs with accuracy tables, rule-suggestions queue (copy/export only, never auto-applied), one-click
   "create Product" from the unknown-barcodes queue, icon-requests → `SharedIcon`, outcome metrics
@@ -213,6 +216,7 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
   (event-volume drops, null rates — the rollup's last-run already shows in Scheduled jobs), and
   read-only opened snapshot columns on `ItemResource` (only the `opened` flag is shown). Keep
   `MIN_USERS` hiding; act on patterns only with ≥5 users.
+
 - **Later:** per-user personalisation and automatic rule learning (needs volume).
 
 **Opened-item shelf life — leftovers**

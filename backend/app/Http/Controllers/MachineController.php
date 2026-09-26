@@ -12,6 +12,7 @@ use App\Services\MachineDraftValidator;
 use App\Services\MachineRunner;
 use App\Services\MachineTriggerService;
 use App\Support\CreditCost;
+use App\Support\MachineFeedback;
 use App\Support\MachineSchedule;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -45,8 +46,17 @@ class MachineController extends Controller
         if (! $result['ok']) {
             $this->credits->grant($request->user(), CreditCost::MACHINE_BUILD, 'machine_build_refund');
 
+            MachineFeedback::draftFailed($request->user());
+
             return response()->json(['ok' => false, 'message' => $result['message']], 200);
         }
+
+        $shaped = [
+            'name' => $result['draft']['name'],
+            'trigger' => ['type' => $result['draft']['trigger_type'], 'config' => $result['draft']['trigger_config']],
+            'steps' => $result['draft']['steps'],
+        ];
+        MachineFeedback::drafted($request->user(), $shaped);
 
         return response()->json(['ok' => true, 'draft' => [
             'name' => $result['draft']['name'],
@@ -86,8 +96,11 @@ class MachineController extends Controller
 
         $result = $this->validator->validate($data, $request->user());
         if (! $result['valid']) {
+            MachineFeedback::saveRejected($request->user(), count($result['errors']));
+
             return response()->json(['errors' => $result['errors']], 422);
         }
+        MachineFeedback::saved($request->user(), $this->validator, $result['draft']);
 
         $machine = Machine::create([
             'user_id' => $request->user()->id,
@@ -171,6 +184,9 @@ class MachineController extends Controller
         }
 
         $machine->save();
+        if ($wasEnabling) {
+            MachineFeedback::enabled($request->user(), $machine);
+        }
 
         // An already-met threshold should start working the moment it's switched on, not wait
         // for the next unrelated item write on the fridge.
@@ -208,6 +224,8 @@ class MachineController extends Controller
     public function dryRun(Request $request, Machine $machine)
     {
         $this->authorize('view', $machine);
+
+        MachineFeedback::dryRan($machine);
 
         return response()->json($this->runner->dryRun($machine));
     }
@@ -250,6 +268,7 @@ class MachineController extends Controller
 
         $run->undone_at = now();
         $run->save();
+        MachineFeedback::runUndone($request->user(), $machine);
 
         return response()->json(['summaries' => $summaries]);
     }

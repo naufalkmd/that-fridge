@@ -8,6 +8,7 @@ use App\Models\Recipe;
 use App\Services\AgentService;
 use App\Services\RecipeLinkImportService;
 use App\Support\ItemFreshness;
+use App\Support\RecipeFeedback;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -204,6 +205,8 @@ class RecipeController extends Controller
             ->take(self::SUGGEST_MAX_RESULTS)
             ->pluck('recipe');
 
+        RecipeFeedback::suggested($user, [...$exact->pluck('id')->all(), ...$similar->pluck('id')->all()], $vibes, $foodFocus, $mealType);
+
         // Deliberately not the standard {"data": ...} Resource wrapper - apiFetch() on the
         // frontend unwraps a top-level "data" key automatically (see apiClient.ts), which
         // would silently strip the sibling exhausted flag this response needs.
@@ -279,6 +282,7 @@ class RecipeController extends Controller
         $this->authorize('view', $recipe);
 
         $recipe->increment('made_count');
+        RecipeFeedback::made($request->user(), $recipe);
 
         return new RecipeResource($recipe);
     }

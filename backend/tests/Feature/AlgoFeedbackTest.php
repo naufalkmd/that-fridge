@@ -7,6 +7,7 @@ use App\Models\ChatHistory;
 use App\Models\Fridge;
 use App\Models\ItemOutcome;
 use App\Models\Product;
+use App\Models\Recipe;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\AlgorithmInsightsReport;
@@ -15,6 +16,7 @@ use App\Support\ItemSuggestionToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class AlgoFeedbackTest extends TestCase
@@ -356,5 +358,84 @@ class AlgoFeedbackTest extends TestCase
         $this->assertDatabaseHas('algo_feedback_events', [
             'algo' => 'low_stock', 'kind' => 'acted', 'outcome' => 'added_to_shopping',
         ]);
+    }
+
+    public function test_recipe_made_logs_the_rank_it_had_in_the_last_suggestion_list(): void
+    {
+        config(['app.algo_feedback_enabled' => true]);
+        $user = User::factory()->create();
+        $make = fn (string $name, array $vibes) => Recipe::create([
+            'user_id' => $user->id, 'name' => $name, 'minutes' => 20, 'ingredients' => [['name' => 'Rice', 'icon' => 'rice']],
+            'steps' => ['Cook'], 'meal_type' => 'dinner', 'vibes' => $vibes, 'food_focus' => [], 'made_count' => 0,
+        ]);
+        $best = $make('Best', ['comfort', 'quick_easy']);
+        $second = $make('Second', ['comfort']);
+        $other = $make('Other', []);
+
+        $this->actingAs($user)->getJson('/api/recipes/suggest?vibes[]=comfort&vibes[]=quick_easy')->assertOk();
+        $this->assertDatabaseHas('algo_feedback_events', [
+            'algo' => 'recipe', 'kind' => 'suggested', 'guess' => 'comfort+quick_easy', 'source' => 'criteria', 'guess_number' => 2,
+        ]);
+
+        $this->postJson("/api/recipes/{$second->id}/mark-made")->assertOk();
+        $this->assertDatabaseHas('algo_feedback_events', [
+            'algo' => 'recipe', 'kind' => 'made', 'final_number' => 2, 'guess_number' => 2, 'source' => 'suggested',
+        ]);
+
+        // The list is consumed, and a recipe outside it is logged as unranked.
+        $this->postJson("/api/recipes/{$other->id}/mark-made")->assertOk();
+        $this->assertDatabaseHas('algo_feedback_events', [
+            'algo' => 'recipe', 'kind' => 'made', 'final_number' => null, 'guess_number' => null, 'source' => 'not_suggested',
+        ]);
+        $this->assertNotNull($best);
+    }
+
+    public function test_kitchen_lab_logs_draft_redraft_save_outcome_enable_and_undo_without_prompt_text(): void
+    {
+        config(['app.algo_feedback_enabled' => true, 'services.openrouter.key' => 'test-key']);
+        $user = User::factory()->create(['ai_credits' => 10]);
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
+        $draft = [
+            'name' => 'Daily calories',
+            'trigger' => ['type' => 'schedule', 'config' => ['frequency' => 'daily', 'time' => '08:00']],
+            'steps' => [
+                ['tool' => 'sum_item_field', 'args' => ['field' => 'calories']],
+                ['tool' => 'notify_user', 'args' => ['message' => 'Total: {step1}']],
+            ],
+        ];
+        Http::fake(['openrouter.ai/*' => Http::response(['choices' => [['message' => ['content' => json_encode($draft)]]]], 200)]);
+
+        $this->actingAs($user)->postJson('/api/machines/draft', ['prompt' => 'secret prompt text'])->assertOk();
+        $this->postJson('/api/machines/draft', ['prompt' => 'secret prompt text'])->assertOk();
+        $this->assertDatabaseHas('algo_feedback_events', ['algo' => 'kitchen_lab', 'kind' => 'drafted', 'source' => 'schedule', 'guess_number' => 2]);
+        $this->assertSame(1, AlgoFeedbackEvent::where('kind', 'redrafted')->count());
+
+        // Saved untouched vs edited vs built by hand.
+        $save = fn (array $over = []) => $this->postJson('/api/machines', array_merge($draft, ['fridge_id' => $fridge->id], $over));
+        $machine = $save()->assertCreated();
+        $this->assertDatabaseHas('algo_feedback_events', ['algo' => 'kitchen_lab', 'kind' => 'saved', 'outcome' => 'as_is', 'guess_number' => 2, 'final_number' => 2]);
+
+        $save()->assertCreated(); // the draft was consumed by the first save
+        $this->assertDatabaseHas('algo_feedback_events', ['algo' => 'kitchen_lab', 'kind' => 'saved', 'outcome' => 'hand_built', 'guess_number' => null]);
+
+        $this->postJson('/api/machines/draft', ['prompt' => 'again'])->assertOk();
+        $save(['trigger' => ['type' => 'schedule', 'config' => ['frequency' => 'daily', 'time' => '09:30']]])->assertCreated();
+        $this->assertDatabaseHas('algo_feedback_events', ['algo' => 'kitchen_lab', 'kind' => 'saved', 'outcome' => 'edited']);
+
+        $save(['steps' => [['tool' => 'not_a_tool', 'args' => []]]])->assertStatus(422);
+        $this->assertDatabaseHas('algo_feedback_events', ['algo' => 'kitchen_lab', 'kind' => 'save_rejected']);
+
+        // Enabling: with a prior dry run vs without.
+        $id = $machine->json('data.id');
+        $this->postJson("/api/machines/{$id}/dry-run")->assertOk();
+        $this->patchJson("/api/machines/{$id}", ['enabled' => true])->assertOk();
+        $this->assertDatabaseHas('algo_feedback_events', ['algo' => 'kitchen_lab', 'kind' => 'enabled', 'outcome' => 'dry_run_first']);
+        $other = $save()->assertCreated()->json('data.id');
+        $this->patchJson("/api/machines/{$other}", ['enabled' => true])->assertOk();
+        $this->assertDatabaseHas('algo_feedback_events', ['algo' => 'kitchen_lab', 'kind' => 'enabled', 'outcome' => 'no_dry_run']);
+
+        // Nothing user-typed is stored.
+        $this->assertSame(0, AlgoFeedbackEvent::where('algo', 'kitchen_lab')->whereNotNull('name_key')->count());
+        $this->assertSame(0, AlgoFeedbackEvent::where('guess', 'like', '%secret%')->count());
     }
 }
