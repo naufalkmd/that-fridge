@@ -48,6 +48,51 @@ BETTER
 - Fixes and small improvements throughout.
 ```
 
+## Description (limit 4000) — 2620 characters
+
+Only the first 2-3 lines show before "more", so the opening sentence carries the pitch. It is not used for search ranking on iOS,
+so it is written for people. The last two paragraphs are needed for a subscription app (auto-renew terms and links to Terms and Privacy).
+
+```
+Know what's in your fridge before you open the door. ThatFridge tracks your groceries, reminds you before things go off, and helps you plan meals from what you already have, so less food ends up in the bin.
+
+ADD IN SECONDS
+Scan a barcode, snap a receipt or a photo of your fridge, or just type or say it. ThatFridge fills in the icon, shelf life and storage spot for you.
+
+NEVER MISS AN EXPIRY DATE
+Freshness at a glance, gentle reminders before food goes bad, and shorter shelf lives that kick in once something is opened. Fridge, freezer and pantry all in one place.
+
+PLAN MEALS, COOK WITH WHAT YOU HAVE
+Plan your week on a calendar, see calories for each meal and day, and keep recipes in your own book. Ask Chef to write a recipe or plan your week around what's about to expire.
+
+YOUR AI KITCHEN CREW
+Chat with Chef, Guardian, Organizer and Shopkeeper. Ask what to cook tonight, what to use up first, or what to buy. Attach an item, a recipe, a day or your meal plan to a message so the answers fit your kitchen.
+
+MAKE IT RUN ITSELF
+Kitchen Lab automations: get a reminder every Monday of what's expiring, be told when stock runs low, or send yourself a weekly summary. Start from a ready-made template.
+
+SEE HOW YOU'RE DOING
+One Insights page shows your kitchen score, how much you used up versus threw out, your calories for the week and the food groups you eat from, with simple charts.
+
+SHARE WITH YOUR HOUSEHOLD
+Invite the people you live with to a shared fridge, so everyone sees what's in it, the shopping list and the notes on the door.
+
+MORE
+- Shopping list with smart "running low" suggestions
+- Sticky notes on the fridge
+- Explore: search recipes, automations, meal plans and food icons
+- Light and dark mode
+- Your data stays yours: sharing anything to improve suggestions is optional, and you can delete it any time in Privacy & data
+
+FREE, WITH OPTIONAL PRO
+ThatFridge is free to use. AI features run on credits: free accounts get 50 every month, and you can buy more any time. ThatFridge Pro gives you 400 credits a month (unused credits roll over up to 800), lets you own more than one fridge and host a shared fridge for your household.
+
+Pro is available as a monthly or yearly subscription, each with a 7-day free trial. Prices are shown in the app in your local currency. Payment is charged to your Apple ID at confirmation of purchase. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel any time in your Apple ID account settings.
+
+Terms of Use: https://thatfridge.com/terms
+Privacy Policy: https://thatfridge.com/privacy
+```
+
 ## Screenshots (first three decide most taps)
 
 Put a short caption on each, in this order:
