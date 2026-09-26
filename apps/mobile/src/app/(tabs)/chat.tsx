@@ -40,6 +40,7 @@ import { stashRecipeSuggestion, useRecipes } from "@/lib/recipes";
 import { useVoiceDictation } from "@/lib/voice";
 import { MarkdownText } from "@/components/markdown-text";
 import { RecipeSuggestionCard } from "@/components/recipe-suggestion-card";
+import { BottomSheet } from "@/components/bottom-sheet";
 import { useTheme } from "@/lib/theme";
 
 // Older builds on this OTA channel may not contain ExpoDocumentPicker. Its entry point
@@ -135,9 +136,11 @@ export default function Chat() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [attachOpen, setAttachOpen] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const imageCount = attachments.filter((a) => a.kind === "image").length;
   const hasPdf = attachments.some((a) => a.kind === "pdf");
+  const canAttach = imageCount < MAX_IMAGES || (!!documentPicker && !hasPdf);
 
   // Voice dictation → fills the composer; the user still reviews and hits send.
   const dictationBase = useRef("");
@@ -248,6 +251,12 @@ export default function Chat() {
 
   function removeAttachment(index: number) {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  /** Close the sheet first: iOS can't present the camera/library/document picker over an open Modal. */
+  function attachVia(pick: () => Promise<void>) {
+    setAttachOpen(false);
+    setTimeout(() => void pick(), 350);
   }
 
   async function send(preset?: string) {
@@ -548,55 +557,22 @@ export default function Chat() {
               style={{ flexDirection: "row", alignItems: "flex-end", gap: 6 }}
             >
               <Pressable
-                onPress={takePhoto}
-                disabled={imageCount >= MAX_IMAGES}
+                onPress={() => setAttachOpen(true)}
+                disabled={!canAttach}
                 hitSlop={4}
+                accessibilityLabel="Add attachment"
                 style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 17,
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
                   backgroundColor: SURFACE2,
                   alignItems: "center",
                   justifyContent: "center",
-                  opacity: imageCount >= MAX_IMAGES ? 0.4 : 1,
+                  opacity: canAttach ? 1 : 0.4,
                 }}
               >
-                <Ionicons name="camera-outline" size={16} color={INK} />
+                <Ionicons name="add" size={22} color={INK} />
               </Pressable>
-              <Pressable
-                onPress={pickImages}
-                disabled={imageCount >= MAX_IMAGES}
-                hitSlop={4}
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 17,
-                  backgroundColor: SURFACE2,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: imageCount >= MAX_IMAGES ? 0.4 : 1,
-                }}
-              >
-                <Ionicons name="image-outline" size={16} color={INK} />
-              </Pressable>
-              {documentPicker && (
-                <Pressable
-                  onPress={pickPdf}
-                  disabled={hasPdf}
-                  hitSlop={4}
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 17,
-                    backgroundColor: SURFACE2,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    opacity: hasPdf ? 0.4 : 1,
-                  }}
-                >
-                  <Ionicons name="document-attach-outline" size={16} color={INK} />
-                </Pressable>
-              )}
               <TextInput
                 value={text}
                 onChangeText={setText}
@@ -654,6 +630,71 @@ export default function Chat() {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      <BottomSheet visible={attachOpen} onClose={() => setAttachOpen(false)}>
+        <View style={{ gap: 4, paddingBottom: 4 }}>
+          {[
+            {
+              key: "camera",
+              icon: "camera-outline" as const,
+              label: "Take a photo",
+              hint: imageCount >= MAX_IMAGES ? `Up to ${MAX_IMAGES} images` : undefined,
+              disabled: imageCount >= MAX_IMAGES,
+              onPress: () => attachVia(takePhoto),
+            },
+            {
+              key: "library",
+              icon: "image-outline" as const,
+              label: "Choose from library",
+              hint: imageCount >= MAX_IMAGES ? `Up to ${MAX_IMAGES} images` : undefined,
+              disabled: imageCount >= MAX_IMAGES,
+              onPress: () => attachVia(pickImages),
+            },
+            ...(documentPicker
+              ? [
+                  {
+                    key: "file",
+                    icon: "document-attach-outline" as const,
+                    label: "Attach a PDF",
+                    hint: hasPdf ? "One PDF per message" : undefined,
+                    disabled: hasPdf,
+                    onPress: () => attachVia(pickPdf),
+                  },
+                ]
+              : []),
+          ].map((o) => (
+            <Pressable
+              key={o.key}
+              onPress={o.onPress}
+              disabled={o.disabled}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 14,
+                paddingVertical: 12,
+                opacity: o.disabled ? 0.4 : 1,
+              }}
+            >
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: SURFACE2,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name={o.icon} size={19} color={INK} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: INK }}>{o.label}</Text>
+                {o.hint && <Text style={{ fontSize: 12, color: FAINT }}>{o.hint}</Text>}
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      </BottomSheet>
     </ImageBackground>
   );
 }

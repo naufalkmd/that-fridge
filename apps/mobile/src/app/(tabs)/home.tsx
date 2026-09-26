@@ -49,7 +49,7 @@ import { GettingStarted } from "@/components/home/GettingStarted";
 import { CrewScene } from "@/components/home/CrewScene";
 import { FridgeNotes } from "@/components/home/FridgeNotes";
 import { SwipeRow } from "@/components/swipe-row";
-import { NotificationRow } from "@/components/notification-row";
+import { NotificationCard, NotificationRow } from "@/components/notification-row";
 import { NotificationUndoSnackbar } from "@/components/notification-undo-snackbar";
 
 const PRO_PURPLE = "#a78bfa";
@@ -120,6 +120,11 @@ export default function Home() {
   }, [items.length]);
 
   const scoped = useMemo(() => scopeItems(items, scope), [items, scope]);
+  // A single-fridge view only shows that fridge's notifications; "All Fridges" shows everything.
+  const scopedEvents = useMemo(
+    () => (scope === "all" ? events : events.filter((e) => e.fridgeId === scope)),
+    [events, scope],
+  );
 
   const expiringCount = scoped.filter((i) => i.freshness < 50).length;
   const heroViews = useMemo(() => fridgeHeroViews(fridges), [fridges]);
@@ -130,16 +135,18 @@ export default function Home() {
     [scoped, guardian],
   );
   const chefPick = suggestions?.[0] ?? null;
+  const showGuardian = !!guardian && !dismissed.guardian;
+  const showLowStock = !!lowStock && !dismissed.lowStock;
 
   const scoreInput = useMemo(
     () => ({
       items: scoped.map((i) => ({ days: i.days, freshness: i.freshness })),
-      notificationEvents: events.map((e) => ({ kind: e.kind, done: e.done })),
+      notificationEvents: scopedEvents.map((e) => ({ kind: e.kind, done: e.done })),
       shoppingList: shoppingItems.map((s) => ({ checked: s.checked })),
       usageHistory,
       organizerTally,
     }),
-    [scoped, events, shoppingItems, usageHistory, organizerTally],
+    [scoped, scopedEvents, shoppingItems, usageHistory, organizerTally],
   );
 
   const scoreByKey = useMemo(() => {
@@ -154,13 +161,13 @@ export default function Home() {
 
   const pendingByKind = useMemo(() => {
     const acc = { expiring: 0, lowStock: 0, recipe: 0 };
-    for (const e of events) {
+    for (const e of scopedEvents) {
       if (!e.done && e.kind in acc) acc[e.kind as keyof typeof acc] += 1;
     }
     return acc;
-  }, [events]);
+  }, [scopedEvents]);
 
-  const recentEvents = useMemo(() => events.slice(0, 3), [events]);
+  const recentEvents = useMemo(() => scopedEvents.slice(0, 3), [scopedEvents]);
 
   async function onRefresh() {
     setRefreshing(true);
@@ -499,9 +506,10 @@ export default function Home() {
             <CrewScene pendingByKind={pendingByKind} scoreByKey={scoreByKey} />
           </View>
 
-          {/* small notifications preview — same NotificationsProvider state (and swipe-delete
-              row) as the full /notifications screen, not a second feed */}
-          {recentEvents.length > 0 && (
+          {/* One Notifications section, one card style: the server events (same
+              NotificationsProvider state / swipe-delete row as the full /notifications screen)
+              followed by the live crew tips (computed from the scoped fridge, dismissed locally). */}
+          {(recentEvents.length > 0 || showGuardian || showLowStock || !dismissed.chef) && (
             <View>
               <View
                 style={{
@@ -521,71 +529,75 @@ export default function Home() {
                   <NotificationRow event={e} onClear={() => requestRemove(e.id)} />
                 </SwipeRow>
               ))}
-            </View>
-          )}
-
-          {/* crew tips — real one-shot agent insights, with a data fallback */}
-          {guardian && !dismissed.guardian && (
-            <CrewTip
-              eyebrow="Expiring soon"
-              agent="Guardian"
-              items={scoped}
-              onPress={() => router.push(`/item/${guardian.id}`)}
-              onDismiss={() => setDismissed((d) => ({ ...d, guardian: true }))}
-              fallback={
-                <Text style={{ fontSize: 13.5, color: INK }}>
-                  <Text style={{ fontWeight: "700" }}>{guardian.name}</Text>
-                  <Text style={{ color: MUTED }}>
-                    {" "}
-                    {daysLabel(guardian.days).toLowerCase()}
-                  </Text>
-                </Text>
-              }
-            />
-          )}
-          {lowStock && !dismissed.lowStock && (
-            <CrewTip
-              eyebrow="Low stock"
-              agent="Shopkeeper"
-              items={scoped}
-              onPress={() => router.push("/shopping")}
-              onDismiss={() => setDismissed((d) => ({ ...d, lowStock: true }))}
-              fallback={
-                <Text style={{ fontSize: 13.5, color: INK }}>
-                  <Text style={{ fontWeight: "700" }}>{lowStock.name}</Text>
-                  <Text style={{ color: MUTED }}>
-                    {" "}
-                    is running low — add it to the list
-                  </Text>
-                </Text>
-              }
-            />
-          )}
-          {!dismissed.chef && (
-            <CrewTip
-              eyebrow="Chef's pick"
-              agent="Chef"
-              items={scoped}
-              onPress={() => router.navigate("/eat")}
-              onDismiss={() => setDismissed((d) => ({ ...d, chef: true }))}
-              fallback={
-                <Text style={{ fontSize: 13.5, color: INK }}>
-                  {chefPick ? (
-                    <>
-                      <Text style={{ fontWeight: "700" }}>{chefPick.name}</Text>
-                      <Text style={{ color: MUTED }}>
-                        {" "}
-                        — {chefPick.minutes} min with what you have
+              {showGuardian && guardian && (
+                <SwipeRow onDelete={() => setDismissed((d) => ({ ...d, guardian: true }))}>
+                  <CrewTip
+                    meta="Guardian · Expiring soon"
+                    agent="Guardian"
+                    items={scoped}
+                    onPress={() => router.push(`/item/${guardian.id}`)}
+                    onDismiss={() => setDismissed((d) => ({ ...d, guardian: true }))}
+                    fallback={
+                      <Text style={{ fontSize: 13, color: INK }}>
+                        <Text style={{ fontWeight: "700" }}>{guardian.name}</Text>
+                        <Text style={{ color: MUTED }}>
+                          {" "}
+                          {daysLabel(guardian.days).toLowerCase()}
+                        </Text>
                       </Text>
-                    </>
-                  ) : (
-                    <Text style={{ color: MUTED }}>
-                      See what you can cook with what&apos;s fresh right now.
-                    </Text>
-                  )}
-                </Text>
-              }
-            />
+                    }
+                  />
+                </SwipeRow>
+              )}
+              {showLowStock && lowStock && (
+                <SwipeRow onDelete={() => setDismissed((d) => ({ ...d, lowStock: true }))}>
+                  <CrewTip
+                    meta="Shopkeeper · Low stock"
+                    agent="Shopkeeper"
+                    items={scoped}
+                    onPress={() => router.push("/shopping")}
+                    onDismiss={() => setDismissed((d) => ({ ...d, lowStock: true }))}
+                    fallback={
+                      <Text style={{ fontSize: 13, color: INK }}>
+                        <Text style={{ fontWeight: "700" }}>{lowStock.name}</Text>
+                        <Text style={{ color: MUTED }}>
+                          {" "}
+                          is running low — add it to the list
+                        </Text>
+                      </Text>
+                    }
+                  />
+                </SwipeRow>
+              )}
+              {!dismissed.chef && (
+                <SwipeRow onDelete={() => setDismissed((d) => ({ ...d, chef: true }))}>
+                  <CrewTip
+                    meta="Chef · Chef's pick"
+                    agent="Chef"
+                    items={scoped}
+                    onPress={() => router.navigate("/eat")}
+                    onDismiss={() => setDismissed((d) => ({ ...d, chef: true }))}
+                    fallback={
+                      <Text style={{ fontSize: 13, color: INK }}>
+                        {chefPick ? (
+                          <>
+                            <Text style={{ fontWeight: "700" }}>{chefPick.name}</Text>
+                            <Text style={{ color: MUTED }}>
+                              {" "}
+                              — {chefPick.minutes} min with what you have
+                            </Text>
+                          </>
+                        ) : (
+                          <Text style={{ color: MUTED }}>
+                            See what you can cook with what&apos;s fresh right now.
+                          </Text>
+                        )}
+                      </Text>
+                    }
+                  />
+                </SwipeRow>
+              )}
+            </View>
           )}
 
           {/* fridge notes — read-only squares; compose/edit lives on the Organizer tab */}
@@ -701,22 +713,33 @@ function StatCard({
   );
 }
 
+const TIP_ICON: Record<CrewAgent, keyof typeof MaterialCommunityIcons.glyphMap> = {
+  Guardian: "timer-sand",
+  Shopkeeper: "cart-outline",
+  Chef: "chef-hat",
+};
+
 function CrewTip({
-  eyebrow,
+  meta,
   agent,
   items,
   onPress,
   onDismiss,
   fallback,
 }: {
-  eyebrow: string;
+  meta: string;
   agent: CrewAgent;
   items: import("@thatfridge/core").FlatItem[];
   onPress: () => void;
   onDismiss: () => void;
   fallback: React.ReactNode;
 }) {
-  const { faint: FAINT } = useTheme().colors;
+  const { colors } = useTheme();
+  const AGENT_COLOR: Record<CrewAgent, string> = {
+    Guardian: colors.agentGuardian,
+    Shopkeeper: colors.agentShopkeeper,
+    Chef: colors.agentChef,
+  };
   // enabled: false — Home never fires the AI call itself, only shows one if it's already
   // cached from the user tapping "Activate {agent}" on the Crew tab this session (agentInsight's
   // cache is a shared module-level singleton). Otherwise this always falls back to `fallback`
@@ -725,105 +748,20 @@ function CrewTip({
   // whether the fridge had changed since the last one.
   const insight = useAgentInsight(agent, items, false);
   return (
-    <TipCard
-      eyebrow={eyebrow}
-      agent={agent}
+    <NotificationCard
+      icon={TIP_ICON[agent]}
+      color={AGENT_COLOR[agent]}
+      meta={meta}
       onPress={onPress}
-      onDismiss={onDismiss}
+      onAction={onDismiss}
     >
       {insight.text ? (
-        <MarkdownText text={insight.text} size={13.5} />
+        <MarkdownText text={insight.text} size={13} />
       ) : insight.loading ? (
-        <Text style={{ fontSize: 13, color: FAINT }}>{agent} is thinking…</Text>
+        <Text style={{ fontSize: 13, color: colors.faint }}>{agent} is thinking…</Text>
       ) : (
         fallback
       )}
-    </TipCard>
-  );
-}
-
-function TipCard({
-  eyebrow,
-  agent,
-  onPress,
-  onDismiss,
-  children,
-}: {
-  eyebrow: string;
-  agent: CrewAgent;
-  onPress: () => void;
-  onDismiss: () => void;
-  children: React.ReactNode;
-}) {
-  const { colors } = useTheme();
-  const SURFACE = colors.surface;
-  const HAIRLINE = colors.hairline;
-  const INK = colors.ink;
-  const FAINT = colors.faint;
-  const AGENT_COLOR: Record<CrewAgent, string> = {
-    Guardian: colors.agentGuardian,
-    Shopkeeper: colors.agentShopkeeper,
-    Chef: colors.agentChef,
-  };
-  const color = AGENT_COLOR[agent];
-  return (
-    <Pressable
-      onPress={onPress}
-      style={{
-        backgroundColor: SURFACE,
-        borderWidth: 1,
-        borderColor: HAIRLINE,
-        borderRadius: 10,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-      }}
-    >
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 6,
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 11,
-            fontWeight: "800",
-            letterSpacing: 0.4,
-            textTransform: "uppercase",
-            color: INK,
-          }}
-        >
-          {eyebrow}
-        </Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <View
-            style={{
-              backgroundColor: `${color}1a`,
-              paddingHorizontal: 7,
-              paddingVertical: 2,
-              borderRadius: 6,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 9.5,
-                fontWeight: "800",
-                letterSpacing: 0.3,
-                textTransform: "uppercase",
-                color,
-              }}
-            >
-              {agent}
-            </Text>
-          </View>
-          <Pressable onPress={onDismiss} hitSlop={10}>
-            <Ionicons name="close" size={15} color={FAINT} />
-          </Pressable>
-        </View>
-      </View>
-      {children}
-    </Pressable>
+    </NotificationCard>
   );
 }

@@ -380,6 +380,7 @@ export function ItemCard({
             paddingVertical: 2,
           }}
         />
+        <AutoFillButton onPress={onAutoFill} loading={autoFilling} compact />
         {onToggle && (
           <Pressable
             onPress={onToggle}
@@ -535,50 +536,10 @@ export function ItemCard({
         </View>
       )}
 
-      {/* quantity - food group no longer has a control here (Phase 3 "remove food-group
-          friction"): auto-fill/scans can still supply item.category (see AutoFillButton and
-          toCreatePayload below), it's just not manually editable until the item exists, on
-          the item detail page's storage row. */}
-      <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 4,
-            backgroundColor: SURFACE2,
-            borderRadius: 6,
-            paddingHorizontal: 4,
-          }}
-        >
-          <Pressable
-            onPress={() => onChange({ qty: Math.max(1, item.qty - 1) })}
-            hitSlop={6}
-            style={{ padding: 7 }}
-          >
-            <MaterialCommunityIcons name="minus" size={14} color={INK} />
-          </Pressable>
-          <Text
-            style={{
-              minWidth: 16,
-              textAlign: "center",
-              fontSize: 13,
-              fontWeight: "700",
-              color: INK,
-            }}
-          >
-            {item.qty}
-          </Text>
-          <Pressable
-            onPress={() => onChange({ qty: item.qty + 1 })}
-            hitSlop={6}
-            style={{ padding: 7 }}
-          >
-            <MaterialCommunityIcons name="plus" size={14} color={INK} />
-          </Pressable>
-        </View>
-      </View>
-
-      {/* date + camera + auto-fill */}
+      {/* date + camera + quantity. Food group has no control here (Phase 3 "remove food-group
+          friction"): auto-fill/scans can still supply item.category (see toCreatePayload below),
+          it's just not manually editable until the item exists, on the item detail page's
+          storage row. */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <DateField
           value={item.expiryDate}
@@ -587,8 +548,9 @@ export function ItemCard({
         <Pressable
           onPress={onScanDate}
           disabled={scanningDate}
+          accessibilityLabel="Scan expiry date"
           style={{
-            width: 34,
+            width: 38,
             height: 38,
             borderRadius: 6,
             alignItems: "center",
@@ -601,12 +563,48 @@ export function ItemCard({
           ) : (
             <MaterialCommunityIcons
               name="camera-outline"
-              size={15}
+              size={16}
               color={AMBER}
             />
           )}
         </Pressable>
-        <AutoFillButton onPress={onAutoFill} loading={autoFilling} />
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            height: 38,
+            backgroundColor: SURFACE2,
+            borderRadius: 6,
+          }}
+        >
+          <Pressable
+            onPress={() => onChange({ qty: Math.max(1, item.qty - 1) })}
+            hitSlop={6}
+            accessibilityLabel="Decrease quantity"
+            style={{ width: 30, height: 38, alignItems: "center", justifyContent: "center" }}
+          >
+            <MaterialCommunityIcons name="minus" size={14} color={INK} />
+          </Pressable>
+          <Text
+            style={{
+              minWidth: 18,
+              textAlign: "center",
+              fontSize: 13,
+              fontWeight: "700",
+              color: INK,
+            }}
+          >
+            {item.qty}
+          </Text>
+          <Pressable
+            onPress={() => onChange({ qty: item.qty + 1 })}
+            hitSlop={6}
+            accessibilityLabel="Increase quantity"
+            style={{ width: 30, height: 38, alignItems: "center", justifyContent: "center" }}
+          >
+            <MaterialCommunityIcons name="plus" size={14} color={INK} />
+          </Pressable>
+        </View>
       </View>
 
       {/* location */}
@@ -623,7 +621,7 @@ export function ItemCard({
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 5,
-                height: 34,
+                height: 38,
                 borderRadius: 6,
                 backgroundColor: on ? l.color : SURFACE2,
               }}
@@ -677,19 +675,24 @@ export function AutoFillButton({
   onPress,
   loading,
   label = "Auto-fill",
+  compact,
 }: {
   onPress: () => void;
   loading?: boolean;
   label?: string;
+  /** Icon-only square (used beside the item name where a labelled pill wouldn't fit). */
+  compact?: boolean;
 }) {
   return (
     <Pressable
       onPress={loading ? undefined : onPress}
+      accessibilityLabel={label}
       style={{
         flexDirection: "row",
         alignItems: "center",
+        justifyContent: "center",
         gap: 4,
-        paddingHorizontal: 12,
+        ...(compact ? { width: 38 } : { paddingHorizontal: 12 }),
         height: 38,
         borderRadius: 6,
         backgroundColor: `${AUTOFILL}26`,
@@ -699,11 +702,13 @@ export function AutoFillButton({
       {loading ? (
         <ActivityIndicator color={AUTOFILL} size="small" />
       ) : (
-        <MaterialCommunityIcons name="auto-fix" size={14} color={AUTOFILL} />
+        <MaterialCommunityIcons name="auto-fix" size={compact ? 16 : 14} color={AUTOFILL} />
       )}
-      <Text style={{ fontSize: 11.5, fontWeight: "700", color: AUTOFILL }}>
-        {loading ? "Thinking…" : label}
-      </Text>
+      {!compact && (
+        <Text style={{ fontSize: 11.5, fontWeight: "700", color: AUTOFILL }}>
+          {loading ? "Thinking…" : label}
+        </Text>
+      )}
     </Pressable>
   );
 }

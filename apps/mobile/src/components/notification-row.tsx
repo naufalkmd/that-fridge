@@ -35,29 +35,38 @@ function kindMeta(
   };
 }
 
-/** One notification row - shared by the full Notifications screen and Home's small preview so
- *  both render (and swipe-delete) the exact same thing off the exact same NotificationsProvider
- *  state, rather than the preview growing into a second feed of its own. */
-export function NotificationRow({
-  event,
-  onClear,
+type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
+
+/** The one card look used for everything in Home's Notifications section and the full feed:
+ *  tinted icon tile, bold message, faint meta line, blue action on the right. Server events
+ *  (NotificationRow) and Home's live crew tips both render through this so there's a single style. */
+export function NotificationCard({
+  icon,
+  color,
+  meta,
+  actionLabel = "Clear",
+  onAction,
+  onPress,
+  children,
 }: {
-  event: NotificationEvent;
-  onClear: () => void;
+  icon: IconName;
+  color: string;
+  meta: string;
+  actionLabel?: string;
+  onAction: () => void;
+  onPress?: () => void;
+  children: React.ReactNode;
 }) {
-  const colors = useTheme().colors;
   const {
     surface: SURFACE,
     hairline: HAIRLINE,
-    ink: INK,
     faint: FAINT,
     blue: BLUE,
-  } = colors;
-  // `event.kind` is a string from the server, not a compile-time-checked union - guard
-  // against a kind this build doesn't know yet (see fallbackMeta above) rather than crashing.
-  const meta = kindMeta(colors)[event.kind] ?? fallbackMeta(colors);
+  } = useTheme().colors;
   return (
-    <View
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
       style={{
         flexDirection: "row",
         alignItems: "center",
@@ -77,28 +86,50 @@ export function NotificationRow({
           borderRadius: 6,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: `${meta.color}1a`,
+          backgroundColor: `${color}1a`,
         }}
       >
-        <MaterialCommunityIcons name={meta.icon} size={17} color={meta.color} />
+        <MaterialCommunityIcons name={icon} size={17} color={color} />
       </View>
 
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: INK, marginBottom: 2 }}>
-          {event.message}
-        </Text>
-        <Text style={{ fontSize: 11, color: FAINT }}>
-          {event.fridgeName} · {timeAgo(event.createdAt)}
-        </Text>
+        <View style={{ marginBottom: 2 }}>{children}</View>
+        <Text style={{ fontSize: 11, color: FAINT }}>{meta}</Text>
       </View>
 
       <Pressable
-        onPress={onClear}
+        onPress={onAction}
         hitSlop={8}
         style={{ paddingHorizontal: 4, paddingVertical: 6 }}
       >
-        <Text style={{ fontSize: 11.5, fontWeight: "700", color: BLUE }}>Clear</Text>
+        <Text style={{ fontSize: 11.5, fontWeight: "700", color: BLUE }}>{actionLabel}</Text>
       </Pressable>
-    </View>
+    </Pressable>
+  );
+}
+
+/** One notification row - shared by the full Notifications screen and Home's small preview so
+ *  both render (and swipe-delete) the exact same thing off the exact same NotificationsProvider
+ *  state, rather than the preview growing into a second feed of its own. */
+export function NotificationRow({
+  event,
+  onClear,
+}: {
+  event: NotificationEvent;
+  onClear: () => void;
+}) {
+  const colors = useTheme().colors;
+  // `event.kind` is a string from the server, not a compile-time-checked union - guard
+  // against a kind this build doesn't know yet (see fallbackMeta above) rather than crashing.
+  const meta = kindMeta(colors)[event.kind] ?? fallbackMeta(colors);
+  return (
+    <NotificationCard
+      icon={meta.icon}
+      color={meta.color}
+      meta={`${event.fridgeName} · ${timeAgo(event.createdAt)}`}
+      onAction={onClear}
+    >
+      <Text style={{ fontSize: 13, fontWeight: "700", color: colors.ink }}>{event.message}</Text>
+    </NotificationCard>
   );
 }
