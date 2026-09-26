@@ -3,7 +3,6 @@ import {
   Linking,
   Pressable,
   ScrollView,
-  Switch,
   Text,
   TextInput,
   View,
@@ -42,6 +41,8 @@ import { useInventory } from "@/lib/inventory";
 import { caloriesSuffix } from "@/lib/recipeCalories";
 import { useScope, scopeItems } from "@/lib/scope";
 import { useShopping } from "@/lib/shopping";
+import { SWEEP_BATCH, SWEEP_COST_PER_ITEM } from "@/lib/organizerSweep";
+import { locationLabel, useOrganizerSweep } from "@/lib/useOrganizerSweep";
 import { useRecipes } from "@/lib/recipes";
 import { useKitchenScore } from "@/lib/kitchenScore";
 import { useNotifications } from "@/lib/notifications";
@@ -248,16 +249,12 @@ function CrewSelector({
 
 export default function Crew() {
   const router = useRouter();
-  const { items, patchItem } = useInventory();
+  const { items } = useInventory();
   const { scope } = useScope();
   const { items: shoppingItems } = useShopping();
   const { recipes } = useRecipes();
-  const {
-    usageHistory,
-    organizerTally,
-    refresh: refreshScore,
-  } = useKitchenScore();
-  const { events, prefs, togglePref } = useNotifications();
+  const { usageHistory, organizerTally } = useKitchenScore();
+  const { events } = useNotifications();
   const toast = useToast();
   const { colors } = useTheme();
   const {
@@ -294,11 +291,8 @@ export default function Crew() {
     ? null
     : (insightOverride.get(meta.agent) ?? insight.text);
 
-  // Organizer's on-demand "misplaced items" sweep — mirrors apps/web checkOrganizerMoves.
-  const [moves, setMoves] = useState<
-    { itemId: string; itemName: string; location: StorageLocation }[]
-  >([]);
-  const [movesLoading, setMovesLoading] = useState(false);
+  // Organizer's on-demand "misplaced items" sweep (asks first: it costs credits).
+  const sweep = useOrganizerSweep();
 
   // This agent's Kitchen Score — same inputs as Home's gauge.
   const scoreInput = useMemo<KitchenScoreInput>(
@@ -366,40 +360,6 @@ export default function Crew() {
             ? `${scoped.length} item${scoped.length === 1 ? "" : "s"} across ${STORAGE_LOCATIONS.length} spots`
             : "Nothing to organize yet";
 
-  const checkOrganizerMoves = useCallback(async () => {
-    if (movesLoading || scoped.length === 0) return;
-    setMovesLoading(true);
-    setMoves([]);
-    const sweep = scoped.slice(0, 30); // keep the parallel suggest-details fan-out bounded
-    const results = await Promise.all(
-      sweep.map(async (item) => {
-        try {
-          const s = await api.suggestItemDetails(item.name, item.icon);
-          if ((item.location ?? "fridge") !== s.location) {
-            return {
-              itemId: item.id,
-              itemName: item.name,
-              location: s.location,
-            };
-          }
-        } catch {
-          /* a single failed suggestion shouldn't block the rest */
-        }
-        return null;
-      }),
-    );
-    const found = results.filter((m): m is NonNullable<typeof m> => m !== null);
-    setMoves(found);
-    setMovesLoading(false);
-    api
-      .incrementOrganizerTally({
-        checked: sweep.length,
-        correct: sweep.length - found.length,
-      })
-      .then(() => refreshScore())
-      .catch(() => {});
-  }, [movesLoading, scoped, refreshScore]);
-
   async function activate() {
     setActivating(true);
     setDismissed((d) => ({ ...d, [meta.agent]: false }));
@@ -435,25 +395,7 @@ export default function Crew() {
     } finally {
       setActivating(false);
     }
-    if (tab === "organizer" && prefs?.crewActionsEnabled) checkOrganizerMoves();
   }
-
-  const applyMove = (itemId: string, location: StorageLocation) => {
-    const mv = moves.find((m) => m.itemId === itemId);
-    const prevLocation =
-      scoped.find((i) => i.id === itemId)?.location ?? "fridge";
-    setMoves((ms) => ms.filter((m) => m.itemId !== itemId));
-    void Haptics.selectionAsync();
-    patchItem(itemId, { location });
-    const label =
-      STORAGE_LOCATIONS.find((l) => l.key === location)?.label ?? location;
-    toast.show(`Moved ${mv?.itemName ?? "item"} to ${label}`, {
-      actionLabel: "Undo",
-      onAction: () => patchItem(itemId, { location: prevLocation }),
-    });
-  };
-  const dismissMove = (itemId: string) =>
-    setMoves((ms) => ms.filter((m) => m.itemId !== itemId));
 
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
@@ -474,10 +416,7 @@ export default function Crew() {
         </View>
         <CrewSelector
           tab={tab}
-          onChange={(t) => {
-            setTab(t);
-            setMoves([]);
-          }}
+          onChange={setTab}
         />
       </View>
 
@@ -617,9 +556,6 @@ export default function Crew() {
             {tab === "organizer" && (
               <View
                 style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
                   gap: 8,
                   marginTop: 2,
                   paddingTop: 8,
@@ -627,39 +563,41 @@ export default function Crew() {
                   borderTopColor: HAIRLINE,
                 }}
               >
-                <Text
+                <Pressable
+                  onPress={sweep.status === "checking" ? undefined : () => sweep.start(scoped)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Check where my items are stored"
                   style={{
-                    flex: 1,
-                    fontSize: 11,
-                    fontWeight: "600",
-                    color: MUTED,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    paddingVertical: 8,
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: tabColor,
+                    opacity: sweep.status === "checking" ? 0.6 : 1,
                   }}
                 >
-                  Let Organizer move items for you
+                  <MaterialCommunityIcons name="broom" size={13} color={tabColor} />
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: tabColor }}>
+                    {sweep.status === "checking"
+                      ? `Checking ${sweep.batchSize} items…`
+                      : `Check where things are stored · up to ${SWEEP_BATCH} items`}
+                  </Text>
+                </Pressable>
+                <Text style={{ fontSize: 10.5, color: FAINT, textAlign: "center" }}>
+                  {SWEEP_COST_PER_ITEM} credit per item checked
                 </Text>
-                <Switch
-                  value={!!prefs?.crewActionsEnabled}
-                  onValueChange={() => togglePref("crewActionsEnabled")}
-                  trackColor={{ true: tabColor, false: HAIRLINE }}
-                  thumbColor={INK}
-                />
               </View>
             )}
 
-            {tab === "organizer" && movesLoading && (
-              <Text style={{ fontSize: 11, color: FAINT, textAlign: "center" }}>
-                Checking for misplaced items…
-              </Text>
-            )}
-
             {tab === "organizer" &&
-              moves.map((mv) => {
-                const label =
-                  STORAGE_LOCATIONS.find((l) => l.key === mv.location)?.label ??
-                  mv.location;
+              sweep.moves.map((mv) => {
+                const label = locationLabel(mv.to);
                 return (
                   <View
-                    key={mv.itemId}
+                    key={mv.id}
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
@@ -680,11 +618,14 @@ export default function Crew() {
                       }}
                     >
                       Move{" "}
-                      <Text style={{ fontWeight: "800" }}>{mv.itemName}</Text>{" "}
+                      <Text style={{ fontWeight: "800" }}>{mv.name}</Text>{" "}
                       to {label}
                     </Text>
                     <Pressable
-                      onPress={() => applyMove(mv.itemId, mv.location)}
+                      onPress={() => {
+                        void Haptics.selectionAsync();
+                        void sweep.apply(mv);
+                      }}
                       style={{
                         paddingVertical: 5,
                         paddingHorizontal: 9,
@@ -702,10 +643,7 @@ export default function Crew() {
                         Apply
                       </Text>
                     </Pressable>
-                    <Pressable
-                      onPress={() => dismissMove(mv.itemId)}
-                      hitSlop={6}
-                    >
+                    <Pressable onPress={() => sweep.dismiss(mv.id)} hitSlop={6}>
                       <MaterialCommunityIcons
                         name="close"
                         size={13}

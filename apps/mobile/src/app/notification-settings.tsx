@@ -55,16 +55,9 @@ function buildGroups(colors: ThemeColors): { title: string; rows: Row[] }[] {
         {
           key: "recipeTips",
           label: "Recipe suggestions",
-          desc: "Chef's picks based on what's fresh right now.",
+          desc: "Chef's recipe pick on Home, based on what's fresh right now.",
           gif: "chef",
           accent: colors.agentChef,
-        },
-        {
-          key: "weeklyDigest",
-          label: "Weekly digest",
-          desc: "A Sunday summary of your fridge health.",
-          gif: "organizer",
-          accent: colors.agentOrganizer,
         },
       ],
     },

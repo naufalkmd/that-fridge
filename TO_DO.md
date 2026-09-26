@@ -115,6 +115,11 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
 - **Latest OTA** (group `5bcdff86-e24d-465a-8c8c-371a47efe343`, commit `b896fc7`, API deployed; earlier group `ab975687`): calendar delete / filter
   dropdown / Ask Quick Chat, Meal plan Autofill (3 credits), calendar fridge picker, change a Machine's fridge,
   Insights + Crew score + Privacy + Meal plan + Calendar Settings rows, profile avatar icon. Plus Explore Phase 1. Not device-checked yet.
+- **Settings audit fixes** (committed, unpublished): Organizer sweep asks first, is capped at 15 items and only counts answered
+  checks (shared by the Organizer screen and the Crew tab); the Crew tab no longer reuses the shared-fridge "Crew activity"
+  pref to gate sweeping; Home tips honour the Expiry / Low stock / Recipe switches; the dead Weekly digest switch is
+  removed (no digest sender exists - build one before bringing it back); AI Data no longer fakes a successful clear.
+  Not done: merging redundant Settings rows (Recipe book / Shopping list / Organizer duplicate Crew tab tabs, AI Data + Privacy, Crew score + Insights + Badges).
 - **Explore** Phase 1 (search + icon / recipe / Machine / meal-plan libraries, admin-curated, read-only) is live. Phase 2 (user contributions) needs UGC moderation (App Store 1.2) first: see `EXPLORE_PLAN.md`.
 
 ### Execution queue (post-launch product work; details in "Product backlog")

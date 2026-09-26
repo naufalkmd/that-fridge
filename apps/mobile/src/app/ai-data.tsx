@@ -6,7 +6,7 @@ import * as Haptics from "expo-haptics";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { timeAgo } from "@thatfridge/core";
+import { describeError, timeAgo } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useKitchenScore } from "@/lib/kitchenScore";
 import { useTheme } from "@/lib/theme";
@@ -43,8 +43,12 @@ export default function AIData() {
   );
 
   async function deleteFact(i: number) {
-    setFacts(await api.deleteMemoryFact(i).catch(() => facts));
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    try {
+      setFacts(await api.deleteMemoryFact(i));
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) {
+      Alert.alert("Couldn't forget that", describeError(e, "Please try again."));
+    }
   }
   function clearFacts() {
     Alert.alert("Clear memory", "Forget everything the crew remembers about you?", [
@@ -53,19 +57,26 @@ export default function AIData() {
         text: "Clear",
         style: "destructive",
         onPress: async () => {
-          await api.clearMemoryFacts().catch(() => {});
-          void Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Success,
-          );
-          setFacts([]);
+          // Only empty the list once the server has: a failed clear must not look like it worked.
+          try {
+            await api.clearMemoryFacts();
+            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            setFacts([]);
+          } catch (e) {
+            Alert.alert("Couldn't clear memory", describeError(e, "Please try again."));
+          }
         },
       },
     ]);
   }
   async function deleteUsage(id: string) {
-    await api.deleteUsageHistoryEntry(id).catch(() => {});
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    refresh();
+    try {
+      await api.deleteUsageHistoryEntry(id);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      refresh();
+    } catch (e) {
+      Alert.alert("Couldn't delete that", describeError(e, "Please try again."));
+    }
   }
 
   return (
@@ -123,7 +134,7 @@ export default function AIData() {
                 }}
               >
                 <Text style={{ flex: 1, fontSize: 12.5, lineHeight: 17, color: INK }}>{f}</Text>
-                <Pressable onPress={() => deleteFact(i)} hitSlop={8}>
+                <Pressable onPress={() => deleteFact(i)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Forget: ${f}`}>
                   <MaterialCommunityIcons name="close" size={15} color={FAINT} />
                 </Pressable>
               </View>
@@ -159,7 +170,7 @@ export default function AIData() {
                     used {u.count}× · {timeAgo(u.lastAt)}
                   </Text>
                 </View>
-                <Pressable onPress={() => deleteUsage(u.id)} hitSlop={8}>
+                <Pressable onPress={() => deleteUsage(u.id)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Remove ${u.name} from usage history`}>
                   <MaterialCommunityIcons name="close" size={15} color={FAINT} />
                 </Pressable>
               </View>

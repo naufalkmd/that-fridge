@@ -68,7 +68,7 @@ export default function Home() {
   const router = useRouter();
   const { user } = useAuth();
   const { items, fridges, loading, refresh } = useInventory();
-  const { events, requestRemove } = useNotifications();
+  const { events, prefs, requestRemove } = useNotifications();
   const { items: shoppingItems } = useShopping();
   const { scope, setScope } = useScope();
   const { usageHistory, organizerTally, scoreSnapshots } = useKitchenScore();
@@ -145,8 +145,10 @@ export default function Home() {
     [scoped, guardian],
   );
   const chefPick = suggestions?.[0] ?? null;
-  const showGuardian = !!guardian && !dismissed.guardian;
-  const showLowStock = !!lowStock && !dismissed.lowStock;
+  // The Crew tip cards follow the same switches as the alerts (Notification settings); unknown yet = on.
+  const showGuardian = !!guardian && !dismissed.guardian && (prefs?.expiryAlerts ?? true);
+  const showLowStock = !!lowStock && !dismissed.lowStock && (prefs?.lowStock ?? true);
+  const showChef = !dismissed.chef && (prefs?.recipeTips ?? true);
 
   const scoreInput = useMemo(
     () => ({
@@ -522,7 +524,7 @@ export default function Home() {
           {/* One Notifications section, one card style: the server events (same
               NotificationsProvider state / swipe-delete row as the full /notifications screen)
               followed by the live crew tips (computed from the scoped fridge, dismissed locally). */}
-          {(recentEvents.length > 0 || showGuardian || showLowStock || !dismissed.chef) && (
+          {(recentEvents.length > 0 || showGuardian || showLowStock || showChef) && (
             <View>
               <View
                 style={{
@@ -582,7 +584,7 @@ export default function Home() {
                   />
                 </SwipeRow>
               )}
-              {!dismissed.chef && (
+              {showChef && (
                 <SwipeRow onDelete={() => dismissTip("chef")}>
                   <CrewTip
                     meta="Chef · Chef's pick"

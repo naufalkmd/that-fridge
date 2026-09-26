@@ -138,7 +138,7 @@ export default function EditProfile() {
             className="items-center rounded-lg bg-accent py-3 active:opacity-80"
             style={{ opacity: !hasChanges || blocked || managed ? 0.4 : 1 }}
           >
-            <Text className="font-bold uppercase tracking-wide text-[#0a0a0c]">
+            <Text className="font-bold uppercase tracking-wide text-on-accent">
               Save changes
             </Text>
           </Pressable>

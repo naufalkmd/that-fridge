@@ -903,7 +903,7 @@ export default function KitchenLab() {
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
       <View className="flex-row items-start justify-between">
-        <PageHeader title="Kitchen Lab" subtitle="Automations that run on their own — beta" />
+        <PageHeader title="Kitchen Lab" subtitle="Automations that run on their own" />
         <Pressable onPress={openCompose} hitSlop={10} className="mr-4 mt-4 active:opacity-70">
           <Ionicons name="add-circle" size={28} color={colors.accent} />
         </Pressable>

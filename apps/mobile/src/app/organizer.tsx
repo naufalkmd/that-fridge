@@ -1,30 +1,26 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { STORAGE_LOCATIONS, type StorageLocation } from "@thatfridge/core";
-import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { useScope, scopeItems } from "@/lib/scope";
 import { useKitchenScore } from "@/lib/kitchenScore";
-import { useToast } from "@/lib/toast";
+import { SWEEP_BATCH, SWEEP_COST_PER_ITEM } from "@/lib/organizerSweep";
+import { locationLabel, useOrganizerSweep } from "@/lib/useOrganizerSweep";
 import { PageHeader } from "@/components/ui";
 import { FoodIcon } from "@/components/food-icon";
 import { useTheme } from "@/lib/theme";
 
 const ORGANIZER_GIF = require("../../assets/images/thatfridge/organizer.gif");
 
-type Move = { id: string; name: string; icon: string; from: StorageLocation; to: StorageLocation };
-
-const locLabel = (k: StorageLocation) => STORAGE_LOCATIONS.find((l) => l.key === k)?.label ?? k;
+const locLabel = locationLabel;
 
 export default function Organizer() {
-  const { items, patchItem } = useInventory();
+  const { items } = useInventory();
   const { scope } = useScope();
-  const { organizerTally, refresh: refreshScore } = useKitchenScore();
-  const toast = useToast();
+  const { organizerTally } = useKitchenScore();
   const {
     accent: AMBER,
     surface: SURFACE,
@@ -38,52 +34,9 @@ export default function Organizer() {
     onAccent: CANVAS,
   } = useTheme().colors;
 
-  const [status, setStatus] = useState<"idle" | "checking" | "done">("idle");
-  const [moves, setMoves] = useState<Move[]>([]);
-  const [checked, setChecked] = useState(0);
-
+  const { status, moves, checked, batchSize, start, apply, dismiss } = useOrganizerSweep();
   const scoped = useMemo(() => scopeItems(items, scope), [items, scope]);
-
-  async function sweep() {
-    if (scoped.length === 0) return;
-    setStatus("checking");
-    setMoves([]);
-    const results = await Promise.all(
-      scoped.map(async (item) => {
-        try {
-          const s = await api.suggestItemDetails(item.name, item.icon);
-          const from = item.location ?? "fridge";
-          if (s.location && s.location !== from) {
-            return { id: item.id, name: item.name, icon: item.icon, from, to: s.location };
-          }
-        } catch {
-          /* skip this one */
-        }
-        return null;
-      }),
-    );
-    const found = results.filter((m): m is Move => m !== null);
-    setMoves(found);
-    setChecked(scoped.length);
-    setStatus("done");
-    api
-      .incrementOrganizerTally({ checked: scoped.length, correct: scoped.length - found.length })
-      .then(() => refreshScore())
-      .catch(() => {});
-  }
-
-  async function apply(m: Move) {
-    setMoves((p) => p.filter((x) => x.id !== m.id));
-    try {
-      await patchItem(m.id, { location: m.to });
-      toast.show(`Moved ${m.name} to ${locLabel(m.to)}`, {
-        actionLabel: "Undo",
-        onAction: () => patchItem(m.id, { location: m.from }),
-      });
-    } catch {
-      setMoves((p) => [m, ...p]);
-    }
-  }
+  const sweep = () => start(scoped);
 
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
@@ -129,7 +82,7 @@ export default function Organizer() {
           {status === "checking" ? (
             <>
               <ActivityIndicator color={FAINT} />
-              <Text style={{ fontSize: 13, fontWeight: "700", color: FAINT }}>Checking {scoped.length} items…</Text>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: FAINT }}>Checking {batchSize} items…</Text>
             </>
           ) : (
             <>
@@ -140,6 +93,9 @@ export default function Organizer() {
             </>
           )}
         </Pressable>
+        <Text style={{ fontSize: 11.5, color: FAINT, textAlign: "center", marginTop: -14, marginBottom: 20 }}>
+          Checks up to {SWEEP_BATCH} items at a time · {SWEEP_COST_PER_ITEM} credit each
+        </Text>
 
         {status === "done" && (
           <>
@@ -147,7 +103,9 @@ export default function Organizer() {
               <View style={{ alignItems: "center", paddingVertical: 30, gap: 8 }}>
                 <MaterialCommunityIcons name="check-circle-outline" size={28} color={GOOD} />
                 <Text style={{ fontSize: 13, color: MUTED, textAlign: "center" }}>
-                  All {checked} item{checked === 1 ? "" : "s"} look well placed. Nice.
+                  {checked === 0
+                    ? "Nothing could be checked this time, so nothing was counted."
+                    : `All ${checked} item${checked === 1 ? "" : "s"} checked look well placed. Nice.`}
                 </Text>
               </View>
             ) : (
@@ -184,7 +142,7 @@ export default function Organizer() {
                           <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>Move it</Text>
                         </Pressable>
                         <Pressable
-                          onPress={() => setMoves((p) => p.filter((x) => x.id !== m.id))}
+                          onPress={() => dismiss(m.id)}
                           style={{ paddingHorizontal: 16, alignItems: "center", justifyContent: "center", borderRadius: 6, borderWidth: 1, borderColor: HAIRLINE }}
                         >
                           <Text style={{ fontSize: 12, fontWeight: "700", color: MUTED }}>Keep</Text>

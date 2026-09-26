@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
@@ -49,8 +49,13 @@ export default function Profile() {
 
   async function doSignOut() {
     setWorking(true);
-    await signOut();
-    router.replace("/sign-in");
+    try {
+      await signOut();
+      router.replace("/sign-in");
+    } catch (e) {
+      setWorking(false);
+      Alert.alert("Couldn't sign out", describeError(e, "Please try again."));
+    }
   }
 
   function confirmDelete() {
@@ -227,12 +232,18 @@ export default function Profile() {
             label="Appearance"
             value={THEME_LABELS[mode]}
             onPress={() =>
-              Alert.alert("Appearance", "Choose how ThatFridge looks.", [
-                { text: "Light", onPress: () => setMode("light") },
-                { text: "Dark", onPress: () => setMode("dark") },
-                { text: "System", onPress: () => setMode("system") },
-                { text: "Cancel", style: "cancel" },
-              ])
+              Alert.alert(
+                "Appearance",
+                "Choose how ThatFridge looks.",
+                [
+                  { text: "Light", onPress: () => setMode("light") },
+                  { text: "Dark", onPress: () => setMode("dark") },
+                  { text: "System", onPress: () => setMode("system") },
+                  // Android shows at most three buttons (it dismisses on outside tap instead); iOS keeps Cancel.
+                  ...(Platform.OS === "ios" ? [{ text: "Cancel", style: "cancel" as const }] : []),
+                ],
+                { cancelable: true },
+              )
             }
           />
           <LinkRow
