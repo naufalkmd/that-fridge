@@ -138,6 +138,7 @@ class ItemController extends Controller
         $before = ItemFeedback::snapshot($item);
         $item->update(ItemPayload::normalize($data));
         ItemFeedback::updated($request->user(), $item, $before);
+        ItemFeedback::autofillApplied($request->user(), $item, $data);
 
         return new ItemResource($item->load('product'));
     }
@@ -163,6 +164,7 @@ class ItemController extends Controller
         }
 
         $fields = [];
+        $categorySource = 'ai';
 
         // Deterministic food-group classification first (keyword rules, then a cache of
         // previously AI-resolved names - see FoodGroupClassifier) - a confident hit here
@@ -172,11 +174,14 @@ class ItemController extends Controller
             $localCategory = FoodGroupClassifier::resolve($item->name, $item->icon);
             if ($localCategory !== null) {
                 $fields['nutrition_category'] = $localCategory;
+                $categorySource = 'classifier';
                 $needsCategory = false;
             }
         }
 
         if (! $needsWeight && ! $needsCalories && ! $needsShelfLife && ! $needsCategory) {
+            ItemFeedback::autofillProposed($request->user(), $item, $fields, $categorySource);
+
             return response()->json(['fields' => (object) $fields], 200);
         }
 
@@ -211,6 +216,8 @@ class ItemController extends Controller
 
             return response()->json(['fields' => (object) [], 'message' => "Couldn't confidently estimate anything new for this item."], 200);
         }
+
+        ItemFeedback::autofillProposed($request->user(), $item, $fields, $categorySource);
 
         return response()->json(['fields' => (object) $fields], 200);
     }

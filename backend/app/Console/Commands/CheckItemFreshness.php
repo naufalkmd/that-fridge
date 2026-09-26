@@ -143,6 +143,13 @@ class CheckItemFreshness extends Command
                 'done' => false,
             ]);
 
+            AlgoFeedback::record($user, 'low_stock', [
+                'kind' => 'sent',
+                'name' => $item->name,
+                'class' => FoodGroupClassifier::classify($item->name, $item->icon),
+                'guess_number' => $item->quantity,
+            ]);
+
             $created++;
         }
 

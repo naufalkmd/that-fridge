@@ -294,4 +294,67 @@ class AlgoFeedbackTest extends TestCase
         ]);
         $this->assertSame(2, AlgoFeedbackEvent::where('algo', 'scan')->where('kind', 'saved')->count());
     }
+
+    public function test_autofill_logs_proposed_fields_then_accepted_or_changed_when_applied(): void
+    {
+        config(['app.algo_feedback_enabled' => true, 'services.openrouter.key' => null]);
+        $user = User::factory()->create(['ai_credits' => 5]);
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
+        $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'Top']);
+        $item = $section->items()->create(['name' => 'Greek Yogurt', 'icon' => 'yogurt']);
+
+        $fields = $this->actingAs($user)->postJson("/api/items/{$item->id}/autofill")->assertOk()->json('fields');
+        $this->assertDatabaseHas('algo_feedback_events', ['algo' => 'autofill', 'kind' => 'proposed', 'guess' => 'calories']);
+        $proposed = AlgoFeedbackEvent::where('algo', 'autofill')->where('kind', 'proposed')->count();
+        $this->assertGreaterThanOrEqual(3, $proposed);
+
+        // An unrelated edit must not consume the pending proposal.
+        $this->patchJson("/api/items/{$item->id}", ['note' => 'hi'])->assertOk();
+        $this->assertDatabaseMissing('algo_feedback_events', ['algo' => 'autofill', 'kind' => 'applied']);
+
+        // "Use these" with the calories bumped by the user: calories changed, the rest accepted.
+        $this->patchJson("/api/items/{$item->id}", [
+            'calories' => $fields['calories'] + 50, 'shelf_life_days' => $fields['shelf_life_days'],
+        ])->assertOk();
+        $this->assertDatabaseHas('algo_feedback_events', ['algo' => 'autofill', 'kind' => 'applied', 'guess' => 'calories', 'outcome' => 'changed']);
+        $this->assertDatabaseHas('algo_feedback_events', ['algo' => 'autofill', 'kind' => 'applied', 'guess' => 'shelf_life_days', 'outcome' => 'accepted']);
+
+        // The proposal is consumed: a later edit of the same field logs no second "applied".
+        $before = AlgoFeedbackEvent::where('kind', 'applied')->count();
+        $this->patchJson("/api/items/{$item->id}", ['calories' => 1])->assertOk();
+        $this->assertSame($before, AlgoFeedbackEvent::where('kind', 'applied')->count());
+    }
+
+    public function test_notification_toggles_log_only_real_changes(): void
+    {
+        config(['app.algo_feedback_enabled' => true]);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->patchJson('/api/notification-prefs', ['lowStock' => false, 'recipeTips' => true])->assertSuccessful();
+
+        $this->assertDatabaseHas('algo_feedback_events', [
+            'algo' => 'notification_pref', 'kind' => 'toggled', 'class' => 'low_stock', 'outcome' => 'off',
+        ]);
+        $this->assertSame(1, AlgoFeedbackEvent::where('algo', 'notification_pref')->count());
+    }
+
+    public function test_low_stock_alert_logs_sent_then_acted_when_added_to_the_shopping_list(): void
+    {
+        config(['app.algo_feedback_enabled' => true]);
+        $user = User::factory()->create();
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
+        $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'Top']);
+        $section->items()->create(['name' => 'Bun', 'icon' => 'bread', 'quantity' => 1]);
+
+        $this->artisan('app:check-item-freshness');
+        $this->assertDatabaseHas('algo_feedback_events', ['algo' => 'low_stock', 'kind' => 'sent', 'guess_number' => 1]);
+
+        $this->actingAs($user)->postJson("/api/fridges/{$fridge->id}/shopping-items", ['name' => 'Eggs', 'section' => 'Other'])->assertCreated();
+        $this->assertDatabaseMissing('algo_feedback_events', ['algo' => 'low_stock', 'kind' => 'acted']);
+
+        $this->postJson("/api/fridges/{$fridge->id}/shopping-items", ['name' => 'bun', 'section' => 'Other'])->assertCreated();
+        $this->assertDatabaseHas('algo_feedback_events', [
+            'algo' => 'low_stock', 'kind' => 'acted', 'outcome' => 'added_to_shopping',
+        ]);
+    }
 }

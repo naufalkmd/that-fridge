@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Item;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 /** Structured item guesses and corrections. Never records notes or custom fields. */
 final class ItemFeedback
@@ -100,6 +101,62 @@ final class ItemFeedback
             'guess' => $changed ? $guess : null, 'final' => $changed ? $final : null,
             'source' => $item->source, 'outcome' => $changed ? 'corrected' : 'accepted',
         ]);
+    }
+
+    private const AUTOFILL_FIELDS = ['weight', 'calories', 'shelf_life_days', 'nutrition_category'];
+
+    private static function autofillKey(User $user, Item $item): string
+    {
+        return "autofill-proposal:{$user->id}:{$item->id}";
+    }
+
+    /**
+     * What Autofill offered, per field. The card is review-then-confirm and "Dismiss" makes no
+     * request, so the offer is remembered briefly and matched against the next PATCH that
+     * carries one of these fields (autofillApplied); proposed minus applied = dismissed.
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    public static function autofillProposed(User $user, Item $item, array $fields, string $categorySource): void
+    {
+        $proposal = array_intersect_key($fields, array_flip(self::AUTOFILL_FIELDS));
+        if ($proposal === []) {
+            return;
+        }
+
+        Cache::put(self::autofillKey($user, $item), $proposal, now()->addMinutes(30));
+        $class = FoodGroupClassifier::classify($item->name, $item->icon);
+        foreach ($proposal as $field => $value) {
+            AlgoFeedback::record($user, 'autofill', [
+                'kind' => 'proposed', 'name' => $item->name, 'class' => $class,
+                'guess' => $field === 'nutrition_category' ? (string) $value : $field,
+                'guess_number' => $field === 'nutrition_category' ? null : (float) $value,
+                'source' => $field === 'nutrition_category' ? $categorySource : 'ai',
+            ]);
+        }
+    }
+
+    /** @param  array<string, mixed>  $patch */
+    public static function autofillApplied(User $user, Item $item, array $patch): void
+    {
+        $key = self::autofillKey($user, $item);
+        $proposal = Cache::get($key);
+        if (! is_array($proposal) || array_intersect_key($proposal, $patch) === []) {
+            return;
+        }
+
+        Cache::forget($key);
+        $class = FoodGroupClassifier::classify($item->name, $item->icon);
+        foreach (array_intersect_key($proposal, $patch) as $field => $value) {
+            $same = $field === 'nutrition_category' ? $patch[$field] === $value : (float) $patch[$field] === (float) $value;
+            AlgoFeedback::record($user, 'autofill', [
+                'kind' => 'applied', 'name' => $item->name, 'class' => $class,
+                'guess' => $field === 'nutrition_category' ? (string) $value : $field,
+                'guess_number' => $field === 'nutrition_category' ? null : (float) $value,
+                'final_number' => $field === 'nutrition_category' || $patch[$field] === null ? null : (float) $patch[$field],
+                'source' => 'card', 'outcome' => $same ? 'accepted' : 'changed',
+            ]);
+        }
     }
 
     public static function updated(User $user, Item $item, array $before): void

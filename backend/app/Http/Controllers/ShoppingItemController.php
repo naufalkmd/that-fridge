@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\ShoppingItemResource;
 use App\Models\Fridge;
+use App\Models\NotificationEvent;
 use App\Models\ShoppingItem;
+use App\Support\AlgoFeedback;
+use App\Support\FoodGroupClassifier;
 use Illuminate\Http\Request;
 
 class ShoppingItemController extends Controller
@@ -46,8 +49,29 @@ class ShoppingItemController extends Controller
         $this->renameShopUrlKey($data);
 
         $shoppingItem = $fridge->shoppingItems()->create($data);
+        $this->recordLowStockAction($request, $fridge, $shoppingItem);
 
         return new ShoppingItemResource($shoppingItem->load('fridge'));
+    }
+
+    /** A shopping entry matching a recent low-stock alert means the alert was acted on. */
+    private function recordLowStockAction(Request $request, Fridge $fridge, ShoppingItem $shoppingItem): void
+    {
+        $alert = NotificationEvent::where('fridge_id', $fridge->id)->where('kind', 'lowStock')
+            ->where('created_at', '>=', now()->subDays(3))
+            ->whereHas('item', fn ($q) => $q->whereRaw('lower(name) = ?', [mb_strtolower($shoppingItem->name)]))
+            ->latest('created_at')->first();
+        if (! $alert) {
+            return;
+        }
+
+        AlgoFeedback::record($request->user(), 'low_stock', [
+            'kind' => 'acted',
+            'name' => $shoppingItem->name,
+            'class' => FoodGroupClassifier::classify($shoppingItem->name, $shoppingItem->icon),
+            'final_number' => (int) $alert->created_at->diffInHours(now()),
+            'outcome' => 'added_to_shopping',
+        ]);
     }
 
     public function update(Request $request, ShoppingItem $shoppingItem)

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\NotificationPrefResource;
+use App\Support\AlgoFeedback;
 use Illuminate\Http\Request;
 
 class NotificationPrefController extends Controller
@@ -42,6 +43,7 @@ class NotificationPrefController extends Controller
 
         $pref = $request->user()->notificationPref()->firstOrCreate([], self::DEFAULTS);
 
+        $before = $pref->only(array_keys(self::DEFAULTS));
         $pref->update([
             'expiry_alerts' => $data['expiryAlerts'] ?? $pref->expiry_alerts,
             'low_stock' => $data['lowStock'] ?? $pref->low_stock,
@@ -50,6 +52,16 @@ class NotificationPrefController extends Controller
             'crew_actions_enabled' => $data['crewActionsEnabled'] ?? $pref->crew_actions_enabled,
             'social' => $data['social'] ?? $pref->social,
         ]);
+
+        // Which alert classes people switch off (and back on) - the alert-fatigue signal.
+        foreach ($before as $key => $was) {
+            if ($was !== $pref->{$key}) {
+                AlgoFeedback::record($request->user(), 'notification_pref', [
+                    'kind' => 'toggled', 'class' => $key, 'source' => 'settings',
+                    'outcome' => $pref->{$key} ? 'on' : 'off',
+                ]);
+            }
+        }
 
         return new NotificationPrefResource($pref);
     }

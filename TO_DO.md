@@ -223,9 +223,11 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 
 **Algorithm insights — what's left**
 
-- [ ] **P1 signals not yet emitted:** autofill per-field accept/partly/dismiss (only a per-item `autofill_used` / `no_autofill` outcome
-  is logged today, in `add_flow`), notification toggles turned off, low-stock tip shown → added to
-  shopping / restock cadence.
+- [ ] **P1 leftovers:** low-stock *restock cadence* (item re-added N days after removal) and Home
+  crew-tip dismissals (local-only today, needs a client event). The rest of P1 is emitted
+  server-side (expiry/low-stock alert sent→acted, scan detected/saved, autofill proposed/applied,
+  notification toggles) — all inert until `ALGO_FEEDBACK_ENABLED=true`. Autofill's card is
+  all-or-nothing, so "partly accepted" only shows up as `changed` values after "Use these".
 - [ ] **P2 signals:** recipe suggestion rank of the recipe marked made, Kitchen Lab drafting
   (saved as-is / edited / redrafted / discarded, validation failures, dry run before enabling),
   D1/D7/D30 retention cohorts.
