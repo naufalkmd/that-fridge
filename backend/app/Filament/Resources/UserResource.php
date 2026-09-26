@@ -14,8 +14,9 @@ use Filament\Tables;
 use Filament\Tables\Table;
 
 /**
- * Users sign up through the app, so there's no create page. Pro status is shown but never
- * editable - RevenueCat webhooks own it. AI credits change only through the view page's
+ * Users sign up through the app, so there's no create page. Subscription Pro is shown but never
+ * editable - RevenueCat webhooks own it. The two admin flags (demo, admin-granted Pro) are set on
+ * the edit page and saved past mass-assignment protection (see EditUser). AI credits change only through the view page's
  * "Adjust credits" button, which goes through CreditService so the ledger stays in step.
  * Account deletion (view page) mirrors DELETE /api/me and is audit-logged.
  */
@@ -50,7 +51,10 @@ class UserResource extends Resource
                     ->unique(ignoreRecord: true),
                 Forms\Components\Toggle::make('is_demo')
                     ->label('Demo / App Review account')
-                    ->helperText('Demo accounts are always treated as Pro.'),
+                    ->helperText('Isolates the account: it can only find and be found by other demo accounts, its name and username are locked, and it is left out of stats and monthly credits. Does not grant Pro.'),
+                Forms\Components\Toggle::make('pro_granted')
+                    ->label('Pro (granted by admin)')
+                    ->helperText('Gives a real user Pro without a subscription. Separate from a paid RevenueCat subscription, which stays in force either way.'),
             ]);
     }
 
@@ -72,10 +76,11 @@ class UserResource extends Resource
                     ->columns(2)
                     ->schema([
                         Infolists\Components\IconEntry::make('pro')
-                            ->label('Pro')
+                            ->label('Pro (effective)')
                             ->state(fn (User $record): bool => $record->isPro())
                             ->boolean(),
-                        Infolists\Components\IconEntry::make('is_demo')->boolean(),
+                        Infolists\Components\IconEntry::make('pro_granted')->label('Pro granted by admin')->boolean(),
+                        Infolists\Components\IconEntry::make('is_demo')->label('Demo account')->boolean(),
                         Infolists\Components\TextEntry::make('pro_expires_at')->dateTime()->placeholder('-'),
                         Infolists\Components\TextEntry::make('pro_trial_until')->dateTime()->placeholder('-'),
                         Infolists\Components\TextEntry::make('ai_credits')->numeric(),
@@ -113,6 +118,7 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('email')->searchable(),
                 Tables\Columns\TextColumn::make('oauth_provider')->placeholder('password')->toggleable(),
                 Tables\Columns\TextColumn::make('pro_expires_at')->label('Pro until')->dateTime()->sortable()->placeholder('-'),
+                Tables\Columns\IconColumn::make('pro_granted')->label('Pro (admin)')->boolean()->toggleable(),
                 Tables\Columns\IconColumn::make('is_demo')->boolean()->toggleable(),
                 Tables\Columns\TextColumn::make('ai_credits')->numeric()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('fridges_count')->counts('fridges')->label('Fridges')->sortable(),
@@ -123,6 +129,7 @@ class UserResource extends Resource
             ->filters([
                 Tables\Filters\Filter::make('pro')
                     ->query(fn ($query) => $query->where('pro_expires_at', '>', now())),
+                Tables\Filters\TernaryFilter::make('pro_granted')->label('Pro granted by admin'),
                 Tables\Filters\TernaryFilter::make('is_demo'),
                 Tables\Filters\SelectFilter::make('sign_in')
                     ->label('Sign-in method')

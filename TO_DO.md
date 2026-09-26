@@ -478,6 +478,10 @@ unauthenticated screen.
 ### Demo / reviewer account
 
 `keira@thatfridge.test` — pre-seeded shared fridge ("Home Fridge") with items across all zones.
+Two separate admin flags (Admin → Users → Edit): **Demo** (`is_demo`: isolated from real users in
+Find a friend, name/username locked, excluded from stats and monthly credits) and **Pro (granted by
+admin)** (`pro_granted`, a comped Pro that a RevenueCat webhook can't overwrite). Demo alone is not
+Pro; the seeded demo accounts have both (the `pro_granted` migration backfills existing ones).
 Password is an env var (`DEMO_USER_PASSWORD`), live value in the shared password manager, pasted
 into ASC's Sign-In fields. If the demo account is ever deleted again (e.g. while recording an
 account-deletion demo), re-seed via `php artisan config:clear && php artisan db:seed --force` on

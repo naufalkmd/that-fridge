@@ -42,6 +42,7 @@ class User extends Authenticatable implements FilamentUser
             'current_streak' => 'integer',
             'last_active_on' => 'date',
             'is_demo' => 'boolean',
+            'pro_granted' => 'boolean',
             'preferences' => 'array',
             'password' => 'hashed',
         ];
@@ -200,12 +201,14 @@ class User extends Authenticatable implements FilamentUser
     /**
      * Synced from RevenueCat webhooks (RevenueCatWebhookController) - never set directly from
      * a user-facing request, so `pro_expires_at` is deliberately not in #[Fillable] above.
-     * Demo / App Review accounts are always Pro so the reviewer can exercise every gated
-     * path (sharing a fridge, etc.) without a sandbox purchase.
+     * `pro_granted` is an admin-comped Pro (a real user given Pro, or a demo / App Review
+     * account that needs to exercise gated paths without a sandbox purchase). It is separate
+     * from `is_demo`, which only isolates an account from real users - a demo account is Pro
+     * only when it is also granted Pro.
      */
     public function isPro(): bool
     {
-        return $this->is_demo || ($this->pro_expires_at !== null && $this->pro_expires_at->isFuture());
+        return $this->pro_granted || ($this->pro_expires_at !== null && $this->pro_expires_at->isFuture());
     }
 
     /**

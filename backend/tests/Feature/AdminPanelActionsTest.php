@@ -8,6 +8,7 @@ use App\Filament\Resources\GeneratedIconResource\Pages\ListGeneratedIcons;
 use App\Filament\Resources\ProductResource\Pages\EditProduct;
 use App\Filament\Resources\RecipeResource\Pages\ListRecipes;
 use App\Filament\Resources\SharedIconResource\Pages\ListSharedIcons;
+use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ViewUser;
 use App\Filament\Widgets\CreditSpendChart;
 use App\Filament\Widgets\LatestFeedback;
@@ -231,5 +232,67 @@ class AdminPanelActionsTest extends TestCase
         Livewire::test(ScheduledJobs::class)->callAction('freshness');
         $this->assertTrue(JobHeartbeat::last('app:check-item-freshness')['ok']);
         $this->assertSame('app:check-item-freshness', AdminAuditLog::sole()->changes['command']);
+    }
+
+    public function test_the_demo_and_pro_toggles_actually_save_and_are_independent(): void
+    {
+        $user = User::factory()->create(['name' => 'Sam', 'email' => 'sam@example.com']);
+        $this->assertFalse($user->is_demo);
+        $this->assertFalse($user->isPro());
+
+        // Pro only: a real user granted Pro, still visible to other real users.
+        Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
+            ->fillForm(['is_demo' => false, 'pro_granted' => true])
+            ->call('save')
+            ->assertHasNoFormErrors();
+        $user->refresh();
+        $this->assertTrue($user->pro_granted);
+        $this->assertFalse($user->is_demo);
+        $this->assertTrue($user->isPro());
+
+        // Demo only: isolated from real users, not Pro.
+        Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
+            ->fillForm(['is_demo' => true, 'pro_granted' => false])
+            ->call('save')
+            ->assertHasNoFormErrors();
+        $user->refresh();
+        $this->assertTrue($user->is_demo);
+        $this->assertFalse($user->pro_granted);
+        $this->assertFalse($user->isPro());
+
+        // Both: a reviewer-style account.
+        Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
+            ->fillForm(['is_demo' => true, 'pro_granted' => true])
+            ->call('save');
+        $this->assertTrue($user->fresh()->is_demo);
+        $this->assertTrue($user->fresh()->isPro());
+
+        $this->assertDatabaseHas('admin_audit_logs', ['action' => 'updated', 'subject_id' => $user->id]);
+    }
+
+    public function test_the_demo_toggle_isolates_the_account_in_find_a_friend(): void
+    {
+        $real = User::factory()->create(['username' => 'realfriend']);
+        $target = User::factory()->create(['username' => 'aboutToBeDemo']);
+
+        $this->actingAs($real)->getJson('/api/users/search?q=aboutToBeDemo')->assertOk()->assertJsonCount(1, 'data');
+
+        $this->actingAs($this->admin);
+        Livewire::test(EditUser::class, ['record' => $target->getRouteKey()])
+            ->fillForm(['is_demo' => true])->call('save');
+
+        $this->actingAs($real)->getJson('/api/users/search?q=aboutToBeDemo')->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_a_subscription_pro_survives_turning_the_admin_pro_toggle_off(): void
+    {
+        $user = User::factory()->create(['pro_expires_at' => now()->addMonth()]);
+        $user->forceFill(['pro_granted' => true])->save();
+
+        Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
+            ->fillForm(['pro_granted' => false])->call('save');
+
+        $this->assertFalse($user->fresh()->pro_granted);
+        $this->assertTrue($user->fresh()->isPro()); // the paid subscription is untouched
     }
 }

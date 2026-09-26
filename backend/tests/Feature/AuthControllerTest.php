@@ -277,10 +277,12 @@ class AuthControllerTest extends TestCase
         $this->patchJson('/api/me/profile', ['name' => 'X'])->assertStatus(401);
     }
 
-    public function test_a_demo_account_is_pro_and_flagged_in_the_payload(): void
+    public function test_a_demo_account_is_flagged_in_the_payload_and_is_pro_only_when_granted(): void
     {
         $demo = User::factory()->create(['is_demo' => true]);
-        $this->assertTrue($demo->isPro());
+        $this->assertFalse($demo->isPro()); // demo isolates the account; it does not grant Pro
+        $demo->forceFill(['pro_granted' => true])->save();
+        $this->assertTrue($demo->fresh()->isPro());
 
         $this->actingAs($demo)->getJson('/api/me')
             ->assertOk()
