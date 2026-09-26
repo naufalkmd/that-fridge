@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Section;
 use App\Services\CreditService;
 use App\Services\ReceiptService;
+use App\Support\AlgoFeedback;
 use App\Support\CreditCost;
 use Illuminate\Http\Request;
 
@@ -49,6 +50,13 @@ class ReceiptController extends Controller
             // empty detected_items list already reads as "couldn't find any items" to them.
             $this->credits->grant($request->user(), CreditCost::RECEIPT_SCAN, 'receipt_scan_refund');
         }
+
+        // Denominator for kept/edited/dropped rates: how many items this scan proposed.
+        AlgoFeedback::record($request->user(), 'scan', [
+            'kind' => 'detected', 'source' => 'receipt',
+            'guess_number' => count($result['detected_items']),
+            'outcome' => $result['ai_failed'] ? 'failed' : 'ok',
+        ]);
 
         return response()->json([
             'receipt_id' => $result['receipt_id'],

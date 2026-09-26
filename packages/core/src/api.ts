@@ -159,6 +159,8 @@ export interface CreateItemInput {
   barcode_miss?: string;
   source?: "manual" | "barcode" | "receipt" | "photo" | "voice" | "chat";
   add_started_at?: string;
+  /** Receipt/photo scans: the name the scan proposed, so the server can measure how often it is edited. */
+  parsed_name?: string;
 }
 
 export interface UpdateItemInput {

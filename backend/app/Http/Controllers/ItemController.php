@@ -62,12 +62,14 @@ class ItemController extends Controller
             'suggestion_token' => ['sometimes', 'string', 'max:2048'],
             'barcode_miss' => ['sometimes', 'string', 'max:64', 'regex:/^[A-Za-z0-9-]+$/'],
             'add_started_at' => ['sometimes', 'date'],
+            'parsed_name' => ['sometimes', 'string', 'max:255'],
         ]);
 
         $suggested = ItemSuggestionToken::read($request->user(), $data['name'], $data['suggestion_token'] ?? null);
-        $itemData = array_diff_key($data, ['suggestion_token' => true, 'barcode_miss' => true, 'add_started_at' => true]);
+        $itemData = array_diff_key($data, ['suggestion_token' => true, 'barcode_miss' => true, 'add_started_at' => true, 'parsed_name' => true]);
         $item = $section->items()->create(ItemPayload::normalize($itemData));
         ItemFeedback::created($request->user(), $item, $suggested, $data['add_started_at'] ?? null);
+        ItemFeedback::scanned($request->user(), $item, $data['parsed_name'] ?? null);
         if (isset($data['barcode_miss']) && ! Product::where('barcode', $data['barcode_miss'])->exists()) {
             AlgoFeedback::record($request->user(), 'barcode', [
                 'kind' => 'miss_named', 'name' => $item->name,

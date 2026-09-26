@@ -37,6 +37,7 @@ interface InventoryContextValue {
       shelf_life_days?: number;
       suggestion_token?: string;
       barcode_miss?: string;
+      parsed_name?: string;
       source?: "manual" | "barcode" | "receipt" | "photo";
       add_started_at?: string;
     }[],
@@ -169,6 +170,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
             ...(d.expiry_date ? { expiry_date: d.expiry_date, shelf_life_days: d.shelf_life_days } : {}),
             ...(d.suggestion_token ? { suggestion_token: d.suggestion_token } : {}),
             ...(d.barcode_miss ? { barcode_miss: d.barcode_miss } : {}),
+            ...(d.parsed_name ? { parsed_name: d.parsed_name } : {}),
             ...(d.source ? { source: d.source } : {}),
             ...(d.add_started_at ? { add_started_at: d.add_started_at } : {}),
             note: "Just added",

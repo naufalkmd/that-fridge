@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Section;
 use App\Services\CreditService;
 use App\Services\PhotoService;
+use App\Support\AlgoFeedback;
 use App\Support\CreditCost;
 use Illuminate\Http\Request;
 
@@ -42,6 +43,13 @@ class PhotoController extends Controller
             // an empty detected_items list already reads as "couldn't spot any items" to them.
             $this->credits->grant($request->user(), CreditCost::PHOTO_SCAN, 'photo_scan_refund');
         }
+
+        // Denominator for kept/edited/dropped rates: how many items this scan proposed.
+        AlgoFeedback::record($request->user(), 'scan', [
+            'kind' => 'detected', 'source' => 'photo',
+            'guess_number' => count($result['detected_items']),
+            'outcome' => $result['ai_failed'] ? 'failed' : 'ok',
+        ]);
 
         return response()->json([
             'photo_scan_id' => $result['photo_scan_id'],

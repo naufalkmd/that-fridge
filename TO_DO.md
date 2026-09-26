@@ -223,8 +223,7 @@ is fixed (`a7fea71`) — the paywall works for whichever products are attached (
 
 **Algorithm insights — what's left**
 
-- [ ] **P1 signals not yet emitted:** receipt/photo scan edit stats (`parsed_name` → final name),
-  autofill per-field accept/partly/dismiss (only a per-item `autofill_used` / `no_autofill` outcome
+- [ ] **P1 signals not yet emitted:** autofill per-field accept/partly/dismiss (only a per-item `autofill_used` / `no_autofill` outcome
   is logged today, in `add_flow`), notification toggles turned off, low-stock tip shown → added to
   shopping / restock cadence.
 - [ ] **P2 signals:** recipe suggestion rank of the recipe marked made, Kitchen Lab drafting

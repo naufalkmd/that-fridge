@@ -80,6 +80,28 @@ final class ItemFeedback
         }
     }
 
+    /**
+     * Receipt/photo scans: the AI-cleaned `parsed_name` vs the name the user kept. Names are
+     * stored (normalized) only when they differ - that pair is the OCR-cleaning corpus; an
+     * unchanged name is just an "accepted" count.
+     */
+    public static function scanned(User $user, Item $item, ?string $parsedName): void
+    {
+        if ($parsedName === null || ! in_array($item->source, ['receipt', 'photo'], true)) {
+            return;
+        }
+
+        $guess = AlgoFeedback::nameKey($parsedName);
+        $final = AlgoFeedback::nameKey($item->name);
+        $changed = $guess !== $final;
+        AlgoFeedback::record($user, 'scan', [
+            'kind' => 'saved', 'name' => $item->name,
+            'class' => FoodGroupClassifier::classify($item->name, $item->icon),
+            'guess' => $changed ? $guess : null, 'final' => $changed ? $final : null,
+            'source' => $item->source, 'outcome' => $changed ? 'corrected' : 'accepted',
+        ]);
+    }
+
     public static function updated(User $user, Item $item, array $before): void
     {
         $group = FoodGroupClassifier::classifyWithSource($item->name, $item->icon);

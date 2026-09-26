@@ -353,6 +353,7 @@ function ScanFlow({
         scan.detected_items.map((d) =>
           blankDraft({
             name: d.parsed_name,
+            parsedName: d.parsed_name,
             icon: d.icon || guessFoodIcon(d.parsed_name) || "generic",
             qty: Math.max(1, d.parsed_quantity ?? 1),
             condition: d.condition ?? null,

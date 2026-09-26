@@ -13,6 +13,7 @@ use App\Services\AlgorithmInsightsReport;
 use App\Support\AlgoFeedback;
 use App\Support\ItemSuggestionToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -120,6 +121,7 @@ class AlgoFeedbackTest extends TestCase
 
     public function test_item_save_records_server_suggestion_and_one_correction_per_changed_field(): void
     {
+        $this->freezeTime(); // add_started_at is asserted as an exact number of elapsed seconds
         config(['app.algo_feedback_enabled' => true]);
         $user = User::factory()->create();
         $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
@@ -257,5 +259,39 @@ class AlgoFeedbackTest extends TestCase
         $user->save();
         $this->deleteJson("/api/items/{$plain->id}")->assertSuccessful();
         $this->assertDatabaseMissing('algo_feedback_events', ['algo' => 'expiry_alert', 'kind' => 'acted']);
+    }
+
+    public function test_scan_logs_detected_count_and_parsed_vs_kept_name(): void
+    {
+        config(['app.algo_feedback_enabled' => true, 'services.openrouter.key' => null]);
+        $user = User::factory()->create(['ai_credits' => 10]);
+        $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Home']);
+        $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'Top']);
+
+        $detected = $this->actingAs($user)->post("/api/sections/{$section->id}/items/receipt/scan", [
+            'image' => UploadedFile::fake()->image('receipt.jpg'),
+        ])->assertOk()->json('detected_items');
+        $this->assertDatabaseHas('algo_feedback_events', [
+            'algo' => 'scan', 'kind' => 'detected', 'source' => 'receipt', 'guess_number' => count($detected),
+        ]);
+
+        $this->postJson("/api/sections/{$section->id}/items", [
+            'name' => 'Milk', 'icon' => 'milk', 'source' => 'receipt', 'parsed_name' => 'Milk',
+        ])->assertCreated();
+        $this->postJson("/api/sections/{$section->id}/items", [
+            'name' => 'Full cream milk', 'icon' => 'milk', 'source' => 'receipt', 'parsed_name' => 'Milk 2L',
+        ])->assertCreated();
+        // A manual add that happens to carry parsed_name is not a scan result.
+        $this->postJson("/api/sections/{$section->id}/items", [
+            'name' => 'Tea', 'icon' => 'tea', 'source' => 'manual', 'parsed_name' => 'Tea',
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('algo_feedback_events', [
+            'algo' => 'scan', 'kind' => 'saved', 'outcome' => 'accepted', 'guess' => null,
+        ]);
+        $this->assertDatabaseHas('algo_feedback_events', [
+            'algo' => 'scan', 'kind' => 'saved', 'outcome' => 'corrected', 'guess' => 'milk l', 'final' => 'full cream milk',
+        ]);
+        $this->assertSame(2, AlgoFeedbackEvent::where('algo', 'scan')->where('kind', 'saved')->count());
     }
 }

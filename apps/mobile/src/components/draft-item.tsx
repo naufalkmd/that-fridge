@@ -95,6 +95,8 @@ export type Draft = {
     token: string;
   } | null;
   barcodeMiss?: string | null;
+  /** Receipt/photo scans: the name the scan proposed, sent back so edits to it can be measured. */
+  parsedName?: string | null;
 };
 
 export const blankDraft = (over: Partial<Draft> = {}): Draft => ({
@@ -133,6 +135,7 @@ export const toCreatePayload = (d: Draft) => ({
     : {}),
   ...(d.suggested?.name === d.name.trim() ? { suggestion_token: d.suggested.token } : {}),
   ...(d.barcodeMiss ? { barcode_miss: d.barcodeMiss } : {}),
+  ...(d.parsedName ? { parsed_name: d.parsedName } : {}),
   source: d.source,
   add_started_at: new Date(d.startedAt).toISOString(),
 });
