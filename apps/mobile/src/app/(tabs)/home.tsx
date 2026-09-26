@@ -241,7 +241,12 @@ export default function Home() {
               justifyContent: "space-between",
             }}
           >
-            <Pressable onPress={() => router.push("/profile")} hitSlop={8}>
+            <Pressable
+              onPress={() => router.push("/profile")}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Profile and settings"
+            >
               <View
                 style={{
                   height: 34,
@@ -257,6 +262,24 @@ export default function Home() {
                 <Text style={{ fontSize: 13, fontWeight: "800", color: INK }}>
                   {user?.name?.slice(0, 1).toUpperCase() ?? "?"}
                 </Text>
+              </View>
+              {/* A tiny cog on the corner says this opens your profile and settings, not just a picture. */}
+              <View
+                style={{
+                  position: "absolute",
+                  right: -4,
+                  bottom: -4,
+                  height: 16,
+                  width: 16,
+                  borderRadius: 8,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: SURFACE,
+                  borderWidth: 1.5,
+                  borderColor: CANVAS,
+                }}
+              >
+                <Ionicons name="settings-sharp" size={9} color={MUTED} />
               </View>
             </Pressable>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
