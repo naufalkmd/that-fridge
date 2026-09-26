@@ -112,11 +112,9 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   toast summary + Kitchen Score refresh, and the app following server-side Pro (admin-granted Pro), and the in-app calendar
   (phases 1-2).
   Rollback: `eas update:rollback`.
-- **Latest OTA** (group `d7911d71-c7cf-42dc-a65a-c97a73faa60b`, commit `5dac267`, API deployed): calendar delete /
-  filter dropdown / Ask Quick Chat, Meal plan without the ideas card, Privacy + Meal plan as Settings rows.
-  Not device-checked yet.
-- **Committed next, unpublished**: fridge picker on the Calendar, Autofill on Meal plan (3 credits), change a Machine's
-  fridge, Calendar + Kitchen Lab tagged NEW in Settings, Insights + Crew score screens (Settings rows), profile avatar icon.
+- **Latest OTA** (group `ab975687-731d-4089-9dd0-a850906abda1`, commit `96ac86c`, API deployed): calendar delete / filter
+  dropdown / Ask Quick Chat, Meal plan Autofill (3 credits), calendar fridge picker, change a Machine's fridge,
+  Insights + Crew score + Privacy + Meal plan + Calendar Settings rows, profile avatar icon. Not device-checked yet.
 - **Explore** (search + icon / recipe / Machine / meal-plan libraries, admin-curated, user contributions): planned in
   `EXPLORE_PLAN.md`; needs UGC moderation (App Store 1.2) before contributions, so it is post-launch.
 
