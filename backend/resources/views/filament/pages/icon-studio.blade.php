@@ -7,6 +7,40 @@
         </x-filament::button>
     </form>
 
+    @php($suggested = $this->suggestions())
+    <x-filament::section heading="Suggested by users" description="Food people added with no icon in the pack, or whose icon they had to change. Most people first. Names show once {{ \App\Services\AlgorithmInsightsReport::MIN_USERS }}+ different people hit them.">
+        @if (count($suggested['rows']) === 0)
+            <p class="text-sm text-gray-500">
+                Nothing shared by {{ \App\Services\AlgorithmInsightsReport::MIN_USERS }}+ people yet.
+                @if ($suggested['hidden'] > 0) {{ $suggested['hidden'] }} rarer {{ \Illuminate\Support\Str::plural('name', $suggested['hidden']) }} kept back. @endif
+            </p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead><tr><th class="p-2">Food</th><th class="p-2">Why</th><th class="p-2">People</th><th class="p-2">Items</th><th class="p-2">Last seen</th><th class="p-2"></th></tr></thead>
+                    <tbody>
+                    @foreach ($suggested['rows'] as $row)
+                        <tr class="border-t border-gray-200 dark:border-gray-700" wire:key="suggest-{{ $row['name_key'] }}">
+                            <td class="p-2 font-medium">{{ $row['name_key'] }}</td>
+                            <td class="p-2">
+                                {{ $row['reason'] }}
+                                @if ($row['picked'])<span class="text-xs text-gray-500">(people picked {{ $row['picked'] }})</span>@endif
+                            </td>
+                            <td class="p-2">{{ $row['users'] }}</td>
+                            <td class="p-2">{{ $row['items'] }}</td>
+                            <td class="p-2">{{ \Illuminate\Support\Carbon::parse($row['last_seen'])->diffForHumans() }}</td>
+                            <td class="p-2"><x-filament::button size="xs" wire:click="useSuggestion(@js($row['name_key']))">Use</x-filament::button></td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @if ($suggested['hidden'] > 0)
+                <p class="mt-2 text-xs text-gray-500">{{ $suggested['hidden'] }} rarer {{ \Illuminate\Support\Str::plural('name', $suggested['hidden']) }} (fewer than {{ \App\Services\AlgorithmInsightsReport::MIN_USERS }} people) kept back.</p>
+            @endif
+        @endif
+    </x-filament::section>
+
     <x-filament::section heading="Your recent icons" description="Not in the pack yet. Add the good ones; discard the rest. Icons already in the pack live under Content → Shared icon pack.">
         <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             @forelse ($this->recent() as $icon)

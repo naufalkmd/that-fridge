@@ -2,13 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\IconStudio;
 use App\Models\AlgoFeedbackEvent;
 use App\Models\Fridge;
+use App\Models\Item;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\AlgorithmInsightsReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class IconMissesTest extends TestCase
@@ -70,5 +73,48 @@ class IconMissesTest extends TestCase
             ->assertSee('icon-studio?prompt=rambutan', false);
 
         $this->actingAs($admin, 'web')->get('/admin/icon-studio?prompt=rambutan')->assertOk()->assertSee('rambutan');
+    }
+
+    public function test_changing_the_icon_the_app_chose_records_a_mismatch_with_the_name(): void
+    {
+        $user = User::factory()->create();
+        $this->addItem($user, 'Cheddar', 'cheese');
+        $item = Item::where('name', 'Cheddar')->firstOrFail();
+
+        $this->actingAs($user)->patchJson("/api/items/{$item->id}", ['icon' => 'icon5'])->assertOk();
+
+        $this->assertDatabaseHas('algo_feedback_events', [
+            'algo' => 'icon', 'kind' => 'mismatch', 'name_key' => 'cheddar', 'guess' => 'cheese', 'final' => 'icon5', 'source' => 'user_edit',
+        ]);
+    }
+
+    public function test_picking_a_different_icon_when_adding_also_counts(): void
+    {
+        $user = User::factory()->create();
+
+        $this->addItem($user, 'Cheddar', 'icon5'); // the app would have shown the cheese icon
+
+        $this->assertDatabaseHas('algo_feedback_events', ['kind' => 'mismatch', 'name_key' => 'cheddar', 'guess' => 'cheese', 'final' => 'icon5', 'source' => 'on_add']);
+    }
+
+    public function test_icon_studio_suggests_names_people_could_not_get_right_and_fills_the_prompt(): void
+    {
+        foreach (range(1, 3) as $i) {
+            $this->addItem(User::factory()->create(), 'Rambutan');
+            $this->addItem(User::factory()->create(), 'Cheddar', 'icon5');
+        }
+        $admin = User::factory()->create(['email' => 'admin@example.com']);
+
+        $s = app(AlgorithmInsightsReport::class)->iconSuggestions();
+        $byName = collect($s['rows'])->keyBy('name_key');
+        $this->assertSame('No icon', $byName['rambutan']['reason']);
+        $this->assertSame('Wrong icon', $byName['cheddar']['reason']);
+        $this->assertSame('icon5', $byName['cheddar']['picked']);
+
+        $this->actingAs($admin, 'web')->get('/admin/icon-studio')->assertOk()->assertSee('Suggested by users')->assertSee('rambutan');
+
+        Livewire::actingAs($admin)->test(IconStudio::class)
+            ->call('useSuggestion', 'rambutan')
+            ->assertSet('data.prompt', 'rambutan');
     }
 }

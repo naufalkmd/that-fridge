@@ -1,9 +1,3 @@
-export interface IconData {
-  cells: (string | null)[];
-  cols: number;
-  rows: number;
-}
-
 export type StorageLocation = "fridge" | "freezer" | "pantry";
 
 // Metric mass/volume plus imperial - covers a block of cheese in grams and a carton of milk

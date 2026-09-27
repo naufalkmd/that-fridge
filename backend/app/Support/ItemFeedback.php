@@ -16,6 +16,7 @@ final class ItemFeedback
         return [
             'nutrition_category' => $item->nutrition_category,
             'icon' => $item->icon,
+            'icon_url' => $item->icon_url,
             'location' => $item->location,
             'shelf_life_days' => $item->shelf_life_days,
             'expiry_date' => $item->expiry_date?->toDateString(),
@@ -71,6 +72,8 @@ final class ItemFeedback
                 'kind' => 'miss', 'name' => $item->name, 'class' => null,
                 'source' => $item->icon_url ? 'generated' : 'generic',
             ]);
+        } elseif ($iconGuess !== null && $iconFinal !== null && $iconFinal !== 'generic' && $iconFinal !== $iconGuess) {
+            self::iconMismatch($user, $item->name, $iconGuess, $iconFinal, 'on_add');
         }
 
         if (isset($suggested['suggested_shelf_life_days'])) {
@@ -219,6 +222,14 @@ final class ItemFeedback
             ]);
         }
 
+        // The icon the app showed wasn't right: the user picked another pack icon, or made their own.
+        if ($before['icon'] !== $item->icon && self::safeIcon($item->icon) !== null && $item->icon !== 'generic') {
+            self::iconMismatch($user, $item->name, self::safeIcon($before['icon']), self::safeIcon($item->icon), 'user_edit');
+        }
+        if (($before['icon_url'] ?? null) === null && $item->icon_url) {
+            AlgoFeedback::record($user, 'icon', ['kind' => 'miss', 'name' => $item->name, 'class' => null, 'source' => 'generated']);
+        }
+
         if ($before['shelf_life_days'] !== $item->shelf_life_days ||
             $before['expiry_date'] !== $item->expiry_date?->toDateString()) {
             AlgoFeedback::record($user, 'shelf_life', [
@@ -256,6 +267,19 @@ final class ItemFeedback
                 'source' => 'user', 'outcome' => 'corrected',
             ]);
         }
+    }
+
+    /**
+     * The app's icon for this name was wrong. Recorded with no class so the name is kept (the
+     * general `icon` events drop it whenever the food group is known) - it feeds Icon Studio's
+     * suggestions, under the MIN_USERS rule like every other name on the admin pages.
+     */
+    private static function iconMismatch(User $user, string $name, ?string $shown, ?string $picked, string $source): void
+    {
+        AlgoFeedback::record($user, 'icon', [
+            'kind' => 'mismatch', 'name' => $name, 'class' => null,
+            'guess' => $shown, 'final' => $picked, 'source' => $source,
+        ]);
     }
 
     private static function safeIcon(?string $icon): ?string

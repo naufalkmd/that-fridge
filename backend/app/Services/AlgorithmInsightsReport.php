@@ -282,6 +282,58 @@ final class AlgorithmInsightsReport
         return ['rows' => $rows, 'hidden' => max(0, $allNames - count($rows))];
     }
 
+    /**
+     * What Icon Studio should draw next: names people added with no pack icon ("No icon") or
+     * whose icon they had to change ("Wrong icon", with what they picked instead), most people
+     * first. Same MIN_USERS rule as the rest of the admin; `hidden` counts the rarer names.
+     *
+     * @return array{rows: list<array{name_key: string, reason: string, items: int, users: int, picked: ?string, last_seen: string}>, hidden: int}
+     */
+    public function iconSuggestions(int $days = 180): array
+    {
+        $base = AlgoFeedbackEvent::query()
+            ->where('algo', 'icon')
+            ->whereIn('kind', ['miss', 'mismatch'])
+            ->where('occurred_at', '>=', now()->subDays($days))
+            ->whereNotNull('name_key');
+
+        $names = (clone $base)
+            ->select('name_key')
+            ->selectRaw("count(*) as items, count(distinct user_id) as users, sum(case when kind = 'miss' then 1 else 0 end) as misses, max(occurred_at) as last_seen")
+            ->groupBy('name_key')
+            ->havingRaw('count(distinct user_id) >= ?', [self::MIN_USERS])
+            ->orderByDesc('users')
+            ->orderByDesc('items')
+            ->limit(60)
+            ->get();
+
+        // For "Wrong icon" names: the icon people chose most often instead.
+        $picks = (clone $base)
+            ->where('kind', 'mismatch')
+            ->whereIn('name_key', $names->pluck('name_key'))
+            ->whereNotNull('final')
+            ->select(['name_key', 'final'])
+            ->selectRaw('count(*) as n')
+            ->groupBy('name_key', 'final')
+            ->get()
+            ->sortByDesc('n')
+            ->unique('name_key')
+            ->keyBy('name_key');
+
+        $rows = $names->map(fn ($r) => [
+            'name_key' => (string) $r->name_key,
+            'reason' => (int) $r->misses >= (int) $r->items - (int) $r->misses ? 'No icon' : 'Wrong icon',
+            'items' => (int) $r->items,
+            'users' => (int) $r->users,
+            'picked' => $picks->get($r->name_key)?->final,
+            'last_seen' => (string) $r->last_seen,
+        ])->values()->all();
+
+        $allNames = (clone $base)->distinct()->count('name_key');
+
+        return ['rows' => $rows, 'hidden' => max(0, $allNames - count($rows))];
+    }
+
     public function iconRequests(int $days = 180): array
     {
         return GeneratedIcon::query()

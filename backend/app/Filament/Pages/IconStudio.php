@@ -4,8 +4,10 @@ namespace App\Filament\Pages;
 
 use App\Models\AdminAuditLog;
 use App\Models\GeneratedIcon;
+use App\Services\AlgorithmInsightsReport;
 use App\Services\IconCurator;
 use App\Services\IconGenerationService;
+use App\Support\AdminCacheKeys;
 use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -14,6 +16,7 @@ use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -65,6 +68,19 @@ class IconStudio extends Page implements HasForms
                 ->helperText('One item, described simply. The pixel-art style is added for you.')
                 ->required()->maxLength(80),
         ]);
+    }
+
+    /** Names users couldn't get a right icon for - see AlgorithmInsightsReport::iconSuggestions. */
+    public function suggestions(): array
+    {
+        return Cache::flexible(AdminCacheKeys::ICON_SUGGESTIONS, AdminCacheKeys::DASHBOARD_TTL,
+            fn () => app(AlgorithmInsightsReport::class)->iconSuggestions());
+    }
+
+    /** Put a suggested name in the prompt, ready to generate. */
+    public function useSuggestion(string $name): void
+    {
+        $this->form->fill(['prompt' => mb_substr(trim($name), 0, 80)]);
     }
 
     public function generate(): void
