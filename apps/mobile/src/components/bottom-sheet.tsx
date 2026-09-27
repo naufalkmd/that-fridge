@@ -32,11 +32,14 @@ export function BottomSheet({
   onClose,
   children,
   maxHeight,
+  dim = 0.55,
 }: {
   visible: boolean;
   onClose: () => void;
   children: React.ReactNode;
   maxHeight?: number;
+  /** Backdrop darkness, 0-1. Lower keeps the screen behind readable. */
+  dim?: number;
 }) {
   const translateY = useSharedValue(0);
   const { surface: SURFACE, hairline: HAIRLINE } = useTheme().colors;
@@ -87,7 +90,7 @@ export function BottomSheet({
           flex: 1,
           justifyContent: "flex-end",
           paddingBottom: keyboard,
-          backgroundColor: "rgba(0,0,0,0.55)",
+          backgroundColor: `rgba(0,0,0,${dim})`,
         }}
       >
         <Animated.View style={[containerStyle, sheetStyle]}>

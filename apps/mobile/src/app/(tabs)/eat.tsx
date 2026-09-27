@@ -56,6 +56,14 @@ import { FridgeScopePicker } from "@/components/fridge-scope";
 import { FoodIcon } from "@/components/food-icon";
 import { MarkdownText } from "@/components/markdown-text";
 import { FridgeNotes } from "@/components/home/FridgeNotes";
+import { MissionSheet, type Outcome } from "@/components/crew/MissionSheet";
+import {
+  chefTasks,
+  guardianTasks,
+  organizerTasks,
+  shopkeeperTasks,
+  type MissionTask,
+} from "@/lib/missions";
 
 const GIFS = {
   chef: require("../../../assets/images/thatfridge/chef.gif"),
@@ -109,6 +117,17 @@ function tabColors(colors: ThemeColors): Record<Tab, string> {
 }
 
 const insightOverride = new Map<ChatAgentName, string>();
+
+/** The score each crew member looks after, as named in its mission sheet. */
+const SCORE_LABEL: Record<Tab, string> = {
+  recipes: "Food Balance",
+  shopping: "Shopkeeper",
+  guardian: "Waste Saver",
+  organizer: "Organizer",
+};
+
+/** A mission as started: the task list is fixed then (so cards don't reshuffle as data changes). */
+type Mission = { tasks: MissionTask[]; done: Record<string, Outcome>; startScore: number | null };
 
 // Each crew tab is one agent's home, so it shows that agent's Kitchen Score — mirrors
 // apps/web SCORE_COMPUTE_BY_TAB in FoodHubScreen.
@@ -398,9 +417,68 @@ export default function Crew() {
     } finally {
       setActivating(false);
     }
-    // With the switch on, Activate also offers to check where things are stored (it asks about the credits first).
-    if (tab === "organizer" && organizerAuto) sweep.start(scoped);
   }
+
+  // ---- missions ----
+  const [missions, setMissions] = useState<Partial<Record<Tab, Mission>>>({});
+  const [missionOpen, setMissionOpen] = useState(false);
+
+  const buildTasks = (t: Tab): MissionTask[] =>
+    t === "guardian"
+      ? guardianTasks(scoped, recipes)
+      : t === "recipes"
+        ? chefTasks(scoped, recipes)
+        : t === "shopping"
+          ? shopkeeperTasks(scoped, shoppingItems, usageHistory, recs)
+          : organizerTasks(scoped, sweep.status !== "idle");
+  const preview = useMemo(
+    () => buildTasks(tab),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tab, scoped, recipes, shoppingItems, usageHistory, recs, sweep.status],
+  );
+  const mission = missions[tab];
+  const missionLeft = mission ? mission.tasks.filter((t) => !mission.done[t.id]).length : 0;
+  const missionDone = mission !== undefined && mission.tasks.length > 0 && missionLeft === 0;
+
+  function startMission() {
+    void Haptics.selectionAsync();
+    if (!mission || missionDone) {
+      setMissions((prev) => ({ ...prev, [tab]: { tasks: buildTasks(tab), done: {}, startScore: score.score } }));
+      // With the switch on, Organizer's mission opens with the storage check (it asks about the credits first).
+      if (tab === "organizer" && organizerAuto && sweep.status === "idle") sweep.start(scoped);
+    }
+    setMissionOpen(true);
+  }
+
+  function recordOutcome(taskId: string, outcome: Outcome) {
+    setMissions((prev) => {
+      const m = prev[tab];
+      return m ? { ...prev, [tab]: { ...m, done: { ...m.done, [taskId]: outcome } } } : prev;
+    });
+  }
+
+  // Organizer: moves found by the storage check join its mission as tasks, and the check itself
+  // counts as done once it has reported back.
+  useEffect(() => {
+    setMissions((prev) => {
+      const m = prev.organizer;
+      if (!m) return prev;
+      const ids = new Set(m.tasks.map((t) => t.id));
+      const added: MissionTask[] = sweep.moves
+        .filter((mv) => !ids.has(`move-${mv.id}`))
+        .map((mv) => ({ kind: "move", id: `move-${mv.id}`, move: mv }));
+      const checkDone = sweep.status === "done" && ids.has("check-storage") && !m.done["check-storage"];
+      if (added.length === 0 && !checkDone) return prev;
+      return {
+        ...prev,
+        organizer: {
+          ...m,
+          tasks: [...m.tasks, ...added],
+          done: checkDone ? { ...m.done, "check-storage": "checked" } : m.done,
+        },
+      };
+    });
+  }, [sweep.moves, sweep.status]);
 
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
@@ -526,7 +604,8 @@ export default function Crew() {
             </View>
 
             <Pressable
-              onPress={activating ? undefined : activate}
+              onPress={startMission}
+              accessibilityLabel={`${meta.agent}'s mission`}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -534,27 +613,41 @@ export default function Crew() {
                 gap: 6,
                 paddingVertical: 8,
                 borderCurve: "continuous", borderRadius: 8,
-                backgroundColor: shownInsight ? `${tabColor}22` : tabColor,
-                opacity: activating ? 0.6 : 1,
+                backgroundColor: missionDone ? `${tabColor}22` : tabColor,
+                overflow: "hidden",
               }}
             >
+              {mission && !missionDone && (
+                <View
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    bottom: 0,
+                    height: 3,
+                    width: `${((mission.tasks.length - missionLeft) / Math.max(1, mission.tasks.length)) * 100}%`,
+                    backgroundColor: "rgba(0,0,0,0.35)",
+                  }}
+                />
+              )}
               <MaterialCommunityIcons
-                name={shownInsight ? "refresh" : "auto-fix"}
-                size={13}
-                color={shownInsight ? tabColor : CANVAS}
+                name={missionDone ? "check-circle" : mission ? "play" : "play-circle"}
+                size={14}
+                color={missionDone ? tabColor : CANVAS}
               />
               <Text
                 style={{
                   fontSize: 12,
                   fontWeight: "700",
-                  color: shownInsight ? tabColor : CANVAS,
+                  color: missionDone ? tabColor : CANVAS,
                 }}
               >
-                {activating
-                  ? "Thinking…"
-                  : shownInsight
-                    ? "Refresh insight"
-                    : `Activate ${meta.agent}`}
+                {missionDone
+                  ? "Mission done · New mission"
+                  : mission
+                    ? `Continue · ${mission.tasks.length - missionLeft} of ${mission.tasks.length}`
+                    : preview.length > 0
+                      ? `Start mission · ${preview.length}`
+                      : "All clear · Check in"}
               </Text>
             </Pressable>
 
@@ -583,72 +676,11 @@ export default function Crew() {
                 <Text style={{ fontSize: 11, color: FAINT }}>
                   {sweep.status === "checking"
                     ? `Checking ${sweep.batchSize} items…`
-                    : `When on, Activate also checks up to ${SWEEP_BATCH} items (asks first · ${SWEEP_COST_PER_ITEM} credit each).`}
+                    : `When on, a mission starts by checking up to ${SWEEP_BATCH} items (asks first · ${SWEEP_COST_PER_ITEM} credit each).`}
                 </Text>
               </View>
             )}
 
-            {tab === "organizer" &&
-              sweep.moves.map((mv) => {
-                const label = locationLabel(mv.to);
-                return (
-                  <View
-                    key={mv.id}
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                      backgroundColor: `${tabColor}0f`,
-                      borderCurve: "continuous", borderRadius: 8,
-                      paddingVertical: 7,
-                      paddingLeft: 10,
-                      paddingRight: 6,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        flex: 1,
-                        fontSize: 11.5,
-                        lineHeight: 15,
-                        color: INK,
-                      }}
-                    >
-                      Move{" "}
-                      <Text style={{ fontWeight: "700" }}>{mv.name}</Text>{" "}
-                      to {label}
-                    </Text>
-                    <Pressable
-                      onPress={() => {
-                        void Haptics.selectionAsync();
-                        void sweep.apply(mv);
-                      }}
-                      style={{
-                        paddingVertical: 5,
-                        paddingHorizontal: 9,
-                        borderCurve: "continuous", borderRadius: 8,
-                        backgroundColor: SURFACE,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          fontWeight: "700",
-                          color: tabColor,
-                        }}
-                      >
-                        Apply
-                      </Text>
-                    </Pressable>
-                    <Pressable onPress={() => sweep.dismiss(mv.id)} hitSlop={6}>
-                      <MaterialCommunityIcons
-                        name="close"
-                        size={13}
-                        color={FAINT}
-                      />
-                    </Pressable>
-                  </View>
-                );
-              })}
           </View>
         </View>
 
@@ -727,6 +759,31 @@ export default function Crew() {
           <MaterialCommunityIcons name="calendar-check" size={22} color={CANVAS} />
         </Pressable>
       )}
+      <MissionSheet
+        visible={missionOpen}
+        onClose={() => setMissionOpen(false)}
+        agent={meta.agent}
+        color={tabColor}
+        gif={meta.gif}
+        scoreLabel={SCORE_LABEL[tab]}
+        score={score.score}
+        startScore={mission?.startScore ?? null}
+        tasks={mission?.tasks ?? []}
+        done={mission?.done ?? {}}
+        onOutcome={recordOutcome}
+        storage={{
+          checking: sweep.status === "checking",
+          start: () => sweep.start(scoped),
+          apply: async (id) => {
+            const mv = sweep.moves.find((m) => m.id === id);
+            if (mv) await sweep.apply(mv);
+          },
+          dismiss: sweep.dismiss,
+        }}
+        onAskTip={() => void activate()}
+        tip={shownInsight}
+        tipBusy={activating}
+      />
     </SafeAreaView>
   );
 }
