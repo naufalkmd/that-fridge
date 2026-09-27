@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { describeError, getOverallScore, getScoreTrend, kitchenScoreResults, type CalendarEntry, type KitchenScoreResult } from "@thatfridge/core";
 import { api } from "@/lib/api";
@@ -18,12 +18,15 @@ import { scopeItems, useScope } from "@/lib/scope";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 import { getDeviceTimezone } from "@/lib/timezone";
 import { useKitchenScoreInput } from "@/lib/useKitchenScoreInput";
+import { PixelText } from "@/components/brand";
 import { FoodIcon } from "@/components/food-icon";
 import { FridgeScopePicker } from "@/components/fridge-scope";
 import { ColumnChart, Legend, MeterRow, ScoreRing } from "@/components/insights/charts";
-import { PageHeader, Skeleton } from "@/components/ui";
+import { Skeleton } from "@/components/ui";
 
 const WEEKS = 4;
+// Usage history is per person and all-time (GET /usage-history), not per fridge, so the fridge picker doesn't narrow it.
+const USAGE_NOTE = "From everything you've used, in all your fridges";
 
 const AGENTS: Record<KitchenScoreResult["key"], { name: string; color: keyof ThemeColors }> = {
   waste: { name: "Guardian", color: "agentGuardian" },
@@ -103,9 +106,23 @@ export default function Insights() {
 
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-      <PageHeader title="Insights" subtitle="How your kitchen is doing" />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48, gap: 14 }}>
-        <FridgeScopePicker />
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 48, gap: 22 }}>
+        <View style={{ gap: 14 }}>
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+            style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2 }}
+          >
+            <Ionicons name="chevron-back" size={18} color={colors.ink} />
+          </Pressable>
+          <View style={{ gap: 4 }}>
+            <PixelText style={{ fontSize: 22, color: colors.ink }}>Insights</PixelText>
+            <Text style={{ fontSize: 12.5, color: colors.muted }}>How your kitchen is doing</Text>
+          </View>
+          <FridgeScopePicker />
+        </View>
 
         {error && (
           <Pressable onPress={() => setReload((n) => n + 1)}>
@@ -113,13 +130,13 @@ export default function Insights() {
           </Pressable>
         )}
 
-        {/* Score: one number, then one bar per crew member. Tap a bar for the why. */}
-        <Card>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 18 }}>
+        {/* Score: one number and a word for it, with a faint accent wash like the Home score card. */}
+        <Card tint>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
             <ScoreRing score={overall} color={bandColor} />
-            <View style={{ flex: 1, gap: 6 }}>
-              <Text style={{ fontSize: 22, fontWeight: "800", color: overall === null ? colors.muted : bandColor }}>{band.label}</Text>
-              <Text style={{ fontSize: 12.5, lineHeight: 18, color: colors.muted }}>
+            <View style={{ flex: 1, gap: 5 }}>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: overall === null ? colors.muted : bandColor }}>{band.label}</Text>
+              <Text style={{ fontSize: 12, lineHeight: 17, color: colors.muted }}>
                 {overall === null
                   ? "Keep using ThatFridge and your score appears here."
                   : wasteTrend && wasteTrend.delta !== 0
@@ -127,31 +144,31 @@ export default function Insights() {
                     : `Your kitchen score, from ${scored === 4 ? "the whole crew" : `${scored} of 4 crew members`}.`}
               </Text>
               {(user?.streak ?? 0) > 0 && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <MaterialCommunityIcons name="fire" size={14} color={colors.accent} />
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.accent }}>{user!.streak}-day streak</Text>
-                </View>
+                <Text style={{ fontSize: 11.5, fontWeight: "600", color: colors.accent }}>{user!.streak}-day streak</Text>
               )}
             </View>
           </View>
+        </Card>
 
-          <View style={{ gap: 4, marginTop: 16 }}>
-            {results.map((r) => {
+        {/* One bar per crew member. Tap a bar for the why. */}
+        <Section title="Your crew">
+          <Card padded={false}>
+            {results.map((r, i) => {
               const agent = AGENTS[r.key];
               const open = openAgent === r.key;
               return (
-                <View key={r.key}>
+                <View key={r.key} style={{ borderBottomWidth: i === results.length - 1 ? 0 : 1, borderBottomColor: colors.hairline }}>
                   <Pressable
                     onPress={() => setOpenAgent(open ? null : r.key)}
                     accessibilityRole="button"
                     accessibilityLabel={`${agent.name}, ${r.score ?? "no score yet"}`}
                     accessibilityState={{ expanded: open }}
-                    style={{ paddingVertical: 8 }}
+                    style={{ paddingVertical: 12, paddingHorizontal: 14 }}
                   >
-                    <MeterRow label={agent.name} value={r.score ?? 0} color={colors[agent.color]} right={r.score === null ? "–" : String(r.score)} muted={r.score === null} />
+                    <MeterRow label={agent.name} dot={colors[agent.color]} value={r.score ?? 0} color={colors[agent.color]} right={r.score === null ? "–" : String(r.score)} muted={r.score === null} />
                   </Pressable>
                   {open && (
-                    <View style={{ marginLeft: 96, marginBottom: 6, gap: 2 }}>
+                    <View style={{ marginLeft: 112, marginRight: 14, marginTop: -4, marginBottom: 12, gap: 2 }}>
                       <Text style={{ fontSize: 12.5, fontWeight: "700", color: colors.ink }}>{r.headline}</Text>
                       <Text style={{ fontSize: 12, lineHeight: 17, color: colors.muted }}>{r.detail}</Text>
                     </View>
@@ -159,38 +176,41 @@ export default function Insights() {
                 </View>
               );
             })}
-          </View>
-        </Card>
+          </Card>
+        </Section>
 
-        <Card title="Right now">
-          {scoped.length === 0 ? (
-            <Empty>Nothing in the fridge yet.</Empty>
-          ) : soon + overdue === 0 ? (
-            <Row icon="check-circle-outline" color={colors.good}>Nothing is close to its date. Nice.</Row>
-          ) : (
-            <View style={{ gap: 8 }}>
-              {overdue > 0 && (
-                <Row icon="alert-circle-outline" color={colors.bad}>
-                  {overdue} item{overdue === 1 ? " is" : "s are"} past {overdue === 1 ? "its" : "their"} date
-                </Row>
-              )}
-              {soon > 0 && (
-                <Row icon="clock-alert-outline" color={colors.warn}>
-                  {soon} item{soon === 1 ? "" : "s"} to use in the next 3 days
-                </Row>
-              )}
-            </View>
-          )}
-        </Card>
+        <Section title="Right now">
+          <Card>
+            {scoped.length === 0 ? (
+              <Empty>Nothing in the fridge yet.</Empty>
+            ) : soon + overdue === 0 ? (
+              <Row color={colors.good}>Nothing is close to its date. Nice.</Row>
+            ) : (
+              <View style={{ gap: 10 }}>
+                {overdue > 0 && (
+                  <Row color={colors.bad}>
+                    {overdue} item{overdue === 1 ? " is" : "s are"} past {overdue === 1 ? "its" : "their"} date
+                  </Row>
+                )}
+                {soon > 0 && (
+                  <Row color={colors.warn}>
+                    {soon} item{soon === 1 ? "" : "s"} to use in the next 3 days
+                  </Row>
+                )}
+              </View>
+            )}
+          </Card>
+        </Section>
 
-        <Card title="Waste">
+        <Section title={`Waste · last ${WEEKS} weeks`}>
+          <Card>
           {loading ? (
             <ChartSkeleton />
           ) : wasteHeadline(waste) === null ? (
             <Empty>Nothing used up or thrown out yet. Remove items as you finish them and this fills in.</Empty>
           ) : (
             <>
-              <Text style={{ fontSize: 14.5, lineHeight: 21, color: colors.ink, marginBottom: 14 }}>{wasteHeadline(waste)}</Text>
+              <Text style={{ fontSize: 13, lineHeight: 19, color: colors.ink, marginBottom: 14 }}>{wasteHeadline(waste)}</Text>
               <ColumnChart
                 columns={waste.weeks.map((w, i) => ({
                   key: w.start,
@@ -202,9 +222,11 @@ export default function Insights() {
               <Legend items={[{ label: "Used up", color: colors.good }, { label: "Thrown out", color: colors.bad }]} />
             </>
           )}
-        </Card>
+          </Card>
+        </Section>
 
-        <Card title="Calories this week">
+        <Section title="Calories this week">
+          <Card>
           {loading ? (
             <ChartSkeleton />
           ) : kcal === null ? (
@@ -212,8 +234,10 @@ export default function Insights() {
           ) : (
             <>
               <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, marginBottom: 14 }}>
-                <Text style={{ fontSize: 28, fontWeight: "800", color: colors.ink }}>≈ {kcal.value.toLocaleString()}</Text>
-                <Text style={{ flex: 1, fontSize: 12.5, color: colors.muted }}>{kcal.caption}</Text>
+                <Text style={{ fontSize: 16, color: colors.ink }}>
+                  ≈ <Text style={{ fontFamily: "PixelMix", fontSize: 18, letterSpacing: 0.5 }}>{kcal.value.toLocaleString()}</Text>
+                </Text>
+                <Text style={{ flex: 1, fontSize: 11.5, color: colors.muted }}>{kcal.caption}</Text>
               </View>
               <ColumnChart
                 columns={calories.days.map((d) => ({
@@ -232,11 +256,13 @@ export default function Insights() {
             </>
           )}
           <Pressable onPress={() => router.push("/meal-plan")} hitSlop={8} style={{ marginTop: 12, alignSelf: "flex-start" }}>
-            <Text style={{ fontSize: 12.5, fontWeight: "700", color: colors.accent }}>Open the meal plan ›</Text>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: colors.accent }}>Open the meal plan ›</Text>
           </Pressable>
-        </Card>
+          </Card>
+        </Section>
 
-        <Card title="Food groups">
+        <Section title="Food groups" note={USAGE_NOTE}>
+          <Card>
           {coreGroups.length === 0 ? (
             <Empty>Use up a few items and we&apos;ll show which food groups you eat from.</Empty>
           ) : (
@@ -246,31 +272,36 @@ export default function Insights() {
                   <MeterRow key={g.key} label={g.label} value={(g.percent / groupMax) * 100} color={colors.accent} muted={g.count === 0} />
                 ))}
               </View>
-              {balanceHint(groups) && <Text style={{ fontSize: 12.5, lineHeight: 18, color: colors.muted, marginTop: 14 }}>{balanceHint(groups)}</Text>}
+              {balanceHint(groups) && <Text style={{ fontSize: 12, lineHeight: 17, color: colors.muted, marginTop: 14 }}>{balanceHint(groups)}</Text>}
             </>
           )}
-        </Card>
+          </Card>
+        </Section>
 
         {(favourites.length > 0 || freshness !== null) && (
-          <Card title="Habits">
+          <Section title="Habits" note={USAGE_NOTE}>
+            <Card>
             {freshness !== null && (
               <View style={{ marginBottom: favourites.length > 0 ? 16 : 0 }}>
                 <MeterRow label="Freshness" value={freshness} color={colors.good} right={`${freshness}%`} />
-                <Text style={{ fontSize: 11.5, color: colors.faint, marginTop: 6 }}>How fresh things are when you use them.</Text>
+                <Text style={{ fontSize: 11, color: colors.faint, marginTop: 6 }}>How fresh things are when you use them.</Text>
               </View>
             )}
             {favourites.length > 0 && (
-              <View style={{ gap: 10 }}>
-                <Text style={{ fontSize: 12, fontWeight: "700", color: colors.faint }}>You use these most</Text>
+              <View style={{ gap: 8 }}>
+                <Text style={{ fontSize: 11.5, fontWeight: "600", color: colors.muted }}>You use these most</Text>
                 {favourites.map((u) => (
                   <View key={u.id} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                    <FoodIcon icon={u.icon} name={u.name} size={26} />
-                    <Text style={{ flex: 1, fontSize: 14, color: colors.ink }}>{u.name}</Text>
+                    <View style={{ width: 30, height: 30, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2 }}>
+                      <FoodIcon icon={u.icon} name={u.name} size={24} />
+                    </View>
+                    <Text style={{ flex: 1, fontSize: 13, color: colors.ink }}>{u.name}</Text>
                   </View>
                 ))}
               </View>
             )}
-          </Card>
+            </Card>
+          </Section>
         )}
 
         {truncated && (
@@ -283,38 +314,53 @@ export default function Insights() {
   );
 }
 
-function Card({ title, children }: { title?: string; children: React.ReactNode }) {
+/** A small uppercase label over its card (the text keeps its case; the style upper-cases it). */
+function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   const { colors } = useTheme();
   return (
-    <View style={{ padding: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}>
-      {title && <Text style={{ fontSize: 13.5, fontWeight: "800", color: colors.ink, marginBottom: 12 }}>{title}</Text>}
+    <View style={{ gap: 8 }}>
+      <View style={{ gap: 3 }}>
+        <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 1.5, textTransform: "uppercase", color: colors.muted }}>{title}</Text>
+        {note && <Text style={{ fontSize: 11, color: colors.faint }}>{note}</Text>}
+      </View>
       {children}
     </View>
   );
 }
 
-function Row({ icon, color, children }: { icon: string; color: string; children: React.ReactNode }) {
+function Card({ children, tint, padded = true }: { children: React.ReactNode; tint?: boolean; padded?: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ padding: padded ? 14 : 0, borderRadius: 18, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, overflow: "hidden" }}>
+      {tint && <View style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: "60%", backgroundColor: `${colors.accent}12` }} />}
+      {children}
+    </View>
+  );
+}
+
+/** A sentence with a small coloured square for how urgent it is. */
+function Row({ color, children }: { color: string; children: React.ReactNode }) {
   const { colors } = useTheme();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-      <MaterialCommunityIcons name={icon as never} size={18} color={color} />
-      <Text style={{ flex: 1, fontSize: 14, color: colors.ink }}>{children}</Text>
+      <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: color }} />
+      <Text style={{ flex: 1, fontSize: 13, color: colors.ink }}>{children}</Text>
     </View>
   );
 }
 
 function Empty({ children }: { children: string }) {
   const { colors } = useTheme();
-  return <Text style={{ fontSize: 12.5, lineHeight: 18, color: colors.muted }}>{children}</Text>;
+  return <Text style={{ fontSize: 12, lineHeight: 17, color: colors.muted }}>{children}</Text>;
 }
 
 /** Placeholder columns while a chart's numbers load. */
 function ChartSkeleton() {
   return (
-    <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-end", height: 110 }}>
+    <View style={{ flexDirection: "row", gap: 6, alignItems: "flex-end", height: 100 }}>
       {[60, 90, 45, 75].map((h, i) => (
         <View key={i} style={{ flex: 1, alignItems: "center" }}>
-          <Skeleton width="62%" height={h} radius={6} />
+          <Skeleton width={18} height={h} radius={2} />
         </View>
       ))}
     </View>
