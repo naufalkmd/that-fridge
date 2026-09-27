@@ -310,6 +310,8 @@ export interface ScanDetectedItem {
   /** Fridge-photo scans only: where the item is, as [ymin, xmin, ymax, xmax] in 0-1000 of the
    *  photo. null when the model couldn't place it. */
   box?: [number, number, number, number] | null;
+  /** Fridge-photo scans only: where the item is normally kept once put away. */
+  storage?: "fridge" | "freezer" | "pantry" | null;
 }
 
 export interface ScanResult {
@@ -317,6 +319,8 @@ export interface ScanResult {
   file_url: string;
   detected_items: ScanDetectedItem[];
   message: string;
+  /** Fridge-photo scans only: what the photo shows, null when unsure. */
+  scene?: "fridge" | "freezer" | "pantry" | "counter" | "unclear" | null;
 }
 
 /** What a generated image is for. All kinds share one weekly free budget (see generateIcon). */

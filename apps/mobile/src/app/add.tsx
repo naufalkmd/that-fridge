@@ -41,7 +41,7 @@ import {
 
 const isExpoGo = Constants.appOwnership === "expo";
 
-type Method = "sweep" | "receipt" | "barcode" | "photo" | "manual";
+type Method = "sweep" | "receipt" | "barcode" | "manual";
 const METHODS: {
   key: Method;
   title: string;
@@ -54,11 +54,12 @@ const METHODS: {
 }[] = [
   {
     key: "sweep",
-    title: "Sweep your fridge",
-    desc: "Shoot it shelf by shelf and log everything at once",
+    // Named as in the store listing and ads; it now covers freezer, pantry and grocery hauls too.
+    title: "Photo of fridge",
+    desc: "Fridge, freezer, pantry or a grocery haul",
     icon: "line-scan",
     credits: 3,
-    creditsLabel: "3 CREDITS / SHELF",
+    creditsLabel: "3 CREDITS / PHOTO",
   },
   {
     key: "receipt",
@@ -72,13 +73,6 @@ const METHODS: {
     title: "Scan barcode",
     desc: "Point your camera at a product barcode",
     icon: "barcode-scan",
-  },
-  {
-    key: "photo",
-    title: "Photo of fridge",
-    desc: "Let AI spot what changed",
-    icon: "camera-outline",
-    credits: 3,
   },
   {
     key: "manual",
@@ -124,7 +118,8 @@ export default function Add() {
   const [method, setMethod] = useState<Method | null>(
     params.name || stashed.length
       ? "manual"
-      : (params.method as Method) || null,
+      : // "photo" was the one-shot fridge scan, now the sweep - land on the picker instead.
+        (params.method === "photo" ? null : (params.method as Method)) || null,
   );
 
   const drafts = useDraftItems(() =>
@@ -202,7 +197,7 @@ export default function Add() {
       if (isExpoGo) {
         Alert.alert(
           "Needs the dev build",
-          "The fridge sweep uses the camera, which isn't available in Expo Go. Use a development build.",
+          "Scanning uses the camera, which isn't available in Expo Go. Use a development build.",
         );
       } else {
         router.push({
@@ -317,8 +312,8 @@ export default function Add() {
             </Pressable>
           ))}
         </ScrollView>
-      ) : method === "receipt" || method === "photo" ? (
-        <ScanFlow mode={method} onDone={() => router.back()} categoryId={params.categoryId ?? null} />
+      ) : method === "receipt" ? (
+        <ScanFlow onDone={() => router.back()} categoryId={params.categoryId ?? null} />
       ) : (
         <DraftList
           drafts={drafts}
@@ -341,14 +336,12 @@ export default function Add() {
   );
 }
 
-// ---- scan flow (receipt / fridge photo) ---------------------------------
+// ---- receipt scan flow (fridge photos go through /sweep) -----------------
 
 function ScanFlow({
-  mode,
   onDone,
   categoryId,
 }: {
-  mode: "receipt" | "photo";
   onDone: () => void;
   categoryId: string | null;
 }) {
@@ -369,10 +362,7 @@ function ScanFlow({
       // support React Native's classic { uri, name, type } placeholder object, despite the
       // types still listing it as valid.
       const blob = await (await fetch(uri)).blob();
-      const scan =
-        mode === "receipt"
-          ? await api.scanReceipt(sectionId, blob)
-          : await api.scanFridgePhoto(sectionId, blob);
+      const scan = await api.scanReceipt(sectionId, blob);
       drafts.setItems(
         scan.detected_items.map((d) =>
           blankDraft({
@@ -382,7 +372,7 @@ function ScanFlow({
             qty: Math.max(1, d.parsed_quantity ?? 1),
             condition: d.condition ?? null,
             categoryId,
-            source: mode,
+            source: "receipt",
           }),
         ),
       );
@@ -474,7 +464,7 @@ function ScanFlow({
         }}
       >
         <MaterialCommunityIcons
-          name={mode === "receipt" ? "receipt" : "fridge-outline"}
+          name="receipt"
           size={40}
           color={FAINT}
         />
@@ -486,9 +476,7 @@ function ScanFlow({
             lineHeight: 19,
           }}
         >
-          {mode === "receipt"
-            ? "Take a photo of your grocery receipt and we'll pull out the items."
-            : "Take a photo inside your fridge and the crew will spot what changed."}
+          Take a photo of your grocery receipt and we&apos;ll pull out the items.
         </Text>
         <Pressable
           onPress={() => capture("camera")}
@@ -536,7 +524,7 @@ function ScanFlow({
       >
         <ActivityIndicator color={AMBER} size="large" />
         <Text style={{ fontSize: 13, color: MUTED }}>
-          {mode === "receipt" ? "Reading receipt…" : "Scanning fridge photo…"}
+          Reading receipt…
         </Text>
       </View>
     );

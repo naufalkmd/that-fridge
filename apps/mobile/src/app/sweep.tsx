@@ -5,12 +5,14 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
   useWindowDimensions,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import Constants from "expo-constants";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
@@ -31,78 +33,104 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Defs, Line, LinearGradient, Rect as SvgRect, Stop } from "react-native-svg";
 
-import { ApiError, describeError, guessFoodIcon, type StorageLocation } from "@thatfridge/core";
+import {
+  ApiError,
+  describeError,
+  guessFoodIcon,
+  type FlatItem,
+  type StorageLocation,
+} from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
+import { useScope } from "@/lib/scope";
 import { useTheme } from "@/lib/theme";
 import { RADIUS } from "@/lib/tokens";
 import { PixelText } from "@/components/brand";
 import { FoodIcon } from "@/components/food-icon";
-import { blankDraft, stashDrafts, toCreatePayload } from "@/components/draft-item";
+import { blankDraft, stashDrafts, toCreatePayload, type Draft } from "@/components/draft-item";
 import {
+  CREDITS_PER_SHOT,
   LOW_CONFIDENCE,
   MAX_SHOTS,
+  SPACES,
   boxToRect,
+  buildSweepResults,
   cropStyle,
   fitFrame,
   flyStart,
   gridCells,
   padBox,
+  sceneSpace,
   shotLabel,
+  spaceLabel,
+  spaceLocation,
   staggerStep,
-  type Box,
   type Rect,
+  type ResultRow,
+  type Scene,
+  type Space,
+  type SweepDetection,
 } from "@/lib/sweep";
 
-// Fridge sweep: shoot the fridge shelf by shelf, then watch each photo's items lock on and fly
-// into a grid. Every shot is an ordinary photo scan (POST items/photo/scan, 3 credits) sent as
-// soon as it's taken, so results are usually back by the time the user taps Done. The effects
-// only ever play over real results - nothing is shown before the scan answers.
+// Scan your kitchen (plan: SCAN_PLAN.md). The user shoots any spaces - fridge, freezer, pantry,
+// or a grocery haul - picking the space per shot. Every shot is an ordinary photo scan (POST
+// items/photo/scan, 3 credits) sent as soon as it's taken. After Done, each photo's items lock on
+// and fly into a grid; the results compare them with what the fridge already tracks (new /
+// already tracked / not seen). The effects only ever play over real results.
 
 const isExpoGo = Constants.appOwnership === "expo";
-const CREDITS_PER_SHOT = 3;
 // The camera view is always dark whatever the app theme, so the HUD has fixed colours.
 const HUD = "#26c6da";
 const HUD_BAD = "#ff5567";
-
-type SweepItem = {
-  id: string;
-  name: string;
-  icon: string;
-  box: Box | null;
-  confidence: number;
-  condition: "vibrant" | "wilting" | "past_best" | null;
-};
+const HUD_WARN = "#f5a623";
 
 type Shot = {
   id: string;
   uri: string;
   /** width / height of the photo as displayed. */
   aspect: number;
-  label: string;
+  space: Space;
+  /** What the model thinks the photo shows. */
+  scene: Scene | null;
   status: "scanning" | "done" | "failed";
-  items: SweepItem[];
+  items: SweepDetection[];
 };
+
+/** Something the user typed in because the scan missed it. */
+type Extra = { key: string; name: string; location: StorageLocation; space: Space };
+
+type MissingChoice = "keep" | "used" | "wasted";
 
 type Stage = "camera" | "reveal" | "grid";
 
 export default function Sweep() {
   const router = useRouter();
   const { categoryId } = useLocalSearchParams<{ categoryId?: string }>();
-  const { ensureSectionId, addManyItems } = useInventory();
+  const { fridges, items: inventory, ensureSectionId, addManyItems, refresh } = useInventory();
+  const { scope, setScope } = useScope();
   const reduceMotion = useReducedMotion();
   const [permission, requestPermission] = useCameraPermissions();
   const [stage, setStage] = useState<Stage>("camera");
+  const [space, setSpace] = useState<Space>("fridge");
+  const [fridgeId, setFridgeId] = useState<string | null>(() =>
+    scope !== "all" && fridges.some((f) => f.id === scope) ? scope : (fridges[0]?.id ?? null),
+  );
   const [shots, setShots] = useState<Shot[]>([]);
-  const [excluded, setExcluded] = useState<Set<string>>(() => new Set());
+  const [extras, setExtras] = useState<Extra[]>([]);
+  // Row key -> ticked. Unset rows default to ticked when new, unticked when already tracked.
+  const [ticks, setTicks] = useState<Record<string, boolean>>({});
+  const [missingChoice, setMissingChoice] = useState<Record<string, MissingChoice>>({});
   const [saving, setSaving] = useState(false);
   const outOfCreditsShown = useRef(false);
 
-  const items = useMemo(
-    () => shots.flatMap((s) => (s.status === "done" ? s.items.map((it) => ({ it, shot: s })) : [])),
-    [shots],
+  const tracked = useMemo(
+    () => (fridgeId ? inventory.filter((i) => i.fridgeId === fridgeId) : []),
+    [inventory, fridgeId],
   );
-  const kept = items.filter(({ it }) => !excluded.has(it.id));
+  const results = useMemo(() => buildSweepResults<FlatItem>(shots, tracked), [shots, tracked]);
+  const isTicked = (r: ResultRow<FlatItem>) => ticks[r.key] ?? r.match === null;
+  const toAdd = results.rows.filter(isTicked);
+  const toClear = results.missing.filter((m) => (missingChoice[m.id] ?? "keep") !== "keep");
 
   function updateShot(id: string, patch: Partial<Shot>) {
     setShots((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
@@ -116,6 +144,7 @@ export default function Sweep() {
       const scan = await api.scanFridgePhoto(sectionId, blob);
       updateShot(shot.id, {
         status: "done",
+        scene: scan.scene ?? null,
         items: scan.detected_items.map((d, i) => ({
           id: `${shot.id}-${i}`,
           name: d.parsed_name,
@@ -123,6 +152,7 @@ export default function Sweep() {
           box: d.box ?? null,
           confidence: typeof d.confidence === "number" ? d.confidence : 0.5,
           condition: d.condition ?? null,
+          storage: d.storage ?? null,
         })),
       });
     } catch (e) {
@@ -130,7 +160,7 @@ export default function Sweep() {
       if (e instanceof ApiError && e.status === 402) {
         if (outOfCreditsShown.current) return;
         outOfCreditsShown.current = true;
-        Alert.alert("Out of credits", "Each shot uses 3 credits. Top up to keep sweeping.", [
+        Alert.alert("Out of credits", `Each shot uses ${CREDITS_PER_SHOT} credits. Top up to keep scanning.`, [
           { text: "Not now", style: "cancel" },
           { text: "Get credits", onPress: () => router.push("/credits") },
         ]);
@@ -142,10 +172,11 @@ export default function Sweep() {
 
   function onCaptured(uri: string, width: number, height: number) {
     const shot: Shot = {
-      id: `s${Date.now()}`,
+      id: `s${Date.now()}${Math.random().toString(36).slice(2, 5)}`,
       uri,
       aspect: width > 0 && height > 0 ? width / height : 3 / 4,
-      label: shotLabel(shots.length),
+      space,
+      scene: null,
       status: "scanning",
       items: [],
     };
@@ -153,48 +184,108 @@ export default function Sweep() {
     void upload(shot);
   }
 
+  function pickFridge() {
+    if (fridges.length < 2) return;
+    Alert.alert("Which fridge is this for?", undefined, [
+      ...fridges.slice(0, 6).map((f) => ({ text: f.name, onPress: () => setFridgeId(f.id) })),
+      { text: "Cancel", style: "cancel" as const },
+    ]);
+  }
+
   function discardAndClose() {
-    if (items.length === 0 && shots.every((s) => s.status !== "scanning")) {
+    const nothing = results.rows.length === 0 && extras.length === 0 && shots.every((s) => s.status !== "scanning");
+    if (nothing) {
       router.back();
       return;
     }
-    Alert.alert("Discard this sweep?", "Nothing has been added to your fridge yet.", [
+    Alert.alert("Discard this scan?", "Nothing has been saved yet.", [
       { text: "Keep going", style: "cancel" },
       { text: "Discard", style: "destructive", onPress: () => router.back() },
     ]);
   }
 
-  function toDrafts() {
-    return kept.map(({ it, shot }) =>
-      blankDraft({
-        name: it.name,
-        parsedName: it.name,
-        icon: it.icon,
-        condition: it.condition,
-        location: (shot.label === "Freezer" ? "freezer" : "fridge") as StorageLocation,
-        categoryId: categoryId ?? null,
-        source: "photo",
-      }),
-    );
+  function toDrafts(): Draft[] {
+    return [
+      ...toAdd.map((r) =>
+        blankDraft({
+          name: r.name,
+          parsedName: r.name,
+          icon: r.icon,
+          qty: r.qty,
+          condition: r.condition,
+          location: r.location,
+          categoryId: categoryId ?? null,
+          source: "photo",
+        }),
+      ),
+      ...extras.map((x) =>
+        blankDraft({
+          name: x.name,
+          icon: guessFoodIcon(x.name) ?? "generic",
+          location: x.location,
+          categoryId: categoryId ?? null,
+        }),
+      ),
+    ];
   }
 
-  async function addAll() {
+  async function targetSectionId(): Promise<string> {
+    const fridge = fridges.find((f) => f.id === fridgeId);
+    if (!fridge) return ensureSectionId();
+    if (fridge.sections[0]) return fridge.sections[0].id;
+    return (await api.createSection(fridge.id, "General")).id;
+  }
+
+  /** Remove the items the user marked used / tossed, correcting the app's guess where it differs. */
+  async function clearMarked(): Promise<{ used: number; wasted: number }> {
+    const done = { used: 0, wasted: 0 };
+    await Promise.allSettled(
+      toClear.map(async (item) => {
+        const choice = missingChoice[item.id] as "used" | "wasted";
+        const res = await api.deleteItem(item.id);
+        if (res.outcome !== choice) await api.correctItemOutcome(res.id, choice);
+        done[choice] += 1;
+      }),
+    );
+    return done;
+  }
+
+  async function save() {
     const drafts = toDrafts();
-    if (!drafts.length) return;
+    if (!drafts.length && !toClear.length) return;
     setSaving(true);
     try {
-      const n = await addManyItems(drafts.map(toCreatePayload));
+      const sectionId = drafts.length ? await targetSectionId() : null;
+      const added = drafts.length
+        ? await addManyItems(drafts.map((d) => ({ ...toCreatePayload(d), sectionId: sectionId! })))
+        : 0;
+      const cleared = await clearMarked();
+      if (cleared.used + cleared.wasted > 0) await refresh();
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (router.canDismiss()) router.dismissAll();
       else router.back();
-      setTimeout(() => Alert.alert("Added", `${n} item${n === 1 ? "" : "s"} added to your fridge.`), 300);
+      const parts = [
+        added ? `${added} item${added === 1 ? "" : "s"} added` : null,
+        cleared.used ? `${cleared.used} marked used` : null,
+        cleared.wasted ? `${cleared.wasted} marked tossed` : null,
+      ].filter(Boolean);
+      setTimeout(() => Alert.alert("Kitchen updated", `${parts.join(", ")}.`), 300);
     } catch (e) {
       setSaving(false);
-      Alert.alert("Error", describeError(e, "Couldn't add those items."));
+      Alert.alert("Error", describeError(e, "Couldn't save the scan."));
     }
   }
 
-  function editDetails() {
+  async function editDetails() {
+    setSaving(true);
+    try {
+      // The add screen files new items under the scoped fridge, so point it at this scan's fridge.
+      if (fridgeId && scope !== fridgeId && fridges.length > 1) setScope(fridgeId);
+      const cleared = await clearMarked();
+      if (cleared.used + cleared.wasted > 0) await refresh();
+    } finally {
+      setSaving(false);
+    }
     stashDrafts(toDrafts());
     router.replace("/add?method=barcode-batch");
   }
@@ -203,7 +294,7 @@ export default function Sweep() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center gap-4 bg-canvas p-6">
         <Text className="text-center text-ink">
-          The fridge sweep needs a development build — the camera isn&apos;t available in Expo Go.
+          Scanning needs a development build — the camera isn&apos;t available in Expo Go.
         </Text>
         <Pressable onPress={() => router.back()}>
           <Text className="text-muted">Close</Text>
@@ -218,7 +309,7 @@ export default function Sweep() {
       return (
         <SafeAreaView className="flex-1 items-center justify-center gap-4 bg-canvas p-6">
           <Text className="text-center text-ink">
-            ThatFridge needs camera access to sweep your fridge.
+            ThatFridge needs camera access to scan your kitchen.
           </Text>
           <Pressable
             onPress={requestPermission}
@@ -235,6 +326,10 @@ export default function Sweep() {
     return (
       <CameraStage
         shots={shots}
+        space={space}
+        onSpace={setSpace}
+        fridgeName={fridges.length > 1 ? fridges.find((f) => f.id === fridgeId)?.name ?? null : null}
+        onPickFridge={pickFridge}
         onCaptured={onCaptured}
         onClose={discardAndClose}
         onDone={() => setStage(reduceMotion ? "grid" : "reveal")}
@@ -249,20 +344,28 @@ export default function Sweep() {
   return (
     <ResultsStage
       shots={shots}
-      items={items}
-      excluded={excluded}
-      onToggle={(id) =>
-        setExcluded((prev) => {
-          const next = new Set(prev);
-          if (next.has(id)) next.delete(id);
-          else next.add(id);
-          return next;
+      rows={results.rows}
+      missing={results.missing}
+      emptyShots={results.emptyShots}
+      extras={extras}
+      isTicked={isTicked}
+      onToggle={(r) => setTicks((prev) => ({ ...prev, [r.key]: !isTicked(r) }))}
+      missingChoice={missingChoice}
+      onMissingChoice={(id, c) => setMissingChoice((prev) => ({ ...prev, [id]: c }))}
+      onShotSpace={(id, s) => updateShot(id, { space: s })}
+      onAddExtra={(name) =>
+        setExtras((prev) => {
+          const last = shots[shots.length - 1]?.space ?? space;
+          return [...prev, { key: `x${Date.now()}`, name, space: last, location: spaceLocation(last, null) }];
         })
       }
+      onRemoveExtra={(key) => setExtras((prev) => prev.filter((x) => x.key !== key))}
+      addCount={toAdd.length + extras.length}
+      clearCount={toClear.length}
       saving={saving}
       canShootMore={shots.length < MAX_SHOTS}
       onShootMore={() => setStage("camera")}
-      onAdd={addAll}
+      onSave={save}
       onEdit={editDetails}
       onClose={discardAndClose}
     />
@@ -273,11 +376,20 @@ export default function Sweep() {
 
 function CameraStage({
   shots,
+  space,
+  onSpace,
+  fridgeName,
+  onPickFridge,
   onCaptured,
   onClose,
   onDone,
 }: {
   shots: Shot[];
+  space: Space;
+  onSpace: (s: Space) => void;
+  /** Shown (and tappable) only when the account has more than one fridge. */
+  fridgeName: string | null;
+  onPickFridge: () => void;
   onCaptured: (uri: string, width: number, height: number) => void;
   onClose: () => void;
   onDone: () => void;
@@ -291,12 +403,14 @@ function CameraStage({
   const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
 
   const full = shots.length >= MAX_SHOTS;
+  const inSpace = shots.filter((s) => s.space === space).length;
+  const hint = SPACES.find((s) => s.key === space)?.hint ?? "";
   // The aiming frame: the camera area between the top readout and the bottom controls.
   const frame: Rect = {
     x: 20,
-    y: insets.top + 70,
+    y: insets.top + 78,
     w: width - 40,
-    h: height - insets.top - 70 - (insets.bottom + 190),
+    h: height - insets.top - 78 - (insets.bottom + 236),
   };
 
   async function shoot() {
@@ -312,6 +426,23 @@ function CameraStage({
     } finally {
       setCapturing(false);
     }
+  }
+
+  // Photos already on the phone go through the same scan and reveal as fresh shots.
+  async function pickFromLibrary() {
+    const room = MAX_SHOTS - shots.length;
+    if (room <= 0 || capturing) return;
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.6,
+      allowsMultipleSelection: true,
+      selectionLimit: room,
+      // Converts HEIC/PNG to a compressed JPEG, as add.tsx does for its uploads.
+      preferredAssetRepresentationMode:
+        ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+    });
+    if (res.canceled) return;
+    for (const a of res.assets.slice(0, room)) onCaptured(a.uri, a.width, a.height);
   }
 
   return (
@@ -340,20 +471,59 @@ function CameraStage({
           <Ionicons name="close" size={20} color="white" />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <PixelText style={{ color: HUD, fontSize: 11 }}>FRIDGE SWEEP</PixelText>
-          <Text style={{ color: "white", fontSize: 13, fontWeight: "600", marginTop: 3 }}>
-            {full
-              ? "That's the most for one sweep — tap Done"
-              : `Shot ${shots.length + 1} of ${MAX_SHOTS} · ${shotLabel(shots.length)}`}
+          <PixelText style={{ color: HUD, fontSize: 11 }}>KITCHEN SCAN</PixelText>
+          <Text style={{ color: "white", fontSize: 13, fontWeight: "600", marginTop: 3 }} numberOfLines={1}>
+            {full ? "That's the most for one scan — tap Done" : shotLabel(space, inSpace)}
+          </Text>
+          {!full && (
+            <Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 11.5, marginTop: 1 }} numberOfLines={1}>
+              {hint}
+            </Text>
+          )}
+        </View>
+        <View style={{ alignItems: "flex-end", gap: 4 }}>
+          {fridgeName && (
+            <Pressable onPress={onPickFridge} hitSlop={6} style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: RADIUS.sm }}>
+              <Text style={{ color: "white", fontSize: 11.5, fontWeight: "700", maxWidth: 110 }} numberOfLines={1}>
+                {fridgeName}
+              </Text>
+              <Ionicons name="chevron-down" size={12} color="white" />
+            </Pressable>
+          )}
+          <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, fontWeight: "600" }}>
+            {shots.length ? `${shots.length * CREDITS_PER_SHOT} credits used` : `${CREDITS_PER_SHOT} credits / shot`}
           </Text>
         </View>
-        <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, fontWeight: "600" }}>
-          {CREDITS_PER_SHOT} credits / shot
-        </Text>
       </View>
 
-      {/* bottom: captured shots, shutter, done */}
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: insets.bottom + 16, gap: 16 }}>
+      {/* bottom: space chips, captured shots, shutter, done */}
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: insets.bottom + 16, gap: 14 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
+          {SPACES.map((s) => {
+            const on = s.key === space;
+            return (
+              <Pressable
+                key={s.key}
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  onSpace(s.key);
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 7,
+                  borderRadius: 999,
+                  borderWidth: 1.5,
+                  borderColor: on ? HUD : "rgba(255,255,255,0.35)",
+                  backgroundColor: on ? "rgba(38,198,218,0.22)" : "rgba(0,0,0,0.45)",
+                }}
+              >
+                <Text style={{ color: on ? HUD : "white", fontSize: 12.5, fontWeight: "700" }}>{s.label}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -364,7 +534,17 @@ function CameraStage({
           ))}
         </ScrollView>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 28 }}>
-          <View style={{ width: 72 }} />
+          <Pressable
+            onPress={pickFromLibrary}
+            disabled={full || capturing}
+            accessibilityLabel="Upload photos"
+            style={{ width: 72, alignItems: "center", gap: 4, opacity: full ? 0.4 : 1 }}
+          >
+            <View style={{ width: 44, height: 44, borderRadius: RADIUS.sm, borderCurve: "continuous", backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
+              <MaterialCommunityIcons name="image-multiple-outline" size={20} color="white" />
+            </View>
+            <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>Upload</Text>
+          </Pressable>
           <Pressable
             onPress={shoot}
             disabled={!ready || capturing || full}
@@ -418,11 +598,13 @@ const hudButton = {
   justifyContent: "center",
 } as const;
 
-function ShotThumb({ shot }: { shot: Shot }) {
+function ShotThumb({ shot, size = 52 }: { shot: Shot; size?: number }) {
+  const empty = shot.status === "done" && shot.items.length === 0;
+  const border = shot.status === "failed" ? HUD_BAD : empty ? HUD_WARN : HUD;
   return (
     <Animated.View
       entering={FadeIn.duration(200)}
-      style={{ width: 52, height: 52, borderRadius: RADIUS.sm, borderCurve: "continuous", overflow: "hidden", borderWidth: 1.5, borderColor: shot.status === "failed" ? HUD_BAD : HUD }}
+      style={{ width: size, height: size, borderRadius: RADIUS.sm, borderCurve: "continuous", overflow: "hidden", borderWidth: 1.5, borderColor: border }}
     >
       <Image source={{ uri: shot.uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
       <View
@@ -442,7 +624,7 @@ function ShotThumb({ shot }: { shot: Shot }) {
         ) : shot.status === "failed" ? (
           <Ionicons name="alert" size={18} color={HUD_BAD} />
         ) : (
-          <PixelText style={{ color: "white", fontSize: 13 }}>{shot.items.length}</PixelText>
+          <PixelText style={{ color: empty ? HUD_WARN : "white", fontSize: 13 }}>{shot.items.length}</PixelText>
         )}
       </View>
     </Animated.View>
@@ -557,7 +739,7 @@ function RevealStage({ shots, onFinish }: { shots: Shot[]; onFinish: () => void 
           {shot ? `ANALYZING ${index + 1}/${shots.length}` : "COMPLETE"}
         </PixelText>
         <Text style={{ color: "white", fontSize: 15, fontWeight: "700", marginTop: 4 }}>
-          {shot?.label ?? ""}
+          {shot ? shotLabel(shot.space, shots.slice(0, index).filter((s) => s.space === shot.space).length) : ""}
         </Text>
       </View>
 
@@ -680,7 +862,7 @@ function LockOn({ rect, name, unsure, delay, hideAt }: { rect: Rect; name: strin
 }
 
 /** The item's crop lifting off the photo and landing in its grid cell. */
-function FlyTile({ item, shot, from, to, delay }: { item: SweepItem; shot: Shot; from: Rect | null; to: Rect | undefined; delay: number }) {
+function FlyTile({ item, shot, from, to, delay }: { item: SweepDetection; shot: Shot; from: Rect | null; to: Rect | undefined; delay: number }) {
   const p = useSharedValue(0);
   const shown = useSharedValue(0);
   useEffect(() => {
@@ -708,7 +890,20 @@ function FlyTile({ item, shot, from, to, delay }: { item: SweepItem; shot: Shot;
 }
 
 /** The item's crop from its photo, or its pixel icon when the scan couldn't place it. */
-function TileFace({ item, shot, size, borderColor, background = "#131316" }: { item: SweepItem; shot: Shot; size: number; borderColor: string; background?: string }) {
+function TileFace({
+  item,
+  shot,
+  size,
+  borderColor,
+  background = "#131316",
+}: {
+  item: Pick<SweepDetection, "box" | "icon" | "name">;
+  /** The photo to crop from; null for items typed in by hand. */
+  shot: Pick<Shot, "uri" | "aspect"> | null;
+  size: number;
+  borderColor: string;
+  background?: string;
+}) {
   return (
     <View
       style={{
@@ -724,7 +919,7 @@ function TileFace({ item, shot, size, borderColor, background = "#131316" }: { i
         justifyContent: "center",
       }}
     >
-      {item.box ? (
+      {item.box && shot ? (
         <Image source={{ uri: shot.uri }} style={{ position: "absolute", ...cropStyle(padBox(item.box), shot.aspect, size - 3) }} contentFit="fill" />
       ) : (
         <FoodIcon icon={item.icon} name={item.name} size={size * 0.7} />
@@ -733,48 +928,98 @@ function TileFace({ item, shot, size, borderColor, background = "#131316" }: { i
   );
 }
 
-// ---- stage 3: results grid ---------------------------------------------------
+
+// ---- stage 3: results --------------------------------------------------------
+
+const LOCATION_LABEL: Record<StorageLocation, string> = { fridge: "Fridge", freezer: "Freezer", pantry: "Pantry" };
 
 function ResultsStage({
   shots,
-  items,
-  excluded,
+  rows,
+  missing,
+  emptyShots,
+  extras,
+  isTicked,
   onToggle,
+  missingChoice,
+  onMissingChoice,
+  onShotSpace,
+  onAddExtra,
+  onRemoveExtra,
+  addCount,
+  clearCount,
   saving,
   canShootMore,
   onShootMore,
-  onAdd,
+  onSave,
   onEdit,
   onClose,
 }: {
   shots: Shot[];
-  items: { it: SweepItem; shot: Shot }[];
-  excluded: Set<string>;
-  onToggle: (id: string) => void;
+  rows: ResultRow<FlatItem>[];
+  missing: FlatItem[];
+  emptyShots: string[];
+  extras: Extra[];
+  isTicked: (r: ResultRow<FlatItem>) => boolean;
+  onToggle: (r: ResultRow<FlatItem>) => void;
+  missingChoice: Record<string, MissingChoice>;
+  onMissingChoice: (id: string, c: MissingChoice) => void;
+  onShotSpace: (id: string, s: Space) => void;
+  onAddExtra: (name: string) => void;
+  onRemoveExtra: (key: string) => void;
+  addCount: number;
+  clearCount: number;
   saving: boolean;
   canShootMore: boolean;
   onShootMore: () => void;
-  onAdd: () => void;
+  onSave: () => void;
   onEdit: () => void;
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { canvas, surface, surface2, hairline, ink, muted, faint, accent, onAccent, warn } = useTheme().colors;
+  const [missed, setMissed] = useState("");
   const cols = 3;
   const gap = 10;
   const tile = Math.floor((width - 40 - gap * (cols - 1)) / cols);
   const pending = shots.filter((s) => s.status === "scanning").length;
-  const count = items.filter(({ it }) => !excluded.has(it.id)).length;
-  const unsure = items.filter(({ it }) => it.confidence < LOW_CONFIDENCE).length;
+  const shotById = useMemo(() => new Map(shots.map((s) => [s.id, s])), [shots]);
+  const fresh = rows.filter((r) => r.match === null);
+  const known = rows.filter((r) => r.match !== null);
+  const unsure = rows.filter((r) => r.confidence < LOW_CONFIDENCE).length;
+  const nothingAtAll = rows.length === 0 && extras.length === 0 && missing.length === 0 && pending === 0;
+
+  const label = (() => {
+    if (addCount && clearCount) return `Add ${addCount} · update ${clearCount}`;
+    if (addCount) return `Add ${addCount} item${addCount === 1 ? "" : "s"}`;
+    if (clearCount) return `Update ${clearCount} item${clearCount === 1 ? "" : "s"}`;
+    return "Nothing to save";
+  })();
+
+  function nextSpace(s: Space): Space {
+    const i = SPACES.findIndex((x) => x.key === s);
+    return SPACES[(i + 1) % SPACES.length].key;
+  }
+
+  function addMissed() {
+    const name = missed.trim();
+    if (!name) return;
+    void Haptics.selectionAsync();
+    onAddExtra(name);
+    setMissed("");
+  }
+
+  const sectionLabel = { fontSize: 11, fontWeight: "600" as const, letterSpacing: 1.2, textTransform: "uppercase" as const, color: muted };
 
   return (
     <View style={{ flex: 1, backgroundColor: canvas }}>
       <View style={{ paddingTop: insets.top + 12, paddingHorizontal: 20, paddingBottom: 12, flexDirection: "row", alignItems: "center", gap: 12 }}>
         <View style={{ flex: 1 }}>
-          <PixelText style={{ color: accent, fontSize: 11 }}>SWEEP COMPLETE</PixelText>
+          <PixelText style={{ color: accent, fontSize: 11 }}>SCAN COMPLETE</PixelText>
           <Text style={{ color: ink, fontSize: 18, fontWeight: "700", marginTop: 4 }}>
-            {items.length} item{items.length === 1 ? "" : "s"} found
+            {fresh.length + extras.length} new
+            {known.length ? ` · ${known.length} already here` : ""}
           </Text>
         </View>
         <Pressable onPress={onClose} hitSlop={10} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: surface2, alignItems: "center", justifyContent: "center" }}>
@@ -782,14 +1027,43 @@ function ResultsStage({
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}>
-        <Text style={{ color: muted, fontSize: 12.5, lineHeight: 18, marginBottom: 14 }}>
-          Tap anything the sweep got wrong to leave it out.
-          {unsure ? ` ${unsure} marked ? ${unsure === 1 ? "is" : "are"} worth a second look.` : ""}
-        </Text>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24, gap: 20 }} keyboardShouldPersistTaps="handled">
+        {/* shots, with the space each was of - tap to change */}
+        <View style={{ gap: 8 }}>
+          <Text style={{ color: muted, fontSize: 12.5, lineHeight: 18 }}>
+            Tap a shot&apos;s label if it was of something else.
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+            {shots.map((s) => {
+              const suggested = sceneSpace(s.scene);
+              const mismatch = s.status === "done" && suggested !== null && suggested !== s.space;
+              return (
+                <View key={s.id} style={{ alignItems: "center", gap: 6 }}>
+                  <ShotThumb shot={s} size={56} />
+                  <Pressable
+                    onPress={() => {
+                      void Haptics.selectionAsync();
+                      onShotSpace(s.id, mismatch ? suggested! : nextSpace(s.space));
+                    }}
+                    hitSlop={4}
+                    accessibilityLabel={mismatch ? `Looks like ${spaceLabel(suggested!)}, tap to switch` : `${spaceLabel(s.space)}, tap to change`}
+                    style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: mismatch ? warn : hairline, backgroundColor: mismatch ? `${warn}22` : surface }}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: mismatch ? warn : ink }}>
+                      {mismatch ? `${spaceLabel(suggested!)}?` : spaceLabel(s.space)}
+                    </Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+          </ScrollView>
+          {shots.some((s) => s.status === "done" && sceneSpace(s.scene) !== null && sceneSpace(s.scene) !== s.space) && (
+            <Text style={{ color: warn, fontSize: 12 }}>A label with ? is what that photo looks like to the crew. Tap it to switch.</Text>
+          )}
+        </View>
 
         {pending > 0 && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <ActivityIndicator color={accent} size="small" />
             <Text style={{ color: muted, fontSize: 12.5 }}>
               Still identifying {pending} shot{pending === 1 ? "" : "s"}…
@@ -797,75 +1071,216 @@ function ResultsStage({
           </View>
         )}
 
-        {items.length === 0 && pending === 0 ? (
-          <View style={{ alignItems: "center", paddingVertical: 40, gap: 10 }}>
-            <MaterialCommunityIcons name="fridge-outline" size={40} color={faint} />
-            <Text style={{ color: muted, fontSize: 13, textAlign: "center" }}>
-              Nothing recognised. Try closer shots with the light on.
+        {emptyShots.length > 0 && (
+          <View style={{ flexDirection: "row", gap: 8, padding: 12, borderRadius: RADIUS.md, borderCurve: "continuous", backgroundColor: `${warn}1a` }}>
+            <Ionicons name="alert-circle-outline" size={17} color={warn} />
+            <Text style={{ flex: 1, color: ink, fontSize: 12.5, lineHeight: 18 }}>
+              {emptyShots.length} shot{emptyShots.length === 1 ? "" : "s"} found nothing. Too dark or too far? Shoot{" "}
+              {emptyShots.length === 1 ? "it" : "them"} again closer, with the light on.
             </Text>
           </View>
-        ) : (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
-            {items.map(({ it, shot }, i) => {
-              const off = excluded.has(it.id);
-              const doubt = it.confidence < LOW_CONFIDENCE;
+        )}
+
+        {nothingAtAll && (
+          <View style={{ alignItems: "center", paddingVertical: 24, gap: 10 }}>
+            <MaterialCommunityIcons name="fridge-outline" size={40} color={faint} />
+            <Text style={{ color: muted, fontSize: 13, textAlign: "center" }}>
+              Nothing recognised. Try closer shots with the light on, or type what&apos;s there below.
+            </Text>
+          </View>
+        )}
+
+        {(fresh.length > 0 || extras.length > 0) && (
+          <View style={{ gap: 10 }}>
+            <Text style={sectionLabel}>New</Text>
+            {unsure > 0 && (
+              <Text style={{ color: muted, fontSize: 12.5, lineHeight: 18 }}>
+                Tap anything the scan got wrong to leave it out. {unsure} marked ? {unsure === 1 ? "is" : "are"} worth a second look.
+              </Text>
+            )}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
+              {fresh.map((r, i) => (
+                <RowTile key={r.key} r={r} i={i} on={isTicked(r)} tile={tile} shot={shotById.get(r.shotId) ?? null} onToggle={onToggle} />
+              ))}
+              {extras.map((x) => (
+                <Pressable key={x.key} onPress={() => onRemoveExtra(x.key)} accessibilityLabel={`Remove ${x.name}`} style={{ width: tile }}>
+                  <TileFace item={{ name: x.name, icon: guessFoodIcon(x.name) ?? "generic", box: null }} shot={null} size={tile} borderColor={accent} background={surface} />
+                  <View style={{ position: "absolute", top: 6, right: 6, width: 20, height: 20, borderRadius: 10, backgroundColor: surface2, alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="close" size={13} color={ink} />
+                  </View>
+                  <Text numberOfLines={1} style={{ color: ink, fontSize: 12.5, fontWeight: "600", marginTop: 6 }}>{x.name}</Text>
+                  <Text numberOfLines={1} style={{ color: faint, fontSize: 11, marginTop: 1 }}>Added by you</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {known.length > 0 && (
+          <View style={{ gap: 10 }}>
+            <Text style={sectionLabel}>Already tracked</Text>
+            <Text style={{ color: muted, fontSize: 12.5, lineHeight: 18 }}>
+              These are in your inventory already, so they won&apos;t be added again. Tap one if it&apos;s a new batch.
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
+              {known.map((r, i) => (
+                <RowTile key={r.key} r={r} i={i} on={isTicked(r)} tile={tile} shot={shotById.get(r.shotId) ?? null} onToggle={onToggle} />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {missing.length > 0 && (
+          <View style={{ gap: 10 }}>
+            <Text style={sectionLabel}>Not seen in this scan</Text>
+            <Text style={{ color: muted, fontSize: 12.5, lineHeight: 18 }}>
+              Tracked here but not in any photo. Just out of frame? Leave it. Finished it? Mark it.
+            </Text>
+            {missing.map((m) => {
+              const choice = missingChoice[m.id] ?? "keep";
               return (
-                <Animated.View key={it.id} entering={FadeInDown.delay(Math.min(i, 24) * 30).duration(260)}>
-                  <Pressable
-                    onPress={() => {
-                      void Haptics.selectionAsync();
-                      onToggle(it.id);
-                    }}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: !off }}
-                    accessibilityLabel={it.name}
-                    style={{ width: tile, opacity: off ? 0.4 : 1 }}
-                  >
-                    <TileFace item={it} shot={shot} size={tile} borderColor={off ? hairline : doubt ? warn : accent} background={surface} />
-                    <View style={{ position: "absolute", top: 6, right: 6, width: 20, height: 20, borderRadius: 10, backgroundColor: off ? surface2 : accent, alignItems: "center", justifyContent: "center" }}>
-                      {!off && <Ionicons name="checkmark" size={14} color={onAccent} />}
-                    </View>
-                    {doubt && !off && (
-                      <View style={{ position: "absolute", top: 6, left: 6, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, backgroundColor: warn }}>
-                        <Text style={{ fontSize: 10, fontWeight: "800", color: onAccent }}>?</Text>
-                      </View>
-                    )}
-                    <Text numberOfLines={1} style={{ color: off ? faint : ink, fontSize: 12.5, fontWeight: "600", marginTop: 6, textDecorationLine: off ? "line-through" : "none" }}>
-                      {it.name}
-                    </Text>
-                  </Pressable>
-                </Animated.View>
+                <View key={m.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: RADIUS.md, borderCurve: "continuous", backgroundColor: surface, borderWidth: 1, borderColor: hairline }}>
+                  <FoodIcon icon={m.icon} iconUrl={m.iconUrl} name={m.name} size={32} />
+                  <View style={{ flex: 1 }}>
+                    <Text numberOfLines={1} style={{ color: ink, fontSize: 13.5, fontWeight: "600" }}>{m.name}</Text>
+                    <Text style={{ color: faint, fontSize: 11 }}>{LOCATION_LABEL[m.location ?? "fridge"]}</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", borderRadius: RADIUS.sm, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: hairline }}>
+                    {(
+                      [
+                        ["keep", "Still there"],
+                        ["used", "Used"],
+                        ["wasted", "Tossed"],
+                      ] as const
+                    ).map(([key, text]) => {
+                      const on = choice === key;
+                      const tint = key === "wasted" ? warn : accent;
+                      return (
+                        <Pressable
+                          key={key}
+                          onPress={() => {
+                            void Haptics.selectionAsync();
+                            onMissingChoice(m.id, key);
+                          }}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: on }}
+                          style={{ paddingHorizontal: 8, paddingVertical: 6, backgroundColor: on ? (key === "keep" ? surface2 : tint) : "transparent" }}
+                        >
+                          <Text style={{ fontSize: 11.5, fontWeight: "700", color: on && key !== "keep" ? onAccent : on ? ink : faint }}>{text}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
               );
             })}
           </View>
         )}
 
+        {/* anything the camera couldn't see */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <TextInput
+            value={missed}
+            onChangeText={setMissed}
+            onSubmitEditing={addMissed}
+            placeholder="Add something the scan missed"
+            placeholderTextColor={faint}
+            returnKeyType="done"
+            style={{ flex: 1, color: ink, fontSize: 14, paddingHorizontal: 12, paddingVertical: 11, borderRadius: RADIUS.md, borderCurve: "continuous", borderWidth: 1, borderColor: hairline, backgroundColor: surface }}
+          />
+          <Pressable onPress={addMissed} disabled={!missed.trim()} accessibilityLabel="Add" style={{ width: 44, height: 44, borderRadius: RADIUS.md, borderCurve: "continuous", backgroundColor: accent, alignItems: "center", justifyContent: "center", opacity: missed.trim() ? 1 : 0.4 }}>
+            <Ionicons name="add" size={22} color={onAccent} />
+          </Pressable>
+        </View>
+
         {canShootMore && (
-          <Pressable onPress={onShootMore} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 20, padding: 14, borderRadius: RADIUS.sm, borderCurve: "continuous", borderWidth: 1.5, borderStyle: "dashed", borderColor: hairline }}>
+          <Pressable onPress={onShootMore} style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: 14, borderRadius: RADIUS.sm, borderCurve: "continuous", borderWidth: 1.5, borderStyle: "dashed", borderColor: hairline }}>
             <MaterialCommunityIcons name="camera-plus-outline" size={16} color={accent} />
-            <Text style={{ color: accent, fontSize: 13, fontWeight: "700" }}>Shoot another shelf</Text>
+            <Text style={{ color: accent, fontSize: 13, fontWeight: "700" }}>Scan another spot</Text>
           </Pressable>
         )}
       </ScrollView>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: insets.bottom + 12, borderTopWidth: 1, borderTopColor: hairline, backgroundColor: surface, gap: 10 }}>
         <Pressable
-          onPress={onAdd}
-          disabled={saving || count === 0}
-          style={{ alignItems: "center", paddingVertical: 15, borderRadius: RADIUS.sm, borderCurve: "continuous", backgroundColor: accent, opacity: saving || count === 0 ? 0.5 : 1 }}
+          onPress={onSave}
+          disabled={saving || (addCount === 0 && clearCount === 0)}
+          style={{ alignItems: "center", paddingVertical: 15, borderRadius: RADIUS.sm, borderCurve: "continuous", backgroundColor: accent, opacity: saving || (addCount === 0 && clearCount === 0) ? 0.5 : 1 }}
         >
           {saving ? (
             <ActivityIndicator color={onAccent} />
           ) : (
-            <Text style={{ fontSize: 14, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: onAccent }}>
-              Add {count} item{count === 1 ? "" : "s"}
-            </Text>
+            <Text style={{ fontSize: 14, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: onAccent }}>{label}</Text>
           )}
         </Pressable>
-        <Pressable onPress={onEdit} disabled={saving || count === 0} hitSlop={6} style={{ alignItems: "center", paddingVertical: 4, opacity: count === 0 ? 0.5 : 1 }}>
+        <Pressable onPress={onEdit} disabled={saving || addCount === 0} hitSlop={6} style={{ alignItems: "center", paddingVertical: 4, opacity: addCount === 0 ? 0.5 : 1 }}>
           <Text style={{ color: muted, fontSize: 12.5, fontWeight: "600" }}>Edit details before adding</Text>
         </Pressable>
       </View>
     </View>
+  );
+}
+
+function RowTile({
+  r,
+  i,
+  on,
+  tile,
+  shot,
+  onToggle,
+}: {
+  r: ResultRow<FlatItem>;
+  i: number;
+  on: boolean;
+  tile: number;
+  shot: Shot | null;
+  onToggle: (r: ResultRow<FlatItem>) => void;
+}) {
+  const { surface, surface2, hairline, ink, faint, accent, onAccent, warn } = useTheme().colors;
+  const doubt = r.confidence < LOW_CONFIDENCE;
+  const note =
+    r.space === "groceries"
+      ? `→ ${LOCATION_LABEL[r.location]}`
+      : r.match
+        ? `In ${LOCATION_LABEL[r.location].toLowerCase()}`
+        : r.seenIn > 1
+          ? `Seen in ${r.seenIn} shots`
+          : null;
+  return (
+    <Animated.View entering={FadeInDown.delay(Math.min(i, 24) * 30).duration(260)}>
+      <Pressable
+        onPress={() => {
+          void Haptics.selectionAsync();
+          onToggle(r);
+        }}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: on }}
+        accessibilityLabel={r.name}
+        style={{ width: tile, opacity: on ? 1 : 0.45 }}
+      >
+        <TileFace item={r.detection} shot={shot} size={tile} borderColor={!on ? hairline : doubt ? warn : accent} background={surface} />
+        <View style={{ position: "absolute", top: 6, right: 6, width: 20, height: 20, borderRadius: 10, backgroundColor: on ? accent : surface2, alignItems: "center", justifyContent: "center" }}>
+          {on && <Ionicons name="checkmark" size={14} color={onAccent} />}
+        </View>
+        {doubt && on && (
+          <View style={{ position: "absolute", top: 6, left: 6, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, backgroundColor: warn }}>
+            <Text style={{ fontSize: 10, fontWeight: "800", color: onAccent }}>?</Text>
+          </View>
+        )}
+        {r.qty > 1 && (
+          <View style={{ position: "absolute", top: tile - 26, right: 6, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: "rgba(0,0,0,0.6)" }}>
+            <Text style={{ fontSize: 11, fontWeight: "800", color: "white" }}>×{r.qty}</Text>
+          </View>
+        )}
+        <Text numberOfLines={1} style={{ color: on ? ink : faint, fontSize: 12.5, fontWeight: "600", marginTop: 6 }}>
+          {r.name}
+        </Text>
+        {note && (
+          <Text numberOfLines={1} style={{ color: faint, fontSize: 11, marginTop: 1 }}>
+            {note}
+          </Text>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }

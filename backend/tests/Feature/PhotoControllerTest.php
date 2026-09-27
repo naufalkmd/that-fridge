@@ -127,4 +127,46 @@ class PhotoControllerTest extends TestCase
             $this->assertCount(4, $item['box']);
         }
     }
+
+    public function test_the_scan_returns_the_scene_and_a_storage_guess_per_item(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => json_encode([
+                'scene' => 'pantry',
+                'items' => [
+                    ['parsed_name' => 'Rice', 'confidence' => 0.9, 'storage' => 'pantry'],
+                    ['parsed_name' => 'Peas', 'confidence' => 0.8, 'storage' => 'basement'],
+                ],
+            ])]]],
+        ], 200)]);
+        $user = User::factory()->create(['ai_credits' => 10]);
+        $section = $this->sectionFor($user);
+
+        $res = $this->actingAs($user)->post("/api/sections/{$section->id}/items/photo/scan", [
+            'image' => UploadedFile::fake()->image('pantry.jpg'),
+        ])->assertStatus(200);
+
+        $this->assertSame('pantry', $res->json('scene'));
+        $this->assertSame('pantry', $res->json('detected_items.0.storage'));
+        $this->assertNull($res->json('detected_items.1.storage')); // not one of fridge/freezer/pantry
+    }
+
+    public function test_an_unknown_scene_comes_back_as_null(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => '{"scene": "garage", "items": []}']]],
+        ], 200)]);
+        $user = User::factory()->create(['ai_credits' => 10]);
+        $section = $this->sectionFor($user);
+
+        $res = $this->actingAs($user)->post("/api/sections/{$section->id}/items/photo/scan", [
+            'image' => UploadedFile::fake()->image('x.jpg'),
+        ])->assertStatus(200);
+
+        $this->assertNull($res->json('scene'));
+        $this->assertSame([], $res->json('detected_items'));
+        $this->assertSame(7, $user->fresh()->ai_credits); // a successful empty scan is still charged
+    }
 }

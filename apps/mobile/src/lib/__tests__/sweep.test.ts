@@ -1,13 +1,19 @@
 import {
+  buildSweepResults,
   boxToRect,
   cropStyle,
   fitFrame,
   flyStart,
   gridCells,
   padBox,
+  sameItem,
+  sceneSpace,
   shotLabel,
+  spaceLocation,
   staggerStep,
   type Box,
+  type SweepDetection,
+  type SweepShotInput,
 } from "../sweep";
 
 describe("fitFrame", () => {
@@ -101,9 +107,109 @@ describe("flyStart", () => {
   });
 });
 
-describe("shotLabel", () => {
-  it("names the first shots and counts after that", () => {
-    expect(shotLabel(0)).toBe("Door");
-    expect(shotLabel(7)).toBe("Shot 8");
+describe("spaces", () => {
+  it("labels the next shot by space", () => {
+    expect(shotLabel("pantry", 2)).toBe("Pantry · shot 3");
+  });
+
+  it("maps a scene to a space", () => {
+    expect(sceneSpace("freezer")).toBe("freezer");
+    expect(sceneSpace("counter")).toBe("groceries");
+    expect(sceneSpace("unclear")).toBeNull();
+    expect(sceneSpace(null)).toBeNull();
+  });
+
+  it("stores a haul by the model's guess and everything else by its space", () => {
+    expect(spaceLocation("pantry", "fridge")).toBe("pantry");
+    expect(spaceLocation("groceries", "freezer")).toBe("freezer");
+    expect(spaceLocation("groceries", null)).toBe("fridge");
+  });
+});
+
+describe("sameItem", () => {
+  it("matches plurals and extra words", () => {
+    expect(sameItem("Eggs", "egg")).toBe(true);
+    expect(sameItem("Milk", "Whole milk")).toBe(true);
+    expect(sameItem("Greek yogurt", "yogurt")).toBe(true);
+  });
+
+  it("doesn't match different things or tiny words", () => {
+    expect(sameItem("Milk", "Oat cookies")).toBe(false);
+    expect(sameItem("Oat milk", "Almond milk")).toBe(false);
+    expect(sameItem("Ox", "Ox tail")).toBe(false);
+  });
+});
+
+describe("buildSweepResults", () => {
+  let n = 0;
+  const det = (name: string, over: Partial<SweepDetection> = {}): SweepDetection => ({
+    id: `d${n++}`,
+    name,
+    icon: "generic",
+    box: null,
+    confidence: 0.9,
+    condition: null,
+    storage: null,
+    ...over,
+  });
+  const shot = (id: string, space: SweepShotInput["space"], items: SweepDetection[], status: SweepShotInput["status"] = "done"): SweepShotInput => ({
+    id,
+    space,
+    status,
+    items,
+  });
+
+  it("merges the same item across shots of one space and counts repeats in a photo as quantity", () => {
+    const { rows } = buildSweepResults(
+      [
+        shot("a", "fridge", [det("Yogurt"), det("Yogurt"), det("Milk")]),
+        shot("b", "fridge", [det("yogurts", { box: [0, 0, 500, 500] })]),
+        shot("c", "freezer", [det("Yogurt")]),
+      ],
+      [],
+    );
+    const fridgeYogurt = rows.find((r) => r.space === "fridge" && r.name === "Yogurt")!;
+    expect(fridgeYogurt.qty).toBe(2);
+    expect(fridgeYogurt.seenIn).toBe(2);
+    expect(fridgeYogurt.shotId).toBe("b"); // the placed view is used for the crop
+    expect(rows.filter((r) => r.name === "Yogurt" || r.name === "yogurts")).toHaveLength(2); // freezer stays separate
+    expect(rows.find((r) => r.space === "freezer")!.location).toBe("freezer");
+  });
+
+  it("matches tracked items at the same location and lists the unseen ones as missing", () => {
+    const tracked = [
+      { id: "t1", name: "Whole milk", location: "fridge" as const },
+      { id: "t2", name: "Butter", location: "fridge" as const },
+      { id: "t3", name: "Rice", location: "pantry" as const },
+      { id: "t4", name: "Milk", location: "freezer" as const },
+    ];
+    const { rows, missing } = buildSweepResults([shot("a", "fridge", [det("Milk"), det("Cheese")])], tracked);
+
+    expect(rows.find((r) => r.name === "Milk")!.match?.id).toBe("t1");
+    expect(rows.find((r) => r.name === "Cheese")!.match).toBeNull();
+    // Only the scanned space is checked: butter is missing, the pantry rice and freezer milk aren't.
+    expect(missing.map((m) => m.id)).toEqual(["t2"]);
+  });
+
+  it("never compares a grocery haul and reports empty shots", () => {
+    const tracked = [{ id: "t1", name: "Milk", location: "fridge" as const }];
+    const { rows, missing, emptyShots } = buildSweepResults(
+      [
+        shot("a", "groceries", [det("Milk", { storage: "fridge" })]),
+        shot("b", "pantry", []),
+        shot("c", "fridge", [det("Eggs")], "scanning"),
+      ],
+      tracked,
+    );
+
+    expect(rows[0].match).toBeNull();
+    expect(rows[0].location).toBe("fridge");
+    expect(missing).toEqual([]); // the fridge shot isn't done, so the fridge wasn't checked
+    expect(emptyShots).toEqual(["b"]);
+  });
+
+  it("treats a tracked item with no location as in the fridge", () => {
+    const { rows } = buildSweepResults([shot("a", "fridge", [det("Jam")])], [{ id: "t1", name: "Jam" }]);
+    expect(rows[0].match?.id).toBe("t1");
   });
 });

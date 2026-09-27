@@ -27,10 +27,12 @@ class PhotoService
             // legitimately empty array (nothing identifiable in the photo). Only the
             // former should be refunded; the controller needs to tell them apart.
             $aiFailed = false;
+            $scene = null;
             if (! $this->vision->available()) {
                 // No API key configured at all - fall back to mock data so local dev/demoing
                 // still works without anyone needing to set one up.
                 $detectedItems = $this->mockDetection();
+                $scene = 'fridge';
             } else {
                 // Boxes come back in the model's view of the pixels, so it must see the
                 // photo the same way up as the phone shows it.
@@ -46,7 +48,8 @@ class PhotoService
                     $aiFailed = true;
                     $detectedItems = [];
                 } else {
-                    $detectedItems = $detected;
+                    $detectedItems = $detected['items'];
+                    $scene = $detected['scene'];
                 }
             }
 
@@ -56,6 +59,7 @@ class PhotoService
                 'file_url' => Storage::disk($disk)->temporaryUrl($path, now()->addMinutes(30)),
                 'status' => 'processed',
                 'detected_items' => $detectedItems,
+                'scene' => $scene,
                 'ai_failed' => $aiFailed,
             ];
         } catch (\Exception $e) {
@@ -65,17 +69,24 @@ class PhotoService
         }
     }
 
+    /** What a photo can show; `counter` is groceries laid out, not yet put away. */
+    public const SCENES = ['fridge', 'freezer', 'pantry', 'counter', 'unclear'];
+
+    public const STORAGE = ['fridge', 'freezer', 'pantry'];
+
     /**
-     * Ask OpenRouter Vision (Claude Haiku) to look at the fridge photo and return detected
-     * items in the same shape the frontend already expects from
-     * mockDetection().
+     * Ask OpenRouter Vision to look at the photo and return ['scene' => ?string, 'items' => [...]],
+     * items in the same shape as mockDetection(). null when the call itself failed.
      */
     private function detectItemsWithVision(string $imagePath, string $mimeType): ?array
     {
         $prompt = <<<'PROMPT'
-You are looking at a photo of the inside of a refrigerator, freezer, or pantry. Identify every distinct food or drink item visible.
+You are looking at a photo from someone's kitchen: usually the inside of a refrigerator, freezer, pantry or cupboard, or groceries laid out on a counter. Identify every distinct food or drink item visible.
 
-Return ONLY a JSON array (no prose, no markdown fences) where each element has exactly these fields:
+Return ONLY a JSON object (no prose, no markdown fences) with two fields:
+- "scene": what the photo shows, one of "fridge", "freezer", "pantry" (a pantry, cupboard or shelf
+  of dry goods), "counter" (groceries laid out, not yet put away) or "unclear".
+- "items": an array where each element has exactly these fields:
 - "detected_name": what you actually see, in plain words, e.g. "milk bottle", "carton of eggs"
 - "parsed_name": a clean, singular, human-readable product name, e.g. "Milk"
 - "matched_product_id": always null
@@ -89,9 +100,12 @@ Return ONLY a JSON array (no prose, no markdown fences) where each element has e
 - "box": where the item is in the photo, as [ymin, xmin, ymax, xmax] with each value an integer
   from 0 to 1000 (0,0 is the top-left corner, 1000,1000 the bottom-right). Draw it tightly around
   that one item. Use null only if you can't place it.
+- "storage": where this item is normally kept once put away, one of "fridge", "freezer" or "pantry".
+
+If you see several of the same item (e.g. three yogurt pots), list each one as its own element.
 
 Only include items you can actually see - do not guess at items that might typically be in a fridge but aren't visible.
-If nothing identifiable is visible, return an empty array.
+If nothing identifiable is visible, return an empty "items" array.
 PROMPT;
 
         // Boxes make the reply longer, hence more room than the 1500-token default.
@@ -102,15 +116,14 @@ PROMPT;
             return null;
         }
 
-        // The model occasionally wraps the array as {"items": [...]} despite the
-        // prompt; handle both shapes defensively.
-        $items = $result['items'] ?? $result;
-
+        // Asked for {"scene", "items"}, but a bare array (the older shape) is accepted too.
+        $items = $result['items'] ?? (array_is_list($result) ? $result : null);
         if (! is_array($items)) {
             return null;
         }
+        $scene = is_string($result['scene'] ?? null) && in_array($result['scene'], self::SCENES, true) ? $result['scene'] : null;
 
-        return array_values(array_map(function ($item) {
+        return ['scene' => $scene, 'items' => array_values(array_map(function ($item) {
             $name = $item['parsed_name'] ?? 'Item';
 
             return [
@@ -122,8 +135,9 @@ PROMPT;
                 'confirmed' => false,
                 'condition' => in_array($item['condition'] ?? null, ['vibrant', 'wilting', 'past_best'], true) ? $item['condition'] : null,
                 'box' => self::normalizeBox($item['box'] ?? null),
+                'storage' => in_array($item['storage'] ?? null, self::STORAGE, true) ? $item['storage'] : null,
             ];
-        }, array_filter($items, 'is_array')));
+        }, array_filter($items, 'is_array')))];
     }
 
     /**
@@ -161,11 +175,11 @@ PROMPT;
     private function mockDetection()
     {
         $rows = [
-            ['detected_name' => 'milk bottle', 'parsed_name' => 'Milk', 'confidence' => 0.95, 'condition' => null, 'box' => [80, 60, 520, 260]],
-            ['detected_name' => 'yogurt container', 'parsed_name' => 'Yogurt', 'confidence' => 0.88, 'condition' => null, 'box' => [320, 330, 520, 520]],
-            ['detected_name' => 'cheese package', 'parsed_name' => 'Cheese', 'confidence' => 0.82, 'condition' => null, 'box' => [380, 600, 520, 900]],
-            ['detected_name' => 'bread loaf', 'parsed_name' => 'Bread', 'confidence' => 0.90, 'condition' => null, 'box' => [600, 80, 820, 480]],
-            ['detected_name' => 'bag of spinach, leaves visibly wilting', 'parsed_name' => 'Spinach', 'confidence' => 0.55, 'condition' => 'wilting', 'box' => [620, 560, 900, 920]],
+            ['detected_name' => 'milk bottle', 'parsed_name' => 'Milk', 'confidence' => 0.95, 'condition' => null, 'box' => [80, 60, 520, 260], 'storage' => 'fridge'],
+            ['detected_name' => 'yogurt container', 'parsed_name' => 'Yogurt', 'confidence' => 0.88, 'condition' => null, 'box' => [320, 330, 520, 520], 'storage' => 'fridge'],
+            ['detected_name' => 'cheese package', 'parsed_name' => 'Cheese', 'confidence' => 0.82, 'condition' => null, 'box' => [380, 600, 520, 900], 'storage' => 'fridge'],
+            ['detected_name' => 'bread loaf', 'parsed_name' => 'Bread', 'confidence' => 0.90, 'condition' => null, 'box' => [600, 80, 820, 480], 'storage' => 'pantry'],
+            ['detected_name' => 'bag of spinach, leaves visibly wilting', 'parsed_name' => 'Spinach', 'confidence' => 0.55, 'condition' => 'wilting', 'box' => [620, 560, 900, 920], 'storage' => 'fridge'],
         ];
 
         return array_map(fn ($r) => [

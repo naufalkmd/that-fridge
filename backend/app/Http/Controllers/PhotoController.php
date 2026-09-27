@@ -56,6 +56,8 @@ class PhotoController extends Controller
             'status' => $result['status'],
             'file_url' => $result['file_url'],
             'detected_items' => $result['detected_items'],
+            // What the photo shows (fridge/freezer/pantry/counter/unclear), null when unknown.
+            'scene' => $result['scene'] ?? null,
             'message' => 'Review detected items, then confirm to add',
         ], 200);
     }
