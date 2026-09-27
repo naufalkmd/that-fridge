@@ -63,7 +63,7 @@ function CustomFieldRow({
     borderWidth: 1,
     borderColor: HAIRLINE,
     backgroundColor: SURFACE2,
-    borderRadius: 6,
+    borderCurve: "continuous", borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 9,
     fontSize: 13,
@@ -89,14 +89,14 @@ function CustomFieldRow({
       <View style={{ flexDirection: "row", gap: 8 }}>
         <Pressable
           onPress={done}
-          style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 9, borderRadius: 6, backgroundColor: AMBER }}
+          style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 9, borderCurve: "continuous", borderRadius: 8, backgroundColor: AMBER }}
         >
           <MaterialCommunityIcons name="check" size={13} color={CANVAS} />
           <Text style={{ fontSize: 12, fontWeight: "700", color: CANVAS }}>Done</Text>
         </Pressable>
         <Pressable
           onPress={remove}
-          style={{ width: 40, alignItems: "center", justifyContent: "center", borderRadius: 6, borderWidth: 1, borderColor: `${BAD}66` }}
+          style={{ width: 40, alignItems: "center", justifyContent: "center", borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: `${BAD}66` }}
         >
           <MaterialCommunityIcons name="trash-can-outline" size={15} color={BAD} />
         </Pressable>
@@ -174,7 +174,7 @@ export function AddCustomFieldRow({
     borderWidth: 1,
     borderColor: HAIRLINE,
     backgroundColor: SURFACE2,
-    borderRadius: 6,
+    borderCurve: "continuous", borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 9,
     fontSize: 13,
@@ -218,14 +218,14 @@ export function AddCustomFieldRow({
       <View style={{ flexDirection: "row", gap: 8 }}>
         <Pressable
           onPress={cancel}
-          style={{ flex: 1, alignItems: "center", paddingVertical: 9, borderRadius: 6, borderWidth: 1, borderColor: HAIRLINE }}
+          style={{ flex: 1, alignItems: "center", paddingVertical: 9, borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE }}
         >
           <Text style={{ fontSize: 12, fontWeight: "700", color: INK }}>Cancel</Text>
         </Pressable>
         <Pressable
           onPress={confirm}
           disabled={status === "saving"}
-          style={{ flex: 1, alignItems: "center", paddingVertical: 9, borderRadius: 6, backgroundColor: BLUE, opacity: status === "saving" ? 0.6 : 1 }}
+          style={{ flex: 1, alignItems: "center", paddingVertical: 9, borderCurve: "continuous", borderRadius: 8, backgroundColor: BLUE, opacity: status === "saving" ? 0.6 : 1 }}
         >
           <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>{status === "saving" ? "Adding…" : "Add field"}</Text>
         </Pressable>

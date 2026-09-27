@@ -5,12 +5,13 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { PixelText } from "@/components/brand";
 import { useTheme } from "@/lib/theme";
+import { TYPE } from "@/lib/tokens";
 
 /** Pulsing placeholder block for loading states. */
 export function Skeleton({
   width = "100%",
   height = 14,
-  radius = 6,
+  radius = 8,
   style,
 }: {
   width?: DimensionValue;
@@ -32,7 +33,7 @@ export function Skeleton({
   }, [pulse]);
   return (
     <Animated.View
-      style={[{ width, height, borderRadius: radius, backgroundColor: colors.surface2, opacity: pulse }, style]}
+      style={[{ width, height, borderCurve: "continuous", borderRadius: radius, backgroundColor: colors.surface2, opacity: pulse }, style]}
     />
   );
 }
@@ -43,7 +44,7 @@ export function SkeletonList({ rows = 5 }: { rows?: number }) {
   return (
     <View
       style={{
-        borderRadius: 8,
+        borderCurve: "continuous", borderRadius: 8,
         borderWidth: 1,
         borderColor: colors.hairline,
         backgroundColor: colors.surface,
@@ -62,7 +63,7 @@ export function SkeletonList({ rows = 5 }: { rows?: number }) {
             borderBottomColor: colors.hairline,
           }}
         >
-          <Skeleton width={38} height={38} radius={6} />
+          <Skeleton width={38} height={38} radius={8} />
           <View style={{ flex: 1, gap: 6 }}>
             <Skeleton width="55%" height={12} />
             <Skeleton width="80%" height={8} />
@@ -93,9 +94,9 @@ export function PageHeader({ title, subtitle }: { title: string; subtitle?: stri
         <Ionicons name="chevron-back" size={20} color={colors.muted} />
       </Pressable>
       <View>
-        <PixelText style={{ fontSize: 14, color: colors.ink }}>{title}</PixelText>
+        <PixelText style={{ ...TYPE.title, color: colors.ink }}>{title}</PixelText>
         {subtitle && (
-          <Text style={{ fontSize: 11.5, color: colors.faint, marginTop: 3 }}>
+          <Text style={{ fontSize: 12, color: colors.muted, marginTop: 4 }}>
             {subtitle}
           </Text>
         )}
@@ -104,24 +105,17 @@ export function PageHeader({ title, subtitle }: { title: string; subtitle?: stri
   );
 }
 
-/** Pixel-font section header — mirrors the web's "Overview" / "Your crew" headers. */
+/** Section label ("Overview", "Your crew"): the app's one section style, small uppercase over its content. */
 export function SectionHeader({ children }: { children: string }) {
   const { colors } = useTheme();
-  return (
-    <PixelText style={{ fontSize: 13, color: colors.ink, marginBottom: 11 }}>{children}</PixelText>
-  );
+  return <Text style={{ ...TYPE.section, color: colors.muted, marginBottom: 10 }}>{children}</Text>;
 }
 
 /** Tiny uppercase label — the web's "EXPIRING SOON" / "LOW STOCK" eyebrows. */
 export function Eyebrow({ children, color }: { children: string; color?: string }) {
   const { colors } = useTheme();
   return (
-    <Text
-      style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.4, color: color ?? colors.ink }}
-      className="uppercase"
-    >
-      {children}
-    </Text>
+    <Text style={{ ...TYPE.section, color: color ?? colors.muted }}>{children}</Text>
   );
 }
 
@@ -136,9 +130,9 @@ export function AgentBadge({ name }: { name: string }) {
   };
   const color = agentColor[name] ?? colors.ink;
   return (
-    <View className="rounded-md px-1.5 py-0.5" style={{ backgroundColor: `${color}1a` }}>
+    <View className="rounded-lg px-1.5 py-0.5" style={{ backgroundColor: `${color}1a` }}>
       <Text
-        style={{ fontSize: 9.5, fontWeight: "800", letterSpacing: 0.3, color }}
+        style={{ fontSize: 9.5, fontWeight: "700", letterSpacing: 0.3, color }}
         className="uppercase"
       >
         {name}

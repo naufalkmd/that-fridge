@@ -59,7 +59,7 @@ export function NoteRow({
           borderWidth: 1,
           borderColor: HAIRLINE,
           backgroundColor: SURFACE2,
-          borderRadius: 6,
+          borderCurve: "continuous", borderRadius: 8,
           paddingHorizontal: 12,
           paddingVertical: 9,
           fontSize: 13,

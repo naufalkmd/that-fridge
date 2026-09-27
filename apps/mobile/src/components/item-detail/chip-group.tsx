@@ -36,7 +36,7 @@ export function ChipGroup({
               style={{
                 paddingHorizontal: 12,
                 paddingVertical: 7,
-                borderRadius: 6,
+                borderCurve: "continuous", borderRadius: 8,
                 backgroundColor: active ? AMBER : SURFACE2,
               }}
             >

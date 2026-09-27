@@ -101,7 +101,7 @@ export default function Credits() {
       <SheetHeader title="AI credits" />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 40, gap: 18 }}>
         <View style={{ alignItems: "center", paddingVertical: 18 }}>
-          <Text style={{ fontSize: 44, fontWeight: "800", color: balance !== null && balance < 3 ? BAD : INK }}>
+          <Text style={{ fontSize: 44, fontWeight: "700", color: balance !== null && balance < 3 ? BAD : INK }}>
             {balance ?? "—"}
           </Text>
           <Text style={{ fontSize: 12.5, color: MUTED }}>credits left</Text>
@@ -129,7 +129,7 @@ export default function Credits() {
                   borderWidth: 1,
                   borderColor: HAIRLINE,
                   backgroundColor: SURFACE,
-                  borderRadius: 10,
+                  borderCurve: "continuous", borderRadius: 12,
                   padding: 16,
                   opacity: buying && buying !== p.identifier ? 0.4 : 1,
                 }}
@@ -140,7 +140,7 @@ export default function Credits() {
                 {buying === p.identifier ? (
                   <ActivityIndicator color={AMBER} />
                 ) : (
-                  <Text style={{ fontSize: 14, fontWeight: "800", color: AMBER }}>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: AMBER }}>
                     {p.product.priceString}
                   </Text>
                 )}
@@ -155,12 +155,12 @@ export default function Credits() {
                 borderWidth: 1,
                 borderColor: `${AMBER}66`,
                 backgroundColor: `${AMBER}12`,
-                borderRadius: 10,
+                borderCurve: "continuous", borderRadius: 12,
                 padding: 16,
                 gap: 4,
               }}
             >
-              <Text style={{ fontSize: 13.5, fontWeight: "800", color: INK }}>Go Pro</Text>
+              <Text style={{ fontSize: 13.5, fontWeight: "700", color: INK }}>Go Pro</Text>
               <Text style={{ fontSize: 11.5, lineHeight: 16, color: MUTED }}>
                 400 AI credits every month, plus shared fridges — from $2.99/mo with a 7-day
                 free trial.
@@ -172,7 +172,7 @@ export default function Credits() {
         {ledger.length > 0 && (
           <View>
             <Label>RECENT</Label>
-            <View style={{ borderRadius: 10, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden" }}>
+            <View style={{ borderCurve: "continuous", borderRadius: 12, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden" }}>
               {ledger.slice(0, 15).map((row, i) => (
                 <View
                   key={i}
@@ -212,7 +212,7 @@ export default function Credits() {
 function Label({ children }: { children: string }) {
   const { faint: FAINT } = useTheme().colors;
   return (
-    <Text style={{ fontSize: 12, fontWeight: "800", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
+    <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
       {children}
     </Text>
   );

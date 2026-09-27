@@ -70,7 +70,7 @@ export function FridgeScopePicker({ small }: { small?: boolean }) {
                 left,
                 width: MENU_WIDTH,
                 backgroundColor: SURFACE,
-                borderRadius: 8,
+                borderCurve: "continuous", borderRadius: 8,
                 borderWidth: 1,
                 borderColor: HAIRLINE,
                 padding: 6,
@@ -93,7 +93,7 @@ export function FridgeScopePicker({ small }: { small?: boolean }) {
                     style={{
                       paddingVertical: 9,
                       paddingHorizontal: 12,
-                      borderRadius: 6,
+                      borderCurve: "continuous", borderRadius: 8,
                       backgroundColor: active ? SURFACE2 : "transparent",
                     }}
                   >

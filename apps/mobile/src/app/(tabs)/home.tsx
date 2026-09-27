@@ -259,7 +259,7 @@ export default function Home() {
                   borderColor: HAIRLINE,
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: "800", color: INK }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: INK }}>
                   {user?.name?.slice(0, 1).toUpperCase() ?? "?"}
                 </Text>
               </View>
@@ -283,14 +283,14 @@ export default function Home() {
               </View>
             </Pressable>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-              <PixelText style={{ fontSize: 20, letterSpacing: 0.5, color: INK }}>
+              <PixelText style={{ fontSize: 16, letterSpacing: 0.5, color: INK }}>
                 ThatFridge
               </PixelText>
               {isPro && (
                 <View
                   style={{
                     backgroundColor: `${PRO_PURPLE}1f`,
-                    borderRadius: 999,
+                    borderCurve: "continuous", borderRadius: 8,
                     paddingHorizontal: 6,
                     paddingVertical: 4,
                   }}
@@ -356,9 +356,9 @@ export default function Home() {
               onLayout={(e: LayoutChangeEvent) =>
                 setHeroWidth(e.nativeEvent.layout.width)
               }
-              style={{ borderRadius: 14, overflow: "hidden" }}
+              style={{ borderCurve: "continuous", borderRadius: 16, overflow: "hidden" }}
             >
-              {(heroWidth === 0 || (loading && fridges.length === 0)) && <Skeleton height={236} radius={14} />}
+              {(heroWidth === 0 || (loading && fridges.length === 0)) && <Skeleton height={236} radius={16} />}
               {heroWidth > 0 && !(loading && fridges.length === 0) && (
                 <ScrollView
                   ref={heroRef}
@@ -408,7 +408,7 @@ export default function Home() {
                           <Text
                             style={{
                               fontSize: 12,
-                              fontWeight: "800",
+                              fontWeight: "700",
                               color: INK,
                             }}
                           >
@@ -430,7 +430,7 @@ export default function Home() {
                         <Text
                           style={{
                             fontSize: 12,
-                            fontWeight: "800",
+                            fontWeight: "700",
                             color: fr.color,
                           }}
                         >
@@ -445,7 +445,7 @@ export default function Home() {
                           backgroundColor: `${CANVAS}8c`,
                           paddingVertical: 5,
                           paddingHorizontal: 10,
-                          borderRadius: 20,
+                          borderCurve: "continuous", borderRadius: 16,
                         }}
                       >
                         <Text
@@ -485,7 +485,7 @@ export default function Home() {
                     <View
                       style={{
                         flex: 1,
-                        borderRadius: 14,
+                        borderCurve: "continuous", borderRadius: 16,
                         borderWidth: 2,
                         borderStyle: "dashed",
                         borderColor: STRONG,
@@ -709,7 +709,7 @@ const heroBadge = (surface: string) =>
     backgroundColor: `${surface}d9`,
     paddingVertical: 6,
     paddingHorizontal: 11,
-    borderRadius: 14,
+    borderCurve: "continuous", borderRadius: 16,
   }) as const;
 
 function StatCard({
@@ -734,7 +734,7 @@ function StatCard({
         backgroundColor: SURFACE,
         borderWidth: 1,
         borderColor: HAIRLINE,
-        borderRadius: 8,
+        borderCurve: "continuous", borderRadius: 8,
         paddingVertical: 12,
         paddingHorizontal: 8,
         alignItems: "center",
@@ -744,7 +744,7 @@ function StatCard({
         style={{
           width: 28,
           height: 28,
-          borderRadius: 6,
+          borderCurve: "continuous", borderRadius: 8,
           backgroundColor: `${tint}1a`,
           alignItems: "center",
           justifyContent: "center",
@@ -753,7 +753,7 @@ function StatCard({
       >
         <Ionicons name={icon} size={14} color={tint} />
       </View>
-      <Text style={{ fontSize: 18, fontWeight: "800", color: INK }}>
+      <Text style={{ fontSize: 18, fontWeight: "700", color: INK }}>
         {value}
       </Text>
       <Text style={{ fontSize: 10, color: FAINT, marginTop: 2 }}>{label}</Text>

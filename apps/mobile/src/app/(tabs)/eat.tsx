@@ -195,7 +195,7 @@ function CrewSelector({
       style={{
         flexDirection: "row",
         backgroundColor: SURFACE2,
-        borderRadius: 10,
+        borderCurve: "continuous", borderRadius: 12,
         padding: 4,
       }}
     >
@@ -207,7 +207,7 @@ function CrewSelector({
               top: 4,
               bottom: 4,
               left: 4,
-              borderRadius: 7,
+              borderCurve: "continuous", borderRadius: 8,
             },
             indicator,
           ]}
@@ -416,7 +416,7 @@ export default function Crew() {
             marginBottom: 14,
           }}
         >
-          <PixelText style={{ fontSize: 16, color: INK }}>Crew</PixelText>
+          <PixelText style={{ fontSize: 16, letterSpacing: 0.5, color: INK }}>Crew</PixelText>
           <FridgeScopePicker small />
         </View>
         <CrewSelector
@@ -444,14 +444,14 @@ export default function Crew() {
               backgroundColor: SURFACE,
               borderWidth: 1,
               borderColor: HAIRLINE,
-              borderRadius: 10,
+              borderCurve: "continuous", borderRadius: 12,
               padding: 14,
               justifyContent: "center",
               gap: 8,
             }}
           >
             <Text
-              style={{ fontSize: 15, fontWeight: "800", color: tabColor }}
+              style={{ fontSize: 15, fontWeight: "700", color: tabColor }}
             >
               {meta.agent}
             </Text>
@@ -499,7 +499,7 @@ export default function Crew() {
                   score.score === null
                     ? "rgba(255,255,255,0.04)"
                     : `${bandColor(score.score, colors)}14`,
-                borderRadius: 6,
+                borderCurve: "continuous", borderRadius: 8,
                 paddingVertical: 8,
                 paddingHorizontal: 10,
               }}
@@ -515,7 +515,7 @@ export default function Crew() {
                 <Text
                   style={{
                     fontSize: 13,
-                    fontWeight: "800",
+                    fontWeight: "700",
                     color: bandColor(score.score, colors),
                   }}
                 >
@@ -533,7 +533,7 @@ export default function Crew() {
                 justifyContent: "center",
                 gap: 6,
                 paddingVertical: 8,
-                borderRadius: 6,
+                borderCurve: "continuous", borderRadius: 8,
                 backgroundColor: shownInsight ? `${tabColor}22` : tabColor,
                 opacity: activating ? 0.6 : 1,
               }}
@@ -599,7 +599,7 @@ export default function Crew() {
                       alignItems: "center",
                       gap: 8,
                       backgroundColor: `${tabColor}0f`,
-                      borderRadius: 6,
+                      borderCurve: "continuous", borderRadius: 8,
                       paddingVertical: 7,
                       paddingLeft: 10,
                       paddingRight: 6,
@@ -614,7 +614,7 @@ export default function Crew() {
                       }}
                     >
                       Move{" "}
-                      <Text style={{ fontWeight: "800" }}>{mv.name}</Text>{" "}
+                      <Text style={{ fontWeight: "700" }}>{mv.name}</Text>{" "}
                       to {label}
                     </Text>
                     <Pressable
@@ -625,7 +625,7 @@ export default function Crew() {
                       style={{
                         paddingVertical: 5,
                         paddingHorizontal: 9,
-                        borderRadius: 6,
+                        borderCurve: "continuous", borderRadius: 8,
                         backgroundColor: SURFACE,
                       }}
                     >
@@ -660,7 +660,7 @@ export default function Crew() {
               borderColor: HAIRLINE,
               borderLeftWidth: 3,
               borderLeftColor: tabColor,
-              borderRadius: 6,
+              borderCurve: "continuous", borderRadius: 8,
               padding: 12,
               paddingRight: 30,
               marginBottom: 16,
@@ -800,7 +800,7 @@ function RecipesPanel() {
             backgroundColor: SURFACE,
             borderWidth: 1,
             borderColor: HAIRLINE,
-            borderRadius: 10,
+            borderCurve: "continuous", borderRadius: 12,
             padding: 14,
             marginBottom: 18,
           }}
@@ -808,7 +808,7 @@ function RecipesPanel() {
           <Text
             style={{
               fontSize: 11,
-              fontWeight: "800",
+              fontWeight: "700",
               letterSpacing: 0.4,
               color: INK,
               marginBottom: 8,
@@ -889,7 +889,7 @@ function RecipesPanel() {
               style={{
                 paddingVertical: 7,
                 paddingHorizontal: 14,
-                borderRadius: 6,
+                borderCurve: "continuous", borderRadius: 8,
                 backgroundColor: active ? AMBER : SURFACE2,
               }}
             >
@@ -910,7 +910,7 @@ function RecipesPanel() {
 
       <View
         style={{
-          borderRadius: 8,
+          borderCurve: "continuous", borderRadius: 8,
           borderWidth: 1,
           borderColor: HAIRLINE,
           backgroundColor: SURFACE,
@@ -990,7 +990,7 @@ function RecipesPanel() {
                       <Text
                         style={{
                           fontSize: 9.5,
-                          fontWeight: "800",
+                          fontWeight: "700",
                           letterSpacing: 0.3,
                           color: BLUE,
                         }}
@@ -1011,7 +1011,7 @@ function RecipesPanel() {
                   backgroundColor: ready ? "rgba(57,224,127,0.14)" : SURFACE2,
                   paddingHorizontal: 10,
                   paddingVertical: 5,
-                  borderRadius: 6,
+                  borderCurve: "continuous", borderRadius: 8,
                 }}
               >
                 <Text
@@ -1110,7 +1110,7 @@ function ShoppingPanel({
           </Text>
           <View
             style={{
-              borderRadius: 6,
+              borderCurve: "continuous", borderRadius: 8,
               borderWidth: 1,
               borderColor: HAIRLINE,
               backgroundColor: SURFACE,
@@ -1192,7 +1192,7 @@ function ShoppingPanel({
               borderWidth: 1,
               borderColor: HAIRLINE,
               backgroundColor: SURFACE,
-              borderRadius: 6,
+              borderCurve: "continuous", borderRadius: 8,
               paddingHorizontal: 14,
               paddingVertical: 11,
               fontSize: 14,
@@ -1204,7 +1204,7 @@ function ShoppingPanel({
             style={{
               justifyContent: "center",
               paddingHorizontal: 14,
-              borderRadius: 6,
+              borderCurve: "continuous", borderRadius: 8,
               backgroundColor: AMBER,
             }}
           >
@@ -1227,7 +1227,7 @@ function ShoppingPanel({
         ) : (
           <View
             style={{
-              borderRadius: 8,
+              borderCurve: "continuous", borderRadius: 8,
               borderWidth: 1,
               borderColor: HAIRLINE,
               backgroundColor: SURFACE,
@@ -1278,7 +1278,7 @@ function ShoppingPanel({
                     hitSlop={6}
                     style={{
                       padding: 4,
-                      borderRadius: 6,
+                      borderCurve: "continuous", borderRadius: 8,
                       backgroundColor: SURFACE2,
                     }}
                   >
@@ -1328,7 +1328,7 @@ function ShoppingPanel({
                     backgroundColor: SURFACE,
                     borderWidth: 1,
                     borderColor: HAIRLINE,
-                    borderRadius: 6,
+                    borderCurve: "continuous", borderRadius: 8,
                     paddingVertical: 10,
                     paddingHorizontal: 14,
                   }}
@@ -1356,13 +1356,13 @@ function ShoppingPanel({
                           backgroundColor: `${m.color}1a`,
                           paddingHorizontal: 6,
                           paddingVertical: 1,
-                          borderRadius: 5,
+                          borderRadius: 4,
                         }}
                       >
                         <Text
                           style={{
                             fontSize: 9,
-                            fontWeight: "800",
+                            fontWeight: "700",
                             letterSpacing: 0.2,
                             color: m.color,
                           }}
@@ -1380,7 +1380,7 @@ function ShoppingPanel({
                     style={{
                       width: 30,
                       height: 30,
-                      borderRadius: 6,
+                      borderCurve: "continuous", borderRadius: 8,
                       backgroundColor: AMBER,
                       alignItems: "center",
                       justifyContent: "center",
@@ -1531,7 +1531,7 @@ function GuardianPanel({
             <Text
               style={{
                 fontSize: 12,
-                fontWeight: "800",
+                fontWeight: "700",
                 letterSpacing: 0.3,
                 color: MUTED,
               }}
@@ -1542,7 +1542,7 @@ function GuardianPanel({
           </View>
           <View
             style={{
-              borderRadius: 8,
+              borderCurve: "continuous", borderRadius: 8,
               borderWidth: 1,
               borderColor: HAIRLINE,
               backgroundColor: SURFACE,
@@ -1596,7 +1596,7 @@ function GuardianPanel({
                           alignItems: "center",
                           gap: 2,
                           backgroundColor: SURFACE2,
-                          borderRadius: 5,
+                          borderRadius: 4,
                           paddingHorizontal: 5,
                           paddingVertical: 1,
                         }}
@@ -1695,7 +1695,7 @@ function OrganizerPanel({
                   <Text
                     style={{
                       fontSize: 12,
-                      fontWeight: "800",
+                      fontWeight: "700",
                       letterSpacing: 0.3,
                       color: loc.color,
                     }}
@@ -1708,7 +1708,7 @@ function OrganizerPanel({
                 </View>
                 <View
                   style={{
-                    borderRadius: 8,
+                    borderCurve: "continuous", borderRadius: 8,
                     borderWidth: 1,
                     borderColor: HAIRLINE,
                     backgroundColor: SURFACE,
@@ -1799,7 +1799,7 @@ function OrganizerPanel({
                                   style={{
                                     width: 26,
                                     height: 26,
-                                    borderRadius: 6,
+                                    borderCurve: "continuous", borderRadius: 8,
                                     backgroundColor: active
                                       ? opt.color
                                       : SURFACE2,

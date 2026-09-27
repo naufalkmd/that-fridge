@@ -412,7 +412,7 @@ export default function Chat() {
             }}
           >
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15.5, fontWeight: "800", color: INK }}>
+              <Text style={{ fontSize: 15.5, fontWeight: "700", color: INK }}>
                 Quick Chat
               </Text>
               <Text style={{ fontSize: 11.5, color: FAINT }}>
@@ -441,7 +441,7 @@ export default function Chat() {
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "space-between",
-                borderRadius: 8,
+                borderCurve: "continuous", borderRadius: 8,
                 borderWidth: 1,
                 borderColor: HAIRLINE,
                 backgroundColor: `${SURFACE}d9`,
@@ -531,14 +531,14 @@ export default function Chat() {
                       {a.kind === "image" ? (
                         <Image
                           source={{ uri: a.uri }}
-                          style={{ flex: 1, borderRadius: 6 }}
+                          style={{ flex: 1, borderRadius: 8 }}
                           contentFit="cover"
                         />
                       ) : (
                         <View
                           style={{
                             flex: 1,
-                            borderRadius: 6,
+                            borderCurve: "continuous", borderRadius: 8,
                             backgroundColor: SURFACE2,
                             alignItems: "center",
                             justifyContent: "center",
@@ -637,7 +637,7 @@ export default function Chat() {
                   flex: 1,
                   maxHeight: 96,
                   backgroundColor: SURFACE2,
-                  borderRadius: 20,
+                  borderCurve: "continuous", borderRadius: 16,
                   paddingHorizontal: 16,
                   paddingVertical: 11,
                   fontSize: 13.5,
@@ -790,7 +790,7 @@ function SuggestionChips({ onPick }: { onPick: (prompt: string) => void }) {
             gap: 6,
             paddingHorizontal: 12,
             paddingVertical: 8,
-            borderRadius: 999,
+            borderCurve: "continuous", borderRadius: 8,
             backgroundColor: `${colors.surface}e6`,
             borderWidth: 1,
             borderColor: colors.hairline,
@@ -996,7 +996,7 @@ function Bubble({ msg }: { msg: Msg }) {
                 <Image
                   key={i}
                   source={{ uri }}
-                  style={{ width: size, height: size, borderRadius: 10 }}
+                  style={{ width: size, height: size, borderRadius: 12 }}
                   contentFit="cover"
                 />
               );
@@ -1010,7 +1010,7 @@ function Bubble({ msg }: { msg: Msg }) {
               alignItems: "center",
               gap: 6,
               backgroundColor: isUser ? "#ffffff26" : colors.surface2,
-              borderRadius: 8,
+              borderCurve: "continuous", borderRadius: 8,
               paddingHorizontal: 10,
               paddingVertical: 8,
               marginBottom: msg.text ? 6 : 0,
@@ -1036,7 +1036,7 @@ function Bubble({ msg }: { msg: Msg }) {
         {!!msg.contextLabels?.length && (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginBottom: msg.text ? 6 : 0, paddingHorizontal: hasAttachment ? 8 : 0 }}>
             {msg.contextLabels.map((c, i) => (
-              <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: "#ffffff26" }}>
+              <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderCurve: "continuous", borderRadius: 12, backgroundColor: "#ffffff26" }}>
                 <Ionicons name={contextIcon(c.type) as never} size={11} color={colors.onAccent} />
                 <Text style={{ fontSize: 11, color: colors.onAccent }} numberOfLines={1}>{c.label}</Text>
               </View>
@@ -1094,7 +1094,7 @@ function Bubble({ msg }: { msg: Msg }) {
                 ["wrong_info", "Wrong info"], ["ignored_fridge", "Ignored my fridge"],
                 ["too_slow", "Too slow"], ["other", "Other"],
               ] as const).map(([reason, label]) => (
-                <Pressable key={reason} disabled={ratingBusy} onPress={() => { void rateReply("down", reason); }} style={{ padding: 6, borderRadius: 6, backgroundColor: colors.surface2 }}>
+                <Pressable key={reason} disabled={ratingBusy} onPress={() => { void rateReply("down", reason); }} style={{ padding: 6, borderCurve: "continuous", borderRadius: 8, backgroundColor: colors.surface2 }}>
                   <Text style={{ color: colors.muted, fontSize: 11 }}>{label}</Text>
                 </Pressable>
               ))}

@@ -58,12 +58,12 @@ export function FilterMenu({
           <View
             style={{
               position: "absolute", top: anchor.y + anchor.h + 6, left, width: MENU_WIDTH, padding: 6,
-              backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.hairline,
+              backgroundColor: colors.surface, borderCurve: "continuous", borderRadius: 12, borderWidth: 1, borderColor: colors.hairline,
               shadowColor: "#000", shadowOpacity: 0.45, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 8,
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 10, paddingVertical: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.4, color: colors.faint }}>SHOW</Text>
+              <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 0.4, color: colors.faint }}>SHOW</Text>
               {active > 0 && (
                 <Pressable onPress={onReset} hitSlop={8} accessibilityLabel="Show everything">
                   <Text style={{ fontSize: 12, fontWeight: "700", color: colors.accent }}>Show all</Text>
@@ -83,7 +83,7 @@ export function FilterMenu({
                 >
                   <View
                     style={{
-                      width: 20, height: 20, borderRadius: 6, alignItems: "center", justifyContent: "center",
+                      width: 20, height: 20, borderCurve: "continuous", borderRadius: 8, alignItems: "center", justifyContent: "center",
                       backgroundColor: shown ? colors.accent : "transparent", borderWidth: shown ? 0 : 1.5, borderColor: colors.hairlineStrong,
                     }}
                   >

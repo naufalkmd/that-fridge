@@ -156,7 +156,7 @@ export function GettingStarted() {
   return (
     <View
       style={{
-        borderRadius: 14,
+        borderCurve: "continuous", borderRadius: 16,
         borderWidth: 1,
         borderColor: HAIRLINE,
         backgroundColor: SURFACE,
@@ -174,7 +174,7 @@ export function GettingStarted() {
         }}
       >
         <View>
-          <Text style={{ fontSize: 13.5, fontWeight: "800", color: INK }}>
+          <Text style={{ fontSize: 13.5, fontWeight: "700", color: INK }}>
             Getting started
           </Text>
           <Text style={{ fontSize: 11, color: FAINT, marginTop: 1 }}>

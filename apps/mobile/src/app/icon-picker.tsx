@@ -108,7 +108,7 @@ export default function IconPicker() {
               borderWidth: 1,
               borderColor: HAIRLINE,
               backgroundColor: SURFACE2,
-              borderRadius: 6,
+              borderCurve: "continuous", borderRadius: 8,
               paddingHorizontal: 10,
               paddingVertical: 9,
               fontSize: 13,
@@ -123,7 +123,7 @@ export default function IconPicker() {
               alignItems: "center",
               gap: 4,
               paddingHorizontal: 12,
-              borderRadius: 6,
+              borderCurve: "continuous", borderRadius: 8,
               backgroundColor: `${PURPLE}26`,
               opacity: generating || !prompt.trim() ? 0.5 : 1,
             }}
@@ -150,7 +150,7 @@ export default function IconPicker() {
                   key={g.id}
                   onPress={() => apply("generic", g.image_url)}
                   onLongPress={() => removeFromLibrary(g.id)}
-                  style={{ width: 52, height: 52, borderRadius: 8, backgroundColor: SURFACE2, alignItems: "center", justifyContent: "center" }}
+                  style={{ width: 52, height: 52, borderCurve: "continuous", borderRadius: 8, backgroundColor: SURFACE2, alignItems: "center", justifyContent: "center" }}
                 >
                   <FoodIcon iconUrl={g.image_url} name={item.name} size={44} />
                 </Pressable>
@@ -170,7 +170,7 @@ export default function IconPicker() {
                 <Pressable
                   key={s.id}
                   onPress={() => apply("generic", s.image_url)}
-                  style={{ width: 52, height: 52, borderRadius: 8, backgroundColor: SURFACE2, alignItems: "center", justifyContent: "center" }}
+                  style={{ width: 52, height: 52, borderCurve: "continuous", borderRadius: 8, backgroundColor: SURFACE2, alignItems: "center", justifyContent: "center" }}
                 >
                   <FoodIcon iconUrl={s.image_url} name={s.label ?? item.name} size={44} />
                 </Pressable>
@@ -193,7 +193,7 @@ export default function IconPicker() {
                   style={{
                     width: 52,
                     height: 52,
-                    borderRadius: 8,
+                    borderCurve: "continuous", borderRadius: 8,
                     backgroundColor: SURFACE2,
                     alignItems: "center",
                     justifyContent: "center",

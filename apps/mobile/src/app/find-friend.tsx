@@ -187,7 +187,7 @@ export default function FindFriend() {
         <Pressable onPress={() => (profile ? setProfile(null) : router.back())} hitSlop={8}>
           <Ionicons name="chevron-back" size={20} color={MUTED} />
         </Pressable>
-        <PixelText style={{ fontSize: 14, color: INK, flex: 1 }}>
+        <PixelText style={{ fontSize: 16, color: INK, flex: 1 }}>
           {profile ? `@${profile.username}` : "Find a friend"}
         </PixelText>
         {profile && (
@@ -199,14 +199,14 @@ export default function FindFriend() {
 
       {profile ? (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 60 }}>
-          <Text style={{ fontSize: 18, fontWeight: "800", color: INK }}>{profile.name}</Text>
+          <Text style={{ fontSize: 18, fontWeight: "700", color: INK }}>{profile.name}</Text>
           <Text style={{ fontSize: 12.5, color: FAINT, marginBottom: 20 }}>@{profile.username}</Text>
 
           <Label>THEIR FRIDGES</Label>
           {profile.fridges.length === 0 ? (
             <Text style={{ fontSize: 12, color: FAINT, marginBottom: 20 }}>No shared fridges.</Text>
           ) : (
-            <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
+            <View style={{ borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
               {profile.fridges.map((f, i) => {
                 const already = f.role != null;
                 const pending = f.requestStatus === "pending" || requested[f.id];
@@ -240,7 +240,7 @@ export default function FindFriend() {
                     ) : (
                       <Pressable
                         onPress={() => requestJoin(f.id)}
-                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, backgroundColor: SURFACE2 }}
+                        style={{ paddingHorizontal: 12, paddingVertical: 6, borderCurve: "continuous", borderRadius: 8, backgroundColor: SURFACE2 }}
                       >
                         <Text style={{ fontSize: 11.5, fontWeight: "700", color: BLUE }}>Request</Text>
                       </Pressable>
@@ -254,7 +254,7 @@ export default function FindFriend() {
           {profile.recipes.length > 0 && (
             <>
               <Label>THEIR RECIPE BOOK</Label>
-              <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden" }}>
+              <View style={{ borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden" }}>
                 {profile.recipes.map((r, i) => (
                   <Pressable
                     key={r.id}
@@ -310,7 +310,7 @@ export default function FindFriend() {
               borderWidth: 1,
               borderColor: HAIRLINE,
               backgroundColor: SURFACE,
-              borderRadius: 6,
+              borderCurve: "continuous", borderRadius: 8,
               paddingHorizontal: 16,
               paddingVertical: 11,
               fontSize: 14,
@@ -322,7 +322,7 @@ export default function FindFriend() {
           {myInvites.length > 0 && (
             <>
               <Label>MY INVITES</Label>
-              <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
+              <View style={{ borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
                 {myInvites.map((inv, i) => (
                   <View
                     key={inv.id}
@@ -366,7 +366,7 @@ export default function FindFriend() {
                   <Text style={{ fontSize: 11.5, fontWeight: "700", color: BLUE }}>Clear</Text>
                 </Pressable>
               </View>
-              <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
+              <View style={{ borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
                 {history.map((username, i) => (
                   <Pressable
                     key={username}
@@ -394,7 +394,7 @@ export default function FindFriend() {
           {searching || loadingProfile ? (
             <ActivityIndicator color={ACCENT} style={{ marginTop: 20 }} />
           ) : results.length > 0 ? (
-            <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden" }}>
+            <View style={{ borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden" }}>
               {results.map((u, i) => (
                 <Pressable
                   key={u.id}
@@ -409,7 +409,7 @@ export default function FindFriend() {
                   }}
                 >
                   <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: SURFACE2 }}>
-                    <Text style={{ fontSize: 13, fontWeight: "800", color: INK }}>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: INK }}>
                       {u.name.slice(0, 1).toUpperCase()}
                     </Text>
                   </View>
@@ -435,7 +435,7 @@ export default function FindFriend() {
 function Label({ children }: { children: string }) {
   const { faint: FAINT } = useTheme().colors;
   return (
-    <Text style={{ fontSize: 12, fontWeight: "800", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
+    <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
       {children}
     </Text>
   );

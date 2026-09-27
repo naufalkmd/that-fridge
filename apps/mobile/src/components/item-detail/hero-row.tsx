@@ -35,7 +35,7 @@ export function HeroRow({ item }: { item: FlatItem }) {
 
   return (
     <View style={{ alignItems: "center", marginBottom: 14 }}>
-      <View style={{ width: 88, height: 88, borderRadius: 10, backgroundColor: SURFACE2, alignItems: "center", justifyContent: "center" }}>
+      <View style={{ width: 88, height: 88, borderCurve: "continuous", borderRadius: 12, backgroundColor: SURFACE2, alignItems: "center", justifyContent: "center" }}>
         <FoodIcon icon={item.icon} iconUrl={item.iconUrl} name={item.name} size={52} />
       </View>
       <Pressable
@@ -69,7 +69,7 @@ export function HeroRow({ item }: { item: FlatItem }) {
             style={{
               minWidth: 160,
               textAlign: "center",
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: "700",
               color: INK,
               borderBottomWidth: 1,
@@ -82,7 +82,7 @@ export function HeroRow({ item }: { item: FlatItem }) {
             onPress={() => setEditingName(true)}
             style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
           >
-            <Text style={{ fontSize: 20, fontWeight: "700", color: INK, textAlign: "center" }}>{item.name}</Text>
+            <Text style={{ fontSize: 18, fontWeight: "700", color: INK, textAlign: "center" }}>{item.name}</Text>
             {status !== "saving" && <MaterialCommunityIcons name="pencil-outline" size={13} color={FAINT} />}
             <CategoryTag category={item.nutritionCategory} />
           </Pressable>

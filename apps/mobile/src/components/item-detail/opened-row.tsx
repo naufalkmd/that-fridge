@@ -54,9 +54,9 @@ export function OpenedRow({ item, open, onToggle, isLast }: { item: FlatItem; op
             onPress={() => void change({ opened: true }, `${item.name} marked opened`, "Couldn't update that")}
             disabled={busy}
             accessibilityRole="button"
-            style={{ height: 42, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: AMBER, opacity: busy ? 0.6 : 1 }}
+            style={{ height: 42, borderCurve: "continuous", borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: AMBER, opacity: busy ? 0.6 : 1 }}
           >
-            <Text style={{ fontSize: 13, fontWeight: "800", color: CANVAS }}>Mark as opened</Text>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: CANVAS }}>Mark as opened</Text>
           </Pressable>
         </View>
       ) : (
@@ -70,16 +70,16 @@ export function OpenedRow({ item, open, onToggle, isLast }: { item: FlatItem; op
               onChangeText={setDays}
               keyboardType="number-pad"
               accessibilityLabel="Days after opening"
-              style={{ width: 72, height: 42, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE2, borderRadius: 8, paddingHorizontal: 12, color: INK, fontSize: 14 }}
+              style={{ width: 72, height: 42, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE2, borderCurve: "continuous", borderRadius: 8, paddingHorizontal: 12, color: INK, fontSize: 14 }}
             />
             <Text style={{ flex: 1, fontSize: 13, color: INK }}>days</Text>
             <Pressable
               onPress={saveDays}
               disabled={busy}
               accessibilityRole="button"
-              style={{ height: 42, paddingHorizontal: 18, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: AMBER, opacity: busy ? 0.6 : 1 }}
+              style={{ height: 42, paddingHorizontal: 18, borderCurve: "continuous", borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: AMBER, opacity: busy ? 0.6 : 1 }}
             >
-              <Text style={{ fontSize: 13, fontWeight: "800", color: CANVAS }}>Save</Text>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: CANVAS }}>Save</Text>
             </Pressable>
           </View>
           <Pressable

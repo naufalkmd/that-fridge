@@ -77,7 +77,7 @@ export function RecipeSuggestionCard({
         style={{
           width: CARD_W,
           backgroundColor: style.color,
-          borderRadius: 6,
+          borderCurve: "continuous", borderRadius: 8,
           padding: 4,
         }}
       >
@@ -105,7 +105,7 @@ export function RecipeSuggestionCard({
               style={{
                 flex: 1,
                 fontSize: 13,
-                fontWeight: "800",
+                fontWeight: "700",
                 color: CANVAS,
                 lineHeight: 16,
               }}
@@ -121,7 +121,7 @@ export function RecipeSuggestionCard({
               }}
             >
               <Text
-                style={{ fontSize: 10.5, fontWeight: "800", color: CANVAS }}
+                style={{ fontSize: 10.5, fontWeight: "700", color: CANVAS }}
               >
                 {suggestion.minutes}m
               </Text>
@@ -153,7 +153,7 @@ export function RecipeSuggestionCard({
                 backgroundColor: style.color,
                 paddingHorizontal: 10,
                 paddingVertical: 3,
-                borderRadius: 9,
+                borderCurve: "continuous", borderRadius: 8,
               }}
             >
               <MaterialCommunityIcons
@@ -164,7 +164,7 @@ export function RecipeSuggestionCard({
               <Text
                 style={{
                   fontSize: 9.5,
-                  fontWeight: "800",
+                  fontWeight: "700",
                   letterSpacing: 0.4,
                   color: CANVAS,
                 }}
@@ -179,7 +179,7 @@ export function RecipeSuggestionCard({
             <Text
               style={{
                 fontSize: 8.5,
-                fontWeight: "800",
+                fontWeight: "700",
                 letterSpacing: 0.5,
                 color: style.color,
               }}
@@ -217,7 +217,7 @@ export function RecipeSuggestionCard({
               <Text
                 style={{
                   fontSize: 8.5,
-                  fontWeight: "800",
+                  fontWeight: "700",
                   letterSpacing: 0.5,
                   color: style.color,
                 }}
@@ -238,7 +238,7 @@ export function RecipeSuggestionCard({
                     <Text
                       style={{
                         fontSize: 9,
-                        fontWeight: "800",
+                        fontWeight: "700",
                         color: CANVAS,
                       }}
                     >
@@ -294,7 +294,7 @@ export function RecipeSuggestionCard({
             <Text
               style={{
                 fontSize: 9.5,
-                fontWeight: "800",
+                fontWeight: "700",
                 letterSpacing: 0.4,
                 color: style.color,
               }}
@@ -334,7 +334,7 @@ export function RecipeSuggestionCard({
             style={{
               alignItems: "center",
               paddingVertical: 10,
-              borderRadius: 6,
+              borderCurve: "continuous", borderRadius: 8,
               backgroundColor: adding ? SURFACE2 : style.color,
               opacity: adding ? 0.7 : 1,
             }}
@@ -360,7 +360,7 @@ export function RecipeSuggestionCard({
                 justifyContent: "center",
                 gap: 4,
                 paddingVertical: 10,
-                borderRadius: 6,
+                borderCurve: "continuous", borderRadius: 8,
                 borderWidth: 1,
                 borderColor: STRONG_BORDER,
                 opacity: adding ? 0.5 : 1,
@@ -383,7 +383,7 @@ export function RecipeSuggestionCard({
                 flex: 1,
                 alignItems: "center",
                 paddingVertical: 10,
-                borderRadius: 6,
+                borderCurve: "continuous", borderRadius: 8,
                 borderWidth: 1,
                 borderColor: STRONG_BORDER,
               }}

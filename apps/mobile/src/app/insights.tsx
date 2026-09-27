@@ -118,7 +118,7 @@ export default function Insights() {
             <Ionicons name="chevron-back" size={18} color={colors.ink} />
           </Pressable>
           <View style={{ gap: 4 }}>
-            <PixelText style={{ fontSize: 22, color: colors.ink }}>Insights</PixelText>
+            <PixelText style={{ fontSize: 16, color: colors.ink }}>Insights</PixelText>
             <Text style={{ fontSize: 12.5, color: colors.muted }}>How your kitchen is doing</Text>
           </View>
           <FridgeScopePicker />
@@ -292,7 +292,7 @@ export default function Insights() {
                 <Text style={{ fontSize: 11.5, fontWeight: "600", color: colors.muted }}>You use these most</Text>
                 {favourites.map((u) => (
                   <View key={u.id} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                    <View style={{ width: 30, height: 30, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2 }}>
+                    <View style={{ width: 30, height: 30, borderCurve: "continuous", borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2 }}>
                       <FoodIcon icon={u.icon} name={u.name} size={24} />
                     </View>
                     <Text style={{ flex: 1, fontSize: 13, color: colors.ink }}>{u.name}</Text>
@@ -320,7 +320,7 @@ function Section({ title, note, children }: { title: string; note?: string; chil
   return (
     <View style={{ gap: 8 }}>
       <View style={{ gap: 3 }}>
-        <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 1.5, textTransform: "uppercase", color: colors.muted }}>{title}</Text>
+        <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 1.2, textTransform: "uppercase", color: colors.muted }}>{title}</Text>
         {note && <Text style={{ fontSize: 11, color: colors.faint }}>{note}</Text>}
       </View>
       {children}
@@ -331,7 +331,7 @@ function Section({ title, note, children }: { title: string; note?: string; chil
 function Card({ children, tint, padded = true }: { children: React.ReactNode; tint?: boolean; padded?: boolean }) {
   const { colors } = useTheme();
   return (
-    <View style={{ padding: padded ? 14 : 0, borderRadius: 18, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, overflow: "hidden" }}>
+    <View style={{ padding: padded ? 14 : 0, borderCurve: "continuous", borderRadius: 16, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, overflow: "hidden" }}>
       {tint && <View style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: "60%", backgroundColor: `${colors.accent}12` }} />}
       {children}
     </View>

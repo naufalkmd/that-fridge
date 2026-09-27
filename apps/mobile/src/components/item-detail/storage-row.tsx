@@ -81,7 +81,7 @@ export function StorageRow({
           justifyContent: "center",
           gap: 6,
           paddingVertical: 9,
-          borderRadius: 6,
+          borderCurve: "continuous", borderRadius: 8,
           backgroundColor: AMBER,
         }}
       >

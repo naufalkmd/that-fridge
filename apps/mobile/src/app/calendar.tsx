@@ -188,7 +188,7 @@ export default function CalendarScreen() {
             <Ionicons name="chevron-back" size={22} color={colors.ink} />
           </Pressable>
           <View style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 17, fontWeight: "800", color: colors.ink }}>{monthTitle(cursor.year, cursor.month)}</Text>
+            <Text style={{ fontSize: 17, fontWeight: "700", color: colors.ink }}>{monthTitle(cursor.year, cursor.month)}</Text>
             {!isCurrentMonth && (
               <Pressable hitSlop={8} onPress={() => setCursor({ year: now.getFullYear(), month: now.getMonth() })}>
                 <Text style={{ fontSize: 11.5, fontWeight: "700", color: colors.accent, marginTop: 2 }}>Today</Text>

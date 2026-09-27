@@ -73,7 +73,7 @@ export function NotificationCard({
         gap: 12,
         padding: 13,
         marginBottom: 10,
-        borderRadius: 8,
+        borderCurve: "continuous", borderRadius: 8,
         borderWidth: 1,
         borderColor: HAIRLINE,
         backgroundColor: SURFACE,
@@ -83,7 +83,7 @@ export function NotificationCard({
         style={{
           width: 36,
           height: 36,
-          borderRadius: 6,
+          borderCurve: "continuous", borderRadius: 8,
           alignItems: "center",
           justifyContent: "center",
           backgroundColor: `${color}1a`,

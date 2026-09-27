@@ -437,7 +437,7 @@ export default function Inventory() {
               onPress={refresh}
               style={{
                 marginBottom: 14,
-                borderRadius: 12,
+                borderCurve: "continuous", borderRadius: 12,
                 borderWidth: 1,
                 borderColor: BAD,
                 backgroundColor: SURFACE,
@@ -500,7 +500,7 @@ export default function Inventory() {
                       style={{
                         paddingVertical: 6,
                         paddingHorizontal: 10,
-                        borderRadius: 6,
+                        borderCurve: "continuous", borderRadius: 8,
                         backgroundColor: SURFACE,
                         borderWidth: 1,
                         borderColor: HAIRLINE,
@@ -524,7 +524,7 @@ export default function Inventory() {
                         gap: 5,
                         paddingVertical: 6,
                         paddingHorizontal: 10,
-                        borderRadius: 6,
+                        borderCurve: "continuous", borderRadius: 8,
                         backgroundColor: SURFACE,
                         borderWidth: 1,
                         borderColor: HAIRLINE,
@@ -553,7 +553,7 @@ export default function Inventory() {
                           top: 38,
                           minWidth: 120,
                           backgroundColor: SURFACE,
-                          borderRadius: 6,
+                          borderCurve: "continuous", borderRadius: 8,
                           borderWidth: 1,
                           borderColor: HAIRLINE,
                           padding: 6,
@@ -569,7 +569,7 @@ export default function Inventory() {
                             style={{
                               paddingVertical: 8,
                               paddingHorizontal: 10,
-                              borderRadius: 6,
+                              borderCurve: "continuous", borderRadius: 8,
                               backgroundColor:
                                 sort === opt.key ? SURFACE2 : "transparent",
                             }}
@@ -607,7 +607,7 @@ export default function Inventory() {
                       style={{
                         paddingVertical: 7,
                         paddingHorizontal: 14,
-                        borderRadius: 6,
+                        borderCurve: "continuous", borderRadius: 8,
                         backgroundColor: active ? INK : SURFACE,
                         borderWidth: active ? 0 : 1,
                         borderColor: HAIRLINE,
@@ -633,7 +633,7 @@ export default function Inventory() {
                     gap: 4,
                     paddingVertical: 7,
                     paddingHorizontal: 12,
-                    borderRadius: 6,
+                    borderCurve: "continuous", borderRadius: 8,
                     borderWidth: 1,
                     borderColor: HAIRLINE,
                     borderStyle: "dashed",
@@ -692,7 +692,7 @@ export default function Inventory() {
                     </View>
                     <View
                       style={{
-                        borderRadius: 8,
+                        borderCurve: "continuous", borderRadius: 8,
                         borderWidth: 1,
                         borderColor: HAIRLINE,
                         backgroundColor: SURFACE,
@@ -706,7 +706,7 @@ export default function Inventory() {
               ) : (
                 <View
                   style={{
-                    borderRadius: 8,
+                    borderCurve: "continuous", borderRadius: 8,
                     borderWidth: 1,
                     borderColor: HAIRLINE,
                     backgroundColor: SURFACE,
@@ -738,7 +738,7 @@ export default function Inventory() {
                     justifyContent: "center",
                     gap: 6,
                     paddingVertical: 13,
-                    borderRadius: 8,
+                    borderCurve: "continuous", borderRadius: 8,
                     borderWidth: 1,
                     borderColor: HAIRLINE,
                     borderStyle: "dashed",
@@ -771,7 +771,7 @@ export default function Inventory() {
               backgroundColor: SURFACE,
               borderWidth: 1,
               borderColor: HAIRLINE,
-              borderRadius: 14,
+              borderCurve: "continuous", borderRadius: 16,
               padding: 10,
             }}
           >
@@ -798,7 +798,7 @@ export default function Inventory() {
                 borderColor: `${BAD}66`,
                 paddingVertical: 9,
                 paddingHorizontal: 12,
-                borderRadius: 8,
+                borderCurve: "continuous", borderRadius: 8,
               }}
             >
               <MaterialCommunityIcons
@@ -807,7 +807,7 @@ export default function Inventory() {
                 color={BAD}
               />
               <Text
-                style={{ fontSize: 12.5, fontWeight: "800", color: BAD }}
+                style={{ fontSize: 12.5, fontWeight: "700", color: BAD }}
               >
                 Delete
               </Text>
@@ -821,7 +821,7 @@ export default function Inventory() {
                 backgroundColor: ACCENT,
                 paddingVertical: 9,
                 paddingHorizontal: 14,
-                borderRadius: 8,
+                borderCurve: "continuous", borderRadius: 8,
               }}
             >
               <MaterialCommunityIcons
@@ -830,7 +830,7 @@ export default function Inventory() {
                 color={CANVAS}
               />
               <Text
-                style={{ fontSize: 12.5, fontWeight: "800", color: CANVAS }}
+                style={{ fontSize: 12.5, fontWeight: "700", color: CANVAS }}
               >
                 Move to…
               </Text>
@@ -861,14 +861,14 @@ export default function Inventory() {
               backgroundColor: SURFACE,
               borderWidth: 1,
               borderColor: ACCENT,
-              borderRadius: 14,
+              borderCurve: "continuous", borderRadius: 16,
               padding: 10,
             }}
           >
             <Text
               style={{
                 fontSize: 10.5,
-                fontWeight: "800",
+                fontWeight: "700",
                 letterSpacing: 0.4,
                 color: FAINT,
                 marginBottom: 8,
@@ -897,7 +897,7 @@ export default function Inventory() {
                     style={{
                       paddingVertical: 8,
                       paddingHorizontal: 12,
-                      borderRadius: 8,
+                      borderCurve: "continuous", borderRadius: 8,
                       backgroundColor: active ? ACCENT : SURFACE2,
                       borderWidth: 1,
                       borderColor: active ? ACCENT : HAIRLINE,
@@ -939,7 +939,7 @@ export default function Inventory() {
                 maxWidth: 220,
                 paddingVertical: 8,
                 paddingHorizontal: 10,
-                borderRadius: 10,
+                borderCurve: "continuous", borderRadius: 12,
                 backgroundColor: SURFACE2,
                 borderWidth: 1,
                 borderColor: ACCENT,
@@ -1007,7 +1007,7 @@ function MoveToSheet({
             style={{
               paddingVertical: 13,
               paddingHorizontal: 10,
-              borderRadius: 8,
+              borderCurve: "continuous", borderRadius: 8,
             }}
           >
             <Text style={{ fontSize: 14, fontWeight: "600", color: INK }}>
@@ -1020,7 +1020,7 @@ function MoveToSheet({
           style={{
             paddingVertical: 13,
             paddingHorizontal: 10,
-            borderRadius: 8,
+            borderCurve: "continuous", borderRadius: 8,
           }}
         >
           <Text style={{ fontSize: 14, fontWeight: "600", color: MUTED }}>
@@ -1035,7 +1035,7 @@ function MoveToSheet({
             gap: 6,
             paddingVertical: 13,
             paddingHorizontal: 10,
-            borderRadius: 8,
+            borderCurve: "continuous", borderRadius: 8,
             borderTopWidth: 1,
             borderTopColor: HAIRLINE,
             marginTop: 4,
@@ -1127,7 +1127,7 @@ function MergedItemGroup({
           borderBottomColor: HAIRLINE,
         }}
       >
-        <View style={{ width: 38, height: 38, borderRadius: 6, backgroundColor: SURFACE2, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 38, height: 38, borderCurve: "continuous", borderRadius: 8, backgroundColor: SURFACE2, alignItems: "center", justifyContent: "center" }}>
           <FoodIcon icon={soonest.icon} iconUrl={soonest.iconUrl} name={soonest.name} size={30} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -1136,7 +1136,7 @@ function MergedItemGroup({
               {soonest.name}
             </Text>
             <View style={{ backgroundColor: `${BLUE}29`, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-              <Text style={{ fontSize: 8.5, fontWeight: "800", letterSpacing: 0.4, color: BLUE }}>
+              <Text style={{ fontSize: 8.5, fontWeight: "700", letterSpacing: 0.4, color: BLUE }}>
                 {items.length}×
               </Text>
             </View>
@@ -1275,7 +1275,7 @@ function ItemRow({
             style={{
               width: 38,
               height: 38,
-              borderRadius: 6,
+              borderCurve: "continuous", borderRadius: 8,
               backgroundColor: SURFACE2,
               alignItems: "center",
               justifyContent: "center",
@@ -1329,7 +1329,7 @@ function ItemRow({
                 <Text
                   style={{
                     fontSize: 8.5,
-                    fontWeight: "800",
+                    fontWeight: "700",
                     letterSpacing: 0.4,
                     color: WARN,
                   }}

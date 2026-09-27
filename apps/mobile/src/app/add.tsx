@@ -238,7 +238,7 @@ export default function Add() {
                 backgroundColor: SURFACE,
                 borderWidth: 1,
                 borderColor: HAIRLINE,
-                borderRadius: 8,
+                borderCurve: "continuous", borderRadius: 8,
                 padding: 16,
               }}
             >
@@ -246,7 +246,7 @@ export default function Add() {
                 style={{
                   width: 40,
                   height: 40,
-                  borderRadius: 6,
+                  borderCurve: "continuous", borderRadius: 8,
                   backgroundColor: SURFACE2,
                   alignItems: "center",
                   justifyContent: "center",
@@ -269,13 +269,13 @@ export default function Add() {
                         backgroundColor: `${AMBER}1a`,
                         paddingHorizontal: 6,
                         paddingVertical: 1,
-                        borderRadius: 5,
+                        borderRadius: 4,
                       }}
                     >
                       <Text
                         style={{
                           fontSize: 9,
-                          fontWeight: "800",
+                          fontWeight: "700",
                           letterSpacing: 0.3,
                           color: AMBER,
                         }}
@@ -475,7 +475,7 @@ function ScanFlow({
             backgroundColor: AMBER,
             paddingVertical: 12,
             paddingHorizontal: 24,
-            borderRadius: 8,
+            borderCurve: "continuous", borderRadius: 8,
           }}
         >
           <MaterialCommunityIcons name="camera" size={16} color={CANVAS} />
@@ -655,7 +655,7 @@ function DraftList({
                 justifyContent: "center",
                 gap: 6,
                 padding: 14,
-                borderRadius: 8,
+                borderCurve: "continuous", borderRadius: 8,
                 borderWidth: 1.5,
                 borderColor: STRONG_BORDER,
                 borderStyle: "dashed",
@@ -686,7 +686,7 @@ function DraftList({
           style={{
             alignItems: "center",
             paddingVertical: 15,
-            borderRadius: 8,
+            borderCurve: "continuous", borderRadius: 8,
             backgroundColor: AMBER,
             opacity: submitting || count === 0 ? 0.5 : 1,
           }}
@@ -738,7 +738,7 @@ function DuplicateNotice({ names }: { names: string[] }) {
         backgroundColor: SURFACE2,
         borderWidth: 1,
         borderColor: HAIRLINE,
-        borderRadius: 8,
+        borderCurve: "continuous", borderRadius: 8,
         padding: 12,
         marginBottom: 14,
       }}

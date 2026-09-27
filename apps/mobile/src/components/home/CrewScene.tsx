@@ -242,7 +242,7 @@ function CrewCharacter({
           backgroundColor: colors.surface,
           borderWidth: 1.5,
           borderColor: zone.color,
-          borderRadius: 6,
+          borderCurve: "continuous", borderRadius: 8,
           paddingVertical: 4,
           paddingHorizontal: 8,
         }}

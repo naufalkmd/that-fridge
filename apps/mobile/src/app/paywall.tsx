@@ -91,7 +91,7 @@ export default function Paywall() {
     <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
       <SheetHeader title="ThatFridge Pro" />
       <ScrollView contentContainerClassName="px-6 pb-8 pt-2 gap-6">
-        <Text className="text-2xl font-extrabold text-ink">Get more out of your fridge</Text>
+        <Text className="text-2xl font-bold text-ink">Get more out of your fridge</Text>
 
         <View className="gap-2.5">
           {BENEFITS.map((b) => (

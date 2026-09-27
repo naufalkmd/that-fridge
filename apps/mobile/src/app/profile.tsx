@@ -102,7 +102,7 @@ export default function Profile() {
           <Ionicons name="person" size={26} color={colors.muted} />
         </View>
         <View className="flex-1 gap-0.5">
-          <Text className="text-xl font-extrabold text-ink">{user?.name ?? "—"}</Text>
+          <Text className="text-xl font-bold text-ink">{user?.name ?? "—"}</Text>
           <Text className="text-[13px] text-muted">@{user?.username}</Text>
           <Text className="text-[12px] text-faint">{user?.email}</Text>
         </View>
@@ -111,7 +111,7 @@ export default function Profile() {
 
       <Pressable
         onPress={() => router.push("/credits")}
-        className="flex-row items-center justify-between rounded-[10px] border border-hairline bg-surface p-4 active:opacity-70"
+        className="flex-row items-center justify-between rounded-xl border border-hairline bg-surface p-4 active:opacity-70"
       >
         <View>
           <Eyebrow color={colors.faint}>AI credits</Eyebrow>
@@ -122,7 +122,7 @@ export default function Profile() {
         <Text className="text-[12.5px] font-semibold text-accent">Get more</Text>
       </Pressable>
 
-      <View className="rounded-[10px] border border-hairline bg-surface p-4">
+      <View className="rounded-xl border border-hairline bg-surface p-4">
         <Eyebrow color={colors.faint}>Subscription</Eyebrow>
         <Text className="mt-1.5 text-[15px] font-semibold text-ink">
           {user?.isDemo

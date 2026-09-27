@@ -32,7 +32,7 @@ export function SheetHeader({
               <Ionicons name="chevron-back" size={18} color={colors.muted} />
             </Pressable>
           )}
-          <PixelText style={{ fontSize: 13, color: colors.ink }}>{title}</PixelText>
+          <PixelText style={{ fontSize: 16, color: colors.ink }}>{title}</PixelText>
         </View>
         <Pressable onPress={close} hitSlop={10}>
           <Text className="text-[15px] text-muted">✕</Text>

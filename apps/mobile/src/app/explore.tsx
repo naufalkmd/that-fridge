@@ -142,13 +142,13 @@ export default function Explore() {
             <Ionicons name="chevron-back" size={18} color={colors.ink} />
           </Pressable>
           <View style={{ gap: 4 }}>
-            <PixelText style={{ fontSize: 22, color: colors.ink }}>Explore</PixelText>
+            <PixelText style={{ fontSize: 16, color: colors.ink }}>Explore</PixelText>
             <Text style={{ fontSize: 12.5, color: colors.muted }}>Recipes, Machines, meal plans and food icons</Text>
           </View>
 
           <View
             style={{
-              flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, height: 42, borderRadius: 13,
+              flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, height: 42, borderCurve: "continuous", borderRadius: 12,
               backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline,
             }}
           >
@@ -240,7 +240,7 @@ export default function Explore() {
                   ))}
                 </View>
               ) : (
-                <View style={{ borderRadius: 18, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, overflow: "hidden" }}>
+                <View style={{ borderCurve: "continuous", borderRadius: 16, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, overflow: "hidden" }}>
                   {shown.map((item, i) => (
                     <ItemRow key={item.id} item={item} last={i === shown.length - 1} onPress={() => setOpen(item)} />
                   ))}
@@ -268,7 +268,7 @@ export default function Explore() {
 function Heading({ children }: { children: string }) {
   const { colors } = useTheme();
   return (
-    <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 1.5, textTransform: "uppercase", color: colors.muted }}>
+    <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 1.2, textTransform: "uppercase", color: colors.muted }}>
       {children}
     </Text>
   );
@@ -281,7 +281,7 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      style={{ height: 32, paddingHorizontal: 12, borderRadius: 10, justifyContent: "center", backgroundColor: active ? colors.accent : colors.surface2 }}
+      style={{ height: 32, paddingHorizontal: 12, borderCurve: "continuous", borderRadius: 12, justifyContent: "center", backgroundColor: active ? colors.accent : colors.surface2 }}
     >
       <Text style={{ fontSize: 12, fontWeight: active ? "700" : "600", color: active ? colors.onAccent : colors.muted }}>{label}</Text>
     </Pressable>
@@ -303,7 +303,7 @@ function Art({ item, size, radius }: { item: ExploreItem; size: number; radius: 
   const tint = typeColor(item.type, colors);
   const meta = typeMeta(item.type);
   return (
-    <View style={{ width: size, height: size, borderRadius: radius, alignItems: "center", justifyContent: "center", backgroundColor: `${tint}24` }}>
+    <View style={{ width: size, height: size, borderCurve: "continuous", borderRadius: radius, alignItems: "center", justifyContent: "center", backgroundColor: `${tint}24` }}>
       {item.type === "recipe" ? (
         <FoodIcon icon={item.recipe?.icon} iconUrl={item.recipe?.iconUrl} name={item.title} size={Math.round(size * 0.78)} />
       ) : item.type === "icon" && item.imageUrl ? (
@@ -335,7 +335,7 @@ function ItemRow({ item, last, onPress }: { item: ExploreItem; last: boolean; on
       accessibilityLabel={`${meta.singular}: ${item.title}`}
       style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.hairline }}
     >
-      <Art item={item} size={36} radius={11} />
+      <Art item={item} size={36} radius={12} />
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={{ fontSize: 13, fontWeight: "700", color: colors.ink }} numberOfLines={1}>{item.title}</Text>
         {facts(item) !== "" && <Text style={{ fontSize: 11.5, color: colors.muted }} numberOfLines={1}>{facts(item)}</Text>}
@@ -353,9 +353,9 @@ function RecipeCard({ item, onPress }: { item: ExploreItem; onPress: () => void 
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Recipe: ${item.title}`}
-      style={{ width: 140, padding: 12, gap: 10, borderRadius: 18, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}
+      style={{ width: 140, padding: 12, gap: 10, borderCurve: "continuous", borderRadius: 16, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}
     >
-      <Art item={item} size={44} radius={14} />
+      <Art item={item} size={44} radius={12} />
       <View style={{ gap: 3 }}>
         <Text style={{ fontSize: 13, fontWeight: "700", color: colors.ink }} numberOfLines={2}>{item.title}</Text>
         {facts(item) !== "" && <Text style={{ fontSize: 11, color: colors.muted }} numberOfLines={1}>{facts(item)}</Text>}
@@ -374,10 +374,10 @@ function MealPlanCard({ item, onPress }: { item: ExploreItem; onPress: () => voi
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Meal plan: ${item.title}`}
-      style={{ padding: 14, gap: 12, borderRadius: 18, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}
+      style={{ padding: 14, gap: 12, borderCurve: "continuous", borderRadius: 16, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <Art item={item} size={36} radius={11} />
+        <Art item={item} size={36} radius={12} />
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={{ fontSize: 13, fontWeight: "700", color: colors.ink }} numberOfLines={1}>{item.title}</Text>
           <Text style={{ fontSize: 11.5, color: colors.muted }} numberOfLines={1}>{facts(item)}</Text>
@@ -408,7 +408,7 @@ function IconTile({ item, onPress }: { item: ExploreItem; onPress: () => void })
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Food icon: ${item.title}`}
-      style={{ width: 50, height: 50, borderRadius: 13, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}
+      style={{ width: 50, height: 50, borderCurve: "continuous", borderRadius: 12, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}
     >
       {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={{ width: 30, height: 30 }} resizeMode="contain" /> : null}
     </Pressable>
@@ -424,18 +424,18 @@ function FeaturedCard({ item, wide, onPress }: { item: ExploreItem; wide: boolea
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Featured ${meta.singular}: ${item.title}`}
-      style={{ width, padding: 16, flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 18, borderWidth: 1, borderColor: `${tint}40`, backgroundColor: colors.surface, overflow: "hidden" }}
+      style={{ width, padding: 16, flexDirection: "row", alignItems: "center", gap: 12, borderCurve: "continuous", borderRadius: 16, borderWidth: 1, borderColor: `${tint}40`, backgroundColor: colors.surface, overflow: "hidden" }}
     >
       <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "55%", backgroundColor: `${tint}10` }} />
       <View style={{ flex: 1, gap: 6 }}>
-        <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 1.5, color: tint }}>FEATURED {meta.singular.toUpperCase()}</Text>
+        <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 1.2, color: tint }}>FEATURED {meta.singular.toUpperCase()}</Text>
         <Text style={{ fontSize: 15, fontWeight: "700", color: colors.ink }} numberOfLines={2}>{item.title}</Text>
         {facts(item) !== "" && <Text style={{ fontSize: 12, color: colors.muted }} numberOfLines={2}>{facts(item)}</Text>}
-        <View style={{ alignSelf: "flex-start", marginTop: 4, height: 30, paddingHorizontal: 12, borderRadius: 10, justifyContent: "center", backgroundColor: colors.accent }}>
+        <View style={{ alignSelf: "flex-start", marginTop: 4, height: 30, paddingHorizontal: 12, borderCurve: "continuous", borderRadius: 12, justifyContent: "center", backgroundColor: colors.accent }}>
           <Text style={{ fontSize: 12, fontWeight: "700", color: colors.onAccent }}>View</Text>
         </View>
       </View>
-      <Art item={item} size={72} radius={20} />
+      <Art item={item} size={72} radius={16} />
     </Pressable>
   );
 }
@@ -461,16 +461,16 @@ function Detail({ item, working, onTake }: { item: ExploreItem; working: boolean
   return (
     <View style={{ padding: 20, gap: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        {item.type !== "icon" && <Art item={item} size={48} radius={15} />}
+        {item.type !== "icon" && <Art item={item} size={48} radius={12} />}
         <View style={{ flex: 1, gap: 4 }}>
-          <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 1.5, color: typeColor(item.type, colors) }}>{meta.singular.toUpperCase()}</Text>
+          <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 1.2, color: typeColor(item.type, colors) }}>{meta.singular.toUpperCase()}</Text>
           <Text style={{ fontSize: 18, fontWeight: "700", color: colors.ink }}>{item.title}</Text>
         </View>
       </View>
       {item.blurb ? <Text style={{ fontSize: 13, lineHeight: 19, color: colors.muted }}>{item.blurb}</Text> : null}
 
       {item.type === "icon" && item.imageUrl && (
-        <View style={{ alignItems: "center", padding: 16, borderRadius: 18, backgroundColor: colors.surface2 }}>
+        <View style={{ alignItems: "center", padding: 16, borderCurve: "continuous", borderRadius: 16, backgroundColor: colors.surface2 }}>
           <Image source={{ uri: item.imageUrl }} style={{ width: 96, height: 96 }} resizeMode="contain" />
         </View>
       )}
@@ -497,7 +497,7 @@ function Detail({ item, working, onTake }: { item: ExploreItem; working: boolean
       {item.tags.length > 0 && (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
           {item.tags.slice(0, 8).map((t) => (
-            <View key={t} style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 7, backgroundColor: colors.surface2 }}>
+            <View key={t} style={{ paddingHorizontal: 8, paddingVertical: 3, borderCurve: "continuous", borderRadius: 8, backgroundColor: colors.surface2 }}>
               <Text style={{ fontSize: 11, color: colors.muted }}>{t}</Text>
             </View>
           ))}
@@ -513,7 +513,7 @@ function Detail({ item, working, onTake }: { item: ExploreItem; working: boolean
           onPress={onTake}
           disabled={working}
           accessibilityRole="button"
-          style={{ height: 46, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent, opacity: working ? 0.6 : 1, marginTop: 4 }}
+          style={{ height: 46, borderCurve: "continuous", borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent, opacity: working ? 0.6 : 1, marginTop: 4 }}
         >
           {working ? <ActivityIndicator color={colors.onAccent} /> : <Text style={{ fontSize: 14, fontWeight: "700", color: colors.onAccent }}>{TAKE_LABEL[item.type]}</Text>}
         </Pressable>

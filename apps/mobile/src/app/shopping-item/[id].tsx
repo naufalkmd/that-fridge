@@ -48,7 +48,7 @@ export default function ShoppingItemDetail() {
     borderWidth: 1,
     borderColor: HAIRLINE,
     backgroundColor: SURFACE2,
-    borderRadius: 6,
+    borderCurve: "continuous", borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 13.5,
@@ -157,7 +157,7 @@ export default function ShoppingItemDetail() {
                   width: 44,
                   alignItems: "center",
                   justifyContent: "center",
-                  borderRadius: 6,
+                  borderCurve: "continuous", borderRadius: 8,
                   backgroundColor: SURFACE2,
                   borderWidth: 1,
                   borderColor: HAIRLINE,
@@ -177,7 +177,7 @@ export default function ShoppingItemDetail() {
           style={{
             alignItems: "center",
             paddingVertical: 13,
-            borderRadius: 6,
+            borderCurve: "continuous", borderRadius: 8,
             backgroundColor: ACCENT,
             opacity: saving ? 0.6 : 1,
           }}
@@ -203,7 +203,7 @@ export default function ShoppingItemDetail() {
           style={{
             alignItems: "center",
             paddingVertical: 13,
-            borderRadius: 6,
+            borderCurve: "continuous", borderRadius: 8,
             backgroundColor: SURFACE,
             borderWidth: 1,
             borderColor: `${BAD}66`,

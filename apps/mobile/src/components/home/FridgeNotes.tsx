@@ -109,7 +109,7 @@ export function FridgeNotes({ variant = "editor" }: { variant?: "grid" | "editor
                   backgroundColor: `${NOTE_COLOR[note.color]}1f`,
                   borderWidth: 1,
                   borderColor: `${NOTE_COLOR[note.color]}55`,
-                  borderRadius: 8,
+                  borderCurve: "continuous", borderRadius: 8,
                   padding: 8,
                   justifyContent: "space-between",
                 }}
@@ -137,7 +137,7 @@ export function FridgeNotes({ variant = "editor" }: { variant?: "grid" | "editor
                 borderWidth: 1,
                 borderColor: HAIRLINE,
                 backgroundColor: SURFACE,
-                borderRadius: 6,
+                borderCurve: "continuous", borderRadius: 8,
                 paddingHorizontal: 14,
                 paddingVertical: 11,
                 fontSize: 13.5,
@@ -146,7 +146,7 @@ export function FridgeNotes({ variant = "editor" }: { variant?: "grid" | "editor
             />
             <Pressable
               onPress={submit}
-              style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: NOTE_COLOR[color], alignItems: "center", justifyContent: "center" }}
+              style={{ width: 40, height: 40, borderCurve: "continuous", borderRadius: 8, backgroundColor: NOTE_COLOR[color], alignItems: "center", justifyContent: "center" }}
             >
               <MaterialCommunityIcons name={editingId ? "check" : "send"} size={16} color={CANVAS} />
             </Pressable>
@@ -200,7 +200,7 @@ export function FridgeNotes({ variant = "editor" }: { variant?: "grid" | "editor
                     borderColor: HAIRLINE,
                     borderLeftWidth: 3,
                     borderLeftColor: NOTE_COLOR[note.color],
-                    borderRadius: 6,
+                    borderCurve: "continuous", borderRadius: 8,
                     paddingVertical: 10,
                     paddingHorizontal: 12,
                   }}

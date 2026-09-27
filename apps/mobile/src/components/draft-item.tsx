@@ -350,7 +350,7 @@ export function ItemCard({
   return (
     <View
       style={{
-        borderRadius: 10,
+        borderCurve: "continuous", borderRadius: 12,
         borderWidth: 1,
         borderColor: HAIRLINE,
         backgroundColor: SURFACE,
@@ -391,7 +391,7 @@ export function ItemCard({
             style={{
               width: 24,
               height: 24,
-              borderRadius: 7,
+              borderCurve: "continuous", borderRadius: 8,
               borderWidth: 1.5,
               borderColor: item.checked ? BLUE : STRONG_BORDER,
               backgroundColor: item.checked ? BLUE : "transparent",
@@ -415,7 +415,7 @@ export function ItemCard({
         <View
           style={{
             backgroundColor: SURFACE2,
-            borderRadius: 8,
+            borderCurve: "continuous", borderRadius: 8,
             padding: 10,
             gap: 8,
           }}
@@ -431,7 +431,7 @@ export function ItemCard({
                 flex: 1,
                 borderWidth: 1,
                 borderColor: HAIRLINE,
-                borderRadius: 6,
+                borderCurve: "continuous", borderRadius: 8,
                 paddingHorizontal: 10,
                 paddingVertical: 8,
                 fontSize: 12,
@@ -446,7 +446,7 @@ export function ItemCard({
                 alignItems: "center",
                 gap: 3,
                 paddingHorizontal: 12,
-                borderRadius: 6,
+                borderCurve: "continuous", borderRadius: 8,
                 backgroundColor: `${AUTOFILL}33`,
                 opacity: generating || !genPrompt.trim() ? 0.5 : 1,
               }}
@@ -500,7 +500,7 @@ export function ItemCard({
                   style={{
                     width: 42,
                     height: 42,
-                    borderRadius: 6,
+                    borderCurve: "continuous", borderRadius: 8,
                     backgroundColor: SURFACE,
                     alignItems: "center",
                     justifyContent: "center",
@@ -519,7 +519,7 @@ export function ItemCard({
                   style={{
                     width: 42,
                     height: 42,
-                    borderRadius: 6,
+                    borderCurve: "continuous", borderRadius: 8,
                     backgroundColor: SURFACE,
                     alignItems: "center",
                     justifyContent: "center",
@@ -555,7 +555,7 @@ export function ItemCard({
           style={{
             width: 38,
             height: 38,
-            borderRadius: 6,
+            borderCurve: "continuous", borderRadius: 8,
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: `${AMBER}24`,
@@ -577,7 +577,7 @@ export function ItemCard({
             alignItems: "center",
             height: 38,
             backgroundColor: SURFACE2,
-            borderRadius: 6,
+            borderCurve: "continuous", borderRadius: 8,
           }}
         >
           <Pressable
@@ -625,7 +625,7 @@ export function ItemCard({
                 justifyContent: "center",
                 gap: 5,
                 height: 38,
-                borderRadius: 6,
+                borderCurve: "continuous", borderRadius: 8,
                 backgroundColor: on ? l.color : SURFACE2,
               }}
             >
@@ -697,7 +697,7 @@ export function AutoFillButton({
         gap: 4,
         ...(compact ? { width: 38 } : { paddingHorizontal: 12 }),
         height: 38,
-        borderRadius: 6,
+        borderCurve: "continuous", borderRadius: 8,
         backgroundColor: `${AUTOFILL}26`,
         opacity: loading ? 0.6 : 1,
       }}
@@ -748,7 +748,7 @@ export function DateField({
           alignItems: "center",
           justifyContent: "space-between",
           backgroundColor: SURFACE2,
-          borderRadius: 6,
+          borderCurve: "continuous", borderRadius: 8,
           paddingHorizontal: 12,
           height: 38,
         }}

@@ -63,7 +63,7 @@ export function ContextSheet({ visible, onClose, onPick }: { visible: boolean; o
               <Ionicons name="chevron-back" size={20} color={colors.muted} />
             </Pressable>
           )}
-          <Text style={{ fontSize: 16, fontWeight: "800", color: colors.ink }}>{meta ? meta.label : "Add context"}</Text>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: colors.ink }}>{meta ? meta.label : "Add context"}</Text>
         </View>
 
         {step === null && (
@@ -82,7 +82,7 @@ export function ContextSheet({ visible, onClose, onPick }: { visible: boolean; o
             placeholderTextColor={colors.faint}
             accessibilityLabel="Search"
             autoCorrect={false}
-            style={{ height: 42, paddingHorizontal: 12, borderRadius: 8, fontSize: 14, color: colors.ink, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.hairline }}
+            style={{ height: 42, paddingHorizontal: 12, borderCurve: "continuous", borderRadius: 8, fontSize: 14, color: colors.ink, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.hairline }}
           />
         )}
 

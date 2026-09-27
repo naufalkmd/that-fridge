@@ -102,7 +102,7 @@ const Tab = memo(function Tab({
       onLayout={reportRect}
       hitSlop={TAB_HIT_SLOP}
       style={[
-        { flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: 20, paddingVertical: 11 },
+        { flexDirection: "row", alignItems: "center", justifyContent: "center", borderCurve: "continuous", borderRadius: 16, paddingVertical: 11 },
         { paddingHorizontal: active ? 14 : 12 },
         pillStyle,
       ]}
@@ -232,7 +232,7 @@ function FloatingTabBarBase({ state, navigation }: TabBarProps) {
           justifyContent: "space-between",
           padding: 6,
           backgroundColor: colors.surface,
-          borderRadius: 26,
+          borderCurve: "continuous", borderRadius: 16,
           borderWidth: 1,
           borderColor: colors.hairline,
         },

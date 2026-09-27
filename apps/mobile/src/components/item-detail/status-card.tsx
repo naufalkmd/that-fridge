@@ -18,10 +18,10 @@ export function StatusCard({ item }: { item: FlatItem }) {
     <View
       accessible
       accessibilityLabel={`${daysLabel(item.days)}. ${item.freshness} percent fresh. ${tip.text}`}
-      style={{ backgroundColor: SURFACE2, borderRadius: 12, padding: 16, marginBottom: 16, gap: 12 }}
+      style={{ backgroundColor: SURFACE2, borderCurve: "continuous", borderRadius: 12, padding: 16, marginBottom: 16, gap: 12 }}
     >
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" }}>
-        <Text style={{ fontSize: 17, fontWeight: "800", color: tone }}>{daysLabel(item.days)}</Text>
+        <Text style={{ fontSize: 17, fontWeight: "700", color: tone }}>{daysLabel(item.days)}</Text>
         <Text style={{ fontSize: 12.5, color: MUTED }}>{item.freshness}% fresh</Text>
       </View>
 

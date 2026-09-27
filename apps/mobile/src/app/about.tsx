@@ -58,7 +58,7 @@ export default function About() {
           food ends up in the bin.
         </Text>
 
-        <Text style={{ fontSize: 12, fontWeight: "800", letterSpacing: 0.3, color: colors.faint, marginBottom: 10 }}>
+        <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: colors.faint, marginBottom: 10 }}>
           MEET THE CREW
         </Text>
         <View style={{ gap: 10 }}>
@@ -69,7 +69,7 @@ export default function About() {
                 flexDirection: "row",
                 gap: 14,
                 padding: 14,
-                borderRadius: 8,
+                borderCurve: "continuous", borderRadius: 8,
                 borderWidth: 1,
                 borderColor: colors.hairline,
                 backgroundColor: colors.surface,
@@ -80,7 +80,7 @@ export default function About() {
                 <Text
                   style={{
                     fontSize: 13.5,
-                    fontWeight: "800",
+                    fontWeight: "700",
                     color: colors[c.agentColor],
                     marginBottom: 3,
                   }}
@@ -96,7 +96,7 @@ export default function About() {
         <Text
           style={{
             fontSize: 12,
-            fontWeight: "800",
+            fontWeight: "700",
             letterSpacing: 0.3,
             color: colors.faint,
             marginTop: 24,
@@ -107,7 +107,7 @@ export default function About() {
         </Text>
         <View
           style={{
-            borderRadius: 8,
+            borderCurve: "continuous", borderRadius: 8,
             borderWidth: 1,
             borderColor: colors.hairline,
             backgroundColor: colors.surface,

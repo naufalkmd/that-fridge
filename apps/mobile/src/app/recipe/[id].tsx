@@ -136,7 +136,7 @@ export default function RecipeDetail() {
             style={{
               width: 76,
               height: 76,
-              borderRadius: 10,
+              borderCurve: "continuous", borderRadius: 12,
               backgroundColor: SURFACE2,
               alignItems: "center",
               justifyContent: "center",
@@ -161,7 +161,7 @@ export default function RecipeDetail() {
           </View>
         </View>
 
-        <Text style={{ textAlign: "center", fontSize: 19, fontWeight: "700", color: INK }}>
+        <Text style={{ textAlign: "center", fontSize: 18, fontWeight: "700", color: INK }}>
           {recipe.name}
         </Text>
         {!recipe.isMine && recipe.isCustom && recipe.ownerUsername && (
@@ -174,8 +174,8 @@ export default function RecipeDetail() {
             {recipe.minutes} min{caloriesSuffix(recipe, true)} · {haveCount}/{ingredients.length} ready
           </Text>
           {recipe.category && (
-            <View style={{ backgroundColor: `${BLUE}1a`, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-              <Text style={{ fontSize: 10.5, fontWeight: "800", letterSpacing: 0.3, color: BLUE }}>
+            <View style={{ backgroundColor: `${BLUE}1a`, paddingHorizontal: 8, paddingVertical: 2, borderCurve: "continuous", borderRadius: 8 }}>
+              <Text style={{ fontSize: 10.5, fontWeight: "700", letterSpacing: 0.3, color: BLUE }}>
                 {recipe.category.toUpperCase()}
               </Text>
             </View>
@@ -185,7 +185,7 @@ export default function RecipeDetail() {
         <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
           INGREDIENTS
         </Text>
-        <View style={{ borderRadius: 8, backgroundColor: SURFACE2, overflow: "hidden", marginBottom: 20 }}>
+        <View style={{ borderCurve: "continuous", borderRadius: 8, backgroundColor: SURFACE2, overflow: "hidden", marginBottom: 20 }}>
           {ingredients.map((ing, i) => {
             const done = ing.have || ing.onList;
             const tint = ing.have ? GOOD : ing.onList ? BLUE : FAINT;
@@ -207,7 +207,7 @@ export default function RecipeDetail() {
                   style={{
                     width: 20,
                     height: 20,
-                    borderRadius: 6,
+                    borderCurve: "continuous", borderRadius: 8,
                     alignItems: "center",
                     justifyContent: "center",
                     backgroundColor: done ? tint : `${tint}1a`,
@@ -231,7 +231,7 @@ export default function RecipeDetail() {
           {recipe.steps.map((step, i) => (
             <View key={i} style={{ flexDirection: "row", gap: 10 }}>
               <View style={{ width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: SURFACE2 }}>
-                <Text style={{ fontSize: 11.5, fontWeight: "800", color: BLUE }}>{i + 1}</Text>
+                <Text style={{ fontSize: 11.5, fontWeight: "700", color: BLUE }}>{i + 1}</Text>
               </View>
               <Text selectable style={{ flex: 1, fontSize: 13.5, lineHeight: 20, color: INK }}>{step}</Text>
             </View>
@@ -246,7 +246,7 @@ export default function RecipeDetail() {
             justifyContent: "center",
             gap: 8,
             paddingVertical: 13,
-            borderRadius: 8,
+            borderCurve: "continuous", borderRadius: 8,
             backgroundColor: AMBER,
             marginBottom: 10,
           }}
@@ -266,7 +266,7 @@ export default function RecipeDetail() {
             justifyContent: "center",
             gap: 8,
             paddingVertical: 12,
-            borderRadius: 8,
+            borderCurve: "continuous", borderRadius: 8,
             borderWidth: 1,
             borderColor: AMBER,
             marginBottom: recipe.attachments.length ? 20 : 8,
@@ -293,7 +293,7 @@ export default function RecipeDetail() {
                       : Linking.openURL(att.url)
                   }
                 >
-                  <View style={{ width: 64, height: 64, borderRadius: 6, overflow: "hidden", backgroundColor: "#000" }}>
+                  <View style={{ width: 64, height: 64, borderCurve: "continuous", borderRadius: 8, overflow: "hidden", backgroundColor: "#000" }}>
                     {att.type === "image" ? (
                       <Image source={{ uri: att.url }} style={{ flex: 1 }} contentFit="cover" />
                     ) : (

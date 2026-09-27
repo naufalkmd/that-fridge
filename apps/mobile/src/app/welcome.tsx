@@ -148,13 +148,13 @@ export default function Welcome() {
             alignItems: "center",
             gap: 6,
             backgroundColor: "rgba(38,198,218,0.16)",
-            borderRadius: 999,
+            borderCurve: "continuous", borderRadius: 8,
             paddingVertical: 4,
             paddingHorizontal: 12,
           }}
         >
           <Ionicons name="eye-outline" size={12} color={ACCENT} />
-          <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.4, color: ACCENT }}>
+          <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 0.4, color: ACCENT }}>
             PREVIEW — tap to exit
           </Text>
         </Pressable>
@@ -305,7 +305,7 @@ function Chip({
     <Pressable
       onPress={onPress}
       style={{
-        borderRadius: 999,
+        borderCurve: "continuous", borderRadius: 8,
         borderWidth: 1,
         borderColor: active ? ACCENT : HAIRLINE,
         backgroundColor: active ? "rgba(38,198,218,0.12)" : SURFACE,
@@ -331,7 +331,7 @@ function QuestionBlock({
 }) {
   return (
     <View style={{ gap: 9 }}>
-      <Text style={{ fontSize: 10.5, fontWeight: "800", letterSpacing: 0.4, color: ACCENT }}>
+      <Text style={{ fontSize: 10.5, fontWeight: "700", letterSpacing: 0.4, color: ACCENT }}>
         {crew.toUpperCase()}
       </Text>
       <Text style={{ fontSize: 15.5, fontWeight: "700", color: INK }}>{question}</Text>
@@ -392,7 +392,7 @@ function QuestionsStep({
             A FEW QUICK THINGS
           </PixelText>
           <Text
-            style={{ fontSize: 25, lineHeight: 31, fontWeight: "800", color: INK, letterSpacing: -0.3 }}
+            style={{ fontSize: 25, lineHeight: 31, fontWeight: "700", color: INK, letterSpacing: -0.3 }}
           >
             Help the crew help you
           </Text>
@@ -537,7 +537,7 @@ function CrewStep({
         <View style={{ gap: 6, marginBottom: 18 }}>
           <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT }}>MEET THE CREW</PixelText>
           <Text
-            style={{ fontSize: 25, lineHeight: 31, fontWeight: "800", color: INK, letterSpacing: -0.3 }}
+            style={{ fontSize: 25, lineHeight: 31, fontWeight: "700", color: INK, letterSpacing: -0.3 }}
           >
             Four of them, one job each
           </Text>
@@ -554,7 +554,7 @@ function CrewStep({
                 <View
                   style={{
                     height: 48,
-                    borderRadius: 13,
+                    borderCurve: "continuous", borderRadius: 12,
                     alignItems: "center",
                     justifyContent: "center",
                     backgroundColor: on ? col : `${col}1f`,
@@ -588,7 +588,7 @@ function CrewStep({
           </View>
           <View style={{ flex: 1, gap: 4 }}>
             <Text
-              style={{ fontSize: 21, fontWeight: "800", color: INK, letterSpacing: -0.2 }}
+              style={{ fontSize: 21, fontWeight: "700", color: INK, letterSpacing: -0.2 }}
             >
               {member.name}
             </Text>
@@ -608,7 +608,7 @@ function CrewStep({
             gap: 9,
             marginTop: 16,
             backgroundColor: SURFACE,
-            borderRadius: 12,
+            borderCurve: "continuous", borderRadius: 12,
             borderLeftWidth: 2.5,
             borderLeftColor: info.color,
             paddingVertical: 10,
@@ -683,14 +683,14 @@ function DemoStep({
       >
         <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT }}>HERE&apos;S THE IDEA</PixelText>
         <Text
-          style={{ fontSize: 25, lineHeight: 31, fontWeight: "800", color: INK, letterSpacing: -0.3 }}
+          style={{ fontSize: 25, lineHeight: 31, fontWeight: "700", color: INK, letterSpacing: -0.3 }}
         >
           Say this is your fridge
         </Text>
 
         <View
           style={{
-            borderRadius: 16,
+            borderCurve: "continuous", borderRadius: 16,
             borderWidth: 1,
             borderColor: HAIRLINE,
             backgroundColor: SURFACE,
@@ -749,13 +749,13 @@ function DemoBubble({ gif, name, text }: { gif: number; name: string; text: stri
           backgroundColor: SURFACE2,
           borderWidth: 1,
           borderColor: HAIRLINE,
-          borderRadius: 14,
+          borderCurve: "continuous", borderRadius: 16,
           borderTopLeftRadius: 4,
           padding: 12,
           gap: 3,
         }}
       >
-        <Text style={{ fontSize: 10.5, fontWeight: "800", letterSpacing: 0.3, color: ACCENT }}>
+        <Text style={{ fontSize: 10.5, fontWeight: "700", letterSpacing: 0.3, color: ACCENT }}>
           {name.toUpperCase()}
         </Text>
         <Text style={{ fontSize: 13, lineHeight: 18, color: INK }}>{text}</Text>
@@ -792,7 +792,7 @@ function ReminderStep({
       <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 26, gap: 12 }}>
         <PixelText style={{ fontSize: 11, letterSpacing: 1, color: ACCENT }}>ONE LAST THING</PixelText>
         <Text
-          style={{ fontSize: 25, lineHeight: 31, fontWeight: "800", color: INK, letterSpacing: -0.3 }}
+          style={{ fontSize: 25, lineHeight: 31, fontWeight: "700", color: INK, letterSpacing: -0.3 }}
         >
           Want a nudge to check in?
         </Text>
@@ -810,7 +810,7 @@ function ReminderStep({
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 12,
-                borderRadius: 14,
+                borderCurve: "continuous", borderRadius: 16,
                 borderWidth: 1,
                 borderColor: active ? ACCENT : HAIRLINE,
                 backgroundColor: active ? "rgba(38,198,218,0.10)" : SURFACE,
@@ -890,7 +890,7 @@ function WallStep({
             style={{
               width: 68,
               height: 68,
-              borderRadius: 18,
+              borderCurve: "continuous", borderRadius: 16,
               alignItems: "center",
               justifyContent: "center",
               backgroundColor: SURFACE,
@@ -906,7 +906,7 @@ function WallStep({
           style={{
             fontSize: 27,
             lineHeight: 33,
-            fontWeight: "800",
+            fontWeight: "700",
             color: INK,
             textAlign: "center",
             letterSpacing: -0.3,
@@ -920,7 +920,7 @@ function WallStep({
 
         <View
           style={{
-            borderRadius: 14,
+            borderCurve: "continuous", borderRadius: 16,
             borderWidth: 1,
             borderColor: HAIRLINE,
             backgroundColor: SURFACE,
@@ -993,7 +993,7 @@ function WallStep({
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 10,
-                borderRadius: 12,
+                borderCurve: "continuous", borderRadius: 12,
                 backgroundColor: "#fff",
                 height: 50,
                 opacity: busy ? 0.7 : 1,
@@ -1016,7 +1016,7 @@ function WallStep({
             style={{
               alignItems: "center",
               justifyContent: "center",
-              borderRadius: 12,
+              borderCurve: "continuous", borderRadius: 12,
               borderWidth: 1,
               borderColor: HAIRLINE,
               height: 50,

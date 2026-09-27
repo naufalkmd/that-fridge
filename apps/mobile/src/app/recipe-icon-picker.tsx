@@ -104,7 +104,7 @@ export default function RecipeIconPicker() {
               borderWidth: 1,
               borderColor: HAIRLINE,
               backgroundColor: SURFACE2,
-              borderRadius: 6,
+              borderCurve: "continuous", borderRadius: 8,
               paddingHorizontal: 10,
               paddingVertical: 9,
               fontSize: 13,
@@ -119,7 +119,7 @@ export default function RecipeIconPicker() {
               alignItems: "center",
               gap: 4,
               paddingHorizontal: 12,
-              borderRadius: 6,
+              borderCurve: "continuous", borderRadius: 8,
               backgroundColor: `${PURPLE}26`,
               opacity: generating || !prompt.trim() ? 0.5 : 1,
             }}
@@ -145,7 +145,7 @@ export default function RecipeIconPicker() {
             alignItems: "center",
             gap: 10,
             padding: 10,
-            borderRadius: 8,
+            borderCurve: "continuous", borderRadius: 8,
             backgroundColor: SURFACE2,
             borderWidth: usingDefault ? 1.5 : 0,
             borderColor: ACCENT,
@@ -172,7 +172,7 @@ export default function RecipeIconPicker() {
                   style={{
                     width: 52,
                     height: 52,
-                    borderRadius: 8,
+                    borderCurve: "continuous", borderRadius: 8,
                     backgroundColor: SURFACE2,
                     alignItems: "center",
                     justifyContent: "center",
@@ -201,7 +201,7 @@ export default function RecipeIconPicker() {
                   style={{
                     width: 52,
                     height: 52,
-                    borderRadius: 8,
+                    borderCurve: "continuous", borderRadius: 8,
                     backgroundColor: SURFACE2,
                     alignItems: "center",
                     justifyContent: "center",
@@ -228,7 +228,7 @@ export default function RecipeIconPicker() {
                 style={{
                   width: 52,
                   height: 52,
-                  borderRadius: 8,
+                  borderCurve: "continuous", borderRadius: 8,
                   backgroundColor: SURFACE2,
                   alignItems: "center",
                   justifyContent: "center",

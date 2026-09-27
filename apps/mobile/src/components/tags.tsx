@@ -22,7 +22,7 @@ export function CategoryTag({ category }: { category?: NutritionCategory | null 
   if (!category) return null;
   const meta = CATEGORY_META[category] ?? CATEGORY_META.other_extras;
   return (
-    <View style={{ padding: 3, borderRadius: 6, backgroundColor: `${meta.color}1a` }}>
+    <View style={{ padding: 3, borderCurve: "continuous", borderRadius: 8, backgroundColor: `${meta.color}1a` }}>
       <MaterialCommunityIcons name={meta.icon} size={11} color={meta.color} />
     </View>
   );
@@ -43,7 +43,7 @@ export function LocationTag({ location = "fridge" }: { location?: StorageLocatio
     <View
       style={{
         padding: 3,
-        borderRadius: 6,
+        borderCurve: "continuous", borderRadius: 8,
         backgroundColor: `${meta.color}1a`,
       }}
     >
@@ -73,7 +73,7 @@ export function ScopePill({
         gap: 5,
         paddingVertical: small ? 5 : 7,
         paddingHorizontal: small ? 10 : 12,
-        borderRadius: 6,
+        borderCurve: "continuous", borderRadius: 8,
         backgroundColor: small ? colors.surface2 : colors.surface,
         borderWidth: small ? 0 : 1,
         borderColor: colors.hairline,

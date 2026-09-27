@@ -246,7 +246,7 @@ export default function RecipeForm() {
             <Pressable
               onPress={importLink}
               disabled={importing || !link.trim()}
-              style={{ paddingHorizontal: 14, justifyContent: "center", borderRadius: 6, backgroundColor: SURFACE2, opacity: importing || !link.trim() ? 0.5 : 1 }}
+              style={{ paddingHorizontal: 14, justifyContent: "center", borderCurve: "continuous", borderRadius: 8, backgroundColor: SURFACE2, opacity: importing || !link.trim() ? 0.5 : 1 }}
             >
               {importing ? (
                 <ActivityIndicator color={BLUE} />
@@ -280,7 +280,7 @@ export default function RecipeForm() {
               borderWidth: 1,
               borderColor: HAIRLINE,
               backgroundColor: SURFACE2,
-              borderRadius: 6,
+              borderCurve: "continuous", borderRadius: 8,
               padding: 10,
             }}
           >
@@ -313,7 +313,7 @@ export default function RecipeForm() {
                 <Pressable
                   key={c}
                   onPress={() => setCategory(active ? null : c)}
-                  style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 6, backgroundColor: active ? AMBER : SURFACE2 }}
+                  style={{ paddingHorizontal: 12, paddingVertical: 7, borderCurve: "continuous", borderRadius: 8, backgroundColor: active ? AMBER : SURFACE2 }}
                 >
                   <Text style={{ fontSize: 12, fontWeight: "700", color: active ? CANVAS : INK, textTransform: "capitalize" }}>
                     {c}
@@ -358,7 +358,7 @@ export default function RecipeForm() {
         <Field label="REFERENCE PHOTOS / VIDEOS">
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {attachments.map((att, i) => (
-              <View key={att.url} style={{ width: 64, height: 64, borderRadius: 6, overflow: "hidden", backgroundColor: "#000" }}>
+              <View key={att.url} style={{ width: 64, height: 64, borderCurve: "continuous", borderRadius: 8, overflow: "hidden", backgroundColor: "#000" }}>
                 {att.type === "image" ? (
                   <Image source={{ uri: att.url }} style={{ flex: 1 }} contentFit="cover" />
                 ) : (
@@ -369,7 +369,7 @@ export default function RecipeForm() {
                 <Pressable
                   onPress={() => setAttachments((a) => a.filter((_, idx) => idx !== i))}
                   hitSlop={6}
-                  style={{ position: "absolute", top: 2, right: 2, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 9 }}
+                  style={{ position: "absolute", top: 2, right: 2, backgroundColor: "rgba(0,0,0,0.6)", borderCurve: "continuous", borderRadius: 8 }}
                 >
                   <MaterialCommunityIcons name="close" size={14} color="#fff" />
                 </Pressable>
@@ -378,7 +378,7 @@ export default function RecipeForm() {
             <Pressable
               onPress={addAttachment}
               disabled={uploadingAtt}
-              style={{ width: 64, height: 64, borderRadius: 6, borderWidth: 1, borderColor: HAIRLINE, borderStyle: "dashed", alignItems: "center", justifyContent: "center", opacity: uploadingAtt ? 0.5 : 1 }}
+              style={{ width: 64, height: 64, borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, borderStyle: "dashed", alignItems: "center", justifyContent: "center", opacity: uploadingAtt ? 0.5 : 1 }}
             >
               {uploadingAtt ? (
                 <ActivityIndicator color={FAINT} size="small" />
@@ -392,7 +392,7 @@ export default function RecipeForm() {
         <Pressable
           onPress={save}
           disabled={saving}
-          style={{ alignItems: "center", paddingVertical: 14, borderRadius: 8, backgroundColor: AMBER, marginTop: 4 }}
+          style={{ alignItems: "center", paddingVertical: 14, borderCurve: "continuous", borderRadius: 8, backgroundColor: AMBER, marginTop: 4 }}
         >
           {saving ? (
             <ActivityIndicator color={CANVAS} />
@@ -412,7 +412,7 @@ function inputStyle(colors: ThemeColors) {
     borderWidth: 1,
     borderColor: colors.hairline,
     backgroundColor: colors.surface2,
-    borderRadius: 6,
+    borderCurve: "continuous", borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 13.5,

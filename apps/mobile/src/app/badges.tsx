@@ -59,7 +59,7 @@ export default function Badges() {
                   flexDirection: "row",
                   gap: 14,
                   padding: 14,
-                  borderRadius: 8,
+                  borderCurve: "continuous", borderRadius: 8,
                   borderWidth: 1,
                   borderColor: earned ? s.color : HAIRLINE,
                   backgroundColor: SURFACE,
@@ -70,7 +70,7 @@ export default function Badges() {
                   style={{
                     width: 42,
                     height: 42,
-                    borderRadius: 8,
+                    borderCurve: "continuous", borderRadius: 8,
                     alignItems: "center",
                     justifyContent: "center",
                     backgroundColor: earned ? `${s.color}1a` : "rgba(255,255,255,0.05)",

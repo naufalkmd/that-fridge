@@ -167,7 +167,7 @@ function Overlay({
               backgroundColor: SURFACE,
               borderWidth: 1,
               borderColor: HAIRLINE,
-              borderRadius: 14,
+              borderCurve: "continuous", borderRadius: 16,
               paddingVertical: 14,
               paddingHorizontal: 18,
               maxWidth: 320,
@@ -178,7 +178,7 @@ function Overlay({
               <Text
                 style={{
                   fontSize: 10,
-                  fontWeight: "800",
+                  fontWeight: "700",
                   letterSpacing: 0.6,
                   color: FAINT,
                   textAlign: "center",
@@ -191,7 +191,7 @@ function Overlay({
             <Text
               style={{
                 fontSize: 15,
-                fontWeight: "800",
+                fontWeight: "700",
                 color: INK,
                 textAlign: "center",
               }}
@@ -215,13 +215,13 @@ function Overlay({
                 marginTop: 12,
                 alignSelf: "center",
                 backgroundColor: ACCENT,
-                borderRadius: 9,
+                borderCurve: "continuous", borderRadius: 8,
                 paddingVertical: 9,
                 paddingHorizontal: 22,
               }}
             >
               <Text
-                style={{ fontSize: 13, fontWeight: "800", color: CANVAS }}
+                style={{ fontSize: 13, fontWeight: "700", color: CANVAS }}
               >
                 {primaryLabel}
               </Text>
@@ -278,7 +278,7 @@ function Overlay({
             top: cy - chip / 2,
             width: chip,
             height: chip,
-            borderRadius: big ? chip / 2 : 14,
+            borderRadius: big ? chip / 2 : 12,
             backgroundColor: ACCENT,
             borderWidth: 4,
             borderColor: SURFACE,

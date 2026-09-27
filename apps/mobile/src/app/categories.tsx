@@ -117,7 +117,7 @@ export default function Categories() {
         ) : (
           <View
             style={{
-              borderRadius: 12,
+              borderCurve: "continuous", borderRadius: 12,
               borderWidth: 1,
               borderColor: HAIRLINE,
               backgroundColor: SURFACE,
@@ -212,7 +212,7 @@ export default function Categories() {
             style={{
               flex: 1,
               backgroundColor: SURFACE2,
-              borderRadius: 8,
+              borderCurve: "continuous", borderRadius: 8,
               borderWidth: 1,
               borderColor: HAIRLINE,
               paddingVertical: 12,
@@ -227,7 +227,7 @@ export default function Categories() {
             style={{
               justifyContent: "center",
               paddingHorizontal: 16,
-              borderRadius: 8,
+              borderCurve: "continuous", borderRadius: 8,
               backgroundColor: ACCENT,
               opacity: !newName.trim() || busy ? 0.5 : 1,
             }}

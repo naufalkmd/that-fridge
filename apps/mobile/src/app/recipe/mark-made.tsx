@@ -119,7 +119,7 @@ export default function MarkRecipeMade() {
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 12 }}>
         {rows.length > 0 && (
-          <View style={{ borderRadius: 10, overflow: "hidden", backgroundColor: SURFACE }}>
+          <View style={{ borderCurve: "continuous", borderRadius: 12, overflow: "hidden", backgroundColor: SURFACE }}>
             {rows.map((r, i) => {
               const st = status[r.id] ?? "finished";
               return (
@@ -138,7 +138,7 @@ export default function MarkRecipeMade() {
                   <Text style={{ flex: 1, fontSize: 13.5, fontWeight: "600", color: INK }} numberOfLines={1}>
                     {r.ingredientName}
                   </Text>
-                  <View style={{ flexDirection: "row", backgroundColor: SURFACE2, borderRadius: 6, padding: 2 }}>
+                  <View style={{ flexDirection: "row", backgroundColor: SURFACE2, borderCurve: "continuous", borderRadius: 8, padding: 2 }}>
                     {(["finished", "remaining"] as Status[]).map((opt) => (
                       <Pressable
                         key={opt}
@@ -146,7 +146,7 @@ export default function MarkRecipeMade() {
                         style={{
                           paddingVertical: 6,
                           paddingHorizontal: 10,
-                          borderRadius: 5,
+                          borderRadius: 4,
                           backgroundColor: st === opt ? (opt === "finished" ? GOOD : WARN) : "transparent",
                         }}
                       >
@@ -174,13 +174,13 @@ export default function MarkRecipeMade() {
       <View style={{ flexDirection: "row", gap: 10, paddingHorizontal: 22, paddingTop: 12, paddingBottom: 26 }}>
         <Pressable
           onPress={() => router.back()}
-          style={{ flex: 1, alignItems: "center", paddingVertical: 13, borderRadius: 10, borderWidth: 1, borderColor: STRONG }}
+          style={{ flex: 1, alignItems: "center", paddingVertical: 13, borderCurve: "continuous", borderRadius: 12, borderWidth: 1, borderColor: STRONG }}
         >
           <Text style={{ fontSize: 13.5, fontWeight: "700", color: INK }}>Cancel</Text>
         </Pressable>
         <Pressable
           onPress={busy ? undefined : confirm}
-          style={{ flex: 1, alignItems: "center", paddingVertical: 13, borderRadius: 10, backgroundColor: AMBER }}
+          style={{ flex: 1, alignItems: "center", paddingVertical: 13, borderCurve: "continuous", borderRadius: 12, backgroundColor: AMBER }}
         >
           {busy ? (
             <ActivityIndicator color={CANVAS} />

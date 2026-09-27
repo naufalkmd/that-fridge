@@ -163,7 +163,7 @@ export default function ChatHistory() {
         >
           <View
             style={{
-              borderRadius: 8,
+              borderCurve: "continuous", borderRadius: 8,
               borderWidth: 1,
               borderColor: HAIRLINE,
               backgroundColor: SURFACE,
@@ -188,7 +188,7 @@ export default function ChatHistory() {
                   style={{
                     width: 34,
                     height: 34,
-                    borderRadius: 6,
+                    borderCurve: "continuous", borderRadius: 8,
                     alignItems: "center",
                     justifyContent: "center",
                     backgroundColor: `${BLUE}1a`,

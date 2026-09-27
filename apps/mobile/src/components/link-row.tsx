@@ -49,7 +49,7 @@ export function LinkRow({
               style={{ backgroundColor: `${colors.accent}26` }}
             >
               <Text
-                className="text-[9.5px] font-extrabold tracking-wide"
+                className="text-[9.5px] font-bold tracking-wide"
                 style={{ color: colors.accent }}
               >
                 {badge}

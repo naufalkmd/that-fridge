@@ -71,7 +71,7 @@ export function WeightRow({
             borderWidth: 1,
             borderColor: HAIRLINE,
             backgroundColor: SURFACE2,
-            borderRadius: 6,
+            borderCurve: "continuous", borderRadius: 8,
             paddingHorizontal: 10,
             paddingVertical: 8,
             fontSize: 13,
@@ -96,7 +96,7 @@ export function WeightRow({
           justifyContent: "center",
           gap: 6,
           paddingVertical: 9,
-          borderRadius: 6,
+          borderCurve: "continuous", borderRadius: 8,
           backgroundColor: AMBER,
         }}
       >

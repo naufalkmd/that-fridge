@@ -76,7 +76,7 @@ function GuardianPill({ overdue }: { overdue: number }) {
         marginTop: 8,
         paddingVertical: 3,
         paddingHorizontal: 8,
-        borderRadius: 20,
+        borderCurve: "continuous", borderRadius: 16,
         backgroundColor: `${color}1a`,
         borderWidth: 1,
         borderColor: color,
@@ -308,7 +308,7 @@ export function KitchenScore({
       <View
         style={{
           position: "relative",
-          borderRadius: 10,
+          borderCurve: "continuous", borderRadius: 12,
           paddingHorizontal: 14,
           paddingVertical: 12,
           backgroundColor: colors.surface,
@@ -405,7 +405,7 @@ export function KitchenScore({
                 gap: 5,
                 paddingVertical: 4,
                 paddingHorizontal: 10,
-                borderRadius: 20,
+                borderCurve: "continuous", borderRadius: 16,
                 backgroundColor: streak > 0 ? `${colors.accent}1a` : colors.surface2,
                 borderWidth: 1,
                 borderColor: streak > 0 ? colors.accent : colors.hairlineStrong,
@@ -464,7 +464,7 @@ export function KitchenScore({
                 key={r.key}
                 style={{
                   padding: 12,
-                  borderRadius: 8,
+                  borderCurve: "continuous", borderRadius: 8,
                   backgroundColor: colors.surface2,
                   borderLeftWidth: 3,
                   borderLeftColor: colors[AGENT_META[r.key].colorKey],
@@ -481,7 +481,7 @@ export function KitchenScore({
                   <Text
                     style={{
                       fontSize: 12.5,
-                      fontWeight: "800",
+                      fontWeight: "700",
                       color: colors.ink,
                     }}
                   >
@@ -494,7 +494,7 @@ export function KitchenScore({
                   <Text
                     style={{
                       fontSize: 13,
-                      fontWeight: "800",
+                      fontWeight: "700",
                       color: bandColor(r.score, colors),
                     }}
                   >

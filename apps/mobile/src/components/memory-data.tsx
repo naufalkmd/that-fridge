@@ -93,12 +93,12 @@ export function MemoryData() {
             backgroundColor: SURFACE,
             borderWidth: 1,
             borderColor: HAIRLINE,
-            borderRadius: 8,
+            borderCurve: "continuous", borderRadius: 8,
             padding: 13,
             marginBottom: 22,
           }}
         >
-          <View style={{ width: 34, height: 34, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: `${BLUE}1a` }}>
+          <View style={{ width: 34, height: 34, borderCurve: "continuous", borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: `${BLUE}1a` }}>
             <MaterialCommunityIcons name="message-outline" size={16} color={BLUE} />
           </View>
           <Text style={{ flex: 1, fontSize: 13.5, fontWeight: "700", color: INK }}>Past conversations</Text>
@@ -120,7 +120,7 @@ export function MemoryData() {
             Nothing remembered yet — the crew picks up preferences and habits from your chats.
           </Text>
         ) : (
-          <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 22 }}>
+          <View style={{ borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 22 }}>
             {facts.map((f, i) => (
               <View
                 key={i}
@@ -148,7 +148,7 @@ export function MemoryData() {
             Nothing yet — items you mark &ldquo;used it up&rdquo; show here and feed the Shopkeeper.
           </Text>
         ) : (
-          <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden" }}>
+          <View style={{ borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden" }}>
             {usage.map((u, i) => (
               <View
                 key={u.id}
@@ -161,7 +161,7 @@ export function MemoryData() {
                   borderBottomColor: HAIRLINE,
                 }}
               >
-                <View style={{ width: 32, height: 32, borderRadius: 6, backgroundColor: SURFACE2, alignItems: "center", justifyContent: "center" }}>
+                <View style={{ width: 32, height: 32, borderCurve: "continuous", borderRadius: 8, backgroundColor: SURFACE2, alignItems: "center", justifyContent: "center" }}>
                   <FoodIcon icon={u.icon} name={u.name} size={26} />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -187,7 +187,7 @@ function Section({ label, inline }: { label: string; inline?: boolean }) {
     <Text
       style={{
         fontSize: 12,
-        fontWeight: "800",
+        fontWeight: "700",
         letterSpacing: 0.3,
         color: FAINT,
         marginBottom: inline ? 0 : 8,

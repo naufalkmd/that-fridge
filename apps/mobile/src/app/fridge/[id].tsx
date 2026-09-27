@@ -206,7 +206,7 @@ export default function ManageFridge() {
             borderWidth: 1,
             borderColor: HAIRLINE,
             backgroundColor: SURFACE2,
-            borderRadius: 6,
+            borderCurve: "continuous", borderRadius: 8,
             paddingHorizontal: 14,
             paddingVertical: 12,
             fontSize: 13.5,
@@ -221,7 +221,7 @@ export default function ManageFridge() {
             const active = styleKey === s.key && style !== "custom";
             return (
               <Pressable key={s.key} onPress={() => setStyle(s.key)} style={{ alignItems: "center", gap: 4 }}>
-                <View style={{ width: 84, height: 60, borderRadius: 8, overflow: "hidden", borderWidth: 2, borderColor: active ? AMBER : "transparent" }}>
+                <View style={{ width: 84, height: 60, borderCurve: "continuous", borderRadius: 8, overflow: "hidden", borderWidth: 2, borderColor: active ? AMBER : "transparent" }}>
                   <Image source={s.photo} style={{ flex: 1 }} contentFit="cover" />
                 </View>
                 <Text style={{ fontSize: 10.5, fontWeight: "700", color: active ? AMBER : FAINT }}>{s.label}</Text>
@@ -233,7 +233,7 @@ export default function ManageFridge() {
               style={{
                 width: 84,
                 height: 60,
-                borderRadius: 8,
+                borderCurve: "continuous", borderRadius: 8,
                 overflow: "hidden",
                 borderWidth: 2,
                 borderColor: style === "custom" ? AMBER : STRONG,
@@ -256,7 +256,7 @@ export default function ManageFridge() {
         </ScrollView>
 
         <Label>MEMBERS ({members.length})</Label>
-        <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
+        <View style={{ borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
           {members.map((m, i) => (
             <View
               key={m.id}
@@ -307,13 +307,13 @@ export default function ManageFridge() {
               borderWidth: 1,
               borderColor: `${AMBER}66`,
               backgroundColor: `${AMBER}12`,
-              borderRadius: 8,
+              borderCurve: "continuous", borderRadius: 8,
               padding: 14,
               marginBottom: 20,
               gap: 4,
             }}
           >
-            <Text style={{ fontSize: 13, fontWeight: "800", color: INK }}>Share this fridge</Text>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: INK }}>Share this fridge</Text>
             <Text style={{ fontSize: 11.5, lineHeight: 16, color: MUTED }}>
               Keep one fridge in sync with a partner or housemate. Inviting people in is a Pro
               feature — upgrade to share.
@@ -334,7 +334,7 @@ export default function ManageFridge() {
                 borderWidth: 1,
                 borderColor: HAIRLINE,
                 backgroundColor: SURFACE2,
-                borderRadius: 6,
+                borderCurve: "continuous", borderRadius: 8,
                 paddingHorizontal: 14,
                 paddingVertical: 12,
                 fontSize: 13.5,
@@ -343,7 +343,7 @@ export default function ManageFridge() {
               }}
             />
             {inviteResults.length > 0 && (
-              <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
+              <View style={{ borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
                 {inviteResults.map((u, i) => (
                   <Pressable
                     key={u.id}
@@ -369,7 +369,7 @@ export default function ManageFridge() {
             {requests.length > 0 && (
               <>
                 <Label>JOIN REQUESTS ({requests.length})</Label>
-                <View style={{ borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
+                <View style={{ borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: HAIRLINE, backgroundColor: SURFACE, overflow: "hidden", marginBottom: 20 }}>
                   {requests.map((r, i) => (
                     <View
                       key={r.id}
@@ -401,7 +401,7 @@ export default function ManageFridge() {
 
         <Pressable
           onPress={confirmLeaveOrDelete}
-          style={{ alignItems: "center", paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: `${BAD}66` }}
+          style={{ alignItems: "center", paddingVertical: 12, borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: `${BAD}66` }}
         >
           <Text style={{ fontSize: 13, fontWeight: "700", color: BAD }}>
             {isOwner ? "Delete fridge" : "Leave fridge"}
@@ -415,7 +415,7 @@ export default function ManageFridge() {
 function Label({ children }: { children: React.ReactNode }) {
   const { faint: FAINT } = useTheme().colors;
   return (
-    <Text style={{ fontSize: 12, fontWeight: "800", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
+    <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 0.3, color: FAINT, marginBottom: 8 }}>
       {children}
     </Text>
   );

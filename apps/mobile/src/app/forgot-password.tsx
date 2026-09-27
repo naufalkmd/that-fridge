@@ -90,7 +90,7 @@ export default function ForgotPassword() {
           >
             <Ionicons name="chevron-back" size={22} color={colors.ink} />
           </Pressable>
-          <PixelText style={{ fontSize: 14, color: colors.ink }}>
+          <PixelText style={{ fontSize: 16, color: colors.ink }}>
             Reset password
           </PixelText>
         </View>

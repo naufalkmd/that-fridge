@@ -120,7 +120,7 @@ export function CaloriesRow({
     justifyContent: "center" as const,
     gap: 6,
     paddingVertical: 9,
-    borderRadius: 7,
+    borderCurve: "continuous" as const, borderRadius: 8,
     backgroundColor: `${AUTOFILL}1f`,
   };
 
@@ -170,7 +170,7 @@ export function CaloriesRow({
             gap: 8,
             paddingVertical: 14,
             marginBottom: 12,
-            borderRadius: 7,
+            borderCurve: "continuous", borderRadius: 8,
             backgroundColor: `${AUTOFILL}14`,
           }}
         >
@@ -190,7 +190,7 @@ export function CaloriesRow({
             gap: 6,
             paddingVertical: 16,
             marginBottom: 12,
-            borderRadius: 7,
+            borderCurve: "continuous", borderRadius: 8,
             borderWidth: 1,
             borderStyle: "dashed",
             borderColor: `${AUTOFILL}66`,
@@ -208,7 +208,7 @@ export function CaloriesRow({
           style={{
             padding: 12,
             marginBottom: 12,
-            borderRadius: 7,
+            borderCurve: "continuous", borderRadius: 8,
             backgroundColor: `${AUTOFILL}1a`,
             borderWidth: 1,
             borderColor: `${AUTOFILL}4d`,
@@ -224,13 +224,13 @@ export function CaloriesRow({
           <View style={{ flexDirection: "row", gap: 7 }}>
             <Pressable
               onPress={useResult}
-              style={{ flex: 1, alignItems: "center", paddingVertical: 7, borderRadius: 6, backgroundColor: AUTOFILL }}
+              style={{ flex: 1, alignItems: "center", paddingVertical: 7, borderCurve: "continuous", borderRadius: 8, backgroundColor: AUTOFILL }}
             >
               <Text style={{ fontSize: 11.5, fontWeight: "700", color: "#fff" }}>Use this</Text>
             </Pressable>
             <Pressable
               onPress={() => setAiStep("choose")}
-              style={{ flex: 1, alignItems: "center", paddingVertical: 7, borderRadius: 6, borderWidth: 1, borderColor: `${AUTOFILL}66` }}
+              style={{ flex: 1, alignItems: "center", paddingVertical: 7, borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: `${AUTOFILL}66` }}
             >
               <Text style={{ fontSize: 11.5, fontWeight: "700", color: AUTOFILL }}>Try again</Text>
             </Pressable>
@@ -259,7 +259,7 @@ export function CaloriesRow({
             borderWidth: 1,
             borderColor: HAIRLINE,
             backgroundColor: SURFACE2,
-            borderRadius: 6,
+            borderCurve: "continuous", borderRadius: 8,
             paddingHorizontal: 10,
             paddingVertical: 8,
             fontSize: 13,

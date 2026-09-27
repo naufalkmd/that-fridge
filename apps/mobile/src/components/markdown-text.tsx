@@ -13,7 +13,7 @@ function inline(text: string, key: string, color: string, selectable: boolean) {
     <Text key={key} selectable={selectable} style={{ color }}>
       {parts.map((p, i) =>
         p.startsWith("**") && p.endsWith("**") ? (
-          <Text key={i} style={{ fontWeight: "800" }}>
+          <Text key={i} style={{ fontWeight: "700" }}>
             {p.slice(2, -2)}
           </Text>
         ) : (
@@ -53,7 +53,7 @@ export function MarkdownText({
             <Text
               key={i}
               selectable={selectable}
-              style={{ ...base, fontWeight: "800", marginBottom: 4 }}
+              style={{ ...base, fontWeight: "700", marginBottom: 4 }}
             >
               {heading[2]}
             </Text>

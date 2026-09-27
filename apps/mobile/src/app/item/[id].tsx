@@ -161,7 +161,7 @@ export default function ItemDetail() {
               alignItems: "center",
               justifyContent: "center",
               gap: 8,
-              borderRadius: 12,
+              borderCurve: "continuous", borderRadius: 12,
               backgroundColor: SURFACE2,
               borderWidth: 1,
               borderColor: HAIRLINE,
@@ -177,9 +177,9 @@ export default function ItemDetail() {
             disabled={busy}
             accessibilityRole="button"
             accessibilityLabel="Remove item"
-            style={{ flex: 1, height: 48, alignItems: "center", justifyContent: "center", borderRadius: 12, backgroundColor: AMBER, opacity: busy ? 0.6 : 1 }}
+            style={{ flex: 1, height: 48, alignItems: "center", justifyContent: "center", borderCurve: "continuous", borderRadius: 12, backgroundColor: AMBER, opacity: busy ? 0.6 : 1 }}
           >
-            <Text style={{ fontSize: 13.5, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5, color: CANVAS }}>Remove</Text>
+            <Text style={{ fontSize: 13.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: CANVAS }}>Remove</Text>
           </Pressable>
         </View>
       </ScrollView>

@@ -188,7 +188,7 @@ export function IntroCarousel({
                   style={{
                     fontSize: 30,
                     lineHeight: 36,
-                    fontWeight: "800",
+                    fontWeight: "700",
                     color: INK,
                     letterSpacing: -0.3,
                   }}
@@ -272,7 +272,7 @@ export function FridgeStep({
             style={{
               width: 68,
               height: 68,
-              borderRadius: 18,
+              borderCurve: "continuous", borderRadius: 16,
               alignItems: "center",
               justifyContent: "center",
               backgroundColor: SURFACE,
@@ -293,7 +293,7 @@ export function FridgeStep({
           style={{
             fontSize: 27,
             lineHeight: 33,
-            fontWeight: "800",
+            fontWeight: "700",
             color: INK,
             textAlign: "center",
             letterSpacing: -0.3,
@@ -320,7 +320,7 @@ export function FridgeStep({
             backgroundColor: SURFACE,
             borderWidth: 1,
             borderColor: HAIRLINE,
-            borderRadius: 12,
+            borderCurve: "continuous", borderRadius: 12,
             paddingVertical: 14,
             paddingHorizontal: 16,
             fontSize: 15,
@@ -368,7 +368,7 @@ export function PrimaryButton({
         justifyContent: "center",
         gap: 8,
         backgroundColor: ACCENT,
-        borderRadius: 12,
+        borderCurve: "continuous", borderRadius: 12,
         minHeight: 54,
         paddingHorizontal: 20,
         opacity: busy ? 0.7 : 1,
@@ -381,7 +381,7 @@ export function PrimaryButton({
           <Text
             style={{
               fontSize: 14,
-              fontWeight: "800",
+              fontWeight: "700",
               textTransform: "uppercase",
               letterSpacing: 0.5,
               color: CANVAS,
@@ -462,7 +462,7 @@ function FreshnessArt() {
         backgroundColor: SURFACE,
         borderWidth: 1,
         borderColor: HAIRLINE,
-        borderRadius: 16,
+        borderCurve: "continuous", borderRadius: 16,
         padding: 16,
         gap: 12,
       }}
@@ -472,7 +472,7 @@ function FreshnessArt() {
           style={{
             width: 38,
             height: 38,
-            borderRadius: 10,
+            borderCurve: "continuous", borderRadius: 12,
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: `${state.color}22`,
@@ -488,11 +488,11 @@ function FreshnessArt() {
           style={{
             paddingHorizontal: 8,
             paddingVertical: 3,
-            borderRadius: 6,
+            borderCurve: "continuous", borderRadius: 8,
             backgroundColor: `${state.color}1f`,
           }}
         >
-          <Text style={{ fontSize: 10.5, fontWeight: "800", color: state.color }}>
+          <Text style={{ fontSize: 10.5, fontWeight: "700", color: state.color }}>
             {state.label}
           </Text>
         </View>
@@ -527,7 +527,7 @@ function ChatArt() {
         <View
           style={{
             backgroundColor: ACCENT,
-            borderRadius: 16,
+            borderCurve: "continuous", borderRadius: 16,
             borderBottomRightRadius: 4,
             paddingVertical: 10,
             paddingHorizontal: 14,
@@ -547,7 +547,7 @@ function ChatArt() {
               backgroundColor: SURFACE,
               borderWidth: 1,
               borderColor: HAIRLINE,
-              borderRadius: 16,
+              borderCurve: "continuous", borderRadius: 16,
               borderBottomLeftRadius: 4,
               paddingVertical: 10,
               paddingHorizontal: 14,

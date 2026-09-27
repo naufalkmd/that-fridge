@@ -19,7 +19,7 @@ export default function AttachmentLightbox() {
         <Image source={{ uri: url }} style={{ width: "100%", height: "80%" }} contentFit="contain" />
       </Pressable>
       <SafeAreaView style={{ position: "absolute", top: 0, right: 0 }}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={{ margin: 16, padding: 8, borderRadius: 20, backgroundColor: "rgba(0,0,0,0.5)" }}>
+        <Pressable onPress={() => router.back()} hitSlop={12} style={{ margin: 16, padding: 8, borderCurve: "continuous", borderRadius: 16, backgroundColor: "rgba(0,0,0,0.5)" }}>
           <Ionicons name="close" size={22} color="#fff" />
         </Pressable>
       </SafeAreaView>

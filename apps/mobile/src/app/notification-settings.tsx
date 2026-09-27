@@ -104,7 +104,7 @@ function CheckInReminderRow() {
 
   return (
     <View className="mb-5">
-      <Text className="mb-2 text-[12px] font-extrabold tracking-wide text-faint">
+      <Text className="mb-2 text-[12px] font-bold tracking-wide text-faint">
         FRIDGE CHECK-IN
       </Text>
       <View className="gap-2 rounded-2xl border border-hairline bg-surface p-4">
@@ -156,7 +156,7 @@ export default function NotificationSettings() {
       <CheckInReminderRow />
       {buildGroups(colors).map((group) => (
         <View key={group.title} className="mb-5">
-          <Text className="mb-2 text-[12px] font-extrabold tracking-wide text-faint">
+          <Text className="mb-2 text-[12px] font-bold tracking-wide text-faint">
             {group.title}
           </Text>
           <View className="overflow-hidden rounded-2xl border border-hairline bg-surface">

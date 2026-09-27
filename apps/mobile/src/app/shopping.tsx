@@ -253,7 +253,7 @@ function Row({
         <Pressable
           onPress={() => Linking.openURL(shopUrl).catch(() => {})}
           hitSlop={8}
-          className="rounded-md bg-surface2 p-1.5"
+          className="rounded-lg bg-surface2 p-1.5"
         >
           <MaterialCommunityIcons
             name="open-in-new"

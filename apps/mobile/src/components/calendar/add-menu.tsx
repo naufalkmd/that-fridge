@@ -20,7 +20,7 @@ export function AddMenu({ onPick, onBack }: { onPick: (action: AddAction) => voi
   return (
     <View>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <Text style={{ fontSize: 16, fontWeight: "800", color: colors.ink }}>Add</Text>
+        <Text style={{ fontSize: 16, fontWeight: "700", color: colors.ink }}>Add</Text>
         <Pressable onPress={onBack} hitSlop={10} accessibilityLabel="Back to the day">
           <Text style={{ fontSize: 13, fontWeight: "700", color: colors.accent }}>Back</Text>
         </Pressable>
@@ -33,11 +33,11 @@ export function AddMenu({ onPick, onBack }: { onPick: (action: AddAction) => voi
             accessibilityRole="button"
             accessibilityLabel={a.title}
             style={{
-              flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 8,
+              flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderCurve: "continuous", borderRadius: 8,
               borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface,
             }}
           >
-            <View style={{ width: 36, height: 36, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: `${colors.accent}1a` }}>
+            <View style={{ width: 36, height: 36, borderCurve: "continuous", borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: `${colors.accent}1a` }}>
               <MaterialCommunityIcons name={a.icon} size={19} color={colors.accent} />
             </View>
             <View style={{ flex: 1 }}>

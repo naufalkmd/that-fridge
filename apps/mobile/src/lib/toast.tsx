@@ -61,7 +61,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             ],
           }}
         >
-          <View className="flex-row items-center gap-3 rounded-[10px] border border-hairline-strong bg-surface py-3 pl-4 pr-3">
+          <View className="flex-row items-center gap-3 rounded-xl border border-hairline-strong bg-surface py-3 pl-4 pr-3">
             <Text className="flex-1 text-[13px] font-semibold text-ink" numberOfLines={1}>
               {toast.message}
             </Text>
@@ -74,7 +74,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 hitSlop={8}
                 className="px-2 py-1"
               >
-                <Text className="text-[13px] font-extrabold text-accent">{toast.actionLabel}</Text>
+                <Text className="text-[13px] font-bold text-accent">{toast.actionLabel}</Text>
               </Pressable>
             )}
             {toast.secondaryActionLabel && (
@@ -86,7 +86,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 hitSlop={8}
                 className="px-2 py-1"
               >
-                <Text className="text-[13px] font-extrabold text-accent">{toast.secondaryActionLabel}</Text>
+                <Text className="text-[13px] font-bold text-accent">{toast.secondaryActionLabel}</Text>
               </Pressable>
             )}
           </View>

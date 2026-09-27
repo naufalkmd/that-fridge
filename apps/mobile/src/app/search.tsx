@@ -62,7 +62,7 @@ export default function Search() {
             borderWidth: 1,
             borderColor: HAIRLINE,
             backgroundColor: SURFACE,
-            borderRadius: 6,
+            borderCurve: "continuous", borderRadius: 8,
             paddingVertical: 11,
             paddingHorizontal: 16,
             fontSize: 14,
@@ -89,7 +89,7 @@ export default function Search() {
                   backgroundColor: SURFACE,
                   borderWidth: 1,
                   borderColor: HAIRLINE,
-                  borderRadius: 6,
+                  borderCurve: "continuous", borderRadius: 8,
                   paddingVertical: 8,
                   paddingHorizontal: 13,
                 }}
@@ -106,7 +106,7 @@ export default function Search() {
               backgroundColor: SURFACE,
               borderWidth: 1,
               borderColor: HAIRLINE,
-              borderRadius: 8,
+              borderCurve: "continuous", borderRadius: 8,
               overflow: "hidden",
             }}
           >
@@ -128,7 +128,7 @@ export default function Search() {
                   style={{
                     width: 38,
                     height: 38,
-                    borderRadius: 6,
+                    borderCurve: "continuous", borderRadius: 8,
                     backgroundColor: SURFACE2,
                     alignItems: "center",
                     justifyContent: "center",

@@ -279,7 +279,7 @@ export default function Scan() {
                         backgroundColor: `${SURFACE}e6`,
                         borderWidth: 1,
                         borderColor: HAIRLINE,
-                        borderRadius: 999,
+                        borderCurve: "continuous", borderRadius: 8,
                         paddingLeft: 6,
                         paddingRight: 12,
                         paddingVertical: 6,
@@ -390,7 +390,7 @@ function ScanResultCard({ result }: { result: ScanResult }) {
       entering={FadeIn.duration(140)}
       style={{
         backgroundColor: "#fff",
-        borderRadius: 14,
+        borderCurve: "continuous", borderRadius: 16,
         paddingVertical: 12,
         paddingHorizontal: 18,
         alignItems: "center",
@@ -426,7 +426,7 @@ function ScanResultCard({ result }: { result: ScanResult }) {
       >
         <MaterialCommunityIcons name={icon} size={16} color={tint} />
         <Text
-          style={{ fontSize: 14, fontWeight: "800", color: "#0a0a0c" }}
+          style={{ fontSize: 14, fontWeight: "700", color: "#0a0a0c" }}
           numberOfLines={1}
         >
           {label}

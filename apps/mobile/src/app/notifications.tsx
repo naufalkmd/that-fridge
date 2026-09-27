@@ -73,7 +73,7 @@ export default function Notifications() {
             <Ionicons name="chevron-back" size={20} color={MUTED} />
           </Pressable>
           <View>
-            <PixelText style={{ fontSize: 14, color: INK }}>Notifications</PixelText>
+            <PixelText style={{ fontSize: 16, color: INK }}>Notifications</PixelText>
             <Text style={{ fontSize: 11.5, color: FAINT, marginTop: 3 }}>
               Swipe left to remove one
             </Text>
@@ -115,7 +115,7 @@ export default function Notifications() {
         {error && (
           <Pressable
             onPress={refresh}
-            style={{ marginBottom: 14, borderRadius: 12, borderWidth: 1, borderColor: BAD, backgroundColor: SURFACE, padding: 12 }}
+            style={{ marginBottom: 14, borderCurve: "continuous", borderRadius: 12, borderWidth: 1, borderColor: BAD, backgroundColor: SURFACE, padding: 12 }}
           >
             <Text style={{ fontWeight: "600", color: BAD }}>{error}</Text>
           </Pressable>
@@ -197,13 +197,13 @@ function PendingRow({
         gap: 12,
         padding: 13,
         marginBottom: 10,
-        borderRadius: 8,
+        borderCurve: "continuous", borderRadius: 8,
         borderWidth: 1,
         borderColor: HAIRLINE,
         backgroundColor: SURFACE,
       }}
     >
-      <View style={{ width: 36, height: 36, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: `${BLUE}1a` }}>
+      <View style={{ width: 36, height: 36, borderCurve: "continuous", borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: `${BLUE}1a` }}>
         <MaterialCommunityIcons name={icon} size={17} color={BLUE} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>

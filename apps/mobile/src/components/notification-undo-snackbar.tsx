@@ -24,7 +24,7 @@ export function NotificationUndoSnackbar({ bottom = 20 }: { bottom?: number }) {
         alignItems: "center",
         justifyContent: "space-between",
         gap: 12,
-        borderRadius: 10,
+        borderCurve: "continuous", borderRadius: 12,
         paddingVertical: 12,
         paddingHorizontal: 16,
         backgroundColor: INK,
@@ -34,7 +34,7 @@ export function NotificationUndoSnackbar({ bottom = 20 }: { bottom?: number }) {
         Notification removed
       </Text>
       <Pressable onPress={undoRemove} hitSlop={8}>
-        <Text style={{ fontSize: 12.5, fontWeight: "800", color: ACCENT }}>Undo</Text>
+        <Text style={{ fontSize: 12.5, fontWeight: "700", color: ACCENT }}>Undo</Text>
       </Pressable>
     </View>
   );

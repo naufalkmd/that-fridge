@@ -53,7 +53,7 @@ export function AskChef({
   const ready = allowEmpty || text.trim().length >= 3;
 
   return (
-    <View style={{ gap: 10, padding: 14, borderRadius: 10, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}>
+    <View style={{ gap: 10, padding: 14, borderCurve: "continuous", borderRadius: 12, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}>
       <Pressable
         onPress={collapsible ? () => setOpen(!open) : undefined}
         disabled={!collapsible}
@@ -64,7 +64,7 @@ export function AskChef({
       >
         <MaterialCommunityIcons name="chef-hat" size={18} color={colors.accent} />
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 14, fontWeight: "800", color: colors.ink }}>Ask Chef</Text>
+          <Text style={{ fontSize: 14, fontWeight: "700", color: colors.ink }}>Ask Chef</Text>
           {collapsible && !open && summary ? <Text style={{ fontSize: 12, color: colors.faint, marginTop: 1 }}>{summary}</Text> : null}
         </View>
         {collapsible && <MaterialCommunityIcons name={open ? "chevron-up" : "chevron-down"} size={20} color={colors.faint} />}
@@ -83,7 +83,7 @@ export function AskChef({
         editable={!busy}
         textAlignVertical="top"
         style={{
-          minHeight: 64, padding: 12, borderRadius: 8, fontSize: 14, lineHeight: 20, color: colors.ink,
+          minHeight: 64, padding: 12, borderCurve: "continuous", borderRadius: 8, fontSize: 14, lineHeight: 20, color: colors.ink,
           backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.hairline,
         }}
       />
@@ -96,7 +96,7 @@ export function AskChef({
             disabled={busy}
             accessibilityRole="button"
             accessibilityLabel={`Use example: ${example}`}
-            style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.hairline }}
+            style={{ paddingHorizontal: 10, paddingVertical: 5, borderCurve: "continuous", borderRadius: 8, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.hairline }}
           >
             <Text style={{ fontSize: 11.5, color: colors.muted }}>{example}</Text>
           </Pressable>
@@ -121,12 +121,12 @@ export function AskChef({
         disabled={!ready || busy}
         accessibilityRole="button"
         accessibilityLabel="Send to Chef"
-        style={{ height: 44, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent, opacity: !ready || busy ? 0.5 : 1 }}
+        style={{ height: 44, borderCurve: "continuous", borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent, opacity: !ready || busy ? 0.5 : 1 }}
       >
         {busy ? (
           <ActivityIndicator color={colors.onAccent} />
         ) : (
-          <Text style={{ fontSize: 14.5, fontWeight: "800", color: colors.onAccent }}>
+          <Text style={{ fontSize: 14.5, fontWeight: "700", color: colors.onAccent }}>
             Ask Chef · {cost} credits
           </Text>
         )}

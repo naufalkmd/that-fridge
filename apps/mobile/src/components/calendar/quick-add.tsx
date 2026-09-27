@@ -55,7 +55,7 @@ export function QuickAdd({ kind, onDone, onBack }: { kind: "shopping" | "note"; 
 
   return (
     <View>
-      <Text style={{ fontSize: 16, fontWeight: "800", color: colors.ink, marginBottom: 12 }}>
+      <Text style={{ fontSize: 16, fontWeight: "700", color: colors.ink, marginBottom: 12 }}>
         {isShopping ? "Add to shopping list" : "Leave a note"}
       </Text>
       <TextInput
@@ -67,20 +67,20 @@ export function QuickAdd({ kind, onDone, onBack }: { kind: "shopping" | "note"; 
         autoFocus
         returnKeyType="done"
         onSubmitEditing={save}
-        style={{ backgroundColor: colors.surface2, color: colors.ink, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, marginBottom: 10 }}
+        style={{ backgroundColor: colors.surface2, color: colors.ink, borderCurve: "continuous", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, marginBottom: 10 }}
       />
       {error && <Text style={{ fontSize: 12.5, color: colors.bad, marginBottom: 10 }}>{error}</Text>}
       <View style={{ flexDirection: "row", gap: 10 }}>
-        <Pressable onPress={onBack} disabled={saving} style={{ flex: 1, alignItems: "center", paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.hairline }}>
+        <Pressable onPress={onBack} disabled={saving} style={{ flex: 1, alignItems: "center", paddingVertical: 12, borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: colors.hairline }}>
           <Text style={{ fontWeight: "700", color: colors.muted }}>Back</Text>
         </Pressable>
         <Pressable
           onPress={save}
           disabled={saving}
           accessibilityRole="button"
-          style={{ flex: 2, alignItems: "center", paddingVertical: 12, borderRadius: 8, backgroundColor: colors.accent, opacity: saving ? 0.6 : 1 }}
+          style={{ flex: 2, alignItems: "center", paddingVertical: 12, borderCurve: "continuous", borderRadius: 8, backgroundColor: colors.accent, opacity: saving ? 0.6 : 1 }}
         >
-          {saving ? <ActivityIndicator color={colors.onAccent} /> : <Text style={{ fontWeight: "800", color: colors.onAccent }}>Add</Text>}
+          {saving ? <ActivityIndicator color={colors.onAccent} /> : <Text style={{ fontWeight: "700", color: colors.onAccent }}>Add</Text>}
         </Pressable>
       </View>
     </View>

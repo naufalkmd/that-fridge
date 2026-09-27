@@ -144,7 +144,7 @@ export default function SignIn() {
                   <Pressable
                     key={m}
                     onPress={() => switchMode(m)}
-                    className={`rounded-md px-5 py-2 ${active ? "bg-surface" : ""}`}
+                    className={`rounded-lg px-5 py-2 ${active ? "bg-surface" : ""}`}
                   >
                     <Text
                       className={`text-[13px] font-bold ${active ? "text-ink" : "text-muted"}`}
@@ -309,7 +309,7 @@ export default function SignIn() {
                 <Pressable
                   onPress={() => social(signInWithGoogle)}
                   disabled={busy}
-                  className="flex-row items-center justify-center gap-2.5 rounded-[10px] bg-white active:opacity-80"
+                  className="flex-row items-center justify-center gap-2.5 rounded-xl bg-white active:opacity-80"
                   style={{ height: 48, width: "100%" }}
                 >
                   <Ionicons name="logo-google" size={18} color="#0a0a0c" />

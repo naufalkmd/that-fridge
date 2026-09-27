@@ -128,7 +128,7 @@ export function DaySheet({
             <QuickAdd kind={view.type} onDone={backToList} onBack={() => setView({ type: "menu" })} />
           ) : (
             <View style={{ paddingBottom: 8 }}>
-              <Text style={{ fontSize: 16, fontWeight: "800", color: colors.ink, marginBottom: 12 }}>{dayTitle(date)}</Text>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: colors.ink, marginBottom: 12 }}>{dayTitle(date)}</Text>
               <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
                 {sections.length === 0 ? (
                   <Text style={{ fontSize: 13, color: colors.faint, paddingVertical: 20, textAlign: "center" }}>
@@ -165,11 +165,11 @@ export function DaySheet({
                 accessibilityLabel="Add"
                 style={{
                   flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 6,
-                  paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.accent, backgroundColor: `${colors.accent}14`,
+                  paddingVertical: 12, borderCurve: "continuous", borderRadius: 8, borderWidth: 1, borderColor: colors.accent, backgroundColor: `${colors.accent}14`,
                 }}
               >
                 <Ionicons name="add" size={18} color={colors.accent} />
-                <Text style={{ fontSize: 13.5, fontWeight: "800", color: colors.accent }}>Add</Text>
+                <Text style={{ fontSize: 13.5, fontWeight: "700", color: colors.accent }}>Add</Text>
               </Pressable>
             </View>
           )}
