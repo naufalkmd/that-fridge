@@ -247,6 +247,41 @@ final class AlgorithmInsightsReport
     }
 
     /** What people generate icons for (free text they typed), shown only when >= MIN_USERS people asked. */
+    /**
+     * Food names that were saved with no icon from the pack (the generic fallback, or an AI icon
+     * the user made themselves), most common first - what to draw next. Names show only once
+     * MIN_USERS different people added them; `hidden` counts the rarer names kept back.
+     *
+     * @return array{rows: list<array{name_key: string, items: int, users: int, generated: int, last_seen: string}>, hidden: int}
+     */
+    public function iconMisses(int $days = 180): array
+    {
+        $base = AlgoFeedbackEvent::query()
+            ->where('algo', 'icon')
+            ->where('kind', 'miss')
+            ->where('occurred_at', '>=', now()->subDays($days))
+            ->whereNotNull('name_key');
+
+        $rows = (clone $base)
+            ->select('name_key')
+            ->selectRaw("count(*) as items, count(distinct user_id) as users, sum(case when source = 'generated' then 1 else 0 end) as generated, max(occurred_at) as last_seen")
+            ->groupBy('name_key')
+            ->havingRaw('count(distinct user_id) >= ?', [self::MIN_USERS])
+            ->orderByDesc('users')
+            ->orderByDesc('items')
+            ->limit(100)
+            ->get()
+            ->map(fn ($r) => [
+                'name_key' => (string) $r->name_key, 'items' => (int) $r->items, 'users' => (int) $r->users,
+                'generated' => (int) $r->generated, 'last_seen' => (string) $r->last_seen,
+            ])
+            ->all();
+
+        $allNames = (clone $base)->distinct()->count('name_key');
+
+        return ['rows' => $rows, 'hidden' => max(0, $allNames - count($rows))];
+    }
+
     public function iconRequests(int $days = 180): array
     {
         return GeneratedIcon::query()

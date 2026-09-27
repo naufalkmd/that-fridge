@@ -30,6 +30,8 @@ final class AdminCacheKeys
 
     public const ALGORITHM_HEALTH = 'admin:algorithm-health';
 
+    public const ICON_MISSES = 'admin:icon-misses:180';
+
     public const RETENTION = 'admin:retention:8w';
 
     public const FEEDBACK_BADGE = 'admin:badge:feedback';

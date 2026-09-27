@@ -187,6 +187,37 @@
             </div>
         @endif
     </x-filament::section>
+    @php($misses = $this->iconMisses())
+    <x-filament::section heading="Items with no icon" description="Food people added that fell back to the generic icon (or got an AI icon they made themselves), most common first: what to draw next. Names show once {{ \App\Services\AlgorithmInsightsReport::MIN_USERS }}+ different people added them.">
+        @if (count($misses['rows']) === 0)
+            <p class="text-sm text-gray-500">
+                No name shared by {{ \App\Services\AlgorithmInsightsReport::MIN_USERS }}+ people yet.
+                @if ($misses['hidden'] > 0) {{ $misses['hidden'] }} rarer {{ \Illuminate\Support\Str::plural('name', $misses['hidden']) }} kept back. @endif
+            </p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead><tr><th class="p-2">Name</th><th class="p-2">Items</th><th class="p-2">People</th><th class="p-2">Made their own</th><th class="p-2">Last added</th><th class="p-2"></th></tr></thead>
+                    <tbody>
+                    @foreach ($misses['rows'] as $row)
+                        <tr class="border-t border-gray-200 dark:border-gray-700">
+                            <td class="p-2 font-medium">{{ $row['name_key'] }}</td>
+                            <td class="p-2">{{ $row['items'] }}</td>
+                            <td class="p-2">{{ $row['users'] }}</td>
+                            <td class="p-2">{{ $row['generated'] ?: '-' }}</td>
+                            <td class="p-2">{{ \Illuminate\Support\Carbon::parse($row['last_seen'])->diffForHumans() }}</td>
+                            <td class="p-2"><a href="{{ \App\Filament\Pages\IconStudio::getUrl(['prompt' => $row['name_key']]) }}" class="text-primary-600 hover:underline">Make icon</a></td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @if ($misses['hidden'] > 0)
+                <p class="mt-2 text-xs text-gray-500">{{ $misses['hidden'] }} rarer {{ \Illuminate\Support\Str::plural('name', $misses['hidden']) }} (fewer than {{ \App\Services\AlgorithmInsightsReport::MIN_USERS }} people) kept back.</p>
+            @endif
+        @endif
+    </x-filament::section>
+
     @php($icons = $this->iconRequests())
     <x-filament::section heading="Icon requests" description="What people generate icons for (free text they typed), shown only when {{ \App\Services\AlgorithmInsightsReport::MIN_USERS }}+ different people asked. Promote good ones from Shared icons.">
         @if (count($icons) === 0)

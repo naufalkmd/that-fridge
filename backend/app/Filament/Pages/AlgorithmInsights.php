@@ -126,6 +126,12 @@ class AlgorithmInsights extends Page
             fn () => app(AlgorithmInsightsReport::class)->retention());
     }
 
+    public function iconMisses(): array
+    {
+        return Cache::flexible(AdminCacheKeys::ICON_MISSES, AdminCacheKeys::DASHBOARD_TTL,
+            fn () => app(AlgorithmInsightsReport::class)->iconMisses());
+    }
+
     public function iconRequests(): array
     {
         return app(AlgorithmInsightsReport::class)->iconRequests();

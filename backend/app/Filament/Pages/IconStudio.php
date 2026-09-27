@@ -51,7 +51,9 @@ class IconStudio extends Page implements HasForms
 
     public function mount(): void
     {
-        $this->form->fill(['prompt' => '']);
+        // "Make icon" on Algorithm insights' "Items with no icon" list opens here with the name filled in.
+        $prompt = request()->query('prompt');
+        $this->form->fill(['prompt' => is_string($prompt) ? mb_substr(trim($prompt), 0, 120) : '']);
     }
 
     public function form(Form $form): Form

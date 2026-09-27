@@ -64,6 +64,15 @@ final class ItemFeedback
             ]);
         }
 
+        // Saved with no pack icon: the generic fallback, or one the user generated with AI. Either
+        // way the pack is missing something people keep adding - the admin "Items with no icon" list.
+        if ($iconGuess === null && ($iconFinal === null || $iconFinal === 'generic' || $item->icon_url)) {
+            AlgoFeedback::record($user, 'icon', [
+                'kind' => 'miss', 'name' => $item->name, 'class' => null,
+                'source' => $item->icon_url ? 'generated' : 'generic',
+            ]);
+        }
+
         if (isset($suggested['suggested_shelf_life_days'])) {
             AlgoFeedback::record($user, 'shelf_life', [
                 'kind' => 'saved', 'name' => $item->name, 'class' => $group['category'],
