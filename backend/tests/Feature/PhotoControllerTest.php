@@ -7,6 +7,7 @@ use App\Models\Section;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -82,5 +83,48 @@ class PhotoControllerTest extends TestCase
         ])->assertStatus(200);
 
         $this->assertNotEmpty(Storage::disk('s3')->files('photos'));
+    }
+
+    public function test_detected_items_carry_a_normalized_bounding_box(): void
+    {
+        config(['services.openrouter.key' => 'test-key', 'services.openrouter.photo_scan_model' => 'google/gemini-2.5-flash']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => json_encode([
+                ['detected_name' => 'milk bottle', 'parsed_name' => 'Milk', 'confidence' => 0.9, 'box' => [100, 50, 600, 300]],
+                ['detected_name' => 'eggs', 'parsed_name' => 'Eggs', 'confidence' => 0.8, 'box' => [0.1, 0.2, 0.3, 0.5]],
+                ['detected_name' => 'jar', 'parsed_name' => 'Jam', 'confidence' => 0.4, 'box' => 'somewhere'],
+                ['detected_name' => 'butter', 'parsed_name' => 'Butter', 'confidence' => 0.7],
+            ])]]],
+        ], 200)]);
+
+        $user = User::factory()->create(['ai_credits' => 10]);
+        $section = $this->sectionFor($user);
+
+        $items = $this->actingAs($user)->post("/api/sections/{$section->id}/items/photo/scan", [
+            'image' => UploadedFile::fake()->image('fridge.jpg'),
+        ])->assertStatus(200)->json('detected_items');
+
+        $this->assertSame([100, 50, 600, 300], $items[0]['box']);
+        $this->assertSame([100, 200, 300, 500], $items[1]['box']); // 0-1 fractions scaled up
+        $this->assertNull($items[2]['box']);
+        $this->assertNull($items[3]['box']);
+        $this->assertSame(0.4, $items[2]['confidence']);
+
+        Http::assertSent(fn ($request) => $request['model'] === 'google/gemini-2.5-flash');
+    }
+
+    public function test_mock_detection_includes_boxes_so_the_sweep_can_be_demoed_without_a_key(): void
+    {
+        $user = User::factory()->create(['ai_credits' => 10]);
+        $section = $this->sectionFor($user);
+        config(['services.openrouter.key' => null]);
+
+        $items = $this->actingAs($user)->post("/api/sections/{$section->id}/items/photo/scan", [
+            'image' => UploadedFile::fake()->image('fridge.jpg'),
+        ])->assertStatus(200)->json('detected_items');
+
+        foreach ($items as $item) {
+            $this->assertCount(4, $item['box']);
+        }
     }
 }

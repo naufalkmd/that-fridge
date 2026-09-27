@@ -37,6 +37,9 @@ return [
 
     'openrouter' => [
         'key' => env('OPENROUTER_API_KEY'),
+        // Model for the fridge-photo scan. It also returns a bounding box per item (the sweep's
+        // lock-on animation), and box accuracy varies a lot by model - test before switching.
+        'photo_scan_model' => env('OPENROUTER_PHOTO_SCAN_MODEL', 'anthropic/claude-haiku-4.5'),
     ],
 
     'fal' => [

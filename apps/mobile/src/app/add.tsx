@@ -41,7 +41,7 @@ import {
 
 const isExpoGo = Constants.appOwnership === "expo";
 
-type Method = "receipt" | "barcode" | "photo" | "manual";
+type Method = "sweep" | "receipt" | "barcode" | "photo" | "manual";
 const METHODS: {
   key: Method;
   title: string;
@@ -49,7 +49,17 @@ const METHODS: {
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
   /** Costs AI credits (vs. barcode/manual which are free). */
   credits?: number;
+  /** Overrides the "N CREDITS" badge text. */
+  creditsLabel?: string;
 }[] = [
+  {
+    key: "sweep",
+    title: "Sweep your fridge",
+    desc: "Shoot it shelf by shelf and log everything at once",
+    icon: "line-scan",
+    credits: 3,
+    creditsLabel: "3 CREDITS / SHELF",
+  },
   {
     key: "receipt",
     title: "Scan receipt",
@@ -188,6 +198,20 @@ export default function Add() {
   }
 
   function chooseMethod(m: Method) {
+    if (m === "sweep") {
+      if (isExpoGo) {
+        Alert.alert(
+          "Needs the dev build",
+          "The fridge sweep uses the camera, which isn't available in Expo Go. Use a development build.",
+        );
+      } else {
+        router.push({
+          pathname: "/sweep",
+          params: params.categoryId ? { categoryId: params.categoryId } : {},
+        });
+      }
+      return;
+    }
     if (m === "barcode") {
       if (isExpoGo) {
         Alert.alert(
@@ -280,7 +304,7 @@ export default function Add() {
                           color: AMBER,
                         }}
                       >
-                        {m.credits} CREDITS
+                        {m.creditsLabel ?? `${m.credits} CREDITS`}
                       </Text>
                     </View>
                   )}

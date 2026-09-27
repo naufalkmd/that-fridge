@@ -305,6 +305,11 @@ export interface ScanDetectedItem {
   icon: string;
   parsed_quantity?: number;
   condition?: "vibrant" | "wilting" | "past_best" | null;
+  /** 0-1 - how sure the vision model is. Fridge-photo scans only. */
+  confidence?: number;
+  /** Fridge-photo scans only: where the item is, as [ymin, xmin, ymax, xmax] in 0-1000 of the
+   *  photo. null when the model couldn't place it. */
+  box?: [number, number, number, number] | null;
 }
 
 export interface ScanResult {

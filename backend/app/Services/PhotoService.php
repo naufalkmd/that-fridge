@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Support\FoodIconMatcher;
+use App\Support\UprightImage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -31,7 +32,16 @@ class PhotoService
                 // still works without anyone needing to set one up.
                 $detectedItems = $this->mockDetection();
             } else {
-                $detected = $this->detectItemsWithVision($file->getRealPath(), $file->getMimeType());
+                // Boxes come back in the model's view of the pixels, so it must see the
+                // photo the same way up as the phone shows it.
+                $upright = UprightImage::copy($file->getRealPath(), $file->getMimeType());
+                try {
+                    $detected = $this->detectItemsWithVision($upright ?? $file->getRealPath(), $upright ? 'image/jpeg' : $file->getMimeType());
+                } finally {
+                    if ($upright) {
+                        @unlink($upright);
+                    }
+                }
                 if ($detected === null) {
                     $aiFailed = true;
                     $detectedItems = [];
@@ -76,12 +86,17 @@ Return ONLY a JSON array (no prose, no markdown fences) where each element has e
   "wilting", or "past_best". For everything else (packaged/sealed items, meat, dairy, drinks,
   anything not vegetable/fruit, or produce you can't get a clear look at), use null. Judge only
   what you can actually see - color, firmness, spotting, wilting - never guess from the item type.
+- "box": where the item is in the photo, as [ymin, xmin, ymax, xmax] with each value an integer
+  from 0 to 1000 (0,0 is the top-left corner, 1000,1000 the bottom-right). Draw it tightly around
+  that one item. Use null only if you can't place it.
 
 Only include items you can actually see - do not guess at items that might typically be in a fridge but aren't visible.
 If nothing identifiable is visible, return an empty array.
 PROMPT;
 
-        $result = $this->vision->analyzeImage($imagePath, $mimeType, $prompt);
+        // Boxes make the reply longer, hence more room than the 1500-token default.
+        $model = config('services.openrouter.photo_scan_model') ?: 'anthropic/claude-haiku-4.5';
+        $result = $this->vision->analyzeImage($imagePath, $mimeType, $prompt, $model, 3000);
 
         if (! is_array($result)) {
             return null;
@@ -106,8 +121,37 @@ PROMPT;
                 'confidence' => is_numeric($item['confidence'] ?? null) ? (float) $item['confidence'] : 0.5,
                 'confirmed' => false,
                 'condition' => in_array($item['condition'] ?? null, ['vibrant', 'wilting', 'past_best'], true) ? $item['condition'] : null,
+                'box' => self::normalizeBox($item['box'] ?? null),
             ];
-        }, $items));
+        }, array_filter($items, 'is_array')));
+    }
+
+    /**
+     * A model box as [ymin, xmin, ymax, xmax] integers clamped to 0-1000, or null when it's
+     * missing, malformed or has no area. Some models answer in 0-1 fractions; those are scaled up.
+     */
+    public static function normalizeBox(mixed $box): ?array
+    {
+        if (! is_array($box) || count($box) !== 4) {
+            return null;
+        }
+        $values = array_values($box);
+        foreach ($values as $v) {
+            if (! is_numeric($v)) {
+                return null;
+            }
+        }
+        $values = array_map('floatval', $values);
+        if (max($values) <= 1.0) {
+            $values = array_map(fn ($v) => $v * 1000, $values);
+        }
+        [$ymin, $xmin, $ymax, $xmax] = array_map(fn ($v) => (int) round(min(1000, max(0, $v))), $values);
+
+        if ($ymax - $ymin < 5 || $xmax - $xmin < 5) {
+            return null;
+        }
+
+        return [$ymin, $xmin, $ymax, $xmax];
     }
 
     /**
@@ -117,11 +161,11 @@ PROMPT;
     private function mockDetection()
     {
         $rows = [
-            ['detected_name' => 'milk bottle', 'parsed_name' => 'Milk', 'confidence' => 0.95, 'condition' => null],
-            ['detected_name' => 'yogurt container', 'parsed_name' => 'Yogurt', 'confidence' => 0.88, 'condition' => null],
-            ['detected_name' => 'cheese package', 'parsed_name' => 'Cheese', 'confidence' => 0.82, 'condition' => null],
-            ['detected_name' => 'bread loaf', 'parsed_name' => 'Bread', 'confidence' => 0.90, 'condition' => null],
-            ['detected_name' => 'bag of spinach, leaves visibly wilting', 'parsed_name' => 'Spinach', 'confidence' => 0.85, 'condition' => 'wilting'],
+            ['detected_name' => 'milk bottle', 'parsed_name' => 'Milk', 'confidence' => 0.95, 'condition' => null, 'box' => [80, 60, 520, 260]],
+            ['detected_name' => 'yogurt container', 'parsed_name' => 'Yogurt', 'confidence' => 0.88, 'condition' => null, 'box' => [320, 330, 520, 520]],
+            ['detected_name' => 'cheese package', 'parsed_name' => 'Cheese', 'confidence' => 0.82, 'condition' => null, 'box' => [380, 600, 520, 900]],
+            ['detected_name' => 'bread loaf', 'parsed_name' => 'Bread', 'confidence' => 0.90, 'condition' => null, 'box' => [600, 80, 820, 480]],
+            ['detected_name' => 'bag of spinach, leaves visibly wilting', 'parsed_name' => 'Spinach', 'confidence' => 0.55, 'condition' => 'wilting', 'box' => [620, 560, 900, 920]],
         ];
 
         return array_map(fn ($r) => [

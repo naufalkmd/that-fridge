@@ -185,6 +185,14 @@ function AppShell({
                                       }}
                                     />
                                     <Stack.Screen
+                                      name="sweep"
+                                      options={{
+                                        headerShown: false,
+                                        presentation: "fullScreenModal",
+                                        gestureEnabled: false,
+                                      }}
+                                    />
+                                    <Stack.Screen
                                       name="notification-settings"
                                       options={{ title: "Notification settings" }}
                                     />

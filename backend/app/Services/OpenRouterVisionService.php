@@ -20,9 +20,9 @@ class OpenRouterVisionService
      * Send an image plus an instruction prompt to the vision model and return its reply
      * decoded as JSON (array or associative array, per whatever shape the prompt asked for).
      * Returns null if the key is missing, the image can't be read, the request fails, or
-     * the reply isn't valid JSON.
+     * the reply isn't valid JSON. $model overrides OpenRouterClient's default model.
      */
-    public function analyzeImage(string $imagePath, string $mimeType, string $prompt): ?array
+    public function analyzeImage(string $imagePath, string $mimeType, string $prompt, ?string $model = null, int $maxTokens = 1500): ?array
     {
         try {
             $contents = file_get_contents($imagePath);
@@ -34,7 +34,7 @@ class OpenRouterVisionService
 
             $dataUrl = 'data:'.$mimeType.';base64,'.base64_encode($contents);
 
-            $result = $this->client->complete([
+            $messages = [
                 [
                     'role' => 'user',
                     'content' => [
@@ -42,7 +42,10 @@ class OpenRouterVisionService
                         ['type' => 'image_url', 'image_url' => ['url' => $dataUrl]],
                     ],
                 ],
-            ], 1500);
+            ];
+            $result = $model
+                ? $this->client->complete($messages, $maxTokens, $model)
+                : $this->client->complete($messages, $maxTokens);
 
             if (! $result['ok']) {
                 return null;
