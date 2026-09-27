@@ -34,7 +34,7 @@ import { getDeviceTimezone } from "@/lib/timezone";
 import { findOverlappingMachine } from "@/lib/machineOverlap";
 import { describeMachineError, setStepArg, type ArgPath } from "@/lib/machineEdit";
 import { StepValuesEditor, TriggerValuesEditor } from "@/components/machine-editor";
-import { PageHeader, Eyebrow } from "@/components/ui";
+import { PixelText } from "@/components/brand";
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -543,311 +543,128 @@ export default function KitchenLab() {
   if (mode === "prompt") {
     return (
       <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-        <ComposeHeader
-          title={editingId ? "Redraft Machine" : "New Machine"}
-          onBack={() => setMode(draft ? "review" : "list")}
-        />
-        <ScrollView contentContainerClassName="p-5 gap-4" keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 12, paddingBottom: 48, gap: 22 }} keyboardShouldPersistTaps="handled">
+          <ScreenTitle title={editingId ? "Redraft Machine" : "New Machine"} onBack={() => setMode(draft ? "review" : "list")} />
+
           {!editingId && (
-            <View className="gap-2">
-              <Eyebrow color={colors.faint}>Start from a template · no credits</Eyebrow>
-              {MACHINE_TEMPLATES.map((template) => (
-                <TemplateCard key={template.id} template={template} onPress={() => openTemplate(template)} />
-              ))}
+            <View style={{ gap: 8 }}>
+              <SectionLabel right="Free">Start from a template</SectionLabel>
+              <Card>
+                {MACHINE_TEMPLATES.map((template, i) => (
+                  <TemplateRow key={template.id} template={template} last={i === MACHINE_TEMPLATES.length - 1} onPress={() => openTemplate(template)} />
+                ))}
+              </Card>
             </View>
           )}
-          <Text className="text-[13px] leading-5 text-muted">
-            Or describe what you want automated. The crew drafts a trigger and steps for you to
-            review before anything is saved.
-          </Text>
-          <View className="flex-row flex-wrap gap-2">
-            {PROMPT_EXAMPLES.map((example) => (
-              <Pressable
-                key={example.label}
-                onPress={() => setPrompt(example.prompt)}
-                className="rounded-lg px-3 py-2"
-                style={{ backgroundColor: colors.surface2 }}
-              >
-                <Text className="text-[12px] font-semibold text-ink">{example.label}</Text>
-              </Pressable>
-            ))}
+
+          <View style={{ gap: 8 }}>
+            <SectionLabel>{editingId ? "Describe the change" : "Or describe it"}</SectionLabel>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              {PROMPT_EXAMPLES.map((example) => (
+                <Pressable
+                  key={example.label}
+                  onPress={() => setPrompt(example.prompt)}
+                  style={{ height: 30, paddingHorizontal: 10, borderCurve: "continuous", borderRadius: 8, justifyContent: "center", backgroundColor: colors.surface2 }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: colors.muted }}>{example.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <TextInput
+              value={prompt}
+              onChangeText={setPrompt}
+              placeholder='e.g. "Every Monday at 8am, tell me total calories expiring this week"'
+              placeholderTextColor={colors.faint}
+              multiline
+              style={{
+                minHeight: 110, padding: 14, borderCurve: "continuous", borderRadius: 16, borderWidth: 1, borderColor: colors.hairline,
+                backgroundColor: colors.surface, fontSize: 14, lineHeight: 20, color: colors.ink, textAlignVertical: "top",
+              }}
+            />
+            {draftMessage && <Text style={{ fontSize: 12.5, color: colors.bad }}>{draftMessage}</Text>}
+            <PrimaryButton onPress={runDraft} disabled={drafting || !prompt.trim()} busy={drafting} icon="sparkles">
+              Draft with AI · 2 credits
+            </PrimaryButton>
+            <Text style={{ fontSize: 11.5, color: colors.faint, textAlign: "center" }}>You review it before anything is saved.</Text>
           </View>
-          <TextInput
-            value={prompt}
-            onChangeText={setPrompt}
-            placeholder='e.g. "Every Monday at 8am, tell me total calories expiring this week"'
-            placeholderTextColor={colors.faint}
-            multiline
-            className="min-h-[110px] rounded-xl border border-hairline bg-surface p-4 text-[14px] text-ink"
-            style={{ textAlignVertical: "top" }}
-          />
-          {draftMessage && (
-            <Text className="text-[12.5px] text-bad">{draftMessage}</Text>
-          )}
-          <Pressable
-            onPress={runDraft}
-            disabled={drafting || !prompt.trim()}
-            className="items-center rounded-lg bg-accent py-3 active:opacity-80 disabled:opacity-50"
-          >
-            {drafting ? (
-              <ActivityIndicator color={colors.canvas} />
-            ) : (
-              <Text className="font-bold uppercase tracking-wide text-on-accent">
-                Draft with AI · 2 credits
-              </Text>
-            )}
-          </Pressable>
         </ScrollView>
       </SafeAreaView>
     );
   }
 
   if (mode === "review" && draft) {
+    const canTest = !!editingId && !redrafted;
     return (
       <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-        <ComposeHeader
-          title={editingId ? "Edit Machine" : "Review Machine"}
-          onBack={() => setMode(enteredDirectly ? "list" : "prompt")}
-        />
-        <ScrollView contentContainerClassName="p-5 gap-5">
-          <View className="gap-1.5">
-            <Eyebrow color={colors.faint}>Name</Eyebrow>
-            <TextInput
-              value={draftName}
-              onChangeText={setDraftName}
-              maxLength={60}
-              className="rounded-lg border border-hairline bg-surface px-3.5 py-3 text-[15px] font-semibold text-ink"
-            />
-          </View>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 12, paddingBottom: 24, gap: 20 }} keyboardShouldPersistTaps="handled">
+          <ScreenTitle title={editingId ? "Edit Machine" : "Review Machine"} onBack={() => setMode(enteredDirectly ? "list" : "prompt")} />
 
-          <View className="gap-1.5">
-            <Eyebrow color={colors.faint}>Trigger</Eyebrow>
-            <View className="rounded-lg border border-hairline bg-surface px-3.5 py-3">
-              <View className="flex-row items-center justify-between gap-3">
-                <Text className="flex-1 text-[14px] text-ink">{describeTrigger(draft.trigger)}</Text>
-                {draft.trigger.type !== "recipe_made" && (
-                  <Pressable onPress={() => setEditingTrigger((v) => !v)} hitSlop={8}>
-                    <Text className="text-[12px] font-bold text-accent">{editingTrigger ? "Done" : "Edit"}</Text>
-                  </Pressable>
-                )}
+          <TextInput
+            value={draftName}
+            onChangeText={setDraftName}
+            maxLength={60}
+            accessibilityLabel="Machine name"
+            style={{ height: 48, paddingHorizontal: 14, borderCurve: "continuous", borderRadius: 16, backgroundColor: colors.surface2, fontSize: 15, fontWeight: "600", color: colors.ink }}
+          />
+
+          {/* When: the trigger in one line, editable in place. */}
+          <View style={{ gap: 8 }}>
+            <SectionLabel>When</SectionLabel>
+            <Card padded>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <IconChip icon={TRIGGER_ICON[draft.trigger.type]} color={colors.accent} />
+                <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 19, color: colors.ink }}>{describeTrigger(draft.trigger)}</Text>
+                {draft.trigger.type !== "recipe_made" && <EditPill open={editingTrigger} onPress={() => setEditingTrigger((v) => !v)} />}
               </View>
               {editingTrigger && <TriggerValuesEditor trigger={draft.trigger} onChange={editTrigger} />}
-            </View>
+              {draft.trigger.type === "schedule" && (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.hairline }}>
+                  <Ionicons name="globe-outline" size={15} color={colors.faint} />
+                  <TextInput
+                    value={draft.trigger.config.timezone}
+                    onChangeText={updateScheduleTimezone}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    accessibilityLabel="Timezone"
+                    placeholder="e.g. Asia/Kuala_Lumpur"
+                    placeholderTextColor={colors.faint}
+                    style={{ flex: 1, fontSize: 13, color: colors.ink, paddingVertical: 4 }}
+                  />
+                  <Pressable onPress={() => updateScheduleTimezone(getDeviceTimezone())} hitSlop={6}>
+                    <Text style={{ fontSize: 11.5, fontWeight: "600", color: colors.accent }}>Use device</Text>
+                  </Pressable>
+                </View>
+              )}
+            </Card>
           </View>
 
-          {draft.trigger.type === "schedule" && (
-            <View className="gap-1.5">
-              <Eyebrow color={colors.faint}>Timezone</Eyebrow>
-              <View className="flex-row items-center gap-2 rounded-lg border border-hairline bg-surface px-3.5 py-1">
-                <TextInput
-                  value={draft.trigger.config.timezone}
-                  onChangeText={updateScheduleTimezone}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  placeholder="e.g. Asia/Kuala_Lumpur"
-                  placeholderTextColor={colors.faint}
-                  className="flex-1 py-2 text-[13.5px] text-ink"
-                />
-                <Pressable onPress={() => updateScheduleTimezone(getDeviceTimezone())} hitSlop={6}>
-                  <Text className="text-[11.5px] font-bold text-accent">Use device</Text>
-                </Pressable>
-              </View>
-              <Text className="text-[11px] text-faint">
-                This schedule runs in this timezone - confirm it's right before saving.
-              </Text>
-            </View>
-          )}
-
-          <View className="gap-1.5">
-            <Eyebrow color={colors.faint}>Steps</Eyebrow>
-            <View className="overflow-hidden rounded-lg border border-hairline bg-surface">
+          {/* Then: numbered steps, each editable in place. */}
+          <View style={{ gap: 8 }}>
+            <SectionLabel>Then</SectionLabel>
+            <Card>
               {draft.steps.map((step, i) => (
-                <View
-                  key={i}
-                  className={`px-3.5 py-3 ${i < draft.steps.length - 1 ? "border-b border-hairline" : ""}`}
-                >
-                  <View className="flex-row gap-2.5">
-                    <Text className="text-[13px] font-bold text-accent">{i + 1}</Text>
-                    <Text className="flex-1 text-[13.5px] text-ink">{describeStep(step)}</Text>
+                <View key={i} style={{ padding: 14, borderBottomWidth: i < draft.steps.length - 1 ? 1 : 0, borderBottomColor: colors.hairline }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                    <View style={{ width: 24, height: 24, borderCurve: "continuous", borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: `${colors.accent}24` }}>
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: colors.accent }}>{i + 1}</Text>
+                    </View>
+                    <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 19, color: colors.ink }}>{describeStep(step)}</Text>
                     {(Object.keys(step.args).length > 0 || step.condition) && (
-                      <Pressable onPress={() => setEditingStepIndex((cur) => (cur === i ? null : i))} hitSlop={8}>
-                        <Text className="text-[12px] font-bold text-accent">
-                          {editingStepIndex === i ? "Done" : "Edit"}
-                        </Text>
-                      </Pressable>
+                      <EditPill open={editingStepIndex === i} onPress={() => setEditingStepIndex((cur) => (cur === i ? null : i))} />
                     )}
                   </View>
                   {editingStepIndex === i && (
-                    <StepValuesEditor
-                      step={step}
-                      index={i}
-                      steps={draft.steps}
-                      onSetArg={editStepArg}
-                      onChangeSteps={editSteps}
-                    />
+                    <StepValuesEditor step={step} index={i} steps={draft.steps} onSetArg={editStepArg} onChangeSteps={editSteps} />
                   )}
                 </View>
               ))}
-            </View>
+            </Card>
           </View>
 
-          {editingId && !redrafted && (
-            <View className="flex-row gap-2.5">
-              <Pressable
-                onPress={runNow}
-                disabled={running}
-                className="flex-1 flex-row items-center justify-center gap-2 rounded-lg border border-hairline py-3 active:opacity-70 disabled:opacity-50"
-              >
-                {running ? (
-                  <ActivityIndicator color={colors.accent} />
-                ) : (
-                  <>
-                    <Ionicons name="play" size={14} color={colors.accent} />
-                    <Text className="text-[13px] font-semibold text-ink">Run now</Text>
-                  </>
-                )}
-              </Pressable>
-              <Pressable
-                onPress={runDryRun}
-                disabled={dryRunning}
-                className="flex-1 flex-row items-center justify-center gap-2 rounded-lg border border-hairline py-3 active:opacity-70 disabled:opacity-50"
-              >
-                {dryRunning ? (
-                  <ActivityIndicator color={colors.accent} />
-                ) : (
-                  <>
-                    <Ionicons name="eye-outline" size={14} color={colors.accent} />
-                    <Text className="text-[13px] font-semibold text-ink">Dry run</Text>
-                  </>
-                )}
-              </Pressable>
-            </View>
-          )}
-
-          {dryRunResult && (
-            <View className="gap-1.5">
-              <View className="flex-row items-center justify-between">
-                <Eyebrow color={colors.faint}>Dry run preview</Eyebrow>
-                <Pressable onPress={() => setDryRunResult(null)} hitSlop={8}>
-                  <Ionicons name="close" size={16} color={colors.faint} />
-                </Pressable>
-              </View>
-              <Text className="text-[11px] text-faint">
-                A preview only - nothing was saved and no notification was sent.
-              </Text>
-              <View
-                className="overflow-hidden rounded-lg border border-dashed bg-surface"
-                style={{ borderColor: colors.accent }}
-              >
-                {dryRunResult.steps.map((step, i) => (
-                  <View
-                    key={i}
-                    className={`gap-1 px-3.5 py-3 ${i < dryRunResult.steps.length - 1 ? "border-b border-hairline" : ""}`}
-                  >
-                    <Text
-                      className="text-[12px]"
-                      style={{ color: step.skipped ? colors.faint : step.ok ? colors.ink : colors.bad }}
-                      numberOfLines={3}
-                    >
-                      {step.skipped ? "○" : step.ok ? "✓" : "✕"} {TOOL_LABELS[step.tool] ?? step.tool}
-                      {step.content ? ` — ${step.content}` : ""}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-              {dryRunResult.status === "failed" && dryRunResult.error && (
-                <Text className="text-[11.5px] text-bad">{dryRunResult.error}</Text>
-              )}
-            </View>
-          )}
-
-          {enteredDirectly && (
-            <Pressable
-              onPress={() => setMode("prompt")}
-              className="items-center rounded-lg border border-hairline py-3 active:opacity-70"
-            >
-              <Text className="text-[13px] font-semibold text-ink">
-                Redraft trigger &amp; steps with AI · 2 credits
-              </Text>
-            </Pressable>
-          )}
-
-          {editingId && (
-            <View className="gap-1.5">
-              <View className="flex-row items-center justify-between">
-                <Eyebrow color={colors.faint}>Execution history</Eyebrow>
-                <Pressable onPress={() => router.push("/notifications")} hitSlop={8}>
-                  <Text className="text-[11.5px] font-bold text-accent">View notifications</Text>
-                </Pressable>
-              </View>
-              {runs === null ? (
-                <ActivityIndicator color={colors.accent} style={{ marginTop: 8 }} />
-              ) : runs.length === 0 ? (
-                <Text className="text-[12.5px] text-faint">
-                  No runs yet - enable this Machine or tap Run now to see history here.
-                </Text>
-              ) : (
-                <View className="overflow-hidden rounded-lg border border-hairline bg-surface">
-                  {runs.map((run, i) => (
-                    <View
-                      key={run.id}
-                      className={`gap-1.5 px-3.5 py-3 ${i < runs.length - 1 ? "border-b border-hairline" : ""}`}
-                    >
-                      <View className="flex-row items-center justify-between gap-2">
-                        <View className="flex-row items-center gap-2">
-                          <Ionicons
-                            name={run.status === "failed" ? "close-circle" : "checkmark-circle"}
-                            size={14}
-                            color={run.status === "failed" ? colors.bad : colors.good}
-                          />
-                          <Text className="text-[12.5px] font-bold text-ink">
-                            {run.status === "failed" ? "Failed" : "Ran successfully"}
-                          </Text>
-                          <Text className="text-[11px] text-faint">{timeAgo(new Date(run.startedAt).getTime())}</Text>
-                        </View>
-                        {run.undoable ? (
-                          <Pressable
-                            onPress={() => confirmUndoRun(run)}
-                            disabled={undoingRunId === run.id}
-                            hitSlop={8}
-                          >
-                            {undoingRunId === run.id ? (
-                              <ActivityIndicator size="small" color={colors.bad} />
-                            ) : (
-                              <Text className="text-[11px] font-bold text-bad">Undo</Text>
-                            )}
-                          </Pressable>
-                        ) : (
-                          run.undoneAt && <Text className="text-[11px] text-faint">Undone</Text>
-                        )}
-                      </View>
-                      {run.error && (
-                        <Text className="text-[11.5px] text-bad" numberOfLines={2}>
-                          {run.error}
-                        </Text>
-                      )}
-                      {run.steps.map((step, si) => (
-                        <Text
-                          key={si}
-                          className="text-[11.5px]"
-                          style={{ color: step.skipped ? colors.faint : step.ok ? colors.muted : colors.bad }}
-                          numberOfLines={2}
-                        >
-                          {step.skipped ? "○" : step.ok ? "✓" : "✕"} {TOOL_LABELS[step.tool] ?? step.tool}
-                          {step.content ? ` — ${step.content}` : ""}
-                        </Text>
-                      ))}
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
-
           {fridges.length > 1 && (
-            <View className="gap-1.5">
-              <Eyebrow color={colors.faint}>Fridge</Eyebrow>
-              <View className="flex-row flex-wrap gap-2">
+            <View style={{ gap: 8 }}>
+              <SectionLabel>Fridge</SectionLabel>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                 {fridges.map((f) => {
                   const active = fridgeId === f.id;
                   return (
@@ -856,157 +673,351 @@ export default function KitchenLab() {
                       onPress={() => setFridgeId(f.id)}
                       accessibilityRole="button"
                       accessibilityState={{ selected: active }}
-                      className="rounded-lg px-3.5 py-2"
-                      style={{ backgroundColor: active ? colors.accent : colors.surface2 }}
+                      style={{ height: 32, paddingHorizontal: 12, borderCurve: "continuous", borderRadius: 12, justifyContent: "center", backgroundColor: active ? colors.accent : colors.surface2 }}
                     >
-                      <Text
-                        className="text-[12.5px] font-bold"
-                        style={{ color: active ? colors.canvas : colors.ink }}
-                      >
-                        {f.name}
-                      </Text>
+                      <Text style={{ fontSize: 12.5, fontWeight: active ? "700" : "600", color: active ? colors.onAccent : colors.muted }}>{f.name}</Text>
                     </Pressable>
                   );
                 })}
               </View>
-              {fridgeChanged && (
-                <Text className="text-[11.5px] text-faint">
-                  Its runs will use this fridge&apos;s items once you save.
-                </Text>
-              )}
+              {fridgeChanged && <Text style={{ fontSize: 11.5, color: colors.faint }}>Its runs will use this fridge&apos;s items once you save.</Text>}
             </View>
           )}
 
-          <Pressable
-            onPress={saveMachine}
-            disabled={saving || !fridgeId}
-            className="items-center rounded-lg bg-accent py-3 active:opacity-80 disabled:opacity-50"
-          >
-            {saving ? (
-              <ActivityIndicator color={colors.canvas} />
-            ) : (
-              <Text className="font-bold uppercase tracking-wide text-on-accent">
-                {editingId ? "Save Changes" : "Save Machine"}
-              </Text>
-            )}
-          </Pressable>
-          {!editingId && (
-            <Text className="text-center text-[11.5px] text-faint">
-              Saved off, ready to switch on from the list. Nothing runs until you enable it.
-            </Text>
+          {enteredDirectly && (
+            <Pressable
+              onPress={() => setMode("prompt")}
+              style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 44, borderCurve: "continuous", borderRadius: 12, backgroundColor: colors.surface2 }}
+            >
+              <Ionicons name="sparkles-outline" size={15} color={colors.accent} />
+              <Text style={{ fontSize: 13, fontWeight: "600", color: colors.ink }}>Redraft with AI · 2 credits</Text>
+            </Pressable>
+          )}
+
+          {/* Test: run it for real or preview it, then what happened. Only for a saved, unchanged Machine. */}
+          {editingId && (
+            <View style={{ gap: 8 }}>
+              <SectionLabel right={<Pressable onPress={() => router.push("/notifications")} hitSlop={8}><Text style={{ fontSize: 12, fontWeight: "600", color: colors.accent }}>Notifications</Text></Pressable>}>
+                Test &amp; history
+              </SectionLabel>
+              {canTest && (
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <TestButton icon="play" label="Run now" busy={running} onPress={runNow} />
+                  <TestButton icon="eye-outline" label="Dry run" busy={dryRunning} onPress={runDryRun} />
+                </View>
+              )}
+
+              {dryRunResult && (
+                <View style={{ borderCurve: "continuous", borderRadius: 16, borderWidth: 1, borderStyle: "dashed", borderColor: colors.accent, backgroundColor: colors.surface, overflow: "hidden" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingTop: 12 }}>
+                    <Text style={{ flex: 1, fontSize: 11.5, color: colors.muted }}>Preview · nothing saved or sent</Text>
+                    <Pressable onPress={() => setDryRunResult(null)} hitSlop={8} accessibilityLabel="Close preview">
+                      <Ionicons name="close" size={16} color={colors.faint} />
+                    </Pressable>
+                  </View>
+                  {dryRunResult.steps.map((step, i) => (
+                    <StepResult key={i} step={step} last={i === dryRunResult.steps.length - 1} />
+                  ))}
+                  {dryRunResult.status === "failed" && dryRunResult.error && (
+                    <Text style={{ fontSize: 11.5, color: colors.bad, paddingHorizontal: 14, paddingBottom: 12 }}>{dryRunResult.error}</Text>
+                  )}
+                </View>
+              )}
+
+              {runs === null ? (
+                <ActivityIndicator color={colors.accent} style={{ marginTop: 8 }} />
+              ) : runs.length === 0 ? (
+                <Text style={{ fontSize: 12, color: colors.faint }}>No runs yet.</Text>
+              ) : (
+                <Card>
+                  {runs.map((run, i) => (
+                    <View key={run.id} style={{ padding: 14, gap: 6, borderBottomWidth: i < runs.length - 1 ? 1 : 0, borderBottomColor: colors.hairline }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                        <Ionicons name={run.status === "failed" ? "close-circle" : "checkmark-circle"} size={15} color={run.status === "failed" ? colors.bad : colors.good} />
+                        <Text style={{ fontSize: 12.5, fontWeight: "600", color: colors.ink }}>{run.status === "failed" ? "Failed" : "Ran successfully"}</Text>
+                        <Text style={{ flex: 1, fontSize: 11, color: colors.faint }}>{timeAgo(new Date(run.startedAt).getTime())}</Text>
+                        {run.undoable ? (
+                          <Pressable onPress={() => confirmUndoRun(run)} disabled={undoingRunId === run.id} hitSlop={8}>
+                            {undoingRunId === run.id ? (
+                              <ActivityIndicator size="small" color={colors.bad} />
+                            ) : (
+                              <Text style={{ fontSize: 11.5, fontWeight: "600", color: colors.bad }}>Undo</Text>
+                            )}
+                          </Pressable>
+                        ) : (
+                          run.undoneAt && <Text style={{ fontSize: 11, color: colors.faint }}>Undone</Text>
+                        )}
+                      </View>
+                      {run.error && <Text style={{ fontSize: 11.5, color: colors.bad }} numberOfLines={2}>{run.error}</Text>}
+                      {run.steps.map((step, si) => (
+                        <Text key={si} style={{ fontSize: 11.5, color: step.skipped ? colors.faint : step.ok ? colors.muted : colors.bad }} numberOfLines={2}>
+                          {step.skipped ? "○" : step.ok ? "✓" : "✕"} {TOOL_LABELS[step.tool] ?? step.tool}
+                          {step.content ? ` — ${step.content}` : ""}
+                        </Text>
+                      ))}
+                    </View>
+                  ))}
+                </Card>
+              )}
+            </View>
           )}
         </ScrollView>
+
+        {/* Save stays in reach at the bottom, whatever is open above. */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 18, borderTopWidth: 1, borderTopColor: colors.hairline, backgroundColor: colors.canvas, gap: 6 }}>
+          <PrimaryButton onPress={saveMachine} disabled={saving || !fridgeId} busy={saving}>
+            {editingId ? "Save Changes" : "Save Machine"}
+          </PrimaryButton>
+          {!editingId && <Text style={{ fontSize: 11, color: colors.faint, textAlign: "center" }}>Saved off. Switch it on from the list.</Text>}
+        </View>
       </SafeAreaView>
     );
   }
 
+  const onCount = machines?.filter((m) => m.enabled).length ?? 0;
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-      <View className="flex-row items-start justify-between">
-        <PageHeader title="Kitchen Lab" subtitle="Automations that run on their own" />
-        <Pressable onPress={openCompose} hitSlop={10} className="mr-4 mt-4 active:opacity-70">
-          <Ionicons name="add-circle" size={28} color={colors.accent} />
-        </Pressable>
-      </View>
-
-      {machines === null ? (
-        <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
-      ) : machines.length === 0 ? (
-        <View className="flex-1 items-center justify-center gap-3 px-10">
-          <Ionicons name="flask-outline" size={40} color={colors.faint} />
-          <Text className="text-center text-[13.5px] leading-5 text-muted">
-            No Machines yet. Pick a template or describe an automation in plain English and the
-            crew builds it — you just switch it on.
-          </Text>
-          <Pressable
-            onPress={openCompose}
-            className="mt-2 items-center rounded-lg bg-accent px-5 py-3 active:opacity-80"
-          >
-            <Text className="font-bold uppercase tracking-wide text-on-accent">Create a Machine</Text>
-          </Pressable>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 12, paddingBottom: 48, gap: 20, flexGrow: 1 }}>
+        <View style={{ gap: 14 }}>
+          <RoundButton icon="chevron-back" label="Back" onPress={() => router.back()} />
+          <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <PixelText style={{ fontSize: 16, color: colors.ink }}>Kitchen Lab</PixelText>
+              <Text style={{ fontSize: 12.5, color: colors.muted }}>
+                {machines && machines.length > 0 ? `${onCount} of ${machines.length} on` : "Automations that run on their own"}
+              </Text>
+            </View>
+            {machines && machines.length > 0 && (
+              <Pressable
+                onPress={openCompose}
+                accessibilityRole="button"
+                accessibilityLabel="New Machine"
+                style={{ flexDirection: "row", alignItems: "center", gap: 4, height: 34, paddingHorizontal: 12, borderCurve: "continuous", borderRadius: 12, backgroundColor: colors.accent }}
+              >
+                <Ionicons name="add" size={16} color={colors.onAccent} />
+                <Text style={{ fontSize: 12.5, fontWeight: "700", color: colors.onAccent }}>New</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
-      ) : (
-        <ScrollView contentContainerClassName="gap-3 p-5">
-          {machines.map((machine) => (
-            <Pressable
-              key={machine.id}
-              onPress={() => openEdit(machine)}
-              className="rounded-xl border border-hairline bg-surface p-4 active:opacity-80"
-            >
-              <View className="flex-row items-start justify-between gap-3">
-                <View className="flex-1 gap-1">
-                  <Text className="text-[15px] font-bold text-ink">{machine.name}</Text>
-                  <Text className="text-[12.5px] text-faint">{describeTrigger(machine.trigger)}</Text>
-                </View>
-                <Switch
-                  value={machine.enabled}
-                  onValueChange={() => toggleEnabled(machine)}
-                  disabled={busyId === machine.id}
-                  trackColor={{ true: colors.accent, false: colors.hairline }}
-                  thumbColor={colors.ink}
-                />
-              </View>
-              <View className="mt-3 border-t border-hairline pt-3">
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-[11.5px] text-faint">
-                    {machine.lastRunAt
-                      ? `Last ran ${machine.lastRunStatus === "failed" ? "and failed" : "ok"} · ${machine.runCount} run${machine.runCount === 1 ? "" : "s"}`
-                      : "Never run yet"}
-                  </Text>
-                  <View className="flex-row items-center gap-4">
-                    <Pressable onPress={() => openDuplicate(machine)} hitSlop={8} disabled={busyId === machine.id}>
+
+        {machines === null ? (
+          <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
+        ) : machines.length === 0 ? (
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 24, paddingBottom: 60 }}>
+            <IconChip icon="flask-outline" color={colors.accent} size={56} />
+            <Text style={{ fontSize: 15, fontWeight: "700", color: colors.ink }}>No Machines yet</Text>
+            <Text style={{ fontSize: 12.5, lineHeight: 18, color: colors.muted, textAlign: "center" }}>Automate reminders and checks. Start from a template or describe one.</Text>
+            <View style={{ marginTop: 4, alignSelf: "stretch" }}>
+              <PrimaryButton onPress={openCompose} icon="add">Create a Machine</PrimaryButton>
+            </View>
+          </View>
+        ) : (
+          <View style={{ gap: 10 }}>
+            {machines.map((machine) => {
+              const failed = machine.lastRunStatus === "failed";
+              return (
+                <Pressable
+                  key={machine.id}
+                  onPress={() => openEdit(machine)}
+                  style={{ borderCurve: "continuous", borderRadius: 16, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, padding: 14, gap: 12 }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                    <IconChip icon={TRIGGER_ICON[machine.trigger.type]} color={machine.enabled ? colors.accent : colors.faint} />
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={{ fontSize: 14, fontWeight: "600", color: colors.ink }} numberOfLines={1}>{machine.name}</Text>
+                      <Text style={{ fontSize: 12, color: colors.muted }} numberOfLines={2}>{describeTrigger(machine.trigger)}</Text>
+                    </View>
+                    <Switch
+                      value={machine.enabled}
+                      onValueChange={() => toggleEnabled(machine)}
+                      disabled={busyId === machine.id}
+                      trackColor={{ true: colors.accent, false: colors.hairline }}
+                      thumbColor={colors.ink}
+                    />
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: failed ? colors.bad : machine.lastRunAt ? colors.good : colors.hairlineStrong }} />
+                    <Text style={{ flex: 1, fontSize: 11.5, color: failed ? colors.bad : colors.faint }} numberOfLines={1}>
+                      {machine.lastRunAt
+                        ? `${failed ? "Last run failed" : "Last run ok"} · ${machine.runCount} run${machine.runCount === 1 ? "" : "s"}`
+                        : "Never run yet"}
+                    </Text>
+                    <Pressable onPress={() => openDuplicate(machine)} hitSlop={10} disabled={busyId === machine.id} accessibilityRole="button" accessibilityLabel={`Duplicate ${machine.name}`}>
                       <Ionicons name="copy-outline" size={16} color={colors.faint} />
                     </Pressable>
-                    <Pressable onPress={() => confirmDelete(machine)} hitSlop={8} disabled={busyId === machine.id}>
+                    <Pressable onPress={() => confirmDelete(machine)} hitSlop={10} disabled={busyId === machine.id} accessibilityRole="button" accessibilityLabel={`Delete ${machine.name}`} style={{ marginLeft: 12 }}>
                       <Ionicons name="trash-outline" size={16} color={colors.faint} />
                     </Pressable>
                   </View>
-                </View>
-                {machine.lastRunStatus === "failed" && machine.lastRunError && (
-                  <Text className="mt-1.5 text-[11px] text-bad" numberOfLines={2}>
-                    {machine.lastRunError.slice(0, 140)}
-                  </Text>
-                )}
-              </View>
-            </Pressable>
-          ))}
-        </ScrollView>
-      )}
+                  {failed && machine.lastRunError && (
+                    <Text style={{ fontSize: 11, color: colors.bad, marginTop: -6 }} numberOfLines={1}>{machine.lastRunError.slice(0, 140)}</Text>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-function ComposeHeader({ title, onBack }: { title: string; onBack: () => void }) {
+type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
+
+/** One glyph per trigger type, so a Machine reads at a glance before its sentence. */
+const TRIGGER_ICON: Record<MachineTrigger["type"], IconName> = {
+  schedule: "clock-outline",
+  item_added: "plus-box-outline",
+  threshold: "chart-line-variant",
+  recipe_made: "chef-hat",
+};
+
+function ScreenTitle({ title, onBack }: { title: string; onBack: () => void }) {
   const { colors } = useTheme();
   return (
-    <View className="flex-row items-center gap-3 px-4 pb-3 pt-4">
-      <Pressable onPress={onBack} hitSlop={8}>
-        <Ionicons name="chevron-back" size={20} color={colors.muted} />
-      </Pressable>
-      <Text className="text-[15px] font-bold text-ink">{title}</Text>
+    <View style={{ gap: 14 }}>
+      <RoundButton icon="chevron-back" label="Back" onPress={onBack} />
+      <PixelText style={{ fontSize: 16, color: colors.ink }}>{title}</PixelText>
     </View>
   );
 }
 
-function TemplateCard({ template, onPress }: { template: MachineTemplate; onPress: () => void }) {
+function RoundButton({ icon, label, onPress }: { icon: "chevron-back"; label: string; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2 }}
+    >
+      <Ionicons name={icon} size={18} color={colors.ink} />
+    </Pressable>
+  );
+}
+
+/** A small uppercase label over a section, with an optional short note or link on the right. */
+function SectionLabel({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+      <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 1.2, textTransform: "uppercase", color: colors.muted }}>{children}</Text>
+      {typeof right === "string" ? <Text style={{ fontSize: 11.5, color: colors.faint }}>{right}</Text> : right}
+    </View>
+  );
+}
+
+function Card({ children, padded }: { children: React.ReactNode; padded?: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ borderCurve: "continuous", borderRadius: 16, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, overflow: "hidden", padding: padded ? 14 : 0 }}>
+      {children}
+    </View>
+  );
+}
+
+function IconChip({ icon, color, size = 38 }: { icon: IconName; color: string; size?: number }) {
+  return (
+    <View style={{ width: size, height: size, borderCurve: "continuous", borderRadius: size >= 48 ? 16 : 12, alignItems: "center", justifyContent: "center", backgroundColor: `${color}1f` }}>
+      <MaterialCommunityIcons name={icon} size={Math.round(size * 0.47)} color={color} />
+    </View>
+  );
+}
+
+function EditPill({ open, onPress }: { open: boolean; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      style={{ height: 28, paddingHorizontal: 10, borderCurve: "continuous", borderRadius: 8, justifyContent: "center", backgroundColor: open ? colors.accent : colors.surface2 }}
+    >
+      <Text style={{ fontSize: 12, fontWeight: "600", color: open ? colors.onAccent : colors.ink }}>{open ? "Done" : "Edit"}</Text>
+    </Pressable>
+  );
+}
+
+function PrimaryButton({
+  children,
+  onPress,
+  disabled,
+  busy,
+  icon,
+}: {
+  children: string;
+  onPress: () => void;
+  disabled?: boolean;
+  busy?: boolean;
+  icon?: "sparkles" | "add";
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 48, borderCurve: "continuous", borderRadius: 16, backgroundColor: colors.accent, opacity: disabled ? 0.5 : 1 }}
+    >
+      {busy ? (
+        <ActivityIndicator color={colors.onAccent} />
+      ) : (
+        <>
+          {icon && <Ionicons name={icon} size={16} color={colors.onAccent} />}
+          <Text style={{ fontSize: 14, fontWeight: "700", color: colors.onAccent }}>{children}</Text>
+        </>
+      )}
+    </Pressable>
+  );
+}
+
+function TestButton({ icon, label, busy, onPress }: { icon: "play" | "eye-outline"; label: string; busy: boolean; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={busy}
+      style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 42, borderCurve: "continuous", borderRadius: 12, backgroundColor: colors.surface2, opacity: busy ? 0.6 : 1 }}
+    >
+      {busy ? (
+        <ActivityIndicator color={colors.accent} />
+      ) : (
+        <>
+          <Ionicons name={icon} size={14} color={colors.accent} />
+          <Text style={{ fontSize: 13, fontWeight: "600", color: colors.ink }}>{label}</Text>
+        </>
+      )}
+    </Pressable>
+  );
+}
+
+function StepResult({ step, last }: { step: MachineDryRunResult["steps"][number]; last: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.hairline }}>
+      <Text style={{ fontSize: 12, color: step.skipped ? colors.faint : step.ok ? colors.ink : colors.bad }} numberOfLines={3}>
+        {step.skipped ? "○" : step.ok ? "✓" : "✕"} {TOOL_LABELS[step.tool] ?? step.tool}
+        {step.content ? ` — ${step.content}` : ""}
+      </Text>
+    </View>
+  );
+}
+
+function TemplateRow({ template, last, onPress }: { template: MachineTemplate; last: boolean; onPress: () => void }) {
   const { colors } = useTheme();
   const color = template.color(colors);
   return (
     <Pressable
       onPress={onPress}
-      className="flex-row items-center gap-3 rounded-lg border border-hairline bg-surface p-3.5 active:opacity-80"
+      style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.hairline }}
     >
-      <View
-        className="h-9 w-9 items-center justify-center rounded-md"
-        style={{ backgroundColor: `${color}1a` }}
-      >
-        <MaterialCommunityIcons name={template.icon} size={17} color={color} />
+      <IconChip icon={template.icon} color={color} size={36} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ fontSize: 13.5, fontWeight: "600", color: colors.ink }}>{template.label}</Text>
+        <Text style={{ fontSize: 11.5, color: colors.muted }} numberOfLines={1}>{template.description}</Text>
       </View>
-      <View className="flex-1">
-        <Text className="text-[13.5px] font-bold text-ink">{template.label}</Text>
-        <Text className="text-[11.5px] text-faint">{template.description}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={15} color={colors.faint} />
+      <Ionicons name="chevron-forward" size={14} color={colors.faint} />
     </Pressable>
   );
 }

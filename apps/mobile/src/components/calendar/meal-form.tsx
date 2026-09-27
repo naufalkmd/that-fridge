@@ -8,6 +8,7 @@ import { shortDayLabel } from "@/lib/calendar";
 import { useKeyboardHeight } from "@/lib/keyboard";
 import { useRecipes } from "@/lib/recipes";
 import { useTheme } from "@/lib/theme";
+import { PixelText } from "@/components/brand";
 import {
   MAX_SLOTS,
   MAX_SLOT_LENGTH,
@@ -102,12 +103,19 @@ export function MealForm({
   const input = {
     backgroundColor: colors.surface2,
     color: colors.ink,
-    borderRadius: 8,
+    borderCurve: "continuous", borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 11,
     fontSize: 14,
   } as const;
-  const label = { fontSize: 11, fontWeight: "800", letterSpacing: 0.4, color: colors.faint, marginBottom: 6, textTransform: "uppercase" } as const;
+  const label = { fontSize: 11, fontWeight: "600", letterSpacing: 1.2, color: colors.muted, marginBottom: 8, textTransform: "uppercase" } as const;
+  // Selectable chips (slots, status): tinted accent when on, a quiet fill when off.
+  const chip = (on: boolean) =>
+    ({
+      height: 32, paddingHorizontal: 12, borderCurve: "continuous", borderRadius: 12, justifyContent: "center",
+      backgroundColor: on ? `${colors.accent}24` : colors.surface2, borderWidth: 1, borderColor: on ? `${colors.accent}80` : "transparent",
+    }) as const;
+  const chipText = (on: boolean) => ({ fontSize: 12.5, fontWeight: on ? "700" : "600", color: on ? colors.accent : colors.muted }) as const;
 
   async function applyTemplate(templateSlots: string[]) {
     await onSaveSlots(templateSlots);
@@ -143,10 +151,9 @@ export function MealForm({
 
   return (
     <ScrollView style={{ maxHeight: scrollMax }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-      <Text style={{ fontSize: 16, fontWeight: "800", color: colors.ink, marginBottom: 12 }}>
-        {isEdit ? "Edit meal" : "Plan a meal"}
-      </Text>
+      <PixelText style={{ fontSize: 16, color: colors.ink, marginBottom: 16 }}>{isEdit ? "Edit meal" : "Plan a meal"}</PixelText>
 
+      {/* 1. What: the name first (focused for a new meal), with the recipe picker right under it. */}
       <Text style={label}>What are you having?</Text>
       <TextInput
         value={draft.title}
@@ -156,25 +163,32 @@ export function MealForm({
         maxLength={120}
         autoFocus={!isEdit}
         returnKeyType="done"
-        style={[input, { marginBottom: 8 }]}
+        style={[input, { fontSize: 15, marginBottom: 8 }]}
       />
 
       <Pressable
         onPress={() => setPickingRecipe((v) => !v)}
-        style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: pickingRecipe ? 8 : 14 }}
+        style={{
+          flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, paddingHorizontal: 10, borderCurve: "continuous", borderRadius: 12,
+          borderWidth: 1, borderColor: chosenRecipe ? `${colors.agentChef}66` : colors.hairline, marginBottom: pickingRecipe ? 8 : 18,
+        }}
       >
-        <MaterialCommunityIcons name="chef-hat" size={16} color={colors.accent} />
-        <Text style={{ flex: 1, fontSize: 13, fontWeight: "700", color: colors.accent }} numberOfLines={1}>
+        <View style={{ width: 28, height: 28, borderCurve: "continuous", borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: `${colors.agentChef}1f` }}>
+          <MaterialCommunityIcons name="chef-hat" size={15} color={colors.agentChef} />
+        </View>
+        <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: chosenRecipe ? colors.ink : colors.muted }} numberOfLines={1}>
           {chosenRecipe ? `Recipe: ${chosenRecipe.name}` : "Choose from your recipes"}
         </Text>
-        {draft.recipeId && (
+        {draft.recipeId ? (
           <Pressable hitSlop={8} accessibilityLabel="Remove recipe" onPress={() => onChange({ recipeId: null })}>
             <MaterialCommunityIcons name="close" size={16} color={colors.faint} />
           </Pressable>
+        ) : (
+          <MaterialCommunityIcons name={pickingRecipe ? "chevron-up" : "chevron-down"} size={18} color={colors.faint} />
         )}
       </Pressable>
       {pickingRecipe && (
-        <View style={{ marginBottom: 14, borderRadius: 8, borderWidth: 1, borderColor: colors.hairline, overflow: "hidden" }}>
+        <View style={{ marginBottom: 18, borderCurve: "continuous", borderRadius: 12, borderWidth: 1, borderColor: colors.hairline, overflow: "hidden" }}>
           <TextInput
             value={recipeQuery}
             onChangeText={setRecipeQuery}
@@ -192,9 +206,9 @@ export function MealForm({
                   onPress={() => pickRecipe(r.id, r.name)}
                   style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.hairline }}
                 >
-                  <Text style={{ flex: 1, fontSize: 13.5, color: colors.ink }} numberOfLines={1}>{r.name}</Text>
+                  <Text style={{ flex: 1, fontSize: 13, color: colors.ink }} numberOfLines={1}>{r.name}</Text>
                   {typeof r.calories === "number" && r.calories > 0 && (
-                    <Text style={{ fontSize: 11.5, color: colors.faint }}>{kcalLabel(r.calories)}</Text>
+                    <Text style={{ fontSize: 11.5, color: colors.muted }}>{kcalLabel(r.calories)}</Text>
                   )}
                 </Pressable>
               ))
@@ -203,10 +217,11 @@ export function MealForm({
         </View>
       )}
 
+      {/* 2. When: the day as a compact week row, then the meal slot. */}
       {dayOptions && (
         <>
           <Text style={label}>Day</Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 18 }}>
             {(dayOptions.includes(draft.date) ? dayOptions : [draft.date, ...dayOptions]).map((day) => {
               const on = draft.date === day;
               const { weekday, day: n } = shortDayLabel(day);
@@ -215,15 +230,16 @@ export function MealForm({
                   key={day}
                   testID={`day-chip-${day}`}
                   accessibilityRole="button"
+                  accessibilityLabel={`${weekday} ${n}`}
                   accessibilityState={{ selected: on }}
                   onPress={() => onChange({ date: day })}
                   style={{
-                    paddingHorizontal: 11, paddingVertical: 7, borderRadius: 999,
-                    backgroundColor: on ? `${colors.accent}26` : colors.surface2,
-                    borderWidth: 1, borderColor: on ? colors.accent : colors.hairline,
+                    width: 42, height: 48, borderCurve: "continuous", borderRadius: 12, alignItems: "center", justifyContent: "center", gap: 2,
+                    backgroundColor: on ? colors.accent : colors.surface2,
                   }}
                 >
-                  <Text style={{ fontSize: 12.5, fontWeight: "700", color: on ? colors.accent : colors.muted }}>{weekday} {n}</Text>
+                  <Text style={{ fontSize: 10, color: on ? colors.onAccent : colors.faint }}>{weekday.slice(0, 3)}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: on ? colors.onAccent : colors.ink }}>{n}</Text>
                 </Pressable>
               );
             })}
@@ -234,52 +250,43 @@ export function MealForm({
       <Text style={label}>Meal</Text>
       {slots.length === 0 && !isEdit && (
         <View style={{ marginBottom: 12 }}>
-          <Text style={{ fontSize: 12.5, color: colors.muted, marginBottom: 8 }}>
+          <Text style={{ fontSize: 12.5, lineHeight: 18, color: colors.muted, marginBottom: 8 }}>
             How do you like to plan? Pick a starting point — you can rename or add your own any time.
           </Text>
-          <View style={{ gap: 8 }}>
-            {MEAL_TEMPLATES.map((t) => (
+          <View style={{ borderCurve: "continuous", borderRadius: 12, borderWidth: 1, borderColor: colors.hairline, overflow: "hidden" }}>
+            {MEAL_TEMPLATES.map((t, i) => (
               <Pressable
                 key={t.id}
                 onPress={() => applyTemplate(t.slots)}
-                style={{ padding: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}
+                style={{ flexDirection: "row", alignItems: "center", padding: 12, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colors.hairline }}
               >
-                <Text style={{ fontSize: 13.5, fontWeight: "700", color: colors.ink }}>{t.label}</Text>
+                <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: colors.ink }}>{t.label}</Text>
+                <MaterialCommunityIcons name="chevron-right" size={18} color={colors.faint} />
               </Pressable>
             ))}
           </View>
         </View>
       )}
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: addingSlot ? 10 : 18 }}>
         {shownSlots.map((slot) => {
           const on = draft.slot.toLowerCase() === slot.toLowerCase();
           return (
-            <Pressable
-              key={slot}
-              accessibilityRole="button"
-              accessibilityState={{ selected: on }}
-              onPress={() => onChange({ slot })}
-              style={{
-                paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999,
-                backgroundColor: on ? `${colors.accent}26` : colors.surface2,
-                borderWidth: 1, borderColor: on ? colors.accent : colors.hairline,
-              }}
-            >
-              <Text style={{ fontSize: 12.5, fontWeight: "700", color: on ? colors.accent : colors.muted }}>{slot}</Text>
+            <Pressable key={slot} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange({ slot })} style={chip(on)}>
+              <Text style={chipText(on)}>{slot}</Text>
             </Pressable>
           );
         })}
         {shownSlots.length < MAX_SLOTS && !addingSlot && (
           <Pressable
             onPress={() => setAddingSlot(true)}
-            style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderStyle: "dashed", borderColor: colors.hairline }}
+            style={{ height: 32, paddingHorizontal: 12, borderCurve: "continuous", borderRadius: 12, justifyContent: "center", borderWidth: 1, borderStyle: "dashed", borderColor: colors.hairlineStrong }}
           >
-            <Text style={{ fontSize: 12.5, fontWeight: "700", color: colors.faint }}>+ New slot</Text>
+            <Text style={{ fontSize: 12.5, fontWeight: "600", color: colors.faint }}>+ New slot</Text>
           </Pressable>
         )}
       </View>
       {addingSlot && (
-        <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 18 }}>
           <TextInput
             value={newSlot}
             onChangeText={setNewSlot}
@@ -289,12 +296,13 @@ export function MealForm({
             autoFocus
             style={[input, { flex: 1 }]}
           />
-          <Pressable onPress={addSlot} style={{ justifyContent: "center", paddingHorizontal: 14, borderRadius: 8, backgroundColor: colors.accent }}>
-            <Text style={{ fontWeight: "800", color: colors.onAccent }}>Add</Text>
+          <Pressable onPress={addSlot} style={{ justifyContent: "center", paddingHorizontal: 16, borderCurve: "continuous", borderRadius: 12, backgroundColor: colors.accent }}>
+            <Text style={{ fontWeight: "700", color: colors.onAccent }}>Add</Text>
           </Pressable>
         </View>
       )}
 
+      {/* 3. Details: calories (estimated for you) and a reminder side by side, then a note. */}
       <View style={{ flexDirection: "row", gap: 10, marginBottom: 6 }}>
         <View style={{ flex: 1 }}>
           <Text style={label}>Calories</Text>
@@ -323,7 +331,7 @@ export function MealForm({
           />
         </View>
       </View>
-      <Text style={{ fontSize: 11.5, color: colors.faint, marginBottom: 12, minHeight: 15 }}>{hint}</Text>
+      <Text style={{ fontSize: 11.5, color: colors.faint, marginBottom: 14, minHeight: 15 }}>{hint}</Text>
 
       <Text style={label}>Note</Text>
       <TextInput
@@ -332,13 +340,13 @@ export function MealForm({
         placeholder="Optional"
         placeholderTextColor={colors.faint}
         maxLength={255}
-        style={[input, { marginBottom: 12 }]}
+        style={[input, { marginBottom: 18 }]}
       />
 
       {isEdit && (
         <>
           <Text style={label}>Status</Text>
-          <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+          <View style={{ flexDirection: "row", gap: 4, padding: 3, borderCurve: "continuous", borderRadius: 12, backgroundColor: colors.surface2, marginBottom: 18 }}>
             {(["planned", "cooked", "skipped"] as MealStatus[]).map((status) => {
               const on = draft.status === status;
               return (
@@ -347,13 +355,9 @@ export function MealForm({
                   accessibilityRole="button"
                   accessibilityState={{ selected: on }}
                   onPress={() => onChange({ status })}
-                  style={{
-                    flex: 1, alignItems: "center", paddingVertical: 8, borderRadius: 8,
-                    backgroundColor: on ? `${colors.accent}26` : colors.surface2,
-                    borderWidth: 1, borderColor: on ? colors.accent : colors.hairline,
-                  }}
+                  style={{ flex: 1, alignItems: "center", paddingVertical: 8, borderCurve: "continuous", borderRadius: 8, backgroundColor: on ? `${colors.accent}29` : "transparent" }}
                 >
-                  <Text style={{ fontSize: 12.5, fontWeight: "700", color: on ? colors.accent : colors.muted }}>{STATUS_LABEL[status]}</Text>
+                  <Text style={{ fontSize: 12.5, fontWeight: on ? "700" : "600", color: on ? colors.accent : colors.muted }}>{STATUS_LABEL[status]}</Text>
                 </Pressable>
               );
             })}
@@ -363,26 +367,26 @@ export function MealForm({
 
       {error && <Text style={{ fontSize: 12.5, color: colors.bad, marginBottom: 10 }}>{error}</Text>}
 
-      <View style={{ flexDirection: "row", gap: 10, marginBottom: 8 }}>
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
         <Pressable
           onPress={onCancel}
           disabled={saving}
-          style={{ flex: 1, alignItems: "center", paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.hairline }}
+          style={{ flex: 1, alignItems: "center", justifyContent: "center", height: 46, borderCurve: "continuous", borderRadius: 12, backgroundColor: colors.surface2 }}
         >
-          <Text style={{ fontWeight: "700", color: colors.muted }}>Cancel</Text>
+          <Text style={{ fontSize: 14, fontWeight: "600", color: colors.muted }}>Cancel</Text>
         </Pressable>
         <Pressable
           onPress={onSave}
           disabled={saving}
           accessibilityRole="button"
-          style={{ flex: 2, alignItems: "center", paddingVertical: 12, borderRadius: 8, backgroundColor: colors.accent, opacity: saving ? 0.6 : 1 }}
+          style={{ flex: 2, alignItems: "center", justifyContent: "center", height: 46, borderCurve: "continuous", borderRadius: 12, backgroundColor: colors.accent, opacity: saving ? 0.6 : 1 }}
         >
-          {saving ? <ActivityIndicator color={colors.onAccent} /> : <Text style={{ fontWeight: "800", color: colors.onAccent }}>Save</Text>}
+          {saving ? <ActivityIndicator color={colors.onAccent} /> : <Text style={{ fontSize: 14, fontWeight: "700", color: colors.onAccent }}>Save</Text>}
         </Pressable>
       </View>
       {isEdit && onDelete && (
         <Pressable onPress={onDelete} disabled={saving} style={{ alignItems: "center", paddingVertical: 10 }}>
-          <Text style={{ fontSize: 13, fontWeight: "700", color: colors.bad }}>Delete meal</Text>
+          <Text style={{ fontSize: 13, fontWeight: "600", color: colors.bad }}>Delete meal</Text>
         </Pressable>
       )}
     </ScrollView>

@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { Image } from "expo-image";
 
 import { ApiError, describeError, type CalendarEntry, type Recipe } from "@thatfridge/core";
 import { api } from "@/lib/api";
@@ -12,10 +12,10 @@ import { compareMeals, draftFromEntry, kcalLabel, MEAL_AUTOFILL_COST, mealsTotal
 import { useCredits } from "@/lib/credits";
 import { useToast } from "@/lib/toast";
 import { useScope } from "@/lib/scope";
-import { useTheme } from "@/lib/theme";
+import { useTheme, type ThemeColors } from "@/lib/theme";
 import { getDeviceTimezone } from "@/lib/timezone";
 import { useMealActions } from "@/lib/useMealActions";
-import { SheetHeader } from "@/components/sheet";
+import { PixelText } from "@/components/brand";
 import { MealRow } from "@/components/calendar/rows";
 import { AskChef } from "@/components/ask-chef";
 import { BottomSheet } from "@/components/bottom-sheet";
@@ -123,37 +123,75 @@ export default function MealPlanScreen() {
   const planFor = (day: string, recipe?: Recipe) =>
     setSheet(newDraft(day, meals.slots, meals.fridgeId, recipe ? { id: recipe.id, name: recipe.name } : null));
 
+  // The day strip scrolls to a day's card: remember where each card sits inside the scroll content.
+  const scrollRef = useRef<ScrollView>(null);
+  const listY = useRef(0);
+  const dayY = useRef<Record<string, number>>({});
+  const jumpTo = (day: string) => {
+    const y = dayY.current[day];
+    if (y !== undefined) scrollRef.current?.scrollTo({ y: Math.max(0, listY.current + y - 12), animated: true });
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-      <SheetHeader title="Meal plan" />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 4, marginBottom: 6 }}>
-          <Pressable accessibilityLabel="Previous week" hitSlop={10} onPress={() => setAnchor(addDays(days[0], -7))}>
-            <Ionicons name="chevron-back" size={22} color={colors.ink} />
-          </Pressable>
-          <View style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 16, fontWeight: "800", color: colors.ink }}>{isThisWeek ? "This week" : weekRangeLabel(days)}</Text>
-            <Text style={{ fontSize: 11.5, color: colors.faint, marginTop: 2 }}>
-              {isThisWeek ? weekRangeLabel(days) : ""}
-              {weekTotal.counted > 0 ? `${isThisWeek ? " · " : ""}${kcalLabel(weekTotal.kcal)} planned` : ""}
-            </Text>
-          </View>
-          <Pressable accessibilityLabel="Next week" hitSlop={10} onPress={() => setAnchor(addDays(days[0], 7))}>
-            <Ionicons name="chevron-forward" size={22} color={colors.ink} />
-          </Pressable>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 48, gap: 18 }} keyboardShouldPersistTaps="handled">
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <RoundButton icon="chevron-back" label="Back" onPress={() => router.back()} />
+          <RoundButton icon="calendar-outline" label="Open the calendar" onPress={() => router.push("/calendar")} />
         </View>
 
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          {!isThisWeek ? (
-            <Pressable hitSlop={8} onPress={() => setAnchor(today)}>
-              <Text style={{ fontSize: 12.5, fontWeight: "700", color: colors.accent }}>Back to this week</Text>
+        {/* Title, then the week switcher: arrows either side of which week this is. */}
+        <View style={{ gap: 10 }}>
+          <PixelText style={{ fontSize: 16, color: colors.ink }}>Meal plan</PixelText>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Pressable accessibilityLabel="Previous week" hitSlop={10} onPress={() => setAnchor(addDays(days[0], -7))} style={weekArrow(colors)}>
+              <Ionicons name="chevron-back" size={15} color={colors.ink} />
             </Pressable>
-          ) : (
-            <View />
+            <View style={{ flex: 1, alignItems: "center" }}>
+              <Text style={{ fontSize: 13.5, fontWeight: "700", color: colors.ink }}>{isThisWeek ? "This week" : weekRangeLabel(days)}</Text>
+              <Text style={{ fontSize: 11.5, color: colors.muted, marginTop: 2 }}>
+                {isThisWeek ? weekRangeLabel(days) : ""}
+                {weekTotal.counted > 0 ? `${isThisWeek ? " · " : ""}${kcalLabel(weekTotal.kcal)} planned` : ""}
+              </Text>
+            </View>
+            <Pressable accessibilityLabel="Next week" hitSlop={10} onPress={() => setAnchor(addDays(days[0], 7))} style={weekArrow(colors)}>
+              <Ionicons name="chevron-forward" size={15} color={colors.ink} />
+            </Pressable>
+          </View>
+          {!isThisWeek && (
+            <Pressable hitSlop={8} onPress={() => setAnchor(today)} style={{ alignSelf: "center" }}>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: colors.accent }}>Back to this week</Text>
+            </Pressable>
           )}
-          <Pressable hitSlop={8} accessibilityLabel="Open the calendar" onPress={() => router.push("/calendar")}>
-            <Text style={{ fontSize: 12.5, fontWeight: "700", color: colors.accent }}>Calendar ›</Text>
-          </Pressable>
+        </View>
+
+        {/* The week at a glance: one dot per meal (planned, cooked, skipped). Tap a day to jump to it. */}
+        <View style={{ flexDirection: "row", gap: 4 }}>
+          {days.map((day) => {
+            const dayMeals = byDate[day] ?? [];
+            const { weekday, day: n } = shortDayLabel(day);
+            const isToday = day === today;
+            return (
+              <Pressable
+                key={day}
+                onPress={() => jumpTo(day)}
+                accessibilityRole="button"
+                accessibilityLabel={`Go to ${weekday} ${n}, ${dayMeals.length} meal${dayMeals.length === 1 ? "" : "s"}`}
+                style={{
+                  flex: 1, height: 56, borderCurve: "continuous", borderRadius: 12, alignItems: "center", justifyContent: "center", gap: 3,
+                  backgroundColor: isToday ? `${colors.accent}24` : "transparent", borderWidth: 1, borderColor: isToday ? `${colors.accent}66` : "transparent",
+                }}
+              >
+                <Text style={{ fontSize: 10, color: isToday ? colors.accent : colors.faint }}>{weekday.slice(0, 1)}</Text>
+                <Text style={{ fontSize: 13, fontWeight: isToday ? "700" : "600", color: isToday ? colors.accent : colors.ink }}>{n}</Text>
+                <View style={{ flexDirection: "row", gap: 2, height: 4 }}>
+                  {dayMeals.slice(0, 4).map((m) => (
+                    <View key={m.id} style={{ width: 4, height: 4, borderRadius: 1, backgroundColor: dotColor(m, colors) }} />
+                  ))}
+                </View>
+              </Pressable>
+            );
+          })}
         </View>
 
         {fillFrom && (
@@ -161,66 +199,74 @@ export default function MealPlanScreen() {
             onPress={openAskChef}
             accessibilityRole="button"
             accessibilityLabel="Ask Chef to plan"
-            style={{
-              flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, marginBottom: 14,
-              borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface,
-            }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderCurve: "continuous", borderRadius: 16, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}
           >
-            <MaterialCommunityIcons name="chef-hat" size={22} color={colors.accent} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: "800", color: colors.ink }}>Ask Chef</Text>
-              <Text style={{ fontSize: 12, color: colors.faint, marginTop: 1 }}>
-                Say what you want this week, or let Chef fill the empty slots
+            <View style={{ width: 40, height: 40, borderCurve: "continuous", borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: `${colors.agentChef}1f`, overflow: "hidden" }}>
+              <Image source={CHEF} style={{ width: 32, height: 32, marginTop: 4 }} contentFit="contain" />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.ink }}>Ask Chef</Text>
+              <Text style={{ fontSize: 11.5, color: colors.muted }} numberOfLines={2}>
+                Say what you want this week, or let Chef fill the empty slots · {MEAL_AUTOFILL_COST} credits
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.faint} />
+            <View style={{ height: 30, paddingHorizontal: 12, borderCurve: "continuous", borderRadius: 12, justifyContent: "center", backgroundColor: `${colors.agentChef}29` }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: colors.agentChef }}>Plan</Text>
+            </View>
           </Pressable>
         )}
 
         {error && (
-          <Pressable onPress={() => setReload((n) => n + 1)} style={{ marginBottom: 12 }}>
+          <Pressable onPress={() => setReload((n) => n + 1)}>
             <Text style={{ fontSize: 12.5, color: colors.bad, textAlign: "center" }}>{error} Tap to retry.</Text>
           </Pressable>
         )}
-        {meals.error && <Text style={{ fontSize: 12.5, color: colors.bad, textAlign: "center", marginBottom: 12 }}>{meals.error}</Text>}
+        {meals.error && <Text style={{ fontSize: 12.5, color: colors.bad, textAlign: "center" }}>{meals.error}</Text>}
 
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: 16 }} onLayout={(e) => (listY.current = e.nativeEvent.layout.y)}>
           {days.map((day) => {
             const dayMeals = [...(byDate[day] ?? [])].sort(order);
             const total = mealsTotal(dayMeals);
             const { weekday, day: n } = shortDayLabel(day);
             const isToday = day === today;
             return (
-              <View
-                key={day}
-                testID={`plan-day-${day}`}
-                style={{
-                  borderRadius: 10, padding: 12, borderWidth: isToday ? 1.5 : 1,
-                  borderColor: isToday ? colors.accent : colors.hairline, backgroundColor: colors.surface,
-                }}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: dayMeals.length > 0 ? 10 : 0 }}>
-                  <Text style={{ fontSize: 14, fontWeight: "800", color: isToday ? colors.accent : colors.ink }}>
+              <View key={day} testID={`plan-day-${day}`} style={{ gap: 8 }} onLayout={(e) => (dayY.current[day] = e.nativeEvent.layout.y)}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 1.2, color: isToday ? colors.accent : colors.muted }}>
                     {isToday ? "Today" : weekday} · {n}
                   </Text>
                   <View style={{ flex: 1 }} />
-                  {total.counted > 0 && <Text style={{ fontSize: 12, fontWeight: "700", color: colors.muted }}>{kcalLabel(total.kcal)}</Text>}
+                  {total.counted > 0 && <Text style={{ fontSize: 11.5, color: colors.muted }}>{kcalLabel(total.kcal)}</Text>}
                   <Pressable
                     onPress={() => planFor(day)}
                     hitSlop={8}
                     accessibilityRole="button"
                     accessibilityLabel={`Add a meal on ${weekday} ${n}`}
-                    style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: `${colors.accent}26` }}
+                    style={{ width: 28, height: 28, borderCurve: "continuous", borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: `${colors.accent}24` }}
                   >
-                    <Ionicons name="add" size={18} color={colors.accent} />
+                    <Ionicons name="add" size={16} color={colors.accent} />
                   </Pressable>
                 </View>
                 {dayMeals.length === 0 ? (
-                  <Text style={{ fontSize: 12, color: colors.faint, marginTop: 6 }}>Nothing planned</Text>
+                  <Pressable
+                    onPress={() => planFor(day)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Nothing planned on ${weekday} ${n}. Plan a meal`}
+                    style={{ height: 44, borderCurve: "continuous", borderRadius: 16, borderWidth: 1.5, borderStyle: "dashed", borderColor: isToday ? `${colors.accent}66` : colors.hairline, alignItems: "center", justifyContent: "center" }}
+                  >
+                    <Text style={{ fontSize: 12, color: colors.faint }}>Nothing planned</Text>
+                  </Pressable>
                 ) : (
-                  <View style={{ gap: 8 }}>
-                    {dayMeals.map((entry) => (
-                      <MealRow key={entry.id} entry={entry} onEdit={() => setSheet(draftFromEntry(entry))} onQuickStatus={meals.quickStatus} />
+                  <View style={{ borderCurve: "continuous", borderRadius: 16, borderWidth: 1, borderColor: isToday ? `${colors.accent}66` : colors.hairline, backgroundColor: colors.surface, overflow: "hidden" }}>
+                    {dayMeals.map((entry, i) => (
+                      <MealRow
+                        key={entry.id}
+                        entry={entry}
+                        flat
+                        last={i === dayMeals.length - 1}
+                        onEdit={() => setSheet(draftFromEntry(entry))}
+                        onQuickStatus={meals.quickStatus}
+                      />
                     ))}
                   </View>
                 )}
@@ -229,7 +275,7 @@ export default function MealPlanScreen() {
           })}
         </View>
 
-        {loading && <ActivityIndicator color={colors.accent} style={{ marginTop: 16 }} />}
+        {loading && <ActivityIndicator color={colors.accent} />}
       </ScrollView>
 
       <BottomSheet visible={askOpen} onClose={() => (autofilling ? undefined : setAskOpen(false))}>
@@ -259,5 +305,33 @@ export default function MealPlanScreen() {
         onSaveSlots={meals.saveSlots}
       />
     </SafeAreaView>
+  );
+}
+
+const CHEF = require("../../assets/images/thatfridge/chef.gif");
+
+/** A meal's dot in the day strip: cooked green, skipped faint, otherwise (planned) the accent. */
+function dotColor(entry: CalendarEntry, colors: ThemeColors): string {
+  if (entry.status === "cooked") return colors.good;
+  if (entry.status === "skipped") return colors.faint;
+  return colors.accent;
+}
+
+function weekArrow(colors: ThemeColors) {
+  return { width: 32, height: 32, borderCurve: "continuous", borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2 } as const;
+}
+
+function RoundButton({ icon, label, onPress }: { icon: "chevron-back" | "calendar-outline"; label: string; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2 }}
+    >
+      <Ionicons name={icon} size={icon === "chevron-back" ? 18 : 16} color={colors.ink} />
+    </Pressable>
   );
 }

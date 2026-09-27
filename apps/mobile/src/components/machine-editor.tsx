@@ -21,7 +21,7 @@ function prettyKey(key: string | number): string {
 }
 
 function Label({ children }: { children: string }) {
-  return <Text className="text-[11px] font-semibold uppercase tracking-wide text-faint">{children}</Text>;
+  return <Text className="text-[11px] font-semibold uppercase tracking-wide text-muted">{children}</Text>;
 }
 
 function Chips<T extends string | number>({
@@ -42,10 +42,10 @@ function Chips<T extends string | number>({
           <Pressable
             key={String(o.key)}
             onPress={() => onChange(o.key)}
-            className="rounded-md px-2.5 py-1.5"
+            className="rounded-lg px-3 py-1.5"
             style={{ backgroundColor: active ? colors.accent : colors.surface2 }}
           >
-            <Text className="text-[12px] font-bold" style={{ color: active ? colors.canvas : colors.ink }}>
+            <Text className="text-[12px] font-semibold" style={{ color: active ? colors.onAccent : colors.ink }}>
               {o.label}
             </Text>
           </Pressable>
@@ -85,7 +85,7 @@ export function NumberField({
       onBlur={() => setText(String(value))}
       keyboardType={integer ? "number-pad" : "decimal-pad"}
       placeholderTextColor={colors.faint}
-      className="rounded-md border border-hairline bg-canvas px-3 py-2 text-[13.5px] text-ink"
+      className="rounded-xl bg-surface2 px-3 py-2.5 text-[13.5px] text-ink"
     />
   );
 }
@@ -99,7 +99,7 @@ function TextField({ value, onCommit, multiline }: { value: string; onCommit: (s
       multiline={multiline}
       placeholderTextColor={colors.faint}
       autoCapitalize="none"
-      className="rounded-md border border-hairline bg-canvas px-3 py-2 text-[13.5px] text-ink"
+      className="rounded-xl bg-surface2 px-3 py-2.5 text-[13.5px] text-ink"
       style={multiline ? { minHeight: 60, textAlignVertical: "top" } : undefined}
     />
   );
@@ -126,7 +126,7 @@ function ArgEditor({
       <View className="gap-2">
         <Label>{prettyKey(name)}</Label>
         {value.map((entry, i) => (
-          <View key={i} className="gap-2 rounded-lg border border-hairline p-2.5">
+          <View key={i} className="gap-2 rounded-xl border border-hairline p-3">
             <ArgEditor name={i} value={entry} path={[...path, i]} onSet={onSet} />
           </View>
         ))}
@@ -199,7 +199,7 @@ export function StepValuesEditor({
 }) {
   const entries = Object.entries(step.args);
   return (
-    <View className="gap-3 pt-2">
+    <View className="gap-3 pt-3">
       {entries.length === 0 && !step.condition && (
         <Text className="text-[12px] text-faint">Nothing to edit on this step.</Text>
       )}
@@ -207,7 +207,7 @@ export function StepValuesEditor({
         <ArgEditor key={k} name={k} value={v} path={[k]} onSet={(path, value) => onSetArg(index, path, value)} />
       ))}
       {step.condition && (
-        <View className="gap-2 rounded-lg border border-hairline p-2.5">
+        <View className="gap-2 rounded-xl border border-hairline p-3">
           <Label>{`Only if step ${step.condition.step}'s total is`}</Label>
           <Chips
             options={OP_OPTIONS}
@@ -240,7 +240,7 @@ export function TriggerValuesEditor({
     const { frequency, weekday, time } = trigger.config;
     const timeOk = isValidTime(timeText);
     return (
-      <View className="gap-3 pt-2">
+      <View className="gap-3 pt-3">
         <View className="gap-1">
           <Label>Repeats</Label>
           <Chips
@@ -263,7 +263,7 @@ export function TriggerValuesEditor({
           </View>
         )}
         <View className="gap-1">
-          <Label>Time (24h, HH:MM)</Label>
+          <Label>Time (24h)</Label>
           <TextInput
             value={timeText}
             onChangeText={(t) => {
@@ -275,10 +275,10 @@ export function TriggerValuesEditor({
             autoCapitalize="none"
             keyboardType="numbers-and-punctuation"
             maxLength={5}
-            className="rounded-md border bg-canvas px-3 py-2 text-[13.5px] text-ink"
-            style={{ borderColor: timeOk ? undefined : "#ff5567" }}
+            className="rounded-xl border bg-surface2 px-3 py-2.5 text-[13.5px] text-ink"
+            style={{ borderColor: timeOk ? "transparent" : "#ff5567" }}
           />
-          {!timeOk && <Text className="text-[11px] text-bad">Use 24-hour HH:MM, like 08:00 or 18:30.</Text>}
+          {!timeOk && <Text className="text-[11px] text-bad">Use HH:MM, like 08:00 or 18:30.</Text>}
         </View>
       </View>
     );
@@ -287,7 +287,7 @@ export function TriggerValuesEditor({
   if (trigger.type === "threshold") {
     const { field, op, value, unit, custom_field_label } = trigger.config;
     return (
-      <View className="gap-3 pt-2">
+      <View className="gap-3 pt-3">
         <View className="gap-1">
           <Label>Watch</Label>
           <Chips
@@ -313,7 +313,7 @@ export function TriggerValuesEditor({
           </View>
         )}
         <View className="gap-1">
-          <Label>Fires when the total is</Label>
+          <Label>When the total is</Label>
           <Chips options={OP_OPTIONS} value={op} onChange={(o) => patch({ op: o })} />
         </View>
         <View className="gap-1">
@@ -327,9 +327,9 @@ export function TriggerValuesEditor({
   if (trigger.type === "item_added") {
     const { search, location } = trigger.config;
     return (
-      <View className="gap-3 pt-2">
+      <View className="gap-3 pt-3">
         <View className="gap-1">
-          <Label>Item name contains (blank = any item)</Label>
+          <Label>Item name (blank = any)</Label>
           <TextField value={search ?? ""} onCommit={(s) => patch({ search: s })} />
         </View>
         <View className="gap-1">

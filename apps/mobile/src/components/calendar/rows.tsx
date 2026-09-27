@@ -46,11 +46,11 @@ export function EntryRow({
       disabled={!openable}
       onPress={() => onOpen(entry)}
       style={{
-        flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 8,
+        flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderCurve: "continuous", borderRadius: 8,
         borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface,
       }}
     >
-      <View style={{ width: 34, height: 34, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: `${color}1a` }}>
+      <View style={{ width: 34, height: 34, borderCurve: "continuous", borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: `${color}1a` }}>
         <MaterialCommunityIcons name={KIND_ICON[entry.kind]} size={17} color={color} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -73,10 +73,15 @@ export function MealRow({
   entry,
   onEdit,
   onQuickStatus,
+  flat,
+  last,
 }: {
   entry: CalendarEntry;
   onEdit: () => void;
   onQuickStatus: (entry: CalendarEntry, status: MealStatus) => Promise<void>;
+  /** A row inside a shared card (the Meal plan's day card): no border of its own, a divider below unless `last`. */
+  flat?: boolean;
+  last?: boolean;
 }) {
   const { colors } = useTheme();
   const color = kindColor("meal", colors);
@@ -96,26 +101,42 @@ export function MealRow({
       onPress={onEdit}
       accessibilityRole="button"
       accessibilityLabel={`Edit ${entry.title}`}
-      style={{
-        flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 8,
-        borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, opacity: status === "skipped" ? 0.55 : 1,
-      }}
+      style={[
+        { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, opacity: status === "skipped" ? 0.55 : 1 },
+        flat
+          ? { borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.hairline }
+          : { borderCurve: "continuous", borderRadius: 16, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
+      ]}
     >
-      <View style={{ width: 34, height: 34, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: `${color}1a` }}>
-        <MaterialCommunityIcons name={KIND_ICON.meal} size={17} color={color} />
+      <View style={{ width: 36, height: 36, borderCurve: "continuous", borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: `${color}1f` }}>
+        <MaterialCommunityIcons name={KIND_ICON.meal} size={16} color={color} />
       </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 13.5, fontWeight: "700", color: colors.ink, textDecorationLine: status === "skipped" ? "line-through" : "none" }}>
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <Text
+          style={{
+            fontSize: 13, fontWeight: "600", color: done ? colors.muted : colors.ink,
+            textDecorationLine: status === "skipped" || done ? "line-through" : "none",
+          }}
+          numberOfLines={1}
+        >
           {entry.title}
         </Text>
-        <Text style={{ fontSize: 11.5, color: colors.faint, marginTop: 2 }}>{meta}</Text>
+        <Text style={{ fontSize: 11.5, color: colors.muted }} numberOfLines={1}>{meta}</Text>
       </View>
       {status === "planned" ? (
-        <Pressable hitSlop={8} accessibilityLabel={`Mark ${entry.title} cooked`} onPress={() => onQuickStatus(entry, "cooked")}>
-          <MaterialCommunityIcons name="check-circle-outline" size={24} color={colors.faint} />
-        </Pressable>
+        <Pressable
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={`Mark ${entry.title} cooked`}
+          onPress={() => onQuickStatus(entry, "cooked")}
+          style={{ width: 22, height: 22, borderCurve: "continuous", borderRadius: 8, borderWidth: 1.5, borderColor: colors.hairlineStrong }}
+        />
       ) : (
-        done && <MaterialCommunityIcons name="check-circle" size={24} color={colors.good} />
+        done && (
+          <View style={{ width: 22, height: 22, borderCurve: "continuous", borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: colors.good }}>
+            <Ionicons name="checkmark" size={15} color={colors.canvas} />
+          </View>
+        )
       )}
     </Pressable>
   );
