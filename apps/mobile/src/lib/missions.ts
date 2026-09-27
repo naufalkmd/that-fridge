@@ -40,6 +40,8 @@ export type MissionTask =
   | { kind: "restock"; id: string; rec: ShoppingRecommendation }
   /** Organizer: an item with no food group. */
   | { kind: "sort-group"; id: string; item: FlatItem }
+  /** Organizer: items with blank details (weight, calories, the user's own custom fields). */
+  | { kind: "fill-details"; id: string; items: { item: FlatItem; missing: string[] }[] }
   /** Organizer: offer the AI storage check (costs credits, asks first). */
   | { kind: "check-storage"; id: string; count: number }
   /** Organizer: the storage check found something in the wrong spot. */
@@ -165,11 +167,30 @@ export function shopkeeperTasks(
 
 // ---- Organizer -------------------------------------------------------------------
 
+/** Items per "fill in details" run - under the item autofill throttle (see bulkAutofill.ts). */
+export const FILL_BATCH = 15;
+
+/** What an item is missing that autofill can fill: weight, calories, and any empty custom field. */
+export function missingDetails(item: Pick<FlatItem, "weight" | "calories" | "customFields">): string[] {
+  const out: string[] = [];
+  if (item.weight == null) out.push("weight");
+  if (item.calories == null) out.push("calories");
+  for (const f of item.customFields ?? []) if (!f.value?.trim()) out.push(f.label);
+  return out;
+}
+
 export function organizerTasks(items: FlatItem[], storageChecked: boolean): MissionTask[] {
   const out: MissionTask[] = items
     .filter((i) => !i.nutritionCategory)
-    .slice(0, MISSION_SIZE - 1)
+    .slice(0, MISSION_SIZE - 2)
     .map((item) => ({ kind: "sort-group", id: `group-${item.id}`, item }));
+  const blanks = items
+    .map((item) => ({ item, missing: missingDetails(item) }))
+    .filter((x) => x.missing.length > 0)
+    // Items with the user's own fields first: those are the ones they set up on purpose.
+    .sort((a, b) => Number(b.missing.some((m) => m !== "weight" && m !== "calories")) - Number(a.missing.some((m) => m !== "weight" && m !== "calories")))
+    .slice(0, FILL_BATCH);
+  if (blanks.length > 0) out.push({ kind: "fill-details", id: "fill-details", items: blanks });
   if (!storageChecked && items.length > 0) out.push({ kind: "check-storage", id: "check-storage", count: items.length });
   return out;
 }
@@ -203,6 +224,11 @@ export function taskLine(t: MissionTask): string {
       return `${t.item.name} has no food group, so it doesn't count toward your balance.`;
     case "move":
       return `${t.move.name} keeps better in the ${locationWord[t.move.to]} than the ${locationWord[t.move.from]}.`;
+    case "fill-details": {
+      const fields = [...new Set(t.items.flatMap((x) => x.missing))];
+      const shown = fields.slice(0, 3).join(", ") + (fields.length > 3 ? ` and ${fields.length - 3} more` : "");
+      return `${t.items.length} item${t.items.length === 1 ? " is" : "s are"} missing ${shown}.`;
+    }
     case "check-storage":
       return `I can check whether your ${t.count} item${t.count === 1 ? " is" : "s are"} stored in the right spot.`;
   }
@@ -261,8 +287,10 @@ export function defaultChoice(t: MissionTask, index: number): { action: string |
       const group = localFoodGroup(t.item);
       return group ? { action: `group:${group}`, ticked: true } : { action: null, ticked: false };
     }
+    case "fill-details":
     case "check-storage":
-      return { action: "check", ticked: false }; // costs credits: the user opts in
+      // Both cost credits: the user opts in.
+      return { action: t.kind === "fill-details" ? "fill" : "check", ticked: false };
     case "move":
       return { action: "move", ticked: true };
   }

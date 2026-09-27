@@ -9,6 +9,7 @@ import Animated, { FadeIn } from "react-native-reanimated";
 
 import { describeError, type FlatItem } from "@thatfridge/core";
 import { api } from "@/lib/api";
+import { describeBulkAutofill, runBulkAutofill } from "@/lib/bulkAutofill";
 import { useAuth } from "@/lib/auth";
 import { useInventory } from "@/lib/inventory";
 import { defaultFridgeId, draftToInput, newDraft, userSlots } from "@/lib/mealPlan";
@@ -31,7 +32,7 @@ import { FoodIcon } from "@/components/food-icon";
 import { MarkdownText } from "@/components/markdown-text";
 
 /** What happened to a task; the summary tallies these. */
-export type Outcome = "saved" | "cooking" | "frozen" | "tossed" | "planned" | "added" | "removed" | "sorted" | "moved" | "checked" | "skipped";
+export type Outcome = "saved" | "cooking" | "frozen" | "tossed" | "planned" | "added" | "removed" | "sorted" | "filled" | "moved" | "checked" | "skipped";
 
 const OUTCOME_WORD: Record<Exclude<Outcome, "skipped">, string> = {
   saved: "used up",
@@ -42,6 +43,7 @@ const OUTCOME_WORD: Record<Exclude<Outcome, "skipped">, string> = {
   added: "added to your list",
   removed: "taken off your list",
   sorted: "sorted",
+  filled: "filled in",
   moved: "moved",
   checked: "checked",
 };
@@ -56,6 +58,7 @@ const DONE_LABEL: Record<Exclude<Outcome, "skipped">, string> = {
   added: "On your list",
   removed: "Off your list",
   sorted: "Sorted",
+  filled: "Filled in",
   moved: "Moved",
   checked: "Checked",
 };
@@ -272,6 +275,20 @@ export function MissionSheet({
           label: `File under ${g.label}`,
           run: async () => (await patchItem(t.item.id, { nutrition_category: g.key }), { outcome: "sorted", undo: () => patchItem(t.item.id, { nutrition_category: null }) }),
         }));
+      case "fill-details": {
+        const ids = t.items.map((x) => x.item.id);
+        return [
+          {
+            key: "fill",
+            label: `Fill them in · up to ${ids.length} credit${ids.length === 1 ? "" : "s"}`,
+            run: async () => {
+              const r = await runBulkAutofill(ids, (id) => api.autofillItem(id), (id, fields) => patchItem(id, fields));
+              if (r.filled === 0 && (r.stopped || r.failed)) throw new Error(describeBulkAutofill(r));
+              return { outcome: "filled" };
+            },
+          },
+        ];
+      }
       case "check-storage":
         return [
           {
@@ -534,6 +551,8 @@ function TaskIcon({ t, size }: { t: MissionTask; size: number }) {
       return <FoodIcon icon={t.rec.icon} name={t.rec.name} size={size} />;
     case "move":
       return <FoodIcon icon={t.move.icon} name={t.move.name} size={size} />;
+    case "fill-details":
+      return <MaterialCommunityIcons name="form-textbox" size={size * 0.8} color="#3d6fe0" />;
     case "check-storage":
       return <MaterialCommunityIcons name="fridge-outline" size={size * 0.8} color="#3d6fe0" />;
   }
@@ -559,6 +578,8 @@ function taskTitle(t: MissionTask): string {
       return t.rec.name;
     case "move":
       return `${t.move.name} · in the ${locationWord[t.move.from]}`;
+    case "fill-details":
+      return `Missing details · ${t.items.length} item${t.items.length === 1 ? "" : "s"}`;
     case "check-storage":
       return "Storage check";
   }

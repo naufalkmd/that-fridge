@@ -7,6 +7,7 @@ import {
   frozenShelfLifeDays,
   guardianTasks,
   isoDaysFromNow,
+  missingDetails,
   organizerTasks,
   shopkeeperTasks,
   taskLine,
@@ -129,10 +130,31 @@ describe("Shopkeeper", () => {
 });
 
 describe("Organizer", () => {
+  const complete = { weight: 200, calories: 90, customFields: [] };
+
   it("sorts items with no food group, then offers the storage check once", () => {
-    const tasks = organizerTasks([item("Mystery jar", { nutritionCategory: null }), item("Carrot")], false);
+    const tasks = organizerTasks([item("Mystery jar", { nutritionCategory: null, ...complete }), item("Carrot", complete)], false);
     expect(tasks.map((t) => t.kind)).toEqual(["sort-group", "check-storage"]);
-    expect(organizerTasks([item("Carrot")], true)).toEqual([]);
+    expect(organizerTasks([item("Carrot", complete)], true)).toEqual([]);
+  });
+
+  it("gathers items with blank details, the user's own fields first", () => {
+    const protein = item("Tofu", { ...complete, customFields: [{ id: "c1", label: "Protein", value: "" }] });
+    const noWeight = item("Rice", { ...complete, weight: null });
+    const tasks = organizerTasks([noWeight, protein, item("Carrot", complete)], true);
+
+    expect(tasks.map((t) => t.kind)).toEqual(["fill-details"]);
+    const fill = tasks[0];
+    expect(fill.kind === "fill-details" && fill.items.map((x) => x.item.name)).toEqual(["Tofu", "Rice"]);
+    expect(taskLine(fill)).toBe("2 items are missing Protein, weight.");
+    expect(defaultChoice(fill, 0)).toEqual({ action: "fill", ticked: false }); // costs credits
+  });
+
+  it("counts only empty fields as missing", () => {
+    expect(missingDetails({ weight: null, calories: 0, customFields: [{ id: "a", label: "Fibre", value: " " }, { id: "b", label: "Brand", value: "Acme" }] })).toEqual([
+      "weight",
+      "Fibre",
+    ]);
   });
 });
 
