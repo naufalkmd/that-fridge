@@ -3,6 +3,7 @@ import type { FlatItem, Recipe, ShoppingItem, UsageHistoryEntry } from "@thatfri
 import {
   canFreeze,
   chefTasks,
+  defaultChoice,
   frozenShelfLifeDays,
   guardianTasks,
   isoDaysFromNow,
@@ -138,5 +139,35 @@ describe("Organizer", () => {
 describe("isoDaysFromNow", () => {
   it("counts in local days", () => {
     expect(isoDaysFromNow(1, new Date(2026, 11, 31, 22))).toBe("2027-01-01");
+  });
+});
+
+describe("the crew's own decisions", () => {
+  const chicken = item("Chicken", { days: 1, freshness: 10, nutritionCategory: "protein" });
+  const lettuce = item("Lettuce", { days: 1, freshness: 10 });
+
+  it("Guardian freezes what freezes, otherwise puts it on tonight's plan", () => {
+    expect(defaultChoice({ kind: "rescue", id: "a", item: chicken, recipe: null, canFreeze: true }, 0)).toEqual({ action: "freeze", ticked: true });
+    expect(defaultChoice({ kind: "rescue", id: "b", item: lettuce, recipe: null, canFreeze: false }, 0)).toEqual({ action: "plan-use-up", ticked: true });
+    expect(defaultChoice({ kind: "rescue", id: "c", item: lettuce, recipe: recipe("Salad", ["Lettuce"]), canFreeze: false }, 0).action).toBe("plan-tonight");
+  });
+
+  it("never clears food or spends credits without the user opting in", () => {
+    expect(defaultChoice({ kind: "expired", id: "e", item: chicken }, 0)).toEqual({ action: "toss", ticked: false });
+    expect(defaultChoice({ kind: "check-storage", id: "s", count: 20 }, 0).ticked).toBe(false);
+  });
+
+  it("Chef plans the best dish tonight and keeps the rest as options", () => {
+    const cook = (missing: string[]) => ({ kind: "cook" as const, id: "k", recipe: recipe("Dal", ["Lentils"]), have: 1, total: 2, missing: missing.map((m) => ({ name: m, icon: m })), rescues: [] });
+    expect(defaultChoice(cook(["Onion"]), 0)).toEqual({ action: "plan-tonight-shop", ticked: true });
+    expect(defaultChoice(cook([]), 0)).toEqual({ action: "plan-tonight", ticked: true });
+    expect(defaultChoice(cook([]), 1)).toEqual({ action: "plan-tomorrow", ticked: false });
+  });
+
+  it("Organizer files an item under the group its icon implies, and asks when it can't tell", () => {
+    const milk = item("Milk", { icon: "milk", nutritionCategory: null });
+    expect(defaultChoice({ kind: "sort-group", id: "g", item: milk }, 0)).toEqual({ action: "group:dairy", ticked: true });
+    const jar = item("Mystery jar", { icon: "zzz", nutritionCategory: null });
+    expect(defaultChoice({ kind: "sort-group", id: "h", item: jar }, 0)).toEqual({ action: null, ticked: false });
   });
 });

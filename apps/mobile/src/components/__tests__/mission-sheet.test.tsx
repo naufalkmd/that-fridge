@@ -20,7 +20,13 @@ jest.mock("@/lib/inventory", () => ({
   useInventory: () => ({ fridges: [], patchItem: mockPatchItem, removeItem: mockRemoveItem, undoRemoval: jest.fn() }),
 }));
 jest.mock("@/lib/shopping", () => ({ useShopping: () => ({ add: mockAdd, remove: jest.fn() }) }));
-jest.mock("@/lib/api", () => ({ api: { correctItemOutcome: (...a: unknown[]) => mockCorrect(...(a as [])), createMealEntry: jest.fn() } }));
+jest.mock("@/lib/api", () => ({
+  api: {
+    correctItemOutcome: (...a: unknown[]) => mockCorrect(...(a as [])),
+    createMealEntry: (...a: unknown[]) => mockCreateMeal(...(a as [])),
+    deleteMealEntry: jest.fn(),
+  },
+}));
 jest.mock("@/components/food-icon", () => ({ FoodIcon: () => null }));
 
 import type { FlatItem } from "@thatfridge/core";
@@ -51,55 +57,68 @@ const sheet = (tasks: MissionTask[], done = {}, onOutcome = jest.fn()) => (
 
 beforeEach(() => jest.clearAllMocks());
 
-describe("MissionSheet", () => {
-  test("Guardian's freeze moves the item to the freezer with a new date and settles the task", async () => {
+const mockCreateMeal = jest.fn(async () => ({ id: "m1" }));
+
+describe("MissionSheet: Activate runs the crew's plan with one press", () => {
+  const lettuce = { ...chicken, id: "i2", name: "Lettuce", icon: "lettuce", nutritionCategory: "vegetables" } as FlatItem;
+  const expiredMilk = { ...chicken, id: "i3", name: "Milk", days: -2, freshness: 0 } as FlatItem;
+
+  test("does every ticked decision, leaves destructive ones unless opted in, and tallies it", async () => {
+    let done: Record<string, string> = {};
+    const onOutcome = jest.fn((id: string, o: string) => {
+      done = { ...done, [id]: o };
+    });
+    const tasks: MissionTask[] = [
+      { kind: "rescue", id: "rescue-i1", item: chicken, recipe: null, canFreeze: true },
+      { kind: "restock", id: "rec-bread", rec: { key: "bread", source: "habit", name: "Bread", icon: "bread", reason: "You buy it often" } },
+      { kind: "expired", id: "expired-i3", item: expiredMilk },
+    ];
+    await render(sheet(tasks, {}, onOutcome));
+
+    expect(screen.getByText("+6")).toBeTruthy(); // live score change since activating
+    expect(screen.getByText("Freeze it")).toBeTruthy(); // the crew's decision, shown per line
+    await fireEvent.press(screen.getByText("Do it · 2 things")); // the expired milk isn't ticked
+
+    await waitFor(() => expect(onOutcome).toHaveBeenCalledTimes(2));
+    expect(mockPatchItem).toHaveBeenCalledWith("i1", expect.objectContaining({ location: "freezer", shelf_life_days: 90 }));
+    expect(mockAdd).toHaveBeenCalledWith("Bread");
+    expect(mockRemoveItem).not.toHaveBeenCalled();
+    expect(onOutcome).toHaveBeenCalledWith("rescue-i1", "frozen");
+    expect(onOutcome).toHaveBeenCalledWith("rec-bread", "added");
+  });
+
+  test("unticking a line keeps it out of the plan", async () => {
     const onOutcome = jest.fn();
     await render(sheet([{ kind: "rescue", id: "rescue-i1", item: chicken, recipe: null, canFreeze: true }], {}, onOutcome));
 
-    expect(screen.getByText("+6")).toBeTruthy(); // live score change since the mission started
-    await fireEvent.press(screen.getByText("Freeze it"));
-
-    await waitFor(() => expect(onOutcome).toHaveBeenCalledWith("rescue-i1", "frozen"));
-    expect(mockPatchItem).toHaveBeenCalledWith("i1", expect.objectContaining({ location: "freezer", shelf_life_days: 90 }));
-    expect(screen.getByText(/moved to the freezer/)).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText(/Chicken/));
+    expect(screen.getByText("Done")).toBeTruthy();
+    expect(screen.queryByText(/Do it/)).toBeNull();
   });
 
-  test("Tossed removes the item and corrects the outcome when the app guessed differently", async () => {
+  test("an item that can't be frozen goes on tonight's plan instead", async () => {
     const onOutcome = jest.fn();
-    await render(sheet([{ kind: "rescue", id: "rescue-i1", item: chicken, recipe: null, canFreeze: false }], {}, onOutcome));
+    await render(sheet([{ kind: "rescue", id: "rescue-i2", item: lettuce, recipe: null, canFreeze: false }], {}, onOutcome));
 
-    expect(screen.queryByText("Freeze it")).toBeNull();
-    await fireEvent.press(screen.getByText("Tossed"));
+    await fireEvent.press(screen.getByText("Do it · 1 thing"));
 
-    await waitFor(() => expect(onOutcome).toHaveBeenCalledWith("rescue-i1", "tossed"));
-    expect(mockRemoveItem).toHaveBeenCalledWith("i1");
-    expect(mockCorrect).toHaveBeenCalledWith("o1", "wasted");
+    await waitFor(() => expect(onOutcome).toHaveBeenCalledWith("rescue-i2", "planned"));
+    expect(mockCreateMeal).toHaveBeenCalledWith(expect.objectContaining({ title: "Use up Lettuce", slot: "Dinner", recipe_id: null }));
   });
 
-  test("Shopkeeper's restock adds to the shopping list", async () => {
-    const onOutcome = jest.fn();
-    await render(
-      sheet([{ kind: "restock", id: "rec-bread", rec: { key: "bread", source: "habit", name: "Bread", icon: "bread", reason: "You buy it often" } }], {}, onOutcome),
-    );
-
-    await fireEvent.press(screen.getByText("Add to list"));
-
-    await waitFor(() => expect(onOutcome).toHaveBeenCalledWith("rec-bread", "added"));
-    expect(mockAdd).toHaveBeenCalledWith("Bread");
-  });
-
-  test("a finished mission tallies what was done", async () => {
+  test("finished lines show what was done, with a tally", async () => {
     await render(
       sheet(
         [
           { kind: "rescue", id: "a", item: chicken, recipe: null, canFreeze: true },
-          { kind: "expired", id: "b", item: { ...chicken, id: "i2", days: -1 } },
+          { kind: "restock", id: "b", rec: { key: "bread", source: "habit", name: "Bread", icon: "bread", reason: "x" } },
         ],
-        { a: "frozen", b: "tossed" },
+        { a: "frozen", b: "added" },
       ),
     );
 
-    expect(screen.getByText("Mission complete")).toBeTruthy();
-    expect(screen.getByText("1 frozen · 1 cleared")).toBeTruthy();
+    expect(screen.getByText("Frozen")).toBeTruthy();
+    expect(screen.getByText("1 frozen · 1 added to your list")).toBeTruthy();
+    expect(screen.getByText("Done")).toBeTruthy();
   });
 });

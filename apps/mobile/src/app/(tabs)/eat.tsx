@@ -419,7 +419,7 @@ export default function Crew() {
     }
   }
 
-  // ---- missions ----
+  // ---- missions: "Activate {agent}" opens the crew member's plan (MissionSheet) ----
   const [missions, setMissions] = useState<Partial<Record<Tab, Mission>>>({});
   const [missionOpen, setMissionOpen] = useState(false);
 
@@ -605,7 +605,7 @@ export default function Crew() {
 
             <Pressable
               onPress={startMission}
-              accessibilityLabel={`${meta.agent}'s mission`}
+              accessibilityLabel={`Activate ${meta.agent}`}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -613,42 +613,21 @@ export default function Crew() {
                 gap: 6,
                 paddingVertical: 8,
                 borderCurve: "continuous", borderRadius: 8,
-                backgroundColor: missionDone ? `${tabColor}22` : tabColor,
-                overflow: "hidden",
+                backgroundColor: tabColor,
               }}
             >
-              {mission && !missionDone && (
-                <View
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    bottom: 0,
-                    height: 3,
-                    width: `${((mission.tasks.length - missionLeft) / Math.max(1, mission.tasks.length)) * 100}%`,
-                    backgroundColor: "rgba(0,0,0,0.35)",
-                  }}
-                />
-              )}
-              <MaterialCommunityIcons
-                name={missionDone ? "check-circle" : mission ? "play" : "play-circle"}
-                size={14}
-                color={missionDone ? tabColor : CANVAS}
-              />
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: "700",
-                  color: missionDone ? tabColor : CANVAS,
-                }}
-              >
-                {missionDone
-                  ? "Mission done · New mission"
-                  : mission
-                    ? `Continue · ${mission.tasks.length - missionLeft} of ${mission.tasks.length}`
-                    : preview.length > 0
-                      ? `Start mission · ${preview.length}`
-                      : "All clear · Check in"}
+              <MaterialCommunityIcons name="auto-fix" size={13} color={CANVAS} />
+              <Text style={{ fontSize: 12, fontWeight: "700", color: CANVAS }}>
+                {`Activate ${meta.agent}`}
               </Text>
+              {/* What the crew member has spotted, before it's activated or still left after. */}
+              {(mission && !missionDone ? missionLeft : mission ? 0 : preview.length) > 0 && (
+                <View style={{ minWidth: 18, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 9, backgroundColor: "rgba(0,0,0,0.25)", alignItems: "center" }}>
+                  <Text style={{ fontSize: 11, fontWeight: "800", color: CANVAS }}>
+                    {mission && !missionDone ? missionLeft : preview.length}
+                  </Text>
+                </View>
+              )}
             </Pressable>
 
             {tab === "organizer" && (
@@ -676,7 +655,7 @@ export default function Crew() {
                 <Text style={{ fontSize: 11, color: FAINT }}>
                   {sweep.status === "checking"
                     ? `Checking ${sweep.batchSize} items…`
-                    : `When on, a mission starts by checking up to ${SWEEP_BATCH} items (asks first · ${SWEEP_COST_PER_ITEM} credit each).`}
+                    : `When on, Activate also checks up to ${SWEEP_BATCH} items (asks first · ${SWEEP_COST_PER_ITEM} credit each).`}
                 </Text>
               </View>
             )}

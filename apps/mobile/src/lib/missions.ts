@@ -1,5 +1,5 @@
-// Crew missions: each crew member looks at the kitchen from its own job and proposes a few
-// concrete tasks the user can settle in one tap (Crew tab → Start mission). Everything here is
+// Crew missions: each crew member looks at the kitchen from its own job, decides what to do about
+// each thing it finds, and the user approves the whole plan with one press (Crew tab → Activate). Everything here is
 // computed on the phone from data the app already has, so a mission is instant and costs no
 // credits; the only paid step is Organizer's optional storage check, which asks first.
 //
@@ -10,7 +10,9 @@
 //   Organizer  - keep the inventory in order: food groups, storage spots.
 
 import {
+  guessFoodIcon,
   normalizeItemName,
+  nutritionCategoryForIcon,
   type FlatItem,
   type NutritionCategory,
   type Recipe,
@@ -222,4 +224,46 @@ export function isoDaysFromNow(n: number, now = new Date()): string {
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + n);
   const pad = (v: number) => String(v).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// ---- the crew's own decisions --------------------------------------------------
+
+/** The food group an item's icon (or its name's best icon) implies, with no AI and no credits. */
+export function localFoodGroup(item: Pick<FlatItem, "icon" | "name">): NutritionCategory | null {
+  return nutritionCategoryForIcon(item.icon) ?? nutritionCategoryForIcon(guessFoodIcon(item.name));
+}
+
+/**
+ * What the crew member decides to do about a task when activated, and whether that goes in the
+ * plan ticked. The rule: act on what's safe and reversible; leave anything destructive (clearing
+ * food), anything that costs credits, or anything that needs the user's judgement unticked.
+ * `action` null means there's no automatic action - the row only offers choices.
+ */
+export function defaultChoice(t: MissionTask, index: number): { action: string | null; ticked: boolean } {
+  switch (t.kind) {
+    case "rescue":
+      if (t.canFreeze) return { action: "freeze", ticked: true };
+      return { action: t.recipe ? "plan-tonight" : "plan-use-up", ticked: true };
+    case "expired":
+      return { action: "toss", ticked: false };
+    case "cook":
+      // The best dish goes on tonight's plan; the others stay as alternatives.
+      if (index > 0) return { action: "plan-tomorrow", ticked: false };
+      return { action: t.missing.length ? "plan-tonight-shop" : "plan-tonight", ticked: true };
+    case "ask-chef":
+      return { action: null, ticked: false };
+    case "list-have":
+      return { action: "remove", ticked: true };
+    case "running-low":
+    case "restock":
+      return { action: "add", ticked: true };
+    case "sort-group": {
+      const group = localFoodGroup(t.item);
+      return group ? { action: `group:${group}`, ticked: true } : { action: null, ticked: false };
+    }
+    case "check-storage":
+      return { action: "check", ticked: false }; // costs credits: the user opts in
+    case "move":
+      return { action: "move", ticked: true };
+  }
 }
