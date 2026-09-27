@@ -141,6 +141,20 @@ export const toCreatePayload = (d: Draft) => ({
 });
 
 
+/**
+ * The crew's guess for a draft's storage spot, date and food group (1 credit when the AI is
+ * needed; throws ApiError 402 when short). Only keys it actually has an answer for are returned.
+ */
+export async function suggestDraftDetails(d: Draft): Promise<Partial<Draft>> {
+  const s = await api.suggestItemDetails(d.name.trim(), d.icon);
+  return {
+    ...(s.feedback_token ? { suggested: { name: d.name.trim(), token: s.feedback_token } } : {}),
+    ...(s.location ? { location: s.location } : {}),
+    ...(s.shelf_life_days ? { expiryDate: isoInDays(s.shelf_life_days) } : {}),
+    ...(s.nutrition_category ? { category: s.nutrition_category } : {}),
+  };
+}
+
 export function useDraftItems(initial: () => Draft[]) {
   const { ensureSectionId } = useInventory();
   const [items, setItems] = useState<Draft[]>(initial);
@@ -171,17 +185,7 @@ export function useDraftItems(initial: () => Draft[]) {
     [],
   );
 
-  const suggest = useCallback(async (d: Draft) => {
-    const s = await api.suggestItemDetails(d.name.trim(), d.icon);
-    return {
-      suggested: s.feedback_token ? { name: d.name.trim(), token: s.feedback_token } : null,
-      ...(s.location ? { location: s.location } : {}),
-      ...(s.shelf_life_days
-        ? { expiryDate: isoInDays(s.shelf_life_days) }
-        : {}),
-      ...(s.nutrition_category ? { category: s.nutrition_category } : {}),
-    } satisfies Partial<Draft>;
-  }, []);
+  const suggest = useCallback(suggestDraftDetails, []);
 
   const fillOne = useCallback(
     async (d: Draft) => {

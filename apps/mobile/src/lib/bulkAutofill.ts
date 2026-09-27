@@ -1,4 +1,4 @@
-import { ApiError, type UpdateItemInput } from "@thatfridge/core";
+import { ApiError } from "@thatfridge/core";
 
 /**
  * Autofill for several items at once (Inventory → Select → Autofill). Each item is one call to
@@ -24,10 +24,10 @@ export interface BulkAutofillResult {
   stopped: "credits" | "throttled" | null;
 }
 
-export async function runBulkAutofill(
+export async function runBulkAutofill<F extends object>(
   ids: string[],
-  autofill: (id: string) => Promise<{ fields: Partial<UpdateItemInput> }>,
-  save: (id: string, fields: Partial<UpdateItemInput>) => Promise<void>,
+  autofill: (id: string) => Promise<{ fields: F }>,
+  save: (id: string, fields: F) => Promise<void> | void,
   onProgress?: (done: number) => void,
 ): Promise<BulkAutofillResult> {
   const result: BulkAutofillResult = { filled: 0, unchanged: 0, failed: 0, skipped: 0, stopped: null };

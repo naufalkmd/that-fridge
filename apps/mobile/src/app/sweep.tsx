@@ -47,7 +47,9 @@ import { useTheme } from "@/lib/theme";
 import { RADIUS } from "@/lib/tokens";
 import { PixelText } from "@/components/brand";
 import { FoodIcon } from "@/components/food-icon";
-import { ItemCard, blankDraft, isoInDays, toCreatePayload, useDraftItems, type Draft } from "@/components/draft-item";
+import { ItemCard, blankDraft, isoInDays, suggestDraftDetails, toCreatePayload, useDraftItems, type Draft } from "@/components/draft-item";
+import { AUTOFILL_BATCH, describeBulkAutofill, runBulkAutofill } from "@/lib/bulkAutofill";
+import { useCredits } from "@/lib/credits";
 import { BottomSheet } from "@/components/bottom-sheet";
 import {
   CREDITS_PER_SHOT,
@@ -145,6 +147,10 @@ export default function Sweep() {
   const [missingChoice, setMissingChoice] = useState<Record<string, MissingChoice>>({});
   // Row key -> the user's edited version of that item (from the edit sheet over the results).
   const [edits, setEdits] = useState<Record<string, Draft>>({});
+  // Rows the crew filled in with "Autofill all" (their drafts live in `edits` too).
+  const [filled, setFilled] = useState<Set<string>>(() => new Set());
+  const [filling, setFilling] = useState<{ done: number; total: number } | null>(null);
+  const { balance: credits, refresh: refreshCredits } = useCredits();
   const [editing, setEditing] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const outOfCreditsShown = useRef(false);
@@ -335,6 +341,57 @@ export default function Sweep() {
     ];
   }
 
+  // Ticked rows still missing a date or food group (barcode products usually arrive complete).
+  const needFill = results.rows.filter((r) => {
+    if (!isTicked(r)) return false;
+    const d = rowDraft(r);
+    return !d.expiryDate || !d.category;
+  });
+
+  /** Fill in storage spot, date and food group for every ticked item that's missing them, after asking. */
+  function autofillAll() {
+    if (filling) return;
+    const todo = needFill.slice(0, AUTOFILL_BATCH);
+    if (todo.length === 0) return;
+    const more = needFill.length > todo.length ? ` That's the first ${todo.length}; run it again for the rest.` : "";
+    Alert.alert(
+      `Autofill ${todo.length} item${todo.length === 1 ? "" : "s"}?`,
+      `The crew fills in the storage spot, date and food group. Up to ${todo.length} credit${todo.length === 1 ? "" : "s"}${credits !== null ? ` (you have ${credits})` : ""}.${more}`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Autofill",
+          onPress: async () => {
+            const byKey = new Map(todo.map((r) => [r.key, r]));
+            setFilling({ done: 0, total: todo.length });
+            const result = await runBulkAutofill(
+              todo.map((r) => r.key),
+              async (key) => ({ fields: await suggestDraftDetails(rowDraft(byKey.get(key)!)) }),
+              (key, fields) => {
+                setEdits((prev) => ({ ...prev, [key]: { ...(prev[key] ?? rowDraft(byKey.get(key)!)), ...fields } }));
+                setFilled((prev) => new Set(prev).add(key));
+              },
+              (done) => setFilling({ done, total: todo.length }),
+            );
+            setFilling(null);
+            void refreshCredits();
+            void Haptics.notificationAsync(
+              result.stopped || result.failed ? Haptics.NotificationFeedbackType.Warning : Haptics.NotificationFeedbackType.Success,
+            );
+            if (result.stopped === "credits") {
+              Alert.alert("Out of credits", describeBulkAutofill(result), [
+                { text: "OK", style: "cancel" },
+                { text: "Get credits", onPress: () => router.push("/credits") },
+              ]);
+            } else if (result.stopped || result.failed) {
+              Alert.alert("Autofill", describeBulkAutofill(result));
+            }
+          },
+        },
+      ],
+    );
+  }
+
   async function targetSectionId(): Promise<string> {
     const fridge = fridges.find((f) => f.id === fridgeId);
     if (!fridge) return ensureSectionId();
@@ -471,6 +528,10 @@ export default function Sweep() {
       onSave={save}
       onEditRow={(key) => setEditing(key)}
       edits={edits}
+      filled={filled}
+      onAutofillAll={autofillAll}
+      autofillCount={Math.min(needFill.length, AUTOFILL_BATCH)}
+      filling={filling}
       onClose={discardAndClose}
     />
     {editingRow && (
@@ -479,6 +540,11 @@ export default function Sweep() {
         draft={rowDraft(editingRow)}
         onDone={(d) => {
           setEdits((prev) => ({ ...prev, [editingRow.key]: d }));
+          setFilled((prev) => {
+            const next = new Set(prev);
+            next.delete(editingRow.key);
+            return next;
+          });
           // Editing something means you want it: tick it (an already-tracked row becomes a new batch).
           setTicks((prev) => ({ ...prev, [editingRow.key]: true }));
           setEditing(null);
@@ -1169,6 +1235,10 @@ function ResultsStage({
   onSave,
   onEditRow,
   edits,
+  filled,
+  onAutofillAll,
+  autofillCount,
+  filling,
   onClose,
 }: {
   shots: Shot[];
@@ -1193,6 +1263,11 @@ function ResultsStage({
   onSave: () => void;
   onEditRow: (key: string) => void;
   edits: Record<string, Draft>;
+  filled: Set<string>;
+  onAutofillAll: () => void;
+  /** Ticked items still missing details (capped at one run). */
+  autofillCount: number;
+  filling: { done: number; total: number } | null;
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
@@ -1321,7 +1396,22 @@ function ResultsStage({
 
         {(fresh.length > 0 || extras.length > 0) && (
           <View style={{ gap: 10 }}>
-            <Text style={sectionLabel}>New</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={sectionLabel}>New</Text>
+              {filling ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <ActivityIndicator size="small" color={accent} />
+                  <Text style={{ color: muted, fontSize: 12, fontWeight: "600" }}>
+                    Filling {filling.done} of {filling.total}…
+                  </Text>
+                </View>
+              ) : autofillCount > 0 ? (
+                <Pressable onPress={onAutofillAll} hitSlop={8} accessibilityLabel="Autofill all" style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: accent }}>
+                  <MaterialCommunityIcons name="auto-fix" size={13} color={accent} />
+                  <Text style={{ color: accent, fontSize: 12, fontWeight: "700" }}>Autofill all</Text>
+                </Pressable>
+              ) : null}
+            </View>
             {unsure > 0 && (
               <Text style={{ color: muted, fontSize: 12.5, lineHeight: 18 }}>
                 Tap anything the scan got wrong to leave it out. {unsure} marked ? {unsure === 1 ? "is" : "are"} worth a second look.
@@ -1329,7 +1419,7 @@ function ResultsStage({
             )}
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
               {fresh.map((r, i) => (
-                <RowTile key={r.key} r={r} i={i} on={isTicked(r)} tile={tile} shot={shotById.get(r.shotId) ?? null} onToggle={onToggle} edited={edits[r.key]} onEdit={() => onEditRow(r.key)} />
+                <RowTile key={r.key} r={r} i={i} on={isTicked(r)} tile={tile} shot={shotById.get(r.shotId) ?? null} onToggle={onToggle} edited={edits[r.key]} autofilled={filled.has(r.key)} onEdit={() => onEditRow(r.key)} />
               ))}
               {extras.map((x) => (
                 <Pressable key={x.key} onPress={() => onRemoveExtra(x.key)} accessibilityLabel={`Remove ${x.name}`} style={{ width: tile }}>
@@ -1375,7 +1465,7 @@ function ResultsStage({
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
               {known.map((r, i) => (
-                <RowTile key={r.key} r={r} i={i} on={isTicked(r)} tile={tile} shot={shotById.get(r.shotId) ?? null} onToggle={onToggle} edited={edits[r.key]} onEdit={() => onEditRow(r.key)} />
+                <RowTile key={r.key} r={r} i={i} on={isTicked(r)} tile={tile} shot={shotById.get(r.shotId) ?? null} onToggle={onToggle} edited={edits[r.key]} autofilled={filled.has(r.key)} onEdit={() => onEditRow(r.key)} />
               ))}
             </View>
           </View>
@@ -1478,6 +1568,7 @@ function RowTile({
   shot,
   onToggle,
   edited,
+  autofilled,
   onEdit,
 }: {
   r: ResultRow<FlatItem>;
@@ -1488,13 +1579,17 @@ function RowTile({
   onToggle: (r: ResultRow<FlatItem>) => void;
   /** The user's edited version, when they've changed it. */
   edited?: Draft;
+  /** Filled in by "Autofill all" rather than edited by hand. */
+  autofilled?: boolean;
   onEdit: () => void;
 }) {
   const { surface, surface2, hairline, ink, faint, accent, onAccent, warn } = useTheme().colors;
   const doubt = r.confidence < LOW_CONFIDENCE && !edited;
   const name = edited?.name.trim() || r.name;
   const qty = edited?.qty ?? r.qty;
-  const note = edited
+  const note = autofilled
+    ? "Filled in"
+    : edited
     ? "Edited"
     : r.space === "groceries"
       ? `→ ${LOCATION_LABEL[r.location]}`
