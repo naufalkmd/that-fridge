@@ -34,6 +34,7 @@ final class ApiUsageFeature
         'MealAutofillService' => 'Ask Chef (meal plan)',
         'RecipeLinkImportService' => 'Recipe link import',
         'IconGenerationService' => 'Icon generation',
+        'FoodVisualDescriber' => 'Icon description',
     ];
 
     /** The label a class name was logged under before it was listed here, for renaming old rows. */

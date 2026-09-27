@@ -49,7 +49,7 @@ class IconGenerationService
         'recipe' => 1,
     ];
 
-    public function __construct(protected FalClient $client) {}
+    public function __construct(protected FalClient $client, protected FoodVisualDescriber $describer) {}
 
     public function available(): bool
     {
@@ -65,7 +65,10 @@ class IconGenerationService
      */
     public function generateIcon(string $prompt, int $userId, string $kind = 'icon'): array
     {
-        $result = $this->client->generate($prompt.self::STYLE_SUFFIX);
+        // Describe the food first, so a dish from any cuisine is drawn as itself rather than as
+        // the image model's guess from the name; falls back to the name as typed.
+        $visual = $this->describer->describe($prompt) ?? $prompt;
+        $result = $this->client->generate($visual.self::STYLE_SUFFIX);
 
         if (! $result['ok']) {
             return $result;
