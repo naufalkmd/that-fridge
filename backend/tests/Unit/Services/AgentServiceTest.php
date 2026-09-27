@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services;
 
 use App\Services\AgentService;
+use App\Services\OpenRouterClient;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -453,5 +454,31 @@ class AgentServiceTest extends TestCase
         $result = app(AgentService::class)->tagRecipe('Something', [['name' => 'X', 'icon' => 'leftovers']], 20);
 
         $this->assertSame(['meal_type' => 'dinner', 'vibes' => [], 'food_focus' => ['balanced']], $result);
+    }
+
+    public function test_a_chat_turn_asks_for_prompt_caching_but_a_compact_tip_does_not(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response(['choices' => [['message' => ['content' => 'Make an omelette.']]]], 200)]);
+
+        app(AgentService::class)->chat('What should I cook?', 'Chef', 'Eggs');
+        Http::assertSent(fn ($request) => ($request['cache_control'] ?? null) === ['type' => 'ephemeral']);
+
+        Http::fake(['openrouter.ai/*' => Http::response(['choices' => [['message' => ['content' => 'Use the eggs.']]]], 200)]);
+        app(AgentService::class)->chat('hi', 'Guardian', null, null, true);
+        Http::assertSent(fn ($request) => ! isset($request['cache_control']));
+    }
+
+    public function test_other_calls_and_non_anthropic_models_never_send_the_cache_flag(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response(['choices' => [['message' => ['content' => 'ok']]]], 200)]);
+        $client = app(OpenRouterClient::class);
+
+        $client->complete([['role' => 'user', 'content' => 'hi']]);
+        $client->complete([['role' => 'user', 'content' => 'hi']], 100, 'google/gemini-2.5-flash', [], true);
+
+        Http::assertSentCount(2);
+        Http::assertNotSent(fn ($request) => isset($request['cache_control']));
     }
 }

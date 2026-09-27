@@ -40,8 +40,14 @@ class OpenRouterClient
      * raw assistant `message` and any `tool_calls` come back so the caller can run the
      * tool-use loop (see AgentService::chat). Callers that don't pass $tools can keep
      * reading just `content` as before.
+     *
+     * $cache turns on the provider's prompt caching (Anthropic models only): the long shared
+     * prefix - tools, system prompt, earlier turns - is read at a tenth of the price and much
+     * faster when the next call starts the same way within ~5 minutes. Worth it only for calls
+     * that repeat a long prefix (Quick Chat and its tool rounds); prompts under the model's
+     * minimum are simply not cached.
      */
-    public function complete(array $messages, int $maxTokens = 1000, string $model = 'anthropic/claude-haiku-4.5', array $tools = []): array
+    public function complete(array $messages, int $maxTokens = 1000, string $model = 'anthropic/claude-haiku-4.5', array $tools = [], bool $cache = false): array
     {
         if (! $this->available()) {
             return ['ok' => false, 'reason' => 'no_api_key'];
@@ -58,6 +64,11 @@ class OpenRouterClient
 
             if ($tools) {
                 $payload['tools'] = $tools;
+            }
+
+            if ($cache && str_starts_with($model, 'anthropic/')) {
+                // OpenRouter's automatic caching: it places the breakpoint at the end of the prefix.
+                $payload['cache_control'] = ['type' => 'ephemeral'];
             }
 
             $startedAt = microtime(true);

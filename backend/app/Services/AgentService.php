@@ -86,8 +86,9 @@ class AgentService
             // toolbox (list/add/remove items, notes, shopping, recipes). An attachment turn
             // skips tools - the vision/document path doesn't combine with tool-use here and
             // the model has what was attached.
+            // Compact tip-card calls are one-offs, so only full chat turns ask for prompt caching.
             $result = $hasAttachment || $compact
-                ? $this->client->complete($messages, $maxTokens)
+                ? $this->client->complete($messages, $maxTokens, cache: ! $compact)
                 : $this->runWithTools($messages, $maxTokens, $user, $fridgeId);
 
             if ($result['ok']) {
@@ -188,7 +189,8 @@ class AgentService
         for ($round = 0; $round <= self::MAX_TOOL_ROUNDS; $round++) {
             $offerTools = $round < self::MAX_TOOL_ROUNDS && $callCount < self::MAX_TOOL_CALLS;
 
-            $last = $this->client->complete($messages, $maxTokens, 'anthropic/claude-haiku-4.5', $offerTools ? $tools : []);
+            // Cached: every round resends the same tools + system prompt + transcript so far.
+            $last = $this->client->complete($messages, $maxTokens, 'anthropic/claude-haiku-4.5', $offerTools ? $tools : [], cache: true);
 
             if (! $last['ok']) {
                 return [...$last, 'mutated' => $mutated, 'tools_used' => $callCount > 0];
@@ -245,7 +247,7 @@ class AgentService
             'content' => 'Reply now in plain text based on what the tools returned. Do not call any more tools.',
         ];
 
-        $res = $this->client->complete($messages, $maxTokens, 'anthropic/claude-haiku-4.5');
+        $res = $this->client->complete($messages, $maxTokens, 'anthropic/claude-haiku-4.5', cache: true);
 
         return ($res['ok'] && trim((string) ($res['content'] ?? '')) !== '') ? $res : null;
     }
