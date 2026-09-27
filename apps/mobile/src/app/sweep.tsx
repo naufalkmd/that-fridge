@@ -47,7 +47,8 @@ import { useTheme } from "@/lib/theme";
 import { RADIUS } from "@/lib/tokens";
 import { PixelText } from "@/components/brand";
 import { FoodIcon } from "@/components/food-icon";
-import { blankDraft, isoInDays, stashDrafts, toCreatePayload, type Draft } from "@/components/draft-item";
+import { ItemCard, blankDraft, isoInDays, toCreatePayload, useDraftItems, type Draft } from "@/components/draft-item";
+import { BottomSheet } from "@/components/bottom-sheet";
 import {
   CREDITS_PER_SHOT,
   LOW_CONFIDENCE,
@@ -120,7 +121,7 @@ export default function Sweep() {
   const router = useRouter();
   const { categoryId, mode: modeParam } = useLocalSearchParams<{ categoryId?: string; mode?: string }>();
   const { fridges, items: inventory, ensureSectionId, addManyItems, refresh, lookupBarcode } = useInventory();
-  const { scope, setScope } = useScope();
+  const { scope } = useScope();
   const reduceMotion = useReducedMotion();
   const [permission, requestPermission] = useCameraPermissions();
   const [stage, setStage] = useState<Stage>("camera");
@@ -142,6 +143,9 @@ export default function Sweep() {
   // Row key -> ticked. Unset rows default to ticked when new, unticked when already tracked.
   const [ticks, setTicks] = useState<Record<string, boolean>>({});
   const [missingChoice, setMissingChoice] = useState<Record<string, MissingChoice>>({});
+  // Row key -> the user's edited version of that item (from the edit sheet over the results).
+  const [edits, setEdits] = useState<Record<string, Draft>>({});
+  const [editing, setEditing] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const outOfCreditsShown = useRef(false);
 
@@ -286,23 +290,29 @@ export default function Sweep() {
     ]);
   }
 
+  /** What a result row would be saved as - or the user's edited version of it. */
+  function rowDraft(r: ResultRow<FlatItem>): Draft {
+    return (
+      edits[r.key] ??
+      blankDraft({
+        name: r.name,
+        // parsed_name measures edits to what a scan proposed; a barcode product isn't a guess.
+        parsedName: r.source === "barcode" ? null : r.name,
+        icon: r.icon,
+        qty: r.qty,
+        condition: r.condition,
+        location: r.location,
+        category: r.category,
+        expiryDate: r.shelfLifeDays ? isoInDays(r.shelfLifeDays) : null,
+        categoryId: categoryId ?? null,
+        source: r.source,
+      })
+    );
+  }
+
   function toDrafts(): Draft[] {
     return [
-      ...toAdd.map((r) =>
-        blankDraft({
-          name: r.name,
-          // parsed_name measures edits to what a scan proposed; a barcode product isn't a guess.
-          parsedName: r.source === "barcode" ? null : r.name,
-          icon: r.icon,
-          qty: r.qty,
-          condition: r.condition,
-          location: r.location,
-          category: r.category,
-          expiryDate: r.shelfLifeDays ? isoInDays(r.shelfLifeDays) : null,
-          categoryId: categoryId ?? null,
-          source: r.source,
-        }),
-      ),
+      ...toAdd.map(rowDraft).filter((d) => d.name.trim()),
       ...unnamed
         .filter((u) => u.name.trim())
         .map((u) =>
@@ -372,20 +382,6 @@ export default function Sweep() {
     }
   }
 
-  async function editDetails() {
-    setSaving(true);
-    try {
-      // The add screen files new items under the scoped fridge, so point it at this scan's fridge.
-      if (fridgeId && scope !== fridgeId && fridges.length > 1) setScope(fridgeId);
-      const cleared = await clearMarked();
-      if (cleared.used + cleared.wasted > 0) await refresh();
-    } finally {
-      setSaving(false);
-    }
-    stashDrafts(toDrafts());
-    router.replace("/add?method=barcode-batch");
-  }
-
   if (isExpoGo) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center gap-4 bg-canvas p-6">
@@ -443,7 +439,10 @@ export default function Sweep() {
     return <RevealStage shots={shots} onFinish={() => setStage("grid")} />;
   }
 
+  const editingRow = editing ? results.rows.find((r) => r.key === editing) : undefined;
+
   return (
+    <>
     <ResultsStage
       shots={shots}
       rows={results.rows}
@@ -470,9 +469,28 @@ export default function Sweep() {
       canShootMore={shots.length < MAX_SHOTS}
       onShootMore={() => setStage("camera")}
       onSave={save}
-      onEdit={editDetails}
+      onEditRow={(key) => setEditing(key)}
+      edits={edits}
       onClose={discardAndClose}
     />
+    {editingRow && (
+      <EditRowSheet
+        key={editingRow.key}
+        draft={rowDraft(editingRow)}
+        onDone={(d) => {
+          setEdits((prev) => ({ ...prev, [editingRow.key]: d }));
+          // Editing something means you want it: tick it (an already-tracked row becomes a new batch).
+          setTicks((prev) => ({ ...prev, [editingRow.key]: true }));
+          setEditing(null);
+        }}
+        onRemove={() => {
+          setTicks((prev) => ({ ...prev, [editingRow.key]: false }));
+          setEditing(null);
+        }}
+        onCancel={() => setEditing(null)}
+      />
+    )}
+    </>
   );
 }
 
@@ -1149,7 +1167,8 @@ function ResultsStage({
   canShootMore,
   onShootMore,
   onSave,
-  onEdit,
+  onEditRow,
+  edits,
   onClose,
 }: {
   shots: Shot[];
@@ -1172,7 +1191,8 @@ function ResultsStage({
   canShootMore: boolean;
   onShootMore: () => void;
   onSave: () => void;
-  onEdit: () => void;
+  onEditRow: (key: string) => void;
+  edits: Record<string, Draft>;
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
@@ -1309,7 +1329,7 @@ function ResultsStage({
             )}
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
               {fresh.map((r, i) => (
-                <RowTile key={r.key} r={r} i={i} on={isTicked(r)} tile={tile} shot={shotById.get(r.shotId) ?? null} onToggle={onToggle} />
+                <RowTile key={r.key} r={r} i={i} on={isTicked(r)} tile={tile} shot={shotById.get(r.shotId) ?? null} onToggle={onToggle} edited={edits[r.key]} onEdit={() => onEditRow(r.key)} />
               ))}
               {extras.map((x) => (
                 <Pressable key={x.key} onPress={() => onRemoveExtra(x.key)} accessibilityLabel={`Remove ${x.name}`} style={{ width: tile }}>
@@ -1355,7 +1375,7 @@ function ResultsStage({
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
               {known.map((r, i) => (
-                <RowTile key={r.key} r={r} i={i} on={isTicked(r)} tile={tile} shot={shotById.get(r.shotId) ?? null} onToggle={onToggle} />
+                <RowTile key={r.key} r={r} i={i} on={isTicked(r)} tile={tile} shot={shotById.get(r.shotId) ?? null} onToggle={onToggle} edited={edits[r.key]} onEdit={() => onEditRow(r.key)} />
               ))}
             </View>
           </View>
@@ -1444,9 +1464,7 @@ function ResultsStage({
             <Text style={{ fontSize: 14, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, color: onAccent }}>{label}</Text>
           )}
         </Pressable>
-        <Pressable onPress={onEdit} disabled={saving || addCount === 0} hitSlop={6} style={{ alignItems: "center", paddingVertical: 4, opacity: addCount === 0 ? 0.5 : 1 }}>
-          <Text style={{ color: muted, fontSize: 12.5, fontWeight: "600" }}>Edit details before adding</Text>
-        </Pressable>
+<Text style={{ color: faint, fontSize: 11.5, textAlign: "center" }}>Tap ✎ on an item to change its name, amount or date.</Text>
       </View>
     </View>
   );
@@ -1459,6 +1477,8 @@ function RowTile({
   tile,
   shot,
   onToggle,
+  edited,
+  onEdit,
 }: {
   r: ResultRow<FlatItem>;
   i: number;
@@ -1466,11 +1486,17 @@ function RowTile({
   tile: number;
   shot: Shot | null;
   onToggle: (r: ResultRow<FlatItem>) => void;
+  /** The user's edited version, when they've changed it. */
+  edited?: Draft;
+  onEdit: () => void;
 }) {
   const { surface, surface2, hairline, ink, faint, accent, onAccent, warn } = useTheme().colors;
-  const doubt = r.confidence < LOW_CONFIDENCE;
-  const note =
-    r.space === "groceries"
+  const doubt = r.confidence < LOW_CONFIDENCE && !edited;
+  const name = edited?.name.trim() || r.name;
+  const qty = edited?.qty ?? r.qty;
+  const note = edited
+    ? "Edited"
+    : r.space === "groceries"
       ? `→ ${LOCATION_LABEL[r.location]}`
       : r.match
         ? `In ${LOCATION_LABEL[r.location].toLowerCase()}`
@@ -1486,7 +1512,7 @@ function RowTile({
         }}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: on }}
-        accessibilityLabel={r.name}
+        accessibilityLabel={name}
         style={{ width: tile, opacity: on ? 1 : 0.45 }}
       >
         <TileFace item={r.detection} shot={shot} size={tile} borderColor={!on ? hairline : doubt ? warn : accent} background={surface} />
@@ -1498,13 +1524,21 @@ function RowTile({
             <Text style={{ fontSize: 10, fontWeight: "800", color: onAccent }}>?</Text>
           </View>
         )}
-        {r.qty > 1 && (
+        {qty > 1 && (
           <View style={{ position: "absolute", top: tile - 26, right: 6, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: "rgba(0,0,0,0.6)" }}>
-            <Text style={{ fontSize: 11, fontWeight: "800", color: "white" }}>×{r.qty}</Text>
+            <Text style={{ fontSize: 11, fontWeight: "800", color: "white" }}>×{qty}</Text>
           </View>
         )}
+        <Pressable
+          onPress={onEdit}
+          hitSlop={8}
+          accessibilityLabel={`Edit ${name}`}
+          style={{ position: "absolute", top: tile - 30, left: 6, width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center" }}
+        >
+          <MaterialCommunityIcons name="pencil" size={13} color="white" />
+        </Pressable>
         <Text numberOfLines={1} style={{ color: on ? ink : faint, fontSize: 12.5, fontWeight: "600", marginTop: 6 }}>
-          {r.name}
+          {name}
         </Text>
         {note && (
           <Text numberOfLines={1} style={{ color: faint, fontSize: 11, marginTop: 1 }}>
@@ -1513,5 +1547,53 @@ function RowTile({
         )}
       </Pressable>
     </Animated.View>
+  );
+}
+
+/** Edit one scanned item over the results, with the same card the Add screen uses. Done keeps the
+ *  changes and returns to the grid; nothing leaves the scan. */
+function EditRowSheet({
+  draft,
+  onDone,
+  onRemove,
+  onCancel,
+}: {
+  draft: Draft;
+  onDone: (d: Draft) => void;
+  onRemove: () => void;
+  onCancel: () => void;
+}) {
+  const { height } = useWindowDimensions();
+  const { accent, onAccent } = useTheme().colors;
+  const store = useDraftItems(() => [draft]);
+  const d = store.items[0];
+  useEffect(() => {
+    store.refetchLibrary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  if (!d) return null;
+  return (
+    <BottomSheet visible onClose={onCancel} maxHeight={Math.round(height * 0.85)}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 8 }}>
+        <ItemCard
+          item={d}
+          onChange={(p) => store.set(d.id, p)}
+          onRemove={onRemove}
+          onAutoFill={() => store.fillOne(d)}
+          autoFilling={store.fillingId === d.id}
+          onScanDate={() => store.scanDate(d)}
+          scanningDate={store.scanningDateId === d.id}
+          library={store.library}
+          refetchLibrary={store.refetchLibrary}
+        />
+      </ScrollView>
+      <Pressable
+        onPress={() => onDone(d)}
+        disabled={!d.name.trim()}
+        style={{ marginTop: 10, alignItems: "center", paddingVertical: 14, borderRadius: RADIUS.sm, borderCurve: "continuous", backgroundColor: accent, opacity: d.name.trim() ? 1 : 0.5 }}
+      >
+        <Text style={{ fontSize: 14, fontWeight: "700", color: onAccent }}>Done</Text>
+      </Pressable>
+    </BottomSheet>
   );
 }
