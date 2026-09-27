@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -15,7 +15,9 @@ import { useTheme } from "@/lib/theme";
 import { getDeviceTimezone } from "@/lib/timezone";
 import { useToast } from "@/lib/toast";
 import { BottomSheet } from "@/components/bottom-sheet";
-import { PageHeader, SkeletonList } from "@/components/ui";
+import { PixelText } from "@/components/brand";
+import { FoodIcon } from "@/components/food-icon";
+import { SkeletonList } from "@/components/ui";
 
 let lastBrowse: { featured: ExploreItem[]; items: ExploreItem[] } | null = null;
 
@@ -128,38 +130,53 @@ export default function Explore() {
 
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-      <PageHeader title="Explore" subtitle="Recipes, Machines, meal plans and food icons" />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48, gap: 14 }} keyboardShouldPersistTaps="handled">
-        <View
-          style={{
-            flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, height: 44, borderRadius: 10,
-            backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline,
-          }}
-        >
-          <Ionicons name="search" size={18} color={colors.faint} />
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search recipes, Machines, plans, icons"
-            placeholderTextColor={colors.faint}
-            accessibilityLabel="Search Explore"
-            autoCorrect={false}
-            returnKeyType="search"
-            style={{ flex: 1, fontSize: 14.5, color: colors.ink }}
-          />
-          {query !== "" && (
-            <Pressable onPress={() => setQuery("")} hitSlop={8} accessibilityLabel="Clear search">
-              <Ionicons name="close-circle" size={18} color={colors.faint} />
-            </Pressable>
-          )}
-        </View>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 48, gap: 22 }} keyboardShouldPersistTaps="handled">
+        <View style={{ gap: 14 }}>
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+            style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2 }}
+          >
+            <Ionicons name="chevron-back" size={18} color={colors.ink} />
+          </Pressable>
+          <View style={{ gap: 4 }}>
+            <PixelText style={{ fontSize: 22, color: colors.ink }}>Explore</PixelText>
+            <Text style={{ fontSize: 12.5, color: colors.muted }}>Recipes, Machines, meal plans and food icons</Text>
+          </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          <Chip label="All" active={type === null} onPress={() => setType(null)} />
-          {EXPLORE_TYPES.map((t) => (
-            <Chip key={t.key} label={t.label} active={type === t.key} onPress={() => setType(t.key)} />
-          ))}
-        </ScrollView>
+          <View
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, height: 42, borderRadius: 13,
+              backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline,
+            }}
+          >
+            <Ionicons name="search" size={15} color={colors.faint} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search recipes, Machines, plans, icons"
+              placeholderTextColor={colors.faint}
+              accessibilityLabel="Search Explore"
+              autoCorrect={false}
+              returnKeyType="search"
+              style={{ flex: 1, fontSize: 13, color: colors.ink }}
+            />
+            {query !== "" && (
+              <Pressable onPress={() => setQuery("")} hitSlop={8} accessibilityLabel="Clear search">
+                <Ionicons name="close-circle" size={16} color={colors.faint} />
+              </Pressable>
+            )}
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: 16 }} style={{ marginHorizontal: -16 }}>
+            <Chip label="All" active={type === null} onPress={() => setType(null)} />
+            {EXPLORE_TYPES.map((t) => (
+              <Chip key={t.key} label={t.label} active={type === t.key} onPress={() => setType(t.key)} />
+            ))}
+          </ScrollView>
+        </View>
 
         {error && (
           <Pressable onPress={() => setReload((n) => n + 1)}>
@@ -175,18 +192,18 @@ export default function Explore() {
         )}
 
         {browsing && featured.length > 0 && (
-          <View>
+          <View style={{ gap: 10 }}>
             <Heading>Featured</Heading>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
               {featured.map((item) => (
-                <FeaturedCard key={item.id} item={item} onPress={() => setOpen(item)} />
+                <FeaturedCard key={item.id} item={item} wide={featured.length === 1} onPress={() => setOpen(item)} />
               ))}
             </ScrollView>
           </View>
         )}
 
         {q !== "" && items.length > 0 && (
-          <Text style={{ fontSize: 12, color: colors.faint }}>
+          <Text style={{ fontSize: 12, color: colors.faint, marginBottom: -10 }}>
             {items.length} result{items.length === 1 ? "" : "s"}
           </Text>
         )}
@@ -195,23 +212,35 @@ export default function Explore() {
           const meta = typeMeta(section.type);
           const shown = browsing ? section.items.slice(0, PREVIEW) : section.items;
           return (
-            <View key={section.type}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View key={section.type} style={{ gap: 10 }}>
+              <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" }}>
                 <Heading>{meta.label}</Heading>
                 {browsing && section.items.length > PREVIEW && (
                   <Pressable onPress={() => setType(section.type)} hitSlop={8} accessibilityLabel={`See all ${meta.label}`}>
-                    <Text style={{ fontSize: 12.5, fontWeight: "700", color: colors.accent }}>See all ›</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: colors.accent }}>See all</Text>
                   </Pressable>
                 )}
               </View>
               {section.type === "icon" ? (
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                   {shown.map((item) => (
                     <IconTile key={item.id} item={item} onPress={() => setOpen(item)} />
                   ))}
                 </View>
+              ) : section.type === "recipe" && browsing ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {shown.map((item) => (
+                    <RecipeCard key={item.id} item={item} onPress={() => setOpen(item)} />
+                  ))}
+                </ScrollView>
+              ) : section.type === "meal_plan" ? (
+                <View style={{ gap: 8 }}>
+                  {shown.map((item) => (
+                    <MealPlanCard key={item.id} item={item} onPress={() => setOpen(item)} />
+                  ))}
+                </View>
               ) : (
-                <View style={{ borderRadius: 10, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, overflow: "hidden" }}>
+                <View style={{ borderRadius: 18, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, overflow: "hidden" }}>
                   {shown.map((item, i) => (
                     <ItemRow key={item.id} item={item} last={i === shown.length - 1} onPress={() => setOpen(item)} />
                   ))}
@@ -235,9 +264,14 @@ export default function Explore() {
   );
 }
 
+/** Small uppercase section label (the text stays in its normal case; only the style upper-cases it). */
 function Heading({ children }: { children: string }) {
   const { colors } = useTheme();
-  return <Text style={{ fontSize: 14, fontWeight: "800", color: colors.ink, marginBottom: 8 }}>{children}</Text>;
+  return (
+    <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 1.5, textTransform: "uppercase", color: colors.muted }}>
+      {children}
+    </Text>
+  );
 }
 
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
@@ -247,13 +281,37 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      style={{
-        paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, borderWidth: 1,
-        backgroundColor: active ? `${colors.accent}26` : colors.surface2, borderColor: active ? colors.accent : colors.hairline,
-      }}
+      style={{ height: 32, paddingHorizontal: 12, borderRadius: 10, justifyContent: "center", backgroundColor: active ? colors.accent : colors.surface2 }}
     >
-      <Text style={{ fontSize: 12.5, fontWeight: "700", color: active ? colors.accent : colors.muted }}>{label}</Text>
+      <Text style={{ fontSize: 12, fontWeight: active ? "700" : "600", color: active ? colors.onAccent : colors.muted }}>{label}</Text>
     </Pressable>
+  );
+}
+
+// Each library keeps one quiet colour: a tint behind its artwork, the glyph in the full colour.
+const MACHINE_PURPLE = "#a855f7";
+function typeColor(type: ExploreType, colors: ReturnType<typeof useTheme>["colors"]): string {
+  if (type === "recipe") return colors.warn;
+  if (type === "machine") return MACHINE_PURPLE;
+  if (type === "meal_plan") return colors.blue;
+  return colors.good;
+}
+
+/** An item's artwork on a tinted square: the recipe's food icon, the icon's picture, else the library's glyph. */
+function Art({ item, size, radius }: { item: ExploreItem; size: number; radius: number }) {
+  const { colors } = useTheme();
+  const tint = typeColor(item.type, colors);
+  const meta = typeMeta(item.type);
+  return (
+    <View style={{ width: size, height: size, borderRadius: radius, alignItems: "center", justifyContent: "center", backgroundColor: `${tint}24` }}>
+      {item.type === "recipe" ? (
+        <FoodIcon icon={item.recipe?.icon} iconUrl={item.recipe?.iconUrl} name={item.title} size={Math.round(size * 0.78)} />
+      ) : item.type === "icon" && item.imageUrl ? (
+        <Image source={{ uri: item.imageUrl }} style={{ width: size * 0.62, height: size * 0.62 }} resizeMode="contain" />
+      ) : (
+        <Ionicons name={meta.icon as never} size={Math.round(size * 0.46)} color={tint} />
+      )}
+    </View>
   );
 }
 
@@ -277,14 +335,68 @@ function ItemRow({ item, last, onPress }: { item: ExploreItem; last: boolean; on
       accessibilityLabel={`${meta.singular}: ${item.title}`}
       style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.hairline }}
     >
-      <View style={{ width: 34, height: 34, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: `${colors.accent}1f` }}>
-        <Ionicons name={meta.icon as never} size={18} color={colors.accent} />
+      <Art item={item} size={36} radius={11} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: colors.ink }} numberOfLines={1}>{item.title}</Text>
+        {facts(item) !== "" && <Text style={{ fontSize: 11.5, color: colors.muted }} numberOfLines={1}>{facts(item)}</Text>}
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, fontWeight: "700", color: colors.ink }} numberOfLines={1}>{item.title}</Text>
-        {facts(item) !== "" && <Text style={{ fontSize: 12, color: colors.faint, marginTop: 1 }} numberOfLines={1}>{facts(item)}</Text>}
+      <Ionicons name="chevron-forward" size={14} color={colors.faint} />
+    </Pressable>
+  );
+}
+
+/** Browse view: a recipe as a small card in a sideways row. */
+function RecipeCard({ item, onPress }: { item: ExploreItem; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Recipe: ${item.title}`}
+      style={{ width: 140, padding: 12, gap: 10, borderRadius: 18, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}
+    >
+      <Art item={item} size={44} radius={14} />
+      <View style={{ gap: 3 }}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: colors.ink }} numberOfLines={2}>{item.title}</Text>
+        {facts(item) !== "" && <Text style={{ fontSize: 11, color: colors.muted }} numberOfLines={1}>{facts(item)}</Text>}
       </View>
-      <Ionicons name="chevron-forward" size={16} color={colors.faint} />
+    </Pressable>
+  );
+}
+
+/** A meal plan with its first few days, so you can see what's in it before opening. */
+function MealPlanCard({ item, onPress }: { item: ExploreItem; onPress: () => void }) {
+  const { colors } = useTheme();
+  const days = planDays(item);
+  const preview = days.slice(0, 3);
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Meal plan: ${item.title}`}
+      style={{ padding: 14, gap: 12, borderRadius: 18, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <Art item={item} size={36} radius={11} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={{ fontSize: 13, fontWeight: "700", color: colors.ink }} numberOfLines={1}>{item.title}</Text>
+          <Text style={{ fontSize: 11.5, color: colors.muted }} numberOfLines={1}>{facts(item)}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={14} color={colors.faint} />
+      </View>
+      {preview.length > 0 && (
+        <View style={{ gap: 6 }}>
+          {preview.map((d, i) => (
+            <View key={i} style={{ flexDirection: "row", gap: 10 }}>
+              <Text style={{ width: 44, fontSize: 12, color: colors.faint }}>Day {d.day + 1}</Text>
+              <Text style={{ flex: 1, fontSize: 12, color: colors.ink }} numberOfLines={1}>{d.slot} · {d.title}</Text>
+            </View>
+          ))}
+          {days.length > preview.length && (
+            <Text style={{ fontSize: 11.5, color: colors.faint }}>+ {days.length - preview.length} more</Text>
+          )}
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -296,32 +408,43 @@ function IconTile({ item, onPress }: { item: ExploreItem; onPress: () => void })
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Food icon: ${item.title}`}
-      style={{ width: 92, alignItems: "center", gap: 6, padding: 8, borderRadius: 10, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}
+      style={{ width: 50, height: 50, borderRadius: 13, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }}
     >
-      {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={{ width: 56, height: 56 }} resizeMode="contain" /> : <View style={{ width: 56, height: 56 }} />}
-      <Text style={{ fontSize: 11.5, color: colors.muted }} numberOfLines={1}>{item.title}</Text>
+      {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={{ width: 30, height: 30 }} resizeMode="contain" /> : null}
     </Pressable>
   );
 }
 
-function FeaturedCard({ item, onPress }: { item: ExploreItem; onPress: () => void }) {
-  const { colors } = useTheme();
+function FeaturedCard({ item, wide, onPress }: { item: ExploreItem; wide: boolean; onPress: () => void }) {
+  const { colors, width } = useFeaturedWidth(wide);
   const meta = typeMeta(item.type);
+  const tint = typeColor(item.type, colors);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Featured ${meta.singular}: ${item.title}`}
-      style={{ width: 200, padding: 14, borderRadius: 10, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, gap: 6 }}
+      style={{ width, padding: 16, flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 18, borderWidth: 1, borderColor: `${tint}40`, backgroundColor: colors.surface, overflow: "hidden" }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        <Ionicons name={meta.icon as never} size={14} color={colors.accent} />
-        <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.4, color: colors.accent }}>{meta.singular.toUpperCase()}</Text>
+      <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "55%", backgroundColor: `${tint}10` }} />
+      <View style={{ flex: 1, gap: 6 }}>
+        <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 1.5, color: tint }}>FEATURED {meta.singular.toUpperCase()}</Text>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: colors.ink }} numberOfLines={2}>{item.title}</Text>
+        {facts(item) !== "" && <Text style={{ fontSize: 12, color: colors.muted }} numberOfLines={2}>{facts(item)}</Text>}
+        <View style={{ alignSelf: "flex-start", marginTop: 4, height: 30, paddingHorizontal: 12, borderRadius: 10, justifyContent: "center", backgroundColor: colors.accent }}>
+          <Text style={{ fontSize: 12, fontWeight: "700", color: colors.onAccent }}>View</Text>
+        </View>
       </View>
-      <Text style={{ fontSize: 15, fontWeight: "800", color: colors.ink }} numberOfLines={2}>{item.title}</Text>
-      <Text style={{ fontSize: 12, color: colors.faint }} numberOfLines={2}>{facts(item)}</Text>
+      <Art item={item} size={72} radius={20} />
     </Pressable>
   );
+}
+
+/** One featured item fills the row; several share it as a sideways scroll with the next one peeking in. */
+function useFeaturedWidth(wide: boolean) {
+  const { colors } = useTheme();
+  const { width: screen } = useWindowDimensions();
+  return { colors, width: wide ? screen - 32 : Math.min(300, screen - 64) };
 }
 
 const TAKE_LABEL: Record<ExploreType, string> = {
@@ -337,13 +460,18 @@ function Detail({ item, working, onTake }: { item: ExploreItem; working: boolean
   const steps = item.type === "machine" ? ((item.payload as { steps?: { tool: string }[] } | null)?.steps ?? []).length : 0;
   return (
     <View style={{ padding: 20, gap: 12 }}>
-      <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 0.4, color: colors.accent }}>{meta.singular.toUpperCase()}</Text>
-      <Text style={{ fontSize: 20, fontWeight: "800", color: colors.ink }}>{item.title}</Text>
-      {item.blurb ? <Text style={{ fontSize: 13.5, lineHeight: 20, color: colors.muted }}>{item.blurb}</Text> : null}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        {item.type !== "icon" && <Art item={item} size={48} radius={15} />}
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 1.5, color: typeColor(item.type, colors) }}>{meta.singular.toUpperCase()}</Text>
+          <Text style={{ fontSize: 18, fontWeight: "700", color: colors.ink }}>{item.title}</Text>
+        </View>
+      </View>
+      {item.blurb ? <Text style={{ fontSize: 13, lineHeight: 19, color: colors.muted }}>{item.blurb}</Text> : null}
 
       {item.type === "icon" && item.imageUrl && (
-        <View style={{ alignItems: "center", padding: 16, borderRadius: 10, backgroundColor: colors.surface2 }}>
-          <Image source={{ uri: item.imageUrl }} style={{ width: 120, height: 120 }} resizeMode="contain" />
+        <View style={{ alignItems: "center", padding: 16, borderRadius: 18, backgroundColor: colors.surface2 }}>
+          <Image source={{ uri: item.imageUrl }} style={{ width: 96, height: 96 }} resizeMode="contain" />
         </View>
       )}
       {item.type === "recipe" && item.recipe && (
@@ -369,7 +497,7 @@ function Detail({ item, working, onTake }: { item: ExploreItem; working: boolean
       {item.tags.length > 0 && (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
           {item.tags.slice(0, 8).map((t) => (
-            <View key={t} style={{ paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999, backgroundColor: colors.surface2 }}>
+            <View key={t} style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 7, backgroundColor: colors.surface2 }}>
               <Text style={{ fontSize: 11, color: colors.muted }}>{t}</Text>
             </View>
           ))}
@@ -385,9 +513,9 @@ function Detail({ item, working, onTake }: { item: ExploreItem; working: boolean
           onPress={onTake}
           disabled={working}
           accessibilityRole="button"
-          style={{ height: 48, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent, opacity: working ? 0.6 : 1, marginTop: 4 }}
+          style={{ height: 46, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent, opacity: working ? 0.6 : 1, marginTop: 4 }}
         >
-          {working ? <ActivityIndicator color={colors.onAccent} /> : <Text style={{ fontSize: 15, fontWeight: "800", color: colors.onAccent }}>{TAKE_LABEL[item.type]}</Text>}
+          {working ? <ActivityIndicator color={colors.onAccent} /> : <Text style={{ fontSize: 14, fontWeight: "700", color: colors.onAccent }}>{TAKE_LABEL[item.type]}</Text>}
         </Pressable>
       )}
     </View>

@@ -335,6 +335,17 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
 
 ## Reference
 
+### Design & marketing assets
+
+All on one Claude design canvas, "ThatFridge Designs": https://claude.ai/artifact/E5hV6eecztzE8VDJDQess7
+(private until shared from its Share menu; export PNGs from Share › Export).
+
+- **Instagram posts** (top row): two 1080×1350 posts in the dark neon pixel theme: **First post** ("Hello, kitchen."
+  intro + kitchen crew) and the **1.3.3 update** ("Your fridge just got smarter.").
+- **App redesign, "Neon Calm"** (second row): minimal mockups of Home, Inventory, Chat, Crew, Explore, Item page,
+  Meal plan, Insights and Profile. Plain dark cards, colour only for status and agent identity, PixelMix only for
+  titles and numbers, smaller icons. Not yet built in `apps/mobile`.
+
 ### Cost tracker (all USD, approximate)
 
 | Item                                                          | Cost         | Status                                           |
