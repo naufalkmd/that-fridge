@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Item;
 use App\Models\User;
+use App\Support\ChatProgress;
 use App\Support\CustomFieldValue;
 use App\Support\FoodGroupClassifier;
 use App\Support\ItemPayload;
@@ -218,6 +219,8 @@ class AgentService
 
             foreach ($calls as $call) {
                 $callCount++;
+                $args = json_decode($call['function']['arguments'] ?? '{}', true);
+                app(ChatProgress::class)->step(ChatProgress::label($call['function']['name'] ?? '', is_array($args) ? $args : []));
                 [$content, $didMutate] = $this->runToolCall($call, $fetches, $callCount, $user, $fridgeId);
                 $mutated = $mutated || $didMutate;
                 $messages[] = [
@@ -226,6 +229,7 @@ class AgentService
                     'content' => $content,
                 ];
             }
+            app(ChatProgress::class)->step('Writing the answer');
         }
 
         // Ran out of rounds with the model still wanting tools - force a final plain-text

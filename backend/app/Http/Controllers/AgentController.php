@@ -7,6 +7,7 @@ use App\Services\AgentService;
 use App\Services\ChatContextService;
 use App\Services\CreditService;
 use App\Support\AlgoFeedback;
+use App\Support\ChatProgress;
 use App\Support\CreditCost;
 use App\Support\ItemSuggestionToken;
 use Illuminate\Http\Request;
@@ -293,6 +294,12 @@ class AgentController extends Controller
             ? $contextService->render($request->user(), $request->input('contexts'), $request->input('tz') ?: 'UTC')
             : '';
 
+        // Live status for the app to poll while it waits (GET /chat/progress/{turn}).
+        $progress = app(ChatProgress::class);
+        if (! $compact) {
+            $progress->begin($request->user()->id, $request->input('turn_id'));
+        }
+
         $result = $this->agentService->chat(
             $request->input('message'),
             $request->input('agent'),
@@ -308,6 +315,7 @@ class AgentController extends Controller
             $request->input('fridge_id') ? (int) $request->input('fridge_id') : null,
             $contextBlock,
         );
+        $progress->end();
 
         if (! $result) {
             if (! $compact) {
@@ -367,6 +375,12 @@ class AgentController extends Controller
             'mutated' => $result['mutated'] ?? false,
             'credits' => $this->credits->balance($request->user()),
         ], 200);
+    }
+
+    /** What the crew is doing right now on a turn the app is waiting for; null once it's done or unknown. */
+    public function progress(Request $request, string $turn)
+    {
+        return response()->json(['status' => ChatProgress::read($request->user()->id, $turn)]);
     }
 
     /**

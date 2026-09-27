@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Support\ChatProgress;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -14,7 +15,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Per request: a Quick Chat turn's live status (see ChatProgress).
+        $this->app->scoped(ChatProgress::class);
     }
 
     /**

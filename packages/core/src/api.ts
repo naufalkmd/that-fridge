@@ -564,6 +564,8 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       contexts?: ChatContextRef[];
       /** The device timezone, so a "day" context lands on the local day. */
       tz?: string;
+      /** A random id for this turn: poll `chatProgress(turnId)` while waiting to show what the crew is doing. */
+      turnId?: string;
     } = {},
   ): Promise<SendChatResult> {
     if ((opts.images?.length || opts.pdf) && typeof FormData !== "undefined") {
@@ -576,6 +578,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       if (opts.fridgeId) fd.append("fridge_id", opts.fridgeId);
       if (opts.contexts?.length) fd.append("contexts", JSON.stringify(opts.contexts));
       if (opts.tz) fd.append("tz", opts.tz);
+      if (opts.turnId) fd.append("turn_id", opts.turnId);
       opts.images?.forEach((image, i) => fd.append("images[]", image as never, `photo${i}.jpg`));
       if (opts.pdf) fd.append("pdf", opts.pdf.blob as never, opts.pdf.name);
       return http.post<SendChatResult>("/chat", fd);
@@ -589,7 +592,13 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       fridge_id: opts.fridgeId || undefined,
       contexts: opts.contexts?.length ? opts.contexts : undefined,
       tz: opts.tz || undefined,
+      turn_id: opts.turnId || undefined,
     });
+  }
+
+  /** What the crew is doing on a turn still in flight ("Adding eggs to your list"); null when done or unknown. */
+  function chatProgress(turnId: string): Promise<{ status: string | null }> {
+    return http.get(`/chat/progress/${encodeURIComponent(turnId)}`);
   }
 
   function rateChatReply(
@@ -1271,6 +1280,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     getChatHistory,
     sendChat,
     rateChatReply,
+    chatProgress,
     listFridges,
     createFridge,
     createSection,

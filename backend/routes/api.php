@@ -114,6 +114,8 @@ Route::middleware('auth:sanctum')->group(function () {
         // Same reasoning as /icons/generate's throttle - protects against a script hammering
         // the endpoint directly, not meant to replace the client-side weekly quota (chatQuota.ts).
         Route::middleware('throttle:15,1')->post('/', [AgentController::class, 'send']);
+        // Polled about once a second while a reply is on its way - a cache read, no model call.
+        Route::middleware('throttle:120,1')->get('/progress/{turn}', [AgentController::class, 'progress']);
         Route::patch('/{chatHistory}/feedback', [AgentController::class, 'rateReply']);
         Route::get('/sessions', [AgentController::class, 'sessions']);
         Route::get('/sessions/{sessionId}', [AgentController::class, 'sessionMessages']);

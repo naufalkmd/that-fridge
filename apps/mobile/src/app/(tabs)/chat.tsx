@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import Reanimated, { FadeIn } from "react-native-reanimated";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   SafeAreaView,
@@ -159,6 +160,8 @@ export default function Chat() {
   }, [contextDay]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  // What the crew is doing while a reply is on its way ("Checking your fridge"), polled from the server.
+  const [status, setStatus] = useState<{ agent: string; text: string } | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [attachOpen, setAttachOpen] = useState(false);
   const [contexts, setContexts] = useState<ChatContext[]>([]);
@@ -323,6 +326,19 @@ export default function Chat() {
         : pending.length > 0
           ? "What do you see in this photo?"
           : "What should I know about this?");
+    const agent = routeChatAgent(messageForApi);
+    const turnId = `t${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
+    // Ask what the crew is doing about once a second until the reply lands. A missed poll just
+    // keeps the last status; the plain dots show until the first answer.
+    let waiting = true;
+    const poll = setInterval(() => {
+      api
+        .chatProgress(turnId)
+        .then((r) => {
+          if (waiting && r.status) setStatus({ agent, text: r.status });
+        })
+        .catch(() => {});
+    }, 900);
     try {
       // Expo's fetch/FormData implementation needs a real Blob for a file part - it doesn't
       // support React Native's classic { uri, name, type } placeholder object, despite the
@@ -340,8 +356,9 @@ export default function Chat() {
         : undefined;
       const res = await api.sendChat(
         messageForApi,
-        routeChatAgent(messageForApi),
+        agent,
         {
+          turnId,
           inventory: inventorySummary,
           sessionId,
           fridgeId: scope === "all" ? undefined : scope,
@@ -389,6 +406,9 @@ export default function Chat() {
         },
       ]);
     } finally {
+      waiting = false;
+      clearInterval(poll);
+      setStatus(null);
       setSending(false);
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     }
@@ -496,7 +516,7 @@ export default function Chat() {
                 )}
               </>
             )}
-            {sending && <TypingDots />}
+            {sending && <TypingDots status={status} />}
           </ScrollView>
 
           <View
@@ -892,7 +912,12 @@ function Dot({ delay }: { delay: number }) {
   );
 }
 
-function TypingDots() {
+/** "Chef is checking your fridge…" from the server's status, lower-casing its first letter. */
+function statusLine(s: { agent: string; text: string }): string {
+  return `${s.agent} is ${s.text.charAt(0).toLowerCase()}${s.text.slice(1)}…`;
+}
+
+function TypingDots({ status }: { status?: { agent: string; text: string } | null }) {
   const { colors } = useTheme();
   return (
     <View
@@ -915,6 +940,16 @@ function TypingDots() {
       <Dot delay={0} />
       <Dot delay={150} />
       <Dot delay={300} />
+      {status && (
+        <Reanimated.Text
+          key={status.text}
+          entering={FadeIn.duration(200)}
+          numberOfLines={1}
+          style={{ marginLeft: 6, maxWidth: 240, fontSize: 12.5, color: colors.muted }}
+        >
+          {statusLine(status)}
+        </Reanimated.Text>
+      )}
     </View>
   );
 }
