@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   LayoutAnimation,
   LayoutRectangle,
@@ -52,6 +53,9 @@ import { useTheme } from "@/lib/theme";
 import { useToast } from "@/lib/toast";
 import { useKitchenScore } from "@/lib/kitchenScore";
 import { summarizeRemovals } from "@/lib/removalSummary";
+import { api } from "@/lib/api";
+import { useCredits } from "@/lib/credits";
+import { AUTOFILL_BATCH, describeBulkAutofill, runBulkAutofill } from "@/lib/bulkAutofill";
 
 const UNCATEGORIZED = "__uncat__";
 
@@ -69,7 +73,8 @@ const SORT_OPTIONS: { key: Sort; label: string }[] = [
 export default function Inventory() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { items, loading, error, refresh, removeManyItems, undoRemoval } = useInventory();
+  const { items, loading, error, refresh, removeManyItems, undoRemoval, patchItem } = useInventory();
+  const { balance: credits, refresh: refreshCredits } = useCredits();
   const toast = useToast();
   const { refresh: refreshScore } = useKitchenScore();
   const { categories, assign } = useCategories();
@@ -95,6 +100,8 @@ export default function Inventory() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [selectMode, setSelectMode] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+  // Bulk autofill progress, while it runs.
+  const [filling, setFilling] = useState<{ done: number; total: number } | null>(null);
   const selecting = selectMode || selected.size > 0;
   // Same-name items collapse into one row by default (see buildRowDescriptors) - this is
   // just which collapsed groups the user has opened back up, keyed by normalizeItemName.
@@ -373,6 +380,46 @@ export default function Inventory() {
     } catch {
       /* assign() rolls nothing back locally; refresh on next load */
     }
+  }
+
+  /** Fill in what's missing on the selected items (shelf life, food group, calories...), after asking. */
+  function autofillSelected() {
+    if (filling) return;
+    const all = [...selected];
+    const ids = all.slice(0, AUTOFILL_BATCH);
+    if (ids.length === 0) return;
+    const more = all.length > ids.length ? ` That's the first ${ids.length}; autofill again for the rest.` : "";
+    Alert.alert(
+      `Autofill ${ids.length} item${ids.length === 1 ? "" : "s"}?`,
+      `The crew fills in anything missing: shelf life, food group, calories, weight. Up to ${ids.length} credit${ids.length === 1 ? "" : "s"}, only for items that need it${credits !== null ? ` (you have ${credits})` : ""}.${more}`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Autofill",
+          onPress: async () => {
+            setSelected(new Set(all.slice(ids.length)));
+            if (all.length <= ids.length) setSelectMode(false);
+            setFilling({ done: 0, total: ids.length });
+            const result = await runBulkAutofill(
+              ids,
+              (id) => api.autofillItem(id),
+              (id, fields) => patchItem(id, fields),
+              (done) => setFilling({ done, total: ids.length }),
+            );
+            setFilling(null);
+            void refreshCredits();
+            void refreshScore();
+            void Haptics.notificationAsync(
+              result.stopped || result.failed ? Haptics.NotificationFeedbackType.Warning : Haptics.NotificationFeedbackType.Success,
+            );
+            toast.show(
+              describeBulkAutofill(result),
+              result.stopped === "credits" ? { actionLabel: "Get credits", onAction: () => router.push("/credits") } : undefined,
+            );
+          },
+        },
+      ],
+    );
   }
 
   function deleteSelected() {
@@ -757,6 +804,31 @@ export default function Inventory() {
           )}
         </ScrollView>
 
+        {/* bulk autofill progress */}
+        {filling && (
+          <View
+            style={{
+              position: "absolute",
+              left: 16,
+              right: 16,
+              bottom: (insets.bottom || 10) + 78 + (selected.size > 0 ? 64 : 0),
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+              backgroundColor: SURFACE,
+              borderWidth: 1,
+              borderColor: ACCENT,
+              borderCurve: "continuous", borderRadius: 16,
+              padding: 12,
+            }}
+          >
+            <ActivityIndicator size="small" color={ACCENT} />
+            <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: INK }}>
+              Autofilling {filling.done} of {filling.total}…
+            </Text>
+          </View>
+        )}
+
         {/* selection action bar */}
         {selected.size > 0 && (
           <View
@@ -813,6 +885,25 @@ export default function Inventory() {
               </Text>
             </Pressable>
             <Pressable
+              onPress={autofillSelected}
+              accessibilityLabel="Autofill selected items"
+              hitSlop={6}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 5,
+                backgroundColor: SURFACE2,
+                borderWidth: 1,
+                borderColor: HAIRLINE,
+                paddingVertical: 9,
+                paddingHorizontal: 12,
+                borderCurve: "continuous", borderRadius: 8,
+              }}
+            >
+              <MaterialCommunityIcons name="auto-fix" size={15} color={INK} />
+              <Text style={{ fontSize: 12.5, fontWeight: "700", color: INK }}>Autofill</Text>
+            </Pressable>
+            <Pressable
               onPress={() => setMoveOpen(true)}
               style={{
                 flexDirection: "row",
@@ -832,7 +923,7 @@ export default function Inventory() {
               <Text
                 style={{ fontSize: 12.5, fontWeight: "700", color: CANVAS }}
               >
-                Move to…
+                Move
               </Text>
             </Pressable>
           </View>
