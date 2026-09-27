@@ -114,10 +114,12 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   toast summary + Kitchen Score refresh, and the app following server-side Pro (admin-granted Pro), and the in-app calendar
   (phases 1-2).
   Rollback: `eas update:rollback`.
-- **Latest OTA** (group `042c9b1c-839d-455a-98d6-bd68286f8d3f`, commit `1d299dc`; earlier groups `65152bfa`, `4d2a4071`, `4b8d196f`, `38644aea`, `5bcdff86`, `ab975687`):
-  Explore (`9e7ee46`) and Insights (`1d299dc`) restyled to the Neon Calm mockups (interface only, same numbers). Not
-  device-checked yet: Explore search / chips / add a recipe, Machine, meal plan; Insights score, crew taps, waste and
-  calorie charts against a single fridge and All fridges; both in light mode.
+- **Latest OTA** (group `6cad1a0e-fce9-450b-a178-c20bb281d3f1`, commit `be4ac00`; earlier groups `042c9b1c`, `65152bfa`, `4d2a4071`, `4b8d196f`, `38644aea`, `5bcdff86`, `ab975687`):
+  Neon Calm restyles of Explore (`9e7ee46`), Insights (`1d299dc`), Meal plan + Kitchen Lab (`4c5a504`), and one type / corner
+  scale across the whole app (`be4ac00`: titles PixelMix 16, section labels 11 uppercase, radii 4/8/12/16 continuous,
+  weights capped at 700; tokens in `apps/mobile/src/lib/tokens.ts`). Interface only. Not device-checked yet: every
+  screen's header and cards (light + dark), Meal plan day strip + Plan a meal sheet, Kitchen Lab list / new / edit + Save
+  bar, Calendar day sheet (shares the meal form and rows).
 - **Previous OTA** (`4d2a4071`, commit `1afccb4`): faster start (splash held until ready, saved-data-first, offline-safe launch),
   merged Insights page, Organizer toggle back, Ask Chef dropdown on the recipe form. Not device-checked yet: cold-start twice
   (second should open complete), try airplane mode.
