@@ -2,7 +2,7 @@
 
 Get ThatFridge running locally, plus every wall we've actually hit and the fix that worked.
 
-_Last updated: 2026-09-24._
+_Last updated: 2026-09-27._
 
 ## Where the other docs live
 
@@ -401,6 +401,18 @@ rm -rf ~/Library/Developer/CoreSimulator/Caches/*
 
 `~/Library/Developer/CoreSimulator` alone was ~3.5 GB. Keep a few GB free before any build.
 Do **not** run `pnpm install --force` when low on disk — it re-downloads everything.
+
+**`eas update` fails with `LLVM ERROR: IO failure on output stream: No space left on device`**
+(then `hermesc ... exited with non-zero code: 1`, `Export failed`; 2026-09-27, 135 MB free). Nothing
+is published when this happens. The export needs roughly 1 GB free. Freed ~1 GB with rebuildable caches:
+
+```bash
+npm cache clean --force                           # ~450 MB
+pnpm store prune                                  # unreferenced packages only
+rm -rf ~/Library/Caches/pnpm "$(getconf DARWIN_USER_TEMP_DIR)"metro-cache
+rm -rf "$(getconf DARWIN_USER_TEMP_DIR)"expo-bundler-*   # leftovers from failed exports
+brew cleanup -s
+```
 
 ---
 
