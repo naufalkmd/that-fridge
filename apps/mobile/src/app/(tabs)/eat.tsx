@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Linking,
   Pressable,
@@ -1079,9 +1079,17 @@ function ShoppingPanel({
     usageHistory,
   });
 
+  const inputRef = useRef<TextInput>(null);
   const submit = () => {
     if (text.trim()) add(text);
     setText("");
+  };
+  // "+" with nothing typed still answers: it puts the cursor in the field (with a light tap) so the
+  // next step is obvious, instead of doing nothing.
+  const onPlus = () => {
+    if (text.trim()) return submit();
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    inputRef.current?.focus();
   };
 
   return (
@@ -1182,6 +1190,7 @@ function ShoppingPanel({
         </Text>
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
           <TextInput
+            ref={inputRef}
             value={text}
             onChangeText={setText}
             onSubmitEditing={submit}
@@ -1200,7 +1209,9 @@ function ShoppingPanel({
             }}
           />
           <Pressable
-            onPress={submit}
+            onPress={onPlus}
+            accessibilityRole="button"
+            accessibilityLabel="Add to shopping list"
             style={{
               justifyContent: "center",
               paddingHorizontal: 14,
