@@ -23,17 +23,25 @@ final class ApiUsageFeature
         'AgentService::requestMachineDraft' => 'Kitchen Lab draft',
         'AgentService::tagRecipe' => 'Recipe tagging',
         'MemoryService::extractAndUpdate' => 'Chat memory',
-        'ReceiptService::scan' => 'Receipt scan',
-        'ReceiptService::parse' => 'Receipt scan',
-        'PhotoService::scan' => 'Fridge photo scan',
-        'PhotoService::detect' => 'Fridge photo scan',
-        'NutritionLabelService::scan' => 'Nutrition label scan',
-        'ExpiryScanService::scan' => 'Expiry date scan',
+        // One feature per class, so matched by class: their method names never matched the old
+        // "::scan" keys, and their calls were logged under the bare class name.
+        'ReceiptService' => 'Receipt scan',
+        'PhotoService' => 'Fridge photo scan',
+        'NutritionLabelService' => 'Nutrition label scan',
+        'ExpiryScanService' => 'Expiry date scan',
         'RecipeCalorieService' => 'Recipe calories',
         'RecipeChefService' => 'Ask Chef (recipe)',
         'MealAutofillService' => 'Ask Chef (meal plan)',
         'RecipeLinkImportService' => 'Recipe link import',
         'IconGenerationService' => 'Icon generation',
+    ];
+
+    /** The label a class name was logged under before it was listed here, for renaming old rows. */
+    public const LEGACY = [
+        'ReceiptService' => 'Receipt scan',
+        'PhotoService' => 'Fridge photo scan',
+        'NutritionLabelService' => 'Nutrition label scan',
+        'ExpiryScanService' => 'Expiry date scan',
     ];
 
     public static function resolve(): string
@@ -50,6 +58,10 @@ final class ApiUsageFeature
                 continue;
             }
             $method = $frame['function'] ?? '';
+            // PHP 8.4+ names a closure after the method it sits in: "{closure:App\X::method():12}".
+            if (preg_match('/^\{closure:.*::(\w+)\(/', $method, $m)) {
+                $method = $m[1];
+            }
             $label = self::LABELS["{$class}::{$method}"] ?? self::LABELS[$class] ?? $class;
         }
 

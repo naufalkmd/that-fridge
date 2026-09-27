@@ -17,6 +17,9 @@ final class AdminCacheKeys
 
     public const AI_BY_FEATURE = 'admin:ai-by-feature:';
 
+    /** AI costs page, suffixed with the period in days. */
+    public const AI_COSTS = 'admin:ai-costs:';
+
     public const ONBOARDING_FUNNEL = 'admin:funnel:14';
 
     public const ALGORITHM_INSIGHTS = 'admin:algorithm-insights:30';

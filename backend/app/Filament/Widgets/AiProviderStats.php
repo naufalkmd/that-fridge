@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Pages\AiBalances;
+use App\Filament\Pages\AiCosts;
 use App\Services\AdminStats;
 use App\Services\AiProviderBalance;
 use App\Support\AdminCacheKeys;
@@ -55,7 +56,8 @@ class AiProviderStats extends StatsOverviewWidget
                 ->description($orDescription)
                 ->descriptionIcon($failRate > 0.05 ? 'heroicon-m-exclamation-triangle' : 'heroicon-m-check-circle')
                 ->color($failRate > 0.05 ? 'danger' : 'success')
-                ->chart(array_map(fn ($v) => (float) $v, $byDay['openrouter'])),
+                ->chart(array_map(fn ($v) => (float) $v, $byDay['openrouter']))
+                ->url(AiCosts::getUrl()),
             Stat::make('fal.ai (estimate)', '≈ '.Money::usd($fal['cost']))
                 ->description(number_format($fal['calls']).' image calls'.($fal['failed'] > 0 ? ' · '.$fal['failed'].' failed' : ''))
                 ->descriptionIcon('heroicon-m-photo')
@@ -68,7 +70,8 @@ class AiProviderStats extends StatsOverviewWidget
                     ? 'No credits spent yet'
                     : 'A credit is priced at about $0.01. '.($perCredit > 0.01 ? 'You are losing money on each one.' : 'You keep the difference.'))
                 ->descriptionIcon($perCredit !== null && $perCredit > 0.01 ? 'heroicon-m-arrow-trending-down' : 'heroicon-m-arrow-trending-up')
-                ->color($perCredit !== null && $perCredit > 0.01 ? 'danger' : 'success'),
+                ->color($perCredit !== null && $perCredit > 0.01 ? 'danger' : 'success')
+                ->url(AiCosts::getUrl()),
         ];
     }
 

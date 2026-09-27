@@ -11,6 +11,17 @@ final class Money
             return '$0';
         }
 
-        return '$'.number_format($amount, $amount < 1 ? 3 : 2);
+        // A single AI call is often a fraction of a cent; four digits keeps $0.0003 from reading as $0.000.
+        return '$'.number_format($amount, $amount < 0.01 ? 4 : ($amount < 1 ? 3 : 2));
+    }
+
+    /** A profit or loss: "+$0.021" / "-$0.004". */
+    public static function signed(float $amount): string
+    {
+        if (round($amount, 4) == 0) {
+            return '$0';
+        }
+
+        return ($amount > 0 ? '+' : '-').self::usd(abs($amount));
     }
 }
