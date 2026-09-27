@@ -283,7 +283,7 @@ export default function Home() {
               </View>
             </Pressable>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-              <PixelText style={{ fontSize: 16, letterSpacing: 0.5, color: INK }}>
+              <PixelText style={{ fontSize: 20, letterSpacing: 0.5, color: INK }}>
                 ThatFridge
               </PixelText>
               {isPro && (

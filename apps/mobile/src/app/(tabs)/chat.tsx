@@ -45,7 +45,9 @@ import { ContextSheet } from "@/components/chat/context-sheet";
 import { addContext, contextIcon, dayLabel, MAX_CONTEXTS, toRefs, type ChatContext } from "@/lib/chatContext";
 import { toISO } from "@/lib/calendar";
 import { getDeviceTimezone } from "@/lib/timezone";
+import { PixelText } from "@/components/brand";
 import { useTheme } from "@/lib/theme";
+import { TYPE } from "@/lib/tokens";
 
 // Older builds on this OTA channel may not contain ExpoDocumentPicker. Its entry point
 // loads the native module at import time, so a static import crashes the entire chat tab.
@@ -64,29 +66,34 @@ const GREETING: Msg = {
   text: "Hi! Ask me anything about what's in your fridge — or paste a recipe link and I'll turn it into a card.",
 };
 
-// Shown only on a fresh/empty chat (before the first real message) - the same activation
-// prompts Home's "Activate {agent}" tip cards use (see home.tsx's AGENT_ACTIVATE_PROMPT),
-// so a suggestion here and the equivalent Home shortcut land the same reply.
-const SUGGESTIONS: { icon: keyof typeof Ionicons.glyphMap; label: string; prompt: string }[] = [
+// Shown only on a fresh/empty chat (before the first real message). Each maps to a Quick Chat tool
+// (see AgentToolbox). Questions send straight away - the first four are the same activation prompts
+// Home's "Activate {agent}" tip cards use (see home.tsx's AGENT_ACTIVATE_PROMPT), so a suggestion here
+// and the Home shortcut land the same reply. Actions only fill the composer (`fill`), so nothing is
+// written to your kitchen until you finish the sentence and send it yourself.
+type Suggestion = { icon: keyof typeof Ionicons.glyphMap; label: string; prompt: string; fill?: boolean };
+const SUGGESTION_GROUPS: { title: string; items: Suggestion[] }[] = [
   {
-    icon: "restaurant-outline",
-    label: "Generate a recipe card",
-    prompt: "What can I cook tonight with what I have?",
+    title: "Ask",
+    items: [
+      { icon: "restaurant-outline", label: "Generate a recipe card", prompt: "What can I cook tonight with what I have?" },
+      { icon: "warning-outline", label: "What's expiring soon?", prompt: "What's at risk of going bad soon?" },
+      { icon: "cart-outline", label: "What should I restock?", prompt: "What should I restock?" },
+      { icon: "sync-outline", label: "Organize my fridge", prompt: "How should I organize my fridge right now?" },
+      { icon: "stats-chart-outline", label: "My kitchen score", prompt: "How's my kitchen score, and what's one thing I can do to improve it?" },
+      { icon: "calendar-clear-outline", label: "What's on my meal plan?", prompt: "What's on my meal plan this week?" },
+    ],
   },
   {
-    icon: "warning-outline",
-    label: "What's expiring soon?",
-    prompt: "What's at risk of going bad soon?",
-  },
-  {
-    icon: "cart-outline",
-    label: "What should I restock?",
-    prompt: "What should I restock?",
-  },
-  {
-    icon: "sync-outline",
-    label: "Organize my fridge",
-    prompt: "How should I organize my fridge right now?",
+    title: "Get it done",
+    items: [
+      { icon: "calendar-outline", label: "Plan my week", prompt: "Plan dinners for the rest of this week using what I already have", fill: true },
+      { icon: "bag-add-outline", label: "Add groceries", prompt: "Add to my fridge: ", fill: true },
+      { icon: "list-outline", label: "Add to shopping list", prompt: "Add to my shopping list: ", fill: true },
+      { icon: "link-outline", label: "Import a recipe link", prompt: "Turn this recipe into a card: ", fill: true },
+      { icon: "bookmark-outline", label: "Remember a preference", prompt: "Remember that I ", fill: true },
+      { icon: "trash-outline", label: "Clear expired items", prompt: "Remove everything in my fridge that's already expired", fill: true },
+    ],
   },
 ];
 
@@ -157,6 +164,7 @@ export default function Chat() {
   const [contexts, setContexts] = useState<ChatContext[]>([]);
   const [contextOpen, setContextOpen] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const inputRef = useRef<TextInput>(null);
   const imageCount = attachments.filter((a) => a.kind === "image").length;
   const hasPdf = attachments.some((a) => a.kind === "pdf");
   // Context can always be added (up to its own cap), so the + is never dead.
@@ -412,9 +420,9 @@ export default function Chat() {
             }}
           >
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15.5, fontWeight: "700", color: INK }}>
+              <PixelText style={{ fontSize: 16, letterSpacing: 0.5, color: INK }}>
                 Quick Chat
-              </Text>
+              </PixelText>
               <Text style={{ fontSize: 11.5, color: FAINT }}>
                 Quick answers about your fridge
               </Text>
@@ -478,7 +486,13 @@ export default function Chat() {
               <>
                 {messages.map((m, i) => <Bubble key={i} msg={m} />)}
                 {messages.length === 1 && messages[0] === GREETING && (
-                  <SuggestionChips onPick={(prompt) => send(prompt)} />
+                  <SuggestionChips
+                    onSend={(prompt) => send(prompt)}
+                    onFill={(prompt) => {
+                      setText(prompt);
+                      inputRef.current?.focus();
+                    }}
+                  />
                 )}
               </>
             )}
@@ -628,6 +642,7 @@ export default function Chat() {
                 <Ionicons name="add" size={22} color={INK} />
               </Pressable>
               <TextInput
+                ref={inputRef}
                 value={text}
                 onChangeText={setText}
                 placeholder="Ask about your fridge…"
@@ -768,39 +783,38 @@ export default function Chat() {
   );
 }
 
-function SuggestionChips({ onPick }: { onPick: (prompt: string) => void }) {
+function SuggestionChips({ onSend, onFill }: { onSend: (prompt: string) => void; onFill: (prompt: string) => void }) {
   const { colors } = useTheme();
   return (
-    <View
-      style={{
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 8,
-        alignSelf: "flex-start",
-        marginTop: 2,
-      }}
-    >
-      {SUGGESTIONS.map((s) => (
-        <Pressable
-          key={s.label}
-          onPress={() => onPick(s.prompt)}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderCurve: "continuous", borderRadius: 8,
-            backgroundColor: `${colors.surface}e6`,
-            borderWidth: 1,
-            borderColor: colors.hairline,
-          }}
-        >
-          <Ionicons name={s.icon} size={13} color={colors.accent} />
-          <Text style={{ fontSize: 12.5, fontWeight: "600", color: colors.ink }}>
-            {s.label}
-          </Text>
-        </Pressable>
+    <View style={{ gap: 14, alignSelf: "stretch", marginTop: 2 }}>
+      {SUGGESTION_GROUPS.map((group) => (
+        <View key={group.title} style={{ gap: 8 }}>
+          <Text style={{ ...TYPE.section, color: colors.muted }}>{group.title}</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {group.items.map((s) => (
+              <Pressable
+                key={s.label}
+                onPress={() => (s.fill ? onFill(s.prompt) : onSend(s.prompt))}
+                accessibilityRole="button"
+                accessibilityHint={s.fill ? "Starts the message for you to finish" : "Sends this question"}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderCurve: "continuous", borderRadius: 8,
+                  backgroundColor: `${colors.surface}e6`,
+                  borderWidth: 1,
+                  borderColor: colors.hairline,
+                }}
+              >
+                <Ionicons name={s.icon} size={13} color={colors.accent} />
+                <Text style={{ fontSize: 12.5, fontWeight: "600", color: colors.ink }}>{s.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
       ))}
     </View>
   );
