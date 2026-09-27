@@ -114,9 +114,12 @@ writing Expo code**), `apps/mobile/RELEASE.md`, `apps/mobile/CONTRIBUTING.md`, `
   toast summary + Kitchen Score refresh, and the app following server-side Pro (admin-granted Pro), and the in-app calendar
   (phases 1-2).
   Rollback: `eas update:rollback`.
-- **Latest OTA** (group `4d2a4071-011e-4aad-bcf0-e2733e609c4b`, commit `1afccb4`; earlier groups `4b8d196f`, `38644aea`, `5bcdff86`, `ab975687`):
-  faster start (splash held until ready, saved-data-first, offline-safe launch), merged Insights page, Organizer toggle back,
-  Ask Chef dropdown on the recipe form. Not device-checked yet: cold-start twice (second should open complete), try airplane mode.
+- **Latest OTA** (group `65152bfa-471e-4ea8-a3f3-c147a72cca8f`, commit `9e7ee46`; earlier groups `4d2a4071`, `4b8d196f`, `38644aea`, `5bcdff86`, `ab975687`):
+  Explore restyled to the Neon Calm mockups (interface only, same logic). Not device-checked yet: open Explore, search,
+  filter by each chip, open + add a recipe / Machine / meal plan, check light mode.
+- **Previous OTA** (`4d2a4071`, commit `1afccb4`): faster start (splash held until ready, saved-data-first, offline-safe launch),
+  merged Insights page, Organizer toggle back, Ask Chef dropdown on the recipe form. Not device-checked yet: cold-start twice
+  (second should open complete), try airplane mode.
 - **Faster start** (live in the latest OTA; also: Organizer toggle restored on its own local setting, Ask Chef is a dropdown on the recipe form): the native splash now stays up until the session and the fridges are ready (max 2.5s), the app
   opens signed in from a saved profile while the server confirms it (and being offline at launch no longer signs you out), and
   fridges / recipes / shopping / notes / categories / notifications / score / Home's Chef pick are saved on the device and painted
