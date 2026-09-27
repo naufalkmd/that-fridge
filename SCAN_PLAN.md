@@ -1,7 +1,8 @@
 # Photo of fridge (kitchen scan) — plan
 
-Status: phases 1–4 built on `feature/fridge-sweep` (2026-09-28), not yet device-checked or deployed.
-Replaces the one-shot "Photo of fridge" add method.
+Status: phases 1–5 built on `feature/fridge-sweep` (2026-09-28), not yet device-checked or deployed.
+Replaces the one-shot "Photo of fridge" add method, and folds receipt and barcode scanning into
+the same camera.
 
 ## The problem
 
@@ -65,9 +66,24 @@ fridge at that location (normalised name, then word containment: "milk" ↔ "who
   at the last shot's space.
 - Low-confidence items keep the "?" marker.
 
+### 5. One camera, three modes
+Receipt, Barcode and Photo of fridge stay as separate rows in the Add menu (they match the store
+listing and ads), but all three open the same camera, preset to that mode, with a **Photo ·
+Receipt · Barcode** switcher at the bottom. A real shopping trip is mixed, so one session can
+take a receipt, a couple of barcodes and a counter photo, and save once.
+- **Photo**: shelf shots with the space chips, 3 credits each.
+- **Receipt**: one shot per receipt (tall frame), 3 credits; its items are always a grocery haul
+  (never compared), with the quantity from the receipt line and a storage guess per item.
+- **Barcode**: live and free, no shutter; a strip frame and a running count. Each product joins
+  the results as grocery stock (its known food group and shelf life carried over; scanning the
+  same product twice counts two). Unknown barcodes are listed on the results screen to name.
+- The same product from a receipt and a barcode merges into one row (the receipt's count wins).
+- The old receipt flow in `add.tsx` and the `/scan` barcode screen are gone.
+
 ## Where it lives
 - Backend: `PhotoService` prompt returns `{scene, items[{…, storage, box}]}`; `PhotoController`
-  adds `scene` to the response. Old clients read only `detected_items`, unchanged.
+  adds `scene` to the response; `ReceiptService` adds a `storage` guess per line. Old clients
+  read only the fields they already knew, unchanged.
 - Mobile: `src/app/sweep.tsx` (camera, reveal, results); pure logic in `src/lib/sweep.ts`
   (`buildSweepResults`, `matchInventory`, geometry) with tests in `src/lib/__tests__/sweep.test.ts`.
 

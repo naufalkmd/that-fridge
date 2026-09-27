@@ -3,12 +3,21 @@
 // for the reveal - where a detected item sits on the photo, how to crop it into a square tile and
 // where the tiles land. Pure functions, so all of it is testable without rendering.
 
-import { normalizeItemName, type StorageLocation } from "@thatfridge/core";
+import { normalizeItemName, type NutritionCategory, type StorageLocation } from "@thatfridge/core";
 
 /** [ymin, xmin, ymax, xmax] in 0-1000 of the photo, as the backend's photo scan returns it. */
 export type Box = [number, number, number, number];
 
 export type Rect = { x: number; y: number; w: number; h: number };
+
+/** What the camera captures: shelf photos, a receipt, or barcodes (live, no shutter). */
+export type CaptureMode = "photo" | "receipt" | "barcode";
+
+export const MODES: { key: CaptureMode; label: string; hint: string; cost: string }[] = [
+  { key: "photo", label: "Photo", hint: "", cost: "3 credits / shot" },
+  { key: "receipt", label: "Receipt", hint: "Fit the whole receipt in the frame", cost: "3 credits / receipt" },
+  { key: "barcode", label: "Barcode", hint: "Hold a barcode in the strip — it adds itself", cost: "Free" },
+];
 
 /** What a shot is of. Groceries = a haul laid out, not yet put away. */
 export type Space = "fridge" | "freezer" | "pantry" | "groceries";
@@ -148,10 +157,17 @@ export type SweepDetection = {
   confidence: number;
   condition: "vibrant" | "wilting" | "past_best" | null;
   storage: StorageLocation | null;
+  /** Units of it (a receipt line's quantity). One when absent. */
+  qty?: number;
+  /** Known up front for barcode products. */
+  category?: NutritionCategory | null;
+  shelfLifeDays?: number | null;
 };
 
 export type SweepShotInput = {
   id: string;
+  /** How it was captured (photo when absent). */
+  source?: "photo" | "receipt" | "barcode";
   space: Space;
   status: "scanning" | "done" | "failed";
   items: SweepDetection[];
@@ -172,6 +188,9 @@ export type ResultRow<T extends TrackedItem = TrackedItem> = {
   seenIn: number;
   confidence: number;
   condition: SweepDetection["condition"];
+  source: "photo" | "receipt" | "barcode";
+  category: NutritionCategory | null;
+  shelfLifeDays: number | null;
   /** The shot and detection to crop the tile from (the one with a box and highest confidence). */
   shotId: string;
   detection: SweepDetection;
@@ -228,6 +247,9 @@ export function buildSweepResults<T extends TrackedItem>(
           seenIn: 0,
           confidence: d.confidence,
           condition: d.condition,
+          source: shot.source ?? "photo",
+          category: d.category ?? null,
+          shelfLifeDays: d.shelfLifeDays ?? null,
           shotId: shot.id,
           detection: d,
           match: null,
@@ -235,9 +257,11 @@ export function buildSweepResults<T extends TrackedItem>(
         };
         groups.set(key, g);
       }
-      g.perShot.set(shot.id, (g.perShot.get(shot.id) ?? 0) + 1);
+      g.perShot.set(shot.id, (g.perShot.get(shot.id) ?? 0) + Math.max(1, d.qty ?? 1));
       g.confidence = Math.max(g.confidence, d.confidence);
       g.condition = g.condition ?? d.condition;
+      g.category = g.category ?? d.category ?? null;
+      g.shelfLifeDays = g.shelfLifeDays ?? d.shelfLifeDays ?? null;
       // Crop from the clearest placed view of it.
       const better = d.box && (!g.detection.box || d.confidence > g.detection.confidence);
       if (better) {

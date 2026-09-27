@@ -7,6 +7,7 @@ use App\Models\Section;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -79,5 +80,26 @@ class ReceiptControllerTest extends TestCase
         ])->assertStatus(200);
 
         $this->assertNotEmpty(Storage::disk('s3')->files('receipts'));
+    }
+
+    public function test_each_line_item_carries_a_storage_guess(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => json_encode([
+                ['parsed_name' => 'Frozen peas', 'parsed_quantity' => 2, 'storage' => 'freezer'],
+                ['parsed_name' => 'Rice', 'parsed_quantity' => 1, 'storage' => 'cellar'],
+            ])]]],
+        ], 200)]);
+        $user = User::factory()->create(['ai_credits' => 10]);
+        $section = $this->sectionFor($user);
+
+        $items = $this->actingAs($user)->post("/api/sections/{$section->id}/items/receipt/scan", [
+            'image' => UploadedFile::fake()->image('receipt.jpg'),
+        ])->assertStatus(200)->json('detected_items');
+
+        $this->assertSame('freezer', $items[0]['storage']);
+        $this->assertSame(2, $items[0]['parsed_quantity']);
+        $this->assertNull($items[1]['storage']);
     }
 }

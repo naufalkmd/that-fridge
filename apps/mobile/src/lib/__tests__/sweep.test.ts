@@ -208,6 +208,32 @@ describe("buildSweepResults", () => {
     expect(emptyShots).toEqual(["b"]);
   });
 
+  it("takes a receipt line's quantity and merges a barcode scan of the same thing", () => {
+    const { rows } = buildSweepResults(
+      [
+        { ...shot("r", "groceries", [det("Yogurt", { qty: 4, storage: "fridge" })]), source: "receipt" },
+        {
+          ...shot("b", "groceries", [
+            det("Yogurt", { category: "dairy", shelfLifeDays: 14, storage: "fridge" }),
+            det("Oat milk", { shelfLifeDays: 30, storage: "pantry" }),
+            det("Oat milk", { shelfLifeDays: 30, storage: "pantry" }),
+          ]),
+          source: "barcode",
+        },
+      ],
+      [],
+    );
+    const yogurt = rows.find((r) => r.name === "Yogurt")!;
+    expect(yogurt.qty).toBe(4); // the receipt's count, not 4 + 1
+    expect(yogurt.source).toBe("receipt");
+    expect(yogurt.category).toBe("dairy"); // filled in from the barcode
+    expect(yogurt.shelfLifeDays).toBe(14);
+    const oat = rows.find((r) => r.name === "Oat milk")!;
+    expect(oat.qty).toBe(2); // scanned twice
+    expect(oat.location).toBe("pantry");
+    expect(oat.source).toBe("barcode");
+  });
+
   it("treats a tracked item with no location as in the fridge", () => {
     const { rows } = buildSweepResults([shot("a", "fridge", [det("Jam")])], [{ id: "t1", name: "Jam" }]);
     expect(rows[0].match?.id).toBe("t1");

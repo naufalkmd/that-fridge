@@ -310,7 +310,7 @@ export interface ScanDetectedItem {
   /** Fridge-photo scans only: where the item is, as [ymin, xmin, ymax, xmax] in 0-1000 of the
    *  photo. null when the model couldn't place it. */
   box?: [number, number, number, number] | null;
-  /** Fridge-photo scans only: where the item is normally kept once put away. */
+  /** Photo and receipt scans: where the item is normally kept once put away. */
   storage?: "fridge" | "freezer" | "pantry" | null;
 }
 

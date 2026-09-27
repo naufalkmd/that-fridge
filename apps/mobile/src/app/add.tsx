@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,21 +10,18 @@ import {
   View,
 } from "react-native";
 import Constants from "expo-constants";
-import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import {
-  ApiError,
   describeError,
   guessFoodIcon,
   normalizeItemName,
   type NutritionCategory,
   type StorageLocation,
 } from "@thatfridge/core";
-import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
 import { useTheme } from "@/lib/theme";
 import { SheetHeader } from "@/components/sheet";
@@ -118,8 +115,8 @@ export default function Add() {
   const [method, setMethod] = useState<Method | null>(
     params.name || stashed.length
       ? "manual"
-      : // "photo" was the one-shot fridge scan, now the sweep - land on the picker instead.
-        (params.method === "photo" ? null : (params.method as Method)) || null,
+      : // Scans happen in /sweep now; any other method param lands on the picker.
+        (params.method === "manual" ? "manual" : null),
   );
 
   const drafts = useDraftItems(() =>
@@ -192,36 +189,31 @@ export default function Add() {
     }
   }
 
+  // Receipt, barcode and fridge photo all open the one scan camera, in that mode; the user can
+  // switch modes there (see sweep.tsx).
+  const CAMERA_MODE: Partial<Record<Method, "photo" | "receipt" | "barcode">> = {
+    sweep: "photo",
+    receipt: "receipt",
+    barcode: "barcode",
+  };
+
   function chooseMethod(m: Method) {
-    if (m === "sweep") {
-      if (isExpoGo) {
-        Alert.alert(
-          "Needs the dev build",
-          "Scanning uses the camera, which isn't available in Expo Go. Use a development build.",
-        );
-      } else {
-        router.push({
-          pathname: "/sweep",
-          params: params.categoryId ? { categoryId: params.categoryId } : {},
-        });
-      }
+    const mode = CAMERA_MODE[m];
+    if (!mode) {
+      setMethod(m);
       return;
     }
-    if (m === "barcode") {
-      if (isExpoGo) {
-        Alert.alert(
-          "Needs the dev build",
-          "Barcode scanning uses the camera, which isn't available in Expo Go. Use a development build.",
-        );
-      } else {
-        router.push({
-          pathname: "/scan",
-          params: params.categoryId ? { categoryId: params.categoryId } : {},
-        });
-      }
+    if (isExpoGo) {
+      Alert.alert(
+        "Needs the dev build",
+        "Scanning uses the camera, which isn't available in Expo Go. Use a development build.",
+      );
       return;
     }
-    setMethod(m);
+    router.push({
+      pathname: "/sweep",
+      params: { mode, ...(params.categoryId ? { categoryId: params.categoryId } : {}) },
+    });
   }
 
   return (
@@ -312,8 +304,6 @@ export default function Add() {
             </Pressable>
           ))}
         </ScrollView>
-      ) : method === "receipt" ? (
-        <ScanFlow onDone={() => router.back()} categoryId={params.categoryId ?? null} />
       ) : (
         <DraftList
           drafts={drafts}
@@ -333,221 +323,6 @@ export default function Add() {
         />
       )}
     </KeyboardAvoidingView>
-  );
-}
-
-// ---- receipt scan flow (fridge photos go through /sweep) -----------------
-
-function ScanFlow({
-  onDone,
-  categoryId,
-}: {
-  onDone: () => void;
-  categoryId: string | null;
-}) {
-  const router = useRouter();
-  const { ensureSectionId, addManyItems } = useInventory();
-  const { accent: AMBER, muted: MUTED, faint: FAINT, onAccent: CANVAS } =
-    useTheme().colors;
-  const [status, setStatus] = useState<"idle" | "scanning" | "review">("idle");
-  const [saving, setSaving] = useState(false);
-  const drafts = useDraftItems(() => []);
-  const autoOpened = useRef(false);
-
-  async function runScan(uri: string) {
-    setStatus("scanning");
-    try {
-      const sectionId = await ensureSectionId();
-      // Expo's fetch/FormData implementation needs a real Blob for a file part - it doesn't
-      // support React Native's classic { uri, name, type } placeholder object, despite the
-      // types still listing it as valid.
-      const blob = await (await fetch(uri)).blob();
-      const scan = await api.scanReceipt(sectionId, blob);
-      drafts.setItems(
-        scan.detected_items.map((d) =>
-          blankDraft({
-            name: d.parsed_name,
-            parsedName: d.parsed_name,
-            icon: d.icon || guessFoodIcon(d.parsed_name) || "generic",
-            qty: Math.max(1, d.parsed_quantity ?? 1),
-            condition: d.condition ?? null,
-            categoryId,
-            source: "receipt",
-          }),
-        ),
-      );
-      drafts.refetchLibrary();
-      setStatus("review");
-    } catch (e) {
-      setStatus("idle");
-      if (e instanceof ApiError && e.status === 402) {
-        router.push("/credits");
-        return;
-      }
-      Alert.alert(
-        "Scan failed",
-        describeError(e, "Couldn't read that photo. Try a clearer shot."),
-      );
-    }
-  }
-
-  async function capture(source: "camera" | "library") {
-    let res: ImagePicker.ImagePickerResult;
-    if (source === "camera") {
-      const perm = await ImagePicker.requestCameraPermissionsAsync();
-      if (!perm.granted) {
-        Alert.alert(
-          "Camera access needed",
-          "Allow camera access to take a photo, or upload one from your library instead.",
-        );
-        return;
-      }
-      res = await ImagePicker.launchCameraAsync({
-        mediaTypes: ["images"],
-        quality: 0.7,
-      });
-    } else {
-      res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        quality: 0.7,
-        // Without this, iOS hands back the original file untouched for HEIC/PNG sources
-        // (screenshots, camera-roll photos) — `quality` is silently ignored for those formats,
-        // so a picked photo can be far bigger than anything the camera path produces.
-        preferredAssetRepresentationMode:
-          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
-      });
-    }
-    if (res.canceled || !res.assets[0]) return;
-    await runScan(res.assets[0].uri);
-  }
-
-  // Camera-first: jump straight to the camera on entry. If it's cancelled or
-  // denied, the idle screen below offers "Take a photo" again plus an upload option.
-  useEffect(() => {
-    if (autoOpened.current) return;
-    autoOpened.current = true;
-    void capture("camera");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function confirm() {
-    const toAdd = drafts.items.filter((i) => i.checked && i.name.trim());
-    if (toAdd.length === 0) return;
-    setSaving(true);
-    try {
-      const n = await addManyItems(toAdd.map(toCreatePayload));
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onDone();
-      setTimeout(
-        () =>
-          Alert.alert(
-            "Added",
-            `${n} item${n === 1 ? "" : "s"} added to your fridge.`,
-          ),
-        300,
-      );
-    } catch (e) {
-      setSaving(false);
-      Alert.alert("Error", describeError(e, "Couldn't add those items."));
-    }
-  }
-
-  if (status === "idle") {
-    return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          paddingHorizontal: 32,
-          gap: 16,
-        }}
-      >
-        <MaterialCommunityIcons
-          name="receipt"
-          size={40}
-          color={FAINT}
-        />
-        <Text
-          style={{
-            fontSize: 13,
-            color: MUTED,
-            textAlign: "center",
-            lineHeight: 19,
-          }}
-        >
-          Take a photo of your grocery receipt and we&apos;ll pull out the items.
-        </Text>
-        <Pressable
-          onPress={() => capture("camera")}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-            backgroundColor: AMBER,
-            paddingVertical: 12,
-            paddingHorizontal: 24,
-            borderCurve: "continuous", borderRadius: 8,
-          }}
-        >
-          <MaterialCommunityIcons name="camera" size={16} color={CANVAS} />
-          <Text
-            style={{
-              fontSize: 13.5,
-              fontWeight: "700",
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
-              color: CANVAS,
-            }}
-          >
-            Take a photo
-          </Text>
-        </Pressable>
-        <Pressable onPress={() => capture("library")} hitSlop={8}>
-          <Text style={{ fontSize: 12.5, fontWeight: "600", color: MUTED }}>
-            Upload from library instead
-          </Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  if (status === "scanning") {
-    return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 14,
-        }}
-      >
-        <ActivityIndicator color={AMBER} size="large" />
-        <Text style={{ fontSize: 13, color: MUTED }}>
-          Reading receipt…
-        </Text>
-      </View>
-    );
-  }
-
-  return (
-    <DraftList
-      drafts={drafts}
-      scanMode
-      categoryId={categoryId}
-      intro={
-        <Text style={{ fontSize: 12.5, color: MUTED, lineHeight: 17 }}>
-          Found {drafts.items.length} item{drafts.items.length === 1 ? "" : "s"}{" "}
-          — the scan can&apos;t tell expiry or storage, so set them below or tap
-          Auto-fill
-        </Text>
-      }
-      emptyText="Nothing recognised. Try a clearer photo, or add manually."
-      addLabel="Add item the scan missed"
-      submitLabel={(n) => `Add ${n} item${n === 1 ? "" : "s"}`}
-      submitting={saving}
-      onSubmit={confirm}
-    />
   );
 }
 

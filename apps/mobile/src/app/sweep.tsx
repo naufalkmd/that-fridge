@@ -47,11 +47,12 @@ import { useTheme } from "@/lib/theme";
 import { RADIUS } from "@/lib/tokens";
 import { PixelText } from "@/components/brand";
 import { FoodIcon } from "@/components/food-icon";
-import { blankDraft, stashDrafts, toCreatePayload, type Draft } from "@/components/draft-item";
+import { blankDraft, isoInDays, stashDrafts, toCreatePayload, type Draft } from "@/components/draft-item";
 import {
   CREDITS_PER_SHOT,
   LOW_CONFIDENCE,
   MAX_SHOTS,
+  MODES,
   SPACES,
   boxToRect,
   buildSweepResults,
@@ -65,6 +66,7 @@ import {
   spaceLabel,
   spaceLocation,
   staggerStep,
+  type CaptureMode,
   type Rect,
   type ResultRow,
   type Scene,
@@ -72,9 +74,11 @@ import {
   type SweepDetection,
 } from "@/lib/sweep";
 
-// Scan your kitchen (plan: SCAN_PLAN.md). The user shoots any spaces - fridge, freezer, pantry,
-// or a grocery haul - picking the space per shot. Every shot is an ordinary photo scan (POST
-// items/photo/scan, 3 credits) sent as soon as it's taken. After Done, each photo's items lock on
+// Scan your kitchen (plan: SCAN_PLAN.md). One camera with three modes the user can switch between
+// mid-session: Photo (shots of any space - fridge, freezer, pantry or a grocery haul - each an
+// ordinary photo scan, POST items/photo/scan, 3 credits), Receipt (POST items/receipt/scan, 3
+// credits; its items are a grocery haul) and Barcode (live, free, looked up as it's seen). Scans
+// are sent as soon as they're taken. After Done, each photo's items lock on
 // and fly into a grid; the results compare them with what the fridge already tracks (new /
 // already tracked / not seen). The effects only ever play over real results.
 
@@ -86,6 +90,8 @@ const HUD_WARN = "#f5a623";
 
 type Shot = {
   id: string;
+  /** A shelf photo, or a receipt (whose items are always a grocery haul). */
+  kind: "photo" | "receipt";
   uri: string;
   /** width / height of the photo as displayed. */
   aspect: number;
@@ -99,19 +105,35 @@ type Shot = {
 /** Something the user typed in because the scan missed it. */
 type Extra = { key: string; name: string; location: StorageLocation; space: Space };
 
+/** A barcode the product database didn't know; saved only once the user names it. */
+type Unnamed = { key: string; code: string; name: string };
+
+const BARCODE_TYPES = ["ean13", "ean8", "upc_a", "upc_e", "code128"] as const;
+/** A barcode stays in view for many frames; ignore the same code again within this window. */
+const BARCODE_REPEAT_MS = 2500;
+
 type MissingChoice = "keep" | "used" | "wasted";
 
 type Stage = "camera" | "reveal" | "grid";
 
 export default function Sweep() {
   const router = useRouter();
-  const { categoryId } = useLocalSearchParams<{ categoryId?: string }>();
-  const { fridges, items: inventory, ensureSectionId, addManyItems, refresh } = useInventory();
+  const { categoryId, mode: modeParam } = useLocalSearchParams<{ categoryId?: string; mode?: string }>();
+  const { fridges, items: inventory, ensureSectionId, addManyItems, refresh, lookupBarcode } = useInventory();
   const { scope, setScope } = useScope();
   const reduceMotion = useReducedMotion();
   const [permission, requestPermission] = useCameraPermissions();
   const [stage, setStage] = useState<Stage>("camera");
+  const [mode, setMode] = useState<CaptureMode>(() =>
+    MODES.some((m) => m.key === modeParam) ? (modeParam as CaptureMode) : "photo",
+  );
   const [space, setSpace] = useState<Space>("fridge");
+  const [barcodes, setBarcodes] = useState<SweepDetection[]>([]);
+  const [unnamed, setUnnamed] = useState<Unnamed[]>([]);
+  const [barcodeNote, setBarcodeNote] = useState<{ text: string; ok: boolean } | null>(null);
+  const lastCode = useRef<{ code: string; at: number }>({ code: "", at: 0 });
+  const lookingUp = useRef(false);
+  const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [fridgeId, setFridgeId] = useState<string | null>(() =>
     scope !== "all" && fridges.some((f) => f.id === scope) ? scope : (fridges[0]?.id ?? null),
   );
@@ -127,7 +149,17 @@ export default function Sweep() {
     () => (fridgeId ? inventory.filter((i) => i.fridgeId === fridgeId) : []),
     [inventory, fridgeId],
   );
-  const results = useMemo(() => buildSweepResults<FlatItem>(shots, tracked), [shots, tracked]);
+  // Barcode scans join the results as one more grocery "shot".
+  const resultShots = useMemo(
+    () => [
+      ...shots.map((s) => ({ ...s, source: s.kind })),
+      ...(barcodes.length
+        ? [{ id: "barcodes", source: "barcode" as const, space: "groceries" as const, status: "done" as const, items: barcodes }]
+        : []),
+    ],
+    [shots, barcodes],
+  );
+  const results = useMemo(() => buildSweepResults<FlatItem>(resultShots, tracked), [resultShots, tracked]);
   const isTicked = (r: ResultRow<FlatItem>) => ticks[r.key] ?? r.match === null;
   const toAdd = results.rows.filter(isTicked);
   const toClear = results.missing.filter((m) => (missingChoice[m.id] ?? "keep") !== "keep");
@@ -141,18 +173,21 @@ export default function Sweep() {
       const sectionId = await ensureSectionId();
       // Expo's FormData needs a real Blob for a file part (see add.tsx's runScan).
       const blob = await (await fetch(shot.uri)).blob();
-      const scan = await api.scanFridgePhoto(sectionId, blob);
+      const scan =
+        shot.kind === "receipt" ? await api.scanReceipt(sectionId, blob) : await api.scanFridgePhoto(sectionId, blob);
       updateShot(shot.id, {
         status: "done",
-        scene: scan.scene ?? null,
+        scene: shot.kind === "receipt" ? "counter" : (scan.scene ?? null),
         items: scan.detected_items.map((d, i) => ({
           id: `${shot.id}-${i}`,
           name: d.parsed_name,
           icon: d.icon || guessFoodIcon(d.parsed_name) || "generic",
           box: d.box ?? null,
-          confidence: typeof d.confidence === "number" ? d.confidence : 0.5,
+          // A printed receipt line is read, not guessed from a photo.
+          confidence: typeof d.confidence === "number" ? d.confidence : shot.kind === "receipt" ? 0.9 : 0.5,
           condition: d.condition ?? null,
           storage: d.storage ?? null,
+          qty: d.parsed_quantity ?? 1,
         })),
       });
     } catch (e) {
@@ -171,17 +206,63 @@ export default function Sweep() {
   }
 
   function onCaptured(uri: string, width: number, height: number) {
+    const receipt = mode === "receipt";
     const shot: Shot = {
       id: `s${Date.now()}${Math.random().toString(36).slice(2, 5)}`,
+      kind: receipt ? "receipt" : "photo",
       uri,
       aspect: width > 0 && height > 0 ? width / height : 3 / 4,
-      space,
+      space: receipt ? "groceries" : space,
       scene: null,
       status: "scanning",
       items: [],
     };
     setShots((prev) => [...prev, shot]);
     void upload(shot);
+  }
+
+  function note(text: string, ok: boolean) {
+    setBarcodeNote({ text, ok });
+    if (noteTimer.current) clearTimeout(noteTimer.current);
+    noteTimer.current = setTimeout(() => setBarcodeNote(null), 2200);
+  }
+
+  async function onBarcode(code: string) {
+    const now = Date.now();
+    if (lookingUp.current) return;
+    if (lastCode.current.code === code && now - lastCode.current.at < BARCODE_REPEAT_MS) return;
+    lastCode.current = { code, at: now };
+    lookingUp.current = true;
+    try {
+      const p = await lookupBarcode(code);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setBarcodes((prev) => [
+        ...prev,
+        {
+          id: `b${now}`,
+          name: p.name,
+          icon: guessFoodIcon(p.name) ?? "generic",
+          box: null,
+          confidence: 1,
+          condition: null,
+          storage: p.location ?? null,
+          category: (p.category as SweepDetection["category"]) ?? null,
+          shelfLifeDays: p.default_shelf_life_days || null,
+        },
+      ]);
+      note(`Added ${p.name}`, true);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        setUnnamed((prev) => (prev.some((u) => u.code === code) ? prev : [...prev, { key: `u${now}`, code, name: "" }]));
+        note("Unknown product. You can name it at the end", false);
+      } else {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        note("Couldn't look that up. Try again", false);
+      }
+    } finally {
+      lookingUp.current = false;
+    }
   }
 
   function pickFridge() {
@@ -193,7 +274,8 @@ export default function Sweep() {
   }
 
   function discardAndClose() {
-    const nothing = results.rows.length === 0 && extras.length === 0 && shots.every((s) => s.status !== "scanning");
+    const nothing =
+      results.rows.length === 0 && extras.length === 0 && unnamed.length === 0 && shots.every((s) => s.status !== "scanning");
     if (nothing) {
       router.back();
       return;
@@ -209,15 +291,29 @@ export default function Sweep() {
       ...toAdd.map((r) =>
         blankDraft({
           name: r.name,
-          parsedName: r.name,
+          // parsed_name measures edits to what a scan proposed; a barcode product isn't a guess.
+          parsedName: r.source === "barcode" ? null : r.name,
           icon: r.icon,
           qty: r.qty,
           condition: r.condition,
           location: r.location,
+          category: r.category,
+          expiryDate: r.shelfLifeDays ? isoInDays(r.shelfLifeDays) : null,
           categoryId: categoryId ?? null,
-          source: "photo",
+          source: r.source,
         }),
       ),
+      ...unnamed
+        .filter((u) => u.name.trim())
+        .map((u) =>
+          blankDraft({
+            name: u.name.trim(),
+            icon: guessFoodIcon(u.name) ?? "generic",
+            barcodeMiss: u.code,
+            categoryId: categoryId ?? null,
+            source: "barcode",
+          }),
+        ),
       ...extras.map((x) =>
         blankDraft({
           name: x.name,
@@ -326,13 +422,19 @@ export default function Sweep() {
     return (
       <CameraStage
         shots={shots}
+        mode={mode}
+        onMode={setMode}
+        onBarcode={(code) => void onBarcode(code)}
+        barcodeCount={barcodes.length + unnamed.length}
+        barcodeNote={barcodeNote}
         space={space}
         onSpace={setSpace}
         fridgeName={fridges.length > 1 ? fridges.find((f) => f.id === fridgeId)?.name ?? null : null}
         onPickFridge={pickFridge}
         onCaptured={onCaptured}
         onClose={discardAndClose}
-        onDone={() => setStage(reduceMotion ? "grid" : "reveal")}
+        // The reveal plays over photos; a barcode-only session goes straight to the results.
+        onDone={() => setStage(reduceMotion || shots.length === 0 ? "grid" : "reveal")}
       />
     );
   }
@@ -345,6 +447,8 @@ export default function Sweep() {
     <ResultsStage
       shots={shots}
       rows={results.rows}
+      unnamed={unnamed}
+      onNameUnnamed={(key, name) => setUnnamed((prev) => prev.map((u) => (u.key === key ? { ...u, name } : u)))}
       missing={results.missing}
       emptyShots={results.emptyShots}
       extras={extras}
@@ -360,7 +464,7 @@ export default function Sweep() {
         })
       }
       onRemoveExtra={(key) => setExtras((prev) => prev.filter((x) => x.key !== key))}
-      addCount={toAdd.length + extras.length}
+      addCount={toAdd.length + extras.length + unnamed.filter((u) => u.name.trim()).length}
       clearCount={toClear.length}
       saving={saving}
       canShootMore={shots.length < MAX_SHOTS}
@@ -376,6 +480,11 @@ export default function Sweep() {
 
 function CameraStage({
   shots,
+  mode,
+  onMode,
+  onBarcode,
+  barcodeCount,
+  barcodeNote,
   space,
   onSpace,
   fridgeName,
@@ -385,6 +494,13 @@ function CameraStage({
   onDone,
 }: {
   shots: Shot[];
+  mode: CaptureMode;
+  onMode: (m: CaptureMode) => void;
+  onBarcode: (code: string) => void;
+  /** Barcodes scanned so far, known or not. */
+  barcodeCount: number;
+  /** The last barcode's result, shown briefly mid-screen. */
+  barcodeNote: { text: string; ok: boolean } | null;
   space: Space;
   onSpace: (s: Space) => void;
   /** Shown (and tappable) only when the account has more than one fridge. */
@@ -402,19 +518,41 @@ function CameraStage({
   const flash = useSharedValue(0);
   const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
 
+  const barcode = mode === "barcode";
   const full = shots.length >= MAX_SHOTS;
-  const inSpace = shots.filter((s) => s.space === space).length;
-  const hint = SPACES.find((s) => s.key === space)?.hint ?? "";
-  // The aiming frame: the camera area between the top readout and the bottom controls.
-  const frame: Rect = {
+  const inSpace = shots.filter((s) => s.kind === "photo" && s.space === space).length;
+  const receipts = shots.filter((s) => s.kind === "receipt").length;
+  const modeInfo = MODES.find((m) => m.key === mode)!;
+  const hint = mode === "photo" ? (SPACES.find((s) => s.key === space)?.hint ?? "") : modeInfo.hint;
+  const title = full && !barcode
+    ? "That's the most for one scan — tap Done"
+    : mode === "photo"
+      ? shotLabel(space, inSpace)
+      : mode === "receipt"
+        ? `Receipt ${receipts + 1}`
+        : barcodeCount
+          ? `${barcodeCount} scanned`
+          : "Scan barcodes";
+  const credits = shots.length * CREDITS_PER_SHOT;
+  const canDone = shots.length > 0 || barcodeCount > 0;
+
+  // The aiming area between the top readout and the bottom controls, shaped to the mode:
+  // the whole view for shelves, a tall slip for a receipt, a strip for a barcode.
+  const area: Rect = {
     x: 20,
     y: insets.top + 78,
     w: width - 40,
-    h: height - insets.top - 78 - (insets.bottom + 236),
+    h: height - insets.top - 78 - (insets.bottom + 270),
   };
+  const frame: Rect =
+    mode === "receipt"
+      ? { x: area.x + area.w * 0.19, y: area.y, w: area.w * 0.62, h: area.h }
+      : barcode
+        ? { x: area.x, y: area.y + area.h / 2 - 70, w: area.w, h: 140 }
+        : area;
 
   async function shoot() {
-    if (!ready || capturing || full || !camera.current) return;
+    if (barcode || !ready || capturing || full || !camera.current) return;
     setCapturing(true);
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     flash.value = withSequence(withTiming(0.85, { duration: 60 }), withTiming(0, { duration: 320 }));
@@ -435,8 +573,8 @@ function CameraStage({
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       quality: 0.6,
-      allowsMultipleSelection: true,
-      selectionLimit: room,
+      allowsMultipleSelection: mode === "photo",
+      selectionLimit: mode === "photo" ? room : 1,
       // Converts HEIC/PNG to a compressed JPEG, as add.tsx does for its uploads.
       preferredAssetRepresentationMode:
         ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
@@ -447,12 +585,30 @@ function CameraStage({
 
   return (
     <View style={{ flex: 1, backgroundColor: "black" }}>
-      <CameraView ref={camera} style={{ flex: 1 }} facing="back" onCameraReady={() => setReady(true)} />
+      <CameraView
+        ref={camera}
+        style={{ flex: 1 }}
+        facing="back"
+        onCameraReady={() => setReady(true)}
+        barcodeScannerSettings={barcode ? { barcodeTypes: [...BARCODE_TYPES] } : undefined}
+        onBarcodeScanned={barcode ? ({ data }) => onBarcode(data) : undefined}
+      />
 
       <View style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }} pointerEvents="none">
-        <HudGrid rect={frame} />
+        {mode === "photo" && <HudGrid rect={frame} />}
         <HudCorners rect={frame} />
-        {!full && <ScanLine rect={frame} />}
+        {(barcode || !full) && <ScanLine key={mode} rect={frame} duration={barcode ? 900 : 2200} band={barcode ? 40 : 70} />}
+        {barcodeNote && barcode && (
+          <Animated.View
+            entering={FadeIn.duration(150)}
+            style={{ position: "absolute", left: 0, right: 0, top: frame.y + frame.h + 14, alignItems: "center" }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "rgba(0,0,0,0.65)", borderWidth: 1, borderColor: barcodeNote.ok ? HUD : HUD_WARN }}>
+              <Ionicons name={barcodeNote.ok ? "checkmark-circle" : "help-circle"} size={15} color={barcodeNote.ok ? HUD : HUD_WARN} />
+              <Text style={{ color: "white", fontSize: 12.5, fontWeight: "600" }} numberOfLines={1}>{barcodeNote.text}</Text>
+            </View>
+          </Animated.View>
+        )}
       </View>
 
       {/* top readout */}
@@ -473,9 +629,9 @@ function CameraStage({
         <View style={{ flex: 1 }}>
           <PixelText style={{ color: HUD, fontSize: 11 }}>KITCHEN SCAN</PixelText>
           <Text style={{ color: "white", fontSize: 13, fontWeight: "600", marginTop: 3 }} numberOfLines={1}>
-            {full ? "That's the most for one scan — tap Done" : shotLabel(space, inSpace)}
+            {title}
           </Text>
-          {!full && (
+          {!(full && !barcode) && (
             <Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 11.5, marginTop: 1 }} numberOfLines={1}>
               {hint}
             </Text>
@@ -490,40 +646,44 @@ function CameraStage({
               <Ionicons name="chevron-down" size={12} color="white" />
             </Pressable>
           )}
-          <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, fontWeight: "600" }}>
-            {shots.length ? `${shots.length * CREDITS_PER_SHOT} credits used` : `${CREDITS_PER_SHOT} credits / shot`}
+          <Text style={{ color: barcode ? HUD : "rgba(255,255,255,0.6)", fontSize: 11, fontWeight: "600" }}>
+            {barcode ? "Free" : credits ? `${credits} credits used` : modeInfo.cost}
           </Text>
         </View>
       </View>
 
-      {/* bottom: space chips, captured shots, shutter, done */}
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: insets.bottom + 16, gap: 14 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
-          {SPACES.map((s) => {
-            const on = s.key === space;
-            return (
-              <Pressable
-                key={s.key}
-                onPress={() => {
-                  void Haptics.selectionAsync();
-                  onSpace(s.key);
-                }}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 7,
-                  borderRadius: 999,
-                  borderWidth: 1.5,
-                  borderColor: on ? HUD : "rgba(255,255,255,0.35)",
-                  backgroundColor: on ? "rgba(38,198,218,0.22)" : "rgba(0,0,0,0.45)",
-                }}
-              >
-                <Text style={{ color: on ? HUD : "white", fontSize: 12.5, fontWeight: "700" }}>{s.label}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+      {/* bottom: space chips (photo), captures, shutter / counter, done, then the mode switcher */}
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: insets.bottom + 12, gap: 14 }}>
+        {mode === "photo" ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
+            {SPACES.map((s) => {
+              const on = s.key === space;
+              return (
+                <Pressable
+                  key={s.key}
+                  onPress={() => {
+                    void Haptics.selectionAsync();
+                    onSpace(s.key);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 7,
+                    borderRadius: 999,
+                    borderWidth: 1.5,
+                    borderColor: on ? HUD : "rgba(255,255,255,0.35)",
+                    backgroundColor: on ? "rgba(38,198,218,0.22)" : "rgba(0,0,0,0.45)",
+                  }}
+                >
+                  <Text style={{ color: on ? HUD : "white", fontSize: 12.5, fontWeight: "700" }}>{s.label}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : (
+          <View style={{ height: 33 }} />
+        )}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -534,50 +694,81 @@ function CameraStage({
           ))}
         </ScrollView>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 28 }}>
-          <Pressable
-            onPress={pickFromLibrary}
-            disabled={full || capturing}
-            accessibilityLabel="Upload photos"
-            style={{ width: 72, alignItems: "center", gap: 4, opacity: full ? 0.4 : 1 }}
-          >
-            <View style={{ width: 44, height: 44, borderRadius: RADIUS.sm, borderCurve: "continuous", backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
-              <MaterialCommunityIcons name="image-multiple-outline" size={20} color="white" />
+          {barcode ? (
+            <View style={{ width: 72 }} />
+          ) : (
+            <Pressable
+              onPress={pickFromLibrary}
+              disabled={full || capturing}
+              accessibilityLabel="Upload photos"
+              style={{ width: 72, alignItems: "center", gap: 4, opacity: full ? 0.4 : 1 }}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: RADIUS.sm, borderCurve: "continuous", backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" }}>
+                <MaterialCommunityIcons name="image-multiple-outline" size={20} color="white" />
+              </View>
+              <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>Upload</Text>
+            </Pressable>
+          )}
+          {barcode ? (
+            // Barcodes add themselves: no shutter, just the running count.
+            <View style={{ width: 76, height: 76, borderRadius: 38, borderWidth: 4, borderColor: HUD, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.35)" }}>
+              <PixelText style={{ color: "white", fontSize: 20 }}>{barcodeCount}</PixelText>
             </View>
-            <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>Upload</Text>
-          </Pressable>
-          <Pressable
-            onPress={shoot}
-            disabled={!ready || capturing || full}
-            accessibilityLabel="Take shot"
-            style={{
-              width: 76,
-              height: 76,
-              borderRadius: 38,
-              borderWidth: 4,
-              borderColor: full ? "rgba(255,255,255,0.3)" : HUD,
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: !ready || capturing ? 0.6 : 1,
-            }}
-          >
-            <View style={{ width: 58, height: 58, borderRadius: 29, backgroundColor: full ? "rgba(255,255,255,0.3)" : "white" }} />
-          </Pressable>
+          ) : (
+            <Pressable
+              onPress={shoot}
+              disabled={!ready || capturing || full}
+              accessibilityLabel={mode === "receipt" ? "Take receipt photo" : "Take shot"}
+              style={{
+                width: 76,
+                height: 76,
+                borderRadius: 38,
+                borderWidth: 4,
+                borderColor: full ? "rgba(255,255,255,0.3)" : HUD,
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: !ready || capturing ? 0.6 : 1,
+              }}
+            >
+              <View style={{ width: 58, height: 58, borderRadius: 29, backgroundColor: full ? "rgba(255,255,255,0.3)" : "white" }} />
+            </Pressable>
+          )}
           <Pressable
             onPress={onDone}
-            disabled={shots.length === 0}
+            disabled={!canDone}
             style={{
               width: 72,
               alignItems: "center",
               paddingVertical: 10,
               borderRadius: RADIUS.sm,
               borderCurve: "continuous",
-              backgroundColor: shots.length ? HUD : "rgba(255,255,255,0.15)",
+              backgroundColor: canDone ? HUD : "rgba(255,255,255,0.15)",
             }}
           >
-            <Text style={{ fontSize: 13, fontWeight: "700", color: shots.length ? "#0a0a0c" : "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: canDone ? "#0a0a0c" : "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>
               Done
             </Text>
           </Pressable>
+        </View>
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 26 }}>
+          {MODES.map((m) => {
+            const on = m.key === mode;
+            return (
+              <Pressable
+                key={m.key}
+                onPress={() => {
+                  if (on) return;
+                  void Haptics.selectionAsync();
+                  onMode(m.key);
+                }}
+                hitSlop={10}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+              >
+                <PixelText style={{ fontSize: 11, color: on ? HUD : "rgba(255,255,255,0.55)" }}>{m.label.toUpperCase()}</PixelText>
+              </Pressable>
+            );
+          })}
         </View>
       </View>
 
@@ -739,7 +930,11 @@ function RevealStage({ shots, onFinish }: { shots: Shot[]; onFinish: () => void 
           {shot ? `ANALYZING ${index + 1}/${shots.length}` : "COMPLETE"}
         </PixelText>
         <Text style={{ color: "white", fontSize: 15, fontWeight: "700", marginTop: 4 }}>
-          {shot ? shotLabel(shot.space, shots.slice(0, index).filter((s) => s.space === shot.space).length) : ""}
+          {shot
+            ? shot.kind === "receipt"
+              ? "Receipt"
+              : shotLabel(shot.space, shots.slice(0, index).filter((s) => s.kind === "photo" && s.space === shot.space).length)
+            : ""}
         </Text>
       </View>
 
@@ -936,6 +1131,8 @@ const LOCATION_LABEL: Record<StorageLocation, string> = { fridge: "Fridge", free
 function ResultsStage({
   shots,
   rows,
+  unnamed,
+  onNameUnnamed,
   missing,
   emptyShots,
   extras,
@@ -957,6 +1154,8 @@ function ResultsStage({
 }: {
   shots: Shot[];
   rows: ResultRow<FlatItem>[];
+  unnamed: Unnamed[];
+  onNameUnnamed: (key: string, name: string) => void;
   missing: FlatItem[];
   emptyShots: string[];
   extras: Extra[];
@@ -988,7 +1187,7 @@ function ResultsStage({
   const fresh = rows.filter((r) => r.match === null);
   const known = rows.filter((r) => r.match !== null);
   const unsure = rows.filter((r) => r.confidence < LOW_CONFIDENCE).length;
-  const nothingAtAll = rows.length === 0 && extras.length === 0 && missing.length === 0 && pending === 0;
+  const nothingAtAll = rows.length === 0 && extras.length === 0 && unnamed.length === 0 && missing.length === 0 && pending === 0;
 
   const label = (() => {
     if (addCount && clearCount) return `Add ${addCount} · update ${clearCount}`;
@@ -1028,18 +1227,26 @@ function ResultsStage({
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24, gap: 20 }} keyboardShouldPersistTaps="handled">
-        {/* shots, with the space each was of - tap to change */}
+        {/* shots, with the space each was of - tap to change (receipts are always a grocery haul) */}
+        {shots.length > 0 && (
         <View style={{ gap: 8 }}>
-          <Text style={{ color: muted, fontSize: 12.5, lineHeight: 18 }}>
-            Tap a shot&apos;s label if it was of something else.
-          </Text>
+          {shots.some((s) => s.kind === "photo") && (
+            <Text style={{ color: muted, fontSize: 12.5, lineHeight: 18 }}>
+              Tap a shot&apos;s label if it was of something else.
+            </Text>
+          )}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
             {shots.map((s) => {
               const suggested = sceneSpace(s.scene);
-              const mismatch = s.status === "done" && suggested !== null && suggested !== s.space;
+              const mismatch = s.kind === "photo" && s.status === "done" && suggested !== null && suggested !== s.space;
               return (
                 <View key={s.id} style={{ alignItems: "center", gap: 6 }}>
                   <ShotThumb shot={s} size={56} />
+                  {s.kind === "receipt" ? (
+                    <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: hairline, backgroundColor: surface }}>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: ink }}>Receipt</Text>
+                    </View>
+                  ) : (
                   <Pressable
                     onPress={() => {
                       void Haptics.selectionAsync();
@@ -1053,14 +1260,16 @@ function ResultsStage({
                       {mismatch ? `${spaceLabel(suggested!)}?` : spaceLabel(s.space)}
                     </Text>
                   </Pressable>
+                  )}
                 </View>
               );
             })}
           </ScrollView>
-          {shots.some((s) => s.status === "done" && sceneSpace(s.scene) !== null && sceneSpace(s.scene) !== s.space) && (
+          {shots.some((s) => s.kind === "photo" && s.status === "done" && sceneSpace(s.scene) !== null && sceneSpace(s.scene) !== s.space) && (
             <Text style={{ color: warn, fontSize: 12 }}>A label with ? is what that photo looks like to the crew. Tap it to switch.</Text>
           )}
         </View>
+        )}
 
         {pending > 0 && (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -1113,6 +1322,28 @@ function ResultsStage({
                 </Pressable>
               ))}
             </View>
+          </View>
+        )}
+
+        {unnamed.length > 0 && (
+          <View style={{ gap: 10 }}>
+            <Text style={sectionLabel}>Name these products</Text>
+            <Text style={{ color: muted, fontSize: 12.5, lineHeight: 18 }}>
+              These barcodes aren&apos;t in the product database yet. Name one to add it, or leave it blank to skip.
+            </Text>
+            {unnamed.map((u) => (
+              <View key={u.key} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <MaterialCommunityIcons name="barcode" size={22} color={faint} />
+                <TextInput
+                  value={u.name}
+                  onChangeText={(t) => onNameUnnamed(u.key, t)}
+                  placeholder={`What is ${u.code}?`}
+                  placeholderTextColor={faint}
+                  returnKeyType="done"
+                  style={{ flex: 1, color: ink, fontSize: 14, paddingHorizontal: 12, paddingVertical: 10, borderRadius: RADIUS.md, borderCurve: "continuous", borderWidth: 1, borderColor: u.name.trim() ? accent : hairline, backgroundColor: surface }}
+                />
+              </View>
+            ))}
           </View>
         )}
 

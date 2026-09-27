@@ -72,6 +72,7 @@ Return ONLY a JSON array (no prose, no markdown fences) where each element has e
 - "parsed_quantity": quantity purchased as a whole number (integer, default 1 if unclear)
 - "matched_product_id": always null
 - "confirmed": always false
+- "storage": where this item is normally kept once put away, one of "fridge", "freezer" or "pantry"
 
 Ignore non-food lines (subtotal, tax, total, discounts, payment method, store header/footer, loyalty info).
 If the image is not a receipt or no items are readable, return an empty array.
@@ -101,8 +102,9 @@ PROMPT;
                 'matched_product_id' => null,
                 'icon' => FoodIconMatcher::guess($name) ?? '',
                 'confirmed' => false,
+                'storage' => in_array($item['storage'] ?? null, PhotoService::STORAGE, true) ? $item['storage'] : null,
             ];
-        }, $items));
+        }, array_filter($items, 'is_array')));
     }
 
     /**
