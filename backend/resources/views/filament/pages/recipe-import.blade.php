@@ -23,12 +23,15 @@
             <dl class="grid grid-cols-2 gap-4 text-sm md:grid-cols-5">
                 <div><dt class="text-gray-500">When</dt><dd class="font-semibold">{{ \Illuminate\Support\Carbon::parse($last['at'])->diffForHumans() }}</dd><dd class="text-xs text-gray-500">{{ $last['trigger'] === 'scheduled' ? 'daily schedule' : 'run by hand' }}</dd></div>
                 <div><dt class="text-gray-500">Added</dt><dd class="text-lg font-semibold">{{ $last['imported'] }}</dd></div>
-                <div><dt class="text-gray-500">Already here</dt><dd class="text-lg font-semibold">{{ $last['exists'] }}</dd></div>
+                <div><dt class="text-gray-500">Already imported</dt><dd class="text-lg font-semibold">{{ $last['exists'] }}</dd></div>
                 <div><dt class="text-gray-500">Duplicates skipped</dt><dd class="text-lg font-semibold">{{ $last['duplicate'] }}</dd></div>
                 <div><dt class="text-gray-500">Too thin</dt><dd class="text-lg font-semibold">{{ $last['low_quality'] }}</dd></div>
             </dl>
         @endif
-        <p class="mt-3 text-sm text-gray-500">The next run starts at recipes beginning with "{{ $this->nextLetter() }}".</p>
+        <p class="mt-3 text-sm text-gray-500">
+            Each run picks at random from the recipes not imported yet, and never imports one twice.
+            @if (isset($last['left'])) About {{ $last['left'] }} left to try. @endif
+        </p>
     </x-filament::section>
 
     <x-filament::section heading="Waiting for you">

@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 /**
  * TheMealDB (themealdb.com): an open recipe database built for apps, ~300 dishes from many
  * cuisines. Its search-by-first-letter endpoint returns full recipes, so the whole catalogue is 26
- * calls. Every recipe links back to its original page when TheMealDB has one.
+ * small calls (all()). Every recipe links back to its original page when TheMealDB has one.
  */
 class TheMealDbSource
 {
@@ -41,6 +41,23 @@ class TheMealDbSource
         }
 
         return array_values(array_filter(array_map(fn ($m) => is_array($m) ? $this->normalise($m) : null, is_array($meals) ? $meals : [])));
+    }
+
+    /**
+     * The whole catalogue, one entry per recipe.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function all(): array
+    {
+        $out = [];
+        foreach (str_split(self::LETTERS) as $letter) {
+            foreach ($this->byLetter($letter) as $recipe) {
+                $out[$recipe['external_id']] = $recipe;
+            }
+        }
+
+        return array_values($out);
     }
 
     private function normalise(array $m): ?array

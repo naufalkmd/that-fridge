@@ -57,13 +57,13 @@ class RecipeImportSettings
         return ! ($last && ($last['trigger'] ?? null) === 'scheduled' && Carbon::parse($last['at'])->isSameDay($now));
     }
 
-    /** @param  array{imported: int, exists: int, duplicate: int, low_quality: int}  $tally */
+    /** @param  array{imported: int, exists: int, duplicate: int, low_quality: int, left?: int}  $tally */
     public static function recordRun(array $tally, string $trigger): void
     {
         AdminSetting::put('recipe_import.last_run', [...$tally, 'trigger' => $trigger, 'at' => now()->toIso8601String()]);
     }
 
-    /** @return array{imported: int, exists: int, duplicate: int, low_quality: int, trigger: string, at: string}|null */
+    /** @return array{imported: int, exists: int, duplicate: int, low_quality: int, left?: int, trigger: string, at: string}|null */
     public static function lastRun(): ?array
     {
         $v = AdminSetting::get('recipe_import.last_run');

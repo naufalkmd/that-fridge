@@ -6,7 +6,6 @@ use App\Filament\Resources\ExploreItemResource;
 use App\Jobs\ImportRecipes;
 use App\Models\AdminAuditLog;
 use App\Models\ExploreItem;
-use App\Services\RecipeImport\RecipeImportRunner;
 use App\Services\RecipeImport\RecipeImportSettings;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -120,11 +119,6 @@ class RecipeImport extends Page implements HasForms
     public function draftsUrl(): string
     {
         return ExploreItemResource::getUrl('index', ['tableFilters' => ['status' => ['value' => 'draft']]]);
-    }
-
-    public function nextLetter(): string
-    {
-        return RecipeImportRunner::nextLetter();
     }
 
     /** The public test key "1" is for development only. */

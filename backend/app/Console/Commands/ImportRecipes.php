@@ -9,8 +9,8 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 /**
- * Fills Explore with recipes from TheMealDB as drafts for an admin to publish (see
- * RecipeImportRunner). The schedule and batch size are set in Admin → Recipe import; --limit
+ * Fills Explore with recipes from TheMealDB, picked at random and never twice, as drafts for an
+ * admin to publish (see RecipeImportRunner). The schedule and batch size are set in Admin → Recipe import; --limit
  * overrides the batch size for a run from the command line.
  */
 #[Signature('app:import-recipes {--limit= : New recipes to add this run (default: the admin setting)} {--scheduled : Called by the daily schedule}')]
@@ -22,7 +22,7 @@ class ImportRecipes extends Command
         $limit = $this->option('limit') !== null ? (int) $this->option('limit') : RecipeImportSettings::limit();
         $tally = $runner->run($limit, $this->option('scheduled') ? 'scheduled' : 'manual');
 
-        $this->info("Imported {$tally['imported']} (already here {$tally['exists']}, duplicates {$tally['duplicate']}, too thin {$tally['low_quality']}). New recipes wait in Explore as drafts.");
+        $this->info("Imported {$tally['imported']} at random (already imported {$tally['exists']}, duplicates {$tally['duplicate']}, too thin {$tally['low_quality']}). New recipes wait in Explore as drafts.");
 
         return self::SUCCESS;
     }

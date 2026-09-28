@@ -6,10 +6,8 @@ use App\Models\ExploreItem;
 use App\Models\Recipe;
 use App\Models\User;
 use App\Services\RecipeImport\RecipeImporter;
-use App\Services\RecipeImport\RecipeImportRunner;
 use App\Services\RecipeImport\TheMealDbSource;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -80,17 +78,35 @@ class RecipeImportTest extends TestCase
         $this->assertSame('exists', $importer->import(app(TheMealDbSource::class)->byLetter('x')[3]));
     }
 
-    public function test_each_run_carries_on_from_where_the_last_stopped(): void
+    public function test_runs_pick_at_random_across_the_catalogue_and_never_repeat(): void
     {
-        $this->fakeApi([$this->meal('1', 'Apam balik'), $this->meal('2', 'Asam pedas'), $this->meal('3', 'Ayam goreng')]);
-        Cache::forget(RecipeImportRunner::CURSOR_KEY);
+        // One recipe per letter a-f, so an alphabetical import would take a, b, c.
+        $letters = ['a' => 'Apam balik', 'b' => 'Bubur', 'c' => 'Cendol', 'd' => 'Dal', 'e' => 'Egg curry', 'f' => 'Fish head curry'];
+        $ids = array_flip(array_keys($letters));
+        Http::fake(function ($request) use ($letters, $ids) {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $q);
+            $l = $q['f'] ?? '';
 
-        $this->artisan('app:import-recipes', ['--limit' => 2])->assertSuccessful();
-        $this->assertSame(2, Recipe::count());
-        $this->assertSame(0, Cache::get(RecipeImportRunner::CURSOR_KEY)); // letter "a" not finished yet
+            return Http::response(['meals' => isset($letters[$l]) ? [$this->meal((string) (100 + $ids[$l]), $letters[$l])] : null], 200);
+        });
 
-        $this->artisan('app:import-recipes', ['--limit' => 2])->assertSuccessful();
-        $this->assertSame(3, Recipe::count());
+        $seen = [];
+        foreach (range(1, 20) as $run) { // over many fresh databases, the first pick varies
+            Recipe::query()->delete();
+            ExploreItem::query()->delete();
+            $this->artisan('app:import-recipes', ['--limit' => 1])->assertSuccessful();
+            $seen[Recipe::value('name')] = true;
+        }
+        $this->assertGreaterThan(1, count($seen)); // not always "Apam balik"
+
+        // Keep importing: every recipe exactly once, then nothing new.
+        Recipe::query()->delete();
+        ExploreItem::query()->delete();
+        $this->artisan('app:import-recipes', ['--limit' => 4])->assertSuccessful();
+        $this->artisan('app:import-recipes', ['--limit' => 4])->assertSuccessful();
+        $this->artisan('app:import-recipes', ['--limit' => 4])->assertSuccessful();
+        $this->assertSame(6, Recipe::count());
+        $this->assertSame(6, Recipe::distinct()->count('external_id'));
     }
 
     public function test_steps_fall_back_to_sentence_pairs_for_one_long_paragraph(): void
