@@ -8,7 +8,7 @@
     </form>
 
     @php($suggested = $this->suggestions())
-    <x-filament::section heading="Suggested by users" description="Food people added with no icon in the pack, or whose icon they had to change. Most people first. Names show once {{ \App\Services\AlgorithmInsightsReport::MIN_USERS }}+ different people hit them.">
+    <x-filament::section heading="Suggested by users" description="Food people added with no icon in the pack, or whose icon they had to change. Pick an existing icon for it, or generate a new one. Most people first. Names show once {{ \App\Services\AlgorithmInsightsReport::MIN_USERS }}+ different people hit them.">
         @if (count($suggested['rows']) === 0)
             <p class="text-sm text-gray-500">
                 Nothing shared by {{ \App\Services\AlgorithmInsightsReport::MIN_USERS }}+ people yet.
@@ -17,7 +17,7 @@
         @else
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
-                    <thead><tr><th class="p-2">Food</th><th class="p-2">Why</th><th class="p-2">People</th><th class="p-2">Items</th><th class="p-2">Last seen</th><th class="p-2"></th></tr></thead>
+                    <thead><tr><th class="p-2">Food</th><th class="p-2">Why</th><th class="p-2">Icons users made</th><th class="p-2">People</th><th class="p-2">Items</th><th class="p-2">Last seen</th><th class="p-2"></th></tr></thead>
                     <tbody>
                     @foreach ($suggested['rows'] as $row)
                         <tr class="border-t border-gray-200 dark:border-gray-700" wire:key="suggest-{{ $row['name_key'] }}">
@@ -26,10 +26,22 @@
                                 {{ $row['reason'] }}
                                 @if ($row['picked'])<span class="text-xs text-gray-500">(people picked {{ $row['picked'] }})</span>@endif
                             </td>
+                            <td class="p-2">
+                                <div class="flex gap-1">
+                                    @forelse ($this->userIconsFor($row['name_key']) as $made)
+                                        <img src="{{ $made->image_url }}" alt="" title="User icon #{{ $made->id }}" class="h-8 w-8 [image-rendering:pixelated]" />
+                                    @empty
+                                        <span class="text-xs text-gray-500">-</span>
+                                    @endforelse
+                                </div>
+                            </td>
                             <td class="p-2">{{ $row['users'] }}</td>
                             <td class="p-2">{{ $row['items'] }}</td>
                             <td class="p-2">{{ \Illuminate\Support\Carbon::parse($row['last_seen'])->diffForHumans() }}</td>
-                            <td class="p-2"><x-filament::button size="xs" wire:click="useSuggestion(@js($row['name_key']))">Use</x-filament::button></td>
+                            <td class="p-2 whitespace-nowrap">
+                                {{ ($this->pickIconAction)(['name' => $row['name_key']]) }}
+                                <x-filament::button size="xs" color="gray" wire:click="useSuggestion(@js($row['name_key']))">Generate</x-filament::button>
+                            </td>
                         </tr>
                     @endforeach
                     </tbody>
@@ -40,6 +52,27 @@
             @endif
         @endif
     </x-filament::section>
+
+    @php($picked = $this->assignments())
+    @if (count($picked) > 0)
+        <x-filament::section heading="Icons you've picked" description="New items, scans and barcode products with these names get this icon." collapsible>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead><tr><th class="p-2">Food</th><th class="p-2">Icon</th><th class="p-2">Picked</th><th class="p-2"></th></tr></thead>
+                    <tbody>
+                    @foreach ($picked as $a)
+                        <tr class="border-t border-gray-200 dark:border-gray-700" wire:key="picked-{{ $a['id'] }}">
+                            <td class="p-2 font-medium">{{ $a['name_key'] }}</td>
+                            <td class="p-2">@if ($a['image'])<img src="{{ $a['image'] }}" alt="" class="h-8 w-8 [image-rendering:pixelated]" />@endif</td>
+                            <td class="p-2">{{ \Illuminate\Support\Carbon::parse($a['updated_at'])->diffForHumans() }}</td>
+                            <td class="p-2">{{ ($this->removeAssignmentAction)(['id' => $a['id']]) }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </x-filament::section>
+    @endif
 
     <x-filament::section heading="Your recent icons" description="Not in the pack yet. Add the good ones; discard the rest. Icons already in the pack live under Content → Shared icon pack.">
         <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">

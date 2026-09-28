@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Product;
-use App\Support\FoodIconMatcher;
+use App\Support\IconAssignments;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -69,7 +69,7 @@ class BarcodeService
         }
 
         $name = $product['product_name'] ?? 'Unknown Product';
-        $icon = FoodIconMatcher::guess($name) ?? '';
+        $icon = IconAssignments::iconFor($name) ?? '';
         $suggestion = $this->agentService->suggestItemDetails($name, $icon ?: null);
 
         return [

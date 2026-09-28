@@ -238,7 +238,7 @@
                             <td class="p-2">{{ $row['users'] }}</td>
                             <td class="p-2">{{ $row['generated'] ?: '-' }}</td>
                             <td class="p-2">{{ \Illuminate\Support\Carbon::parse($row['last_seen'])->diffForHumans() }}</td>
-                            <td class="p-2"><a href="{{ \App\Filament\Pages\IconStudio::getUrl(['prompt' => $row['name_key']]) }}" class="text-primary-600 hover:underline">Make icon</a></td>
+                            <td class="p-2"><a href="{{ \App\Filament\Pages\IconStudio::getUrl(['prompt' => $row['name_key']]) }}" class="text-primary-600 hover:underline">Pick or make icon</a></td>
                         </tr>
                     @endforeach
                     </tbody>

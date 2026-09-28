@@ -14,6 +14,7 @@ use App\Support\AlgoFeedback;
 use App\Support\CreditCost;
 use App\Support\CustomFieldValue;
 use App\Support\FoodGroupClassifier;
+use App\Support\IconAssignments;
 use App\Support\ItemFeedback;
 use App\Support\ItemPayload;
 use App\Support\ItemSuggestionToken;
@@ -69,6 +70,12 @@ class ItemController extends Controller
 
         $suggested = ItemSuggestionToken::read($request->user(), $data['name'], $data['suggestion_token'] ?? null);
         $itemData = array_diff_key($data, ['suggestion_token' => true, 'barcode_miss' => true, 'add_started_at' => true, 'parsed_name' => true]);
+        // No icon from the app (it only knows the pack): use the one an admin picked for this name.
+        if (in_array($itemData['icon'], ['generic', ''], true) && empty($itemData['icon_url'])
+            && ($assigned = IconAssignments::forName($itemData['name']))) {
+            $itemData['icon'] = $assigned['icon'] ?? 'generic';
+            $itemData['icon_url'] = $assigned['icon_url'];
+        }
         $item = $section->items()->create(ItemPayload::normalize($itemData));
         ItemFeedback::created($request->user(), $item, $suggested, $data['add_started_at'] ?? null);
         ItemFeedback::scanned($request->user(), $item, $data['parsed_name'] ?? null);

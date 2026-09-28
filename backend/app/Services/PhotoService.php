@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Support\FoodIconMatcher;
+use App\Support\IconAssignments;
 use App\Support\UprightImage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -128,7 +128,7 @@ PROMPT;
             return [
                 'detected_name' => $item['detected_name'] ?? $name,
                 'parsed_name' => $name,
-                'icon' => FoodIconMatcher::guess($name) ?? '',
+                'icon' => IconAssignments::iconFor($name) ?? '',
                 'matched_product_id' => null,
                 'confidence' => is_numeric($item['confidence'] ?? null) ? (float) $item['confidence'] : 0.5,
                 'confirmed' => false,
@@ -183,7 +183,7 @@ PROMPT;
 
         return array_map(fn ($r) => [
             ...$r,
-            'icon' => FoodIconMatcher::guess($r['parsed_name']) ?? '',
+            'icon' => IconAssignments::iconFor($r['parsed_name']) ?? '',
             'matched_product_id' => null,
             'confirmed' => false,
         ], $rows);

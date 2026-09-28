@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Support\FoodIconMatcher;
+use App\Support\IconAssignments;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -99,7 +99,7 @@ PROMPT;
                 'parsed_name' => $name,
                 'parsed_quantity' => max(1, (int) ($item['parsed_quantity'] ?? 1)),
                 'matched_product_id' => null,
-                'icon' => FoodIconMatcher::guess($name) ?? '',
+                'icon' => IconAssignments::iconFor($name) ?? '',
                 'confirmed' => false,
                 'storage' => in_array($item['storage'] ?? null, PhotoService::STORAGE, true) ? $item['storage'] : null,
             ];
@@ -121,7 +121,7 @@ PROMPT;
         return array_map(fn ($r) => [
             ...$r,
             'matched_product_id' => null,
-            'icon' => FoodIconMatcher::guess($r['parsed_name']) ?? '',
+            'icon' => IconAssignments::iconFor($r['parsed_name']) ?? '',
             'confirmed' => false,
         ], $rows);
     }

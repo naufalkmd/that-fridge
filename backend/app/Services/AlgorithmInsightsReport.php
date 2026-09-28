@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AlgoFeedbackEvent;
 use App\Models\AnalyticsEvent;
 use App\Models\GeneratedIcon;
+use App\Models\IconAssignment;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -305,7 +306,9 @@ final class AlgorithmInsightsReport
             ->where('algo', 'icon')
             ->where('kind', 'miss')
             ->where('occurred_at', '>=', now()->subDays($days))
-            ->whereNotNull('name_key');
+            ->whereNotNull('name_key')
+            // Names an admin has already given an icon (Icon Studio → Pick icon) are settled.
+            ->whereNotIn('name_key', IconAssignment::query()->select('name_key'));
 
         $rows = (clone $base)
             ->select('name_key')
@@ -340,7 +343,9 @@ final class AlgorithmInsightsReport
             ->where('algo', 'icon')
             ->whereIn('kind', ['miss', 'mismatch'])
             ->where('occurred_at', '>=', now()->subDays($days))
-            ->whereNotNull('name_key');
+            ->whereNotNull('name_key')
+            // Names an admin has already given an icon (Icon Studio → Pick icon) are settled.
+            ->whereNotIn('name_key', IconAssignment::query()->select('name_key'));
 
         $names = (clone $base)
             ->select('name_key')

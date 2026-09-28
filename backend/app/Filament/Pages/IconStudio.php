@@ -4,10 +4,17 @@ namespace App\Filament\Pages;
 
 use App\Models\AdminAuditLog;
 use App\Models\GeneratedIcon;
+use App\Models\IconAssignment;
+use App\Models\Item;
+use App\Models\SharedIcon;
 use App\Services\AlgorithmInsightsReport;
 use App\Services\IconCurator;
 use App\Services\IconGenerationService;
 use App\Support\AdminCacheKeys;
+use App\Support\AlgoFeedback;
+use App\Support\FoodIconMatcher;
+use App\Support\IconAssignments;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -75,6 +82,177 @@ class IconStudio extends Page implements HasForms
     {
         return Cache::flexible(AdminCacheKeys::ICON_SUGGESTIONS, AdminCacheKeys::DASHBOARD_TTL,
             fn () => app(AlgorithmInsightsReport::class)->iconSuggestions());
+    }
+
+    /**
+     * Pick the icon for a suggested food name: one of the pack icons, a shared icon, or an icon a
+     * user generated for this name (promoted to the shared pack on the way). New items, scans and
+     * barcode products with that name get it from then on; optionally the existing items too.
+     */
+    public function pickIconAction(): Action
+    {
+        return Action::make('pickIcon')
+            ->label('Pick icon')
+            ->icon('heroicon-m-photo')
+            ->size('xs')
+            ->modalHeading(fn (array $arguments) => 'Icon for "'.($arguments['name'] ?? '').'"')
+            ->modalDescription('Items with this name will show it from now on.')
+            ->form(fn (array $arguments) => [
+                Forms\Components\Select::make('choice')
+                    ->label('Icon')
+                    ->searchable()
+                    ->allowHtml()
+                    ->required()
+                    ->options(fn () => $this->iconChoices((string) ($arguments['name'] ?? ''))),
+                Forms\Components\Toggle::make('apply_existing')
+                    ->label(fn () => 'Also update the '.$this->unnamedItemCount((string) ($arguments['name'] ?? '')).' existing items with this name and no icon')
+                    ->default(true)
+                    ->visible(fn () => $this->unnamedItemCount((string) ($arguments['name'] ?? '')) > 0),
+            ])
+            ->action(fn (array $data, array $arguments) => $this->assign(
+                (string) ($arguments['name'] ?? ''), (string) $data['choice'], (bool) ($data['apply_existing'] ?? false),
+            ));
+    }
+
+    public function removeAssignmentAction(): Action
+    {
+        return Action::make('removeAssignment')
+            ->label('Remove')
+            ->color('danger')
+            ->size('xs')
+            ->requiresConfirmation()
+            ->modalDescription('New items with this name go back to the pack\'s own guess. Items already updated keep their icon.')
+            ->action(function (array $arguments) {
+                $a = IconAssignment::find($arguments['id'] ?? null);
+                if ($a) {
+                    AdminAuditLog::record('deleted', $a, ['before' => $a->only(['name_key', 'icon', 'icon_url'])]);
+                    $a->delete();
+                    $this->flushIconCaches();
+                }
+            });
+    }
+
+    /** @return array<string, array<string, string>> Select options, grouped, as HTML with a preview. */
+    public function iconChoices(string $name): array
+    {
+        $option = fn (?string $url, string $label) => '<span style="display:flex;align-items:center;gap:8px">'
+            .($url ? '<img src="'.e($url).'" alt="" style="width:28px;height:28px;image-rendering:pixelated">' : '')
+            .'<span>'.e($label).'</span></span>';
+
+        $groups = [];
+        $made = $this->userIconsFor($name, 12);
+        if ($made !== []) {
+            $groups['Made by users for this name'] = collect($made)->mapWithKeys(fn ($g) => ["gen:{$g->id}" => $option($g->image_url, "User icon #{$g->id}")])->all();
+        }
+        $shared = SharedIcon::query()->orderBy('label')->limit(300)->get(['id', 'label', 'image_url']);
+        if ($shared->isNotEmpty()) {
+            $groups['Shared icons'] = $shared->mapWithKeys(fn ($i) => ["shared:{$i->id}" => $option($i->image_url, (string) $i->label)])->all();
+        }
+        $groups['Pixel pack'] = collect(FoodIconMatcher::packOptions())
+            ->mapWithKeys(fn ($label, $key) => ["pack:{$key}" => $option(FoodIconMatcher::imageUrl($key), $label)])->all();
+
+        return $groups;
+    }
+
+    /** Icons users generated for this food name (their prompt was the name), newest first. */
+    public function userIconsFor(string $name, int $limit = 3): array
+    {
+        return GeneratedIcon::query()
+            ->whereRaw('lower(trim(prompt)) = ?', [mb_strtolower(trim($name))])
+            ->latest('id')->limit($limit)->get(['id', 'image_url', 'image_path', 'prompt'])->all();
+    }
+
+    /** Items called this (same name key) that still have no icon. */
+    public function unnamedItemCount(string $name): int
+    {
+        return count($this->unnamedItemIds($name));
+    }
+
+    /** @return list<int> */
+    private function unnamedItemIds(string $name): array
+    {
+        $key = AlgoFeedback::nameKey($name);
+        if ($key === null) {
+            return [];
+        }
+        $ids = [];
+        Item::query()->whereIn('icon', ['generic', ''])->whereNull('icon_url')->select(['id', 'name'])
+            ->chunkById(500, function ($items) use ($key, &$ids) {
+                foreach ($items as $item) {
+                    if (AlgoFeedback::nameKey($item->name) === $key) {
+                        $ids[] = $item->id;
+                    }
+                }
+            });
+
+        return $ids;
+    }
+
+    public function assign(string $name, string $choice, bool $applyExisting): void
+    {
+        $key = AlgoFeedback::nameKey($name);
+        if ($key === null) {
+            return;
+        }
+
+        [$kind, $ref] = array_pad(explode(':', $choice, 2), 2, '');
+        $icon = null;
+        $url = null;
+        $sharedId = null;
+        try {
+            if ($kind === 'pack' && FoodIconMatcher::fileFor($ref) !== null) {
+                $icon = $ref;
+            } elseif ($kind === 'shared' && ($shared = SharedIcon::find((int) $ref))) {
+                [$url, $sharedId] = [$shared->image_url, $shared->id];
+            } elseif ($kind === 'gen' && ($gen = GeneratedIcon::find((int) $ref))) {
+                // A user's icon becomes a shared one first, so it lives in the pack for everyone.
+                $shared = app(IconCurator::class)->promote($gen, Str::limit(Str::title($name), 40, ''));
+                [$url, $sharedId] = [$shared->image_url, $shared->id];
+            } else {
+                Notification::make()->danger()->title('That icon is no longer available.')->send();
+
+                return;
+            }
+        } catch (RuntimeException $e) {
+            Notification::make()->danger()->title($e->getMessage())->send();
+
+            return;
+        }
+
+        $assignment = IconAssignment::updateOrCreate(['name_key' => $key], [
+            'icon' => $icon, 'icon_url' => $url, 'shared_icon_id' => $sharedId, 'assigned_by' => Auth::id(),
+        ]);
+        $updated = 0;
+        if ($applyExisting) {
+            $ids = $this->unnamedItemIds($name);
+            $updated = $ids === [] ? 0 : Item::query()->whereIn('id', $ids)->update(['icon' => $icon ?? 'generic', 'icon_url' => $url]);
+        }
+        AdminAuditLog::record('assigned_icon', $assignment, ['after' => ['name_key' => $key, 'icon' => $icon, 'icon_url' => $url], 'items_updated' => $updated]);
+        $this->flushIconCaches();
+
+        Notification::make()->success()
+            ->title("\"{$key}\" has an icon now")
+            ->body($updated ? "{$updated} existing items updated too." : 'New items with this name will use it.')
+            ->send();
+    }
+
+    /** @return list<array{id: int, name_key: string, image: ?string, updated_at: string}> */
+    public function assignments(): array
+    {
+        return IconAssignment::query()->latest('updated_at')->limit(100)->get()
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'name_key' => $a->name_key,
+                'image' => $a->icon_url ?? FoodIconMatcher::imageUrl($a->icon),
+                'updated_at' => (string) $a->updated_at,
+            ])->all();
+    }
+
+    private function flushIconCaches(): void
+    {
+        IconAssignments::flush();
+        Cache::forget(AdminCacheKeys::ICON_SUGGESTIONS);
+        Cache::forget(AdminCacheKeys::ICON_MISSES);
     }
 
     /** Put a suggested name in the prompt, ready to generate. */
