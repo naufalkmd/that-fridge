@@ -38,16 +38,21 @@ export const FRESH_GREEN = "#3f8f5c";
 export const FRESH_AMBER = "#d99a2b";
 export const FRESH_RED = "#c1452e";
 
+/** Below this, an item is about to turn (red): use it today or tomorrow. */
+export const FRESHNESS_AT_RISK = 30;
+/** Below this (and not at risk), it's worth planning for (amber). */
+export const FRESHNESS_WATCH = 60;
+
 export function freshColor(freshness: number): string {
-  if (freshness >= 60) return FRESH_GREEN;
-  if (freshness >= 30) return FRESH_AMBER;
+  if (freshness >= FRESHNESS_WATCH) return FRESH_GREEN;
+  if (freshness >= FRESHNESS_AT_RISK) return FRESH_AMBER;
   return FRESH_RED;
 }
 
 // Same thresholds as freshColor, as an ordinal for sorting: most urgent (red) first.
 export function freshnessBand(freshness: number): 0 | 1 | 2 {
-  if (freshness < 30) return 0;
-  if (freshness < 60) return 1;
+  if (freshness < FRESHNESS_AT_RISK) return 0;
+  if (freshness < FRESHNESS_WATCH) return 1;
   return 2;
 }
 

@@ -2,6 +2,8 @@
 // inputs instead of the web's ThatFridgeState. (The goal tracker was removed with the Goal screen.)
 
 import type { FlatItem } from "./api";
+import { normalizeItemName } from "./domain";
+import { recipeCoverage, sameFood } from "./recipeMatch";
 import type {
   BadgeKey,
   Recipe,
@@ -29,36 +31,26 @@ export function getShoppingRecommendations(input: {
   limit?: number;
 }): ShoppingRecommendation[] {
   const { items, recipes, shoppingList, usageHistory, limit = 6 } = input;
-  const stocked = new Set(items.map((i) => i.name.trim().toLowerCase()));
-  const onList = new Set(
-    shoppingList.filter((s) => !s.checked).map((s) => s.name.trim().toLowerCase()),
-  );
+  const onList = shoppingList.filter((s) => !s.checked);
   const seen = new Set<string>();
   const out: ShoppingRecommendation[] = [];
   const push = (r: ShoppingRecommendation) => {
-    const k = r.name.trim().toLowerCase();
-    if (seen.has(k) || stocked.has(k) || onList.has(k)) return;
+    const k = normalizeItemName(r.name);
+    if (seen.has(k)) return;
+    // Already at home, or already on the list - the same food by the shared rule (recipeMatch).
+    if (items.some((i) => sameFood(i.name, r.name)) || onList.some((s) => sameFood(s.name, r.name))) return;
     seen.add(k);
     out.push(r);
   };
 
   // Recipes you're close to being able to make — surface what's missing.
   const close = recipes
-    .map((r) => {
-      const have = r.ingredients.filter((ing) =>
-        items.some(
-          (i) => i.icon === ing.icon || i.name.toLowerCase() === ing.name.toLowerCase(),
-        ),
-      ).length;
-      return { r, have, total: r.ingredients.length };
-    })
+    .map((r) => ({ r, ...recipeCoverage(r, items) }))
     .filter((x) => x.total > 0 && x.have > 0 && x.have < x.total)
     .sort((a, b) => b.have / b.total - a.have / a.total);
 
-  for (const { r } of close.slice(0, 2)) {
-    for (const ing of r.ingredients) {
-      if (items.some((i) => i.icon === ing.icon || i.name.toLowerCase() === ing.name.toLowerCase()))
-        continue;
+  for (const { r, missing } of close.slice(0, 2)) {
+    for (const ing of missing) {
       push({
         key: `rec-${r.id}-${ing.name}`,
         source: "recipe",

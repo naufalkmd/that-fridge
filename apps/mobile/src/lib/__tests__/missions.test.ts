@@ -191,5 +191,7 @@ describe("the crew's own decisions", () => {
     expect(defaultChoice({ kind: "sort-group", id: "g", item: milk }, 0)).toEqual({ action: "group:dairy", ticked: true });
     const jar = item("Mystery jar", { icon: "zzz", nutritionCategory: null });
     expect(defaultChoice({ kind: "sort-group", id: "h", item: jar }, 0)).toEqual({ action: null, ticked: false });
+    // The server's classifier wins over the icon's guess.
+    expect(defaultChoice({ kind: "sort-group", id: "k", item: jar, suggested: "other_extras" }, 0)).toEqual({ action: "group:other_extras", ticked: true });
   });
 });

@@ -3,7 +3,7 @@
 // for the reveal - where a detected item sits on the photo, how to crop it into a square tile and
 // where the tiles land. Pure functions, so all of it is testable without rendering.
 
-import { normalizeItemName, type NutritionCategory, type StorageLocation } from "@thatfridge/core";
+import { normalizeItemName, sameFood, type NutritionCategory, type StorageLocation } from "@thatfridge/core";
 
 /** [ymin, xmin, ymax, xmax] in 0-1000 of the photo, as the backend's photo scan returns it. */
 export type Box = [number, number, number, number];
@@ -198,25 +198,6 @@ export type ResultRow<T extends TrackedItem = TrackedItem> = {
   match: T | null;
 };
 
-const tokens = (s: string) => normalizeItemName(s).split(/[^a-z0-9]+/).filter(Boolean);
-
-/**
- * Whether a scanned name and a tracked one are the same thing: equal once normalised ("Eggs" /
- * "egg"), or every word of the shorter name appears in the longer ("Milk" / "Whole milk").
- */
-export function sameItem(a: string, b: string): boolean {
-  const na = normalizeItemName(a);
-  const nb = normalizeItemName(b);
-  if (!na || !nb) return false;
-  if (na === nb) return true;
-  const ta = tokens(a);
-  const tb = tokens(b);
-  const [short, long] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
-  if (short.length === 0 || !short.some((t) => t.length >= 3)) return false;
-  const longSet = new Set(long.map((t) => normalizeItemName(t)));
-  return short.every((t) => longSet.has(normalizeItemName(t)));
-}
-
 /**
  * Turn the finished shots into result rows and compare them with `tracked` (the target fridge's
  * items): the same item across shots of one space merges into one row, rows from fridge / freezer
@@ -279,7 +260,7 @@ export function buildSweepResults<T extends TrackedItem>(
     row.seenIn = perShot.size;
     if (row.space !== "groceries") {
       const hit = tracked.find(
-        (t) => !used.has(t.id) && (t.location ?? "fridge") === row.location && sameItem(row.name, t.name),
+        (t) => !used.has(t.id) && (t.location ?? "fridge") === row.location && sameFood(row.name, t.name),
       );
       if (hit) {
         used.add(hit.id);

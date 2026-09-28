@@ -22,6 +22,8 @@ import Animated, {
 
 import {
   ApiError,
+  FRESHNESS_AT_RISK,
+  FRESHNESS_WATCH,
   STORAGE_LOCATIONS,
   computeFoodBalanceScore,
   computeOrganizerScore,
@@ -31,6 +33,8 @@ import {
   describeError,
   freshColor,
   getShoppingRecommendations,
+  rankRecipesToCook,
+  recipeCoverage,
   type ChatAgentName,
   type FlatItem,
   type KitchenScoreInput,
@@ -336,26 +340,12 @@ export default function Crew() {
       }),
     [scoped, recipes, shoppingItems, usageHistory],
   );
-  const tonightReady = useMemo(() => {
-    const best = recipes
-      .map((r) => ({
-        have: r.ingredients.filter((ing) =>
-          scoped.some(
-            (i) =>
-              i.icon === ing.icon ||
-              i.name.toLowerCase() === ing.name.toLowerCase(),
-          ),
-        ).length,
-        total: r.ingredients.length,
-      }))
-      .filter((x) => x.total > 0)
-      .sort((a, b) => b.have / b.total - a.have / a.total)[0];
-    return best ?? null;
-  }, [recipes, scoped]);
+  // Chef's top pick, by the same ranking as its Activate plan and the recipe book (core).
+  const tonightReady = useMemo(() => rankRecipesToCook(recipes, scoped)[0] ?? null, [recipes, scoped]);
 
-  const riskCount = scoped.filter((i) => i.freshness < 30).length;
+  const riskCount = scoped.filter((i) => i.freshness < FRESHNESS_AT_RISK).length;
   const watchCount = scoped.filter(
-    (i) => i.freshness >= 30 && i.freshness < 60,
+    (i) => i.freshness >= FRESHNESS_AT_RISK && i.freshness < FRESHNESS_WATCH,
   ).length;
   const freshCount = scoped.length - riskCount - watchCount;
   const barTotal = Math.max(1, scoped.length);
@@ -370,7 +360,9 @@ export default function Crew() {
       : tab === "recipes"
         ? tonightReady
           ? `${tonightReady.have}/${tonightReady.total} ingredients ready for tonight`
-          : "No recipes yet"
+          : recipes.length
+            ? "Nothing you can make from this fridge yet"
+            : "No recipes yet"
         : tab === "shopping"
           ? recs.length > 0
             ? `${recs.length} item${recs.length === 1 ? "" : "s"} to restock`
@@ -440,7 +432,29 @@ export default function Crew() {
   function startMission() {
     void Haptics.selectionAsync();
     if (!mission || missionDone) {
-      setMissions((prev) => ({ ...prev, [tab]: { tasks: buildTasks(tab), done: {}, startScore: score.score } }));
+      const tasks = buildTasks(tab);
+      setMissions((prev) => ({ ...prev, [tab]: { tasks, done: {}, startScore: score.score } }));
+      // Organizer files items the way the server does when they're added (free, no AI).
+      const unsorted = tasks.filter((t): t is Extract<MissionTask, { kind: "sort-group" }> => t.kind === "sort-group");
+      if (unsorted.length) {
+        api
+          .classifyFoodGroups(unsorted.map((t) => ({ name: t.item.name, icon: t.item.icon })))
+          .then((groups) =>
+            setMissions((prev) => {
+              const m = prev.organizer;
+              if (!m) return prev;
+              const byId = new Map(unsorted.map((t, i) => [t.id, groups[i] ?? null]));
+              return {
+                ...prev,
+                organizer: {
+                  ...m,
+                  tasks: m.tasks.map((t) => (t.kind === "sort-group" && byId.get(t.id) ? { ...t, suggested: byId.get(t.id) } : t)),
+                },
+              };
+            }),
+          )
+          .catch(() => {});
+      }
       // With the switch on, Organizer's mission opens with the storage check (it asks about the credits first).
       if (tab === "organizer" && organizerAuto && sweep.status === "idle") sweep.start(scoped);
     }
@@ -799,14 +813,7 @@ function RecipesPanel() {
   const view = useMemo(
     () =>
       recipes.map((r) => {
-        const have = r.ingredients.filter((ing) =>
-          items.some(
-            (i) =>
-              i.icon === ing.icon ||
-              i.name.toLowerCase() === ing.name.toLowerCase(),
-          ),
-        ).length;
-        const total = r.ingredients.length;
+        const { have, total } = recipeCoverage(r, items);
         return { r, have, total, ready: total > 0 && have === total };
       }),
     [recipes, items],
@@ -816,13 +823,11 @@ function RecipesPanel() {
     if (filter === "favorites") return view.filter((v) => v.r.isFavorite);
     return view.filter((v) => v.r.category === filter);
   }, [view, filter]);
-  const tonight = useMemo(
-    () =>
-      view.length
-        ? [...view].sort((a, b) => b.have / b.total - a.have / a.total)[0]
-        : null,
-    [view],
-  );
+  // Same pick as Chef's plan and the Crew hero line: what uses up expiring food first (core).
+  const tonight = useMemo(() => {
+    const best = rankRecipesToCook(recipes, items)[0];
+    return best ? { r: best.recipe, have: best.have, total: best.total } : null;
+  }, [recipes, items]);
 
   return (
     <View>
@@ -1479,19 +1484,19 @@ const RISK_BUCKETS: {
   {
     key: "risk",
     label: "Act now",
-    test: (f) => f < 30,
+    test: (f) => f < FRESHNESS_AT_RISK,
     hint: "Going bad soon — use or lose it",
   },
   {
     key: "watch",
     label: "Use soon",
-    test: (f) => f >= 30 && f < 60,
+    test: (f) => f >= FRESHNESS_AT_RISK && f < FRESHNESS_WATCH,
     hint: "Plan to use within a few days",
   },
   {
     key: "fresh",
     label: "Fresh",
-    test: (f) => f >= 60,
+    test: (f) => f >= FRESHNESS_WATCH,
     hint: "Holding up well",
   },
 ];

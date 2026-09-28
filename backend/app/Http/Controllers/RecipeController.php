@@ -11,6 +11,7 @@ use App\Services\CreditService;
 use App\Services\RecipeChefService;
 use App\Services\RecipeLinkImportService;
 use App\Support\CreditCost;
+use App\Support\IngredientMatch;
 use App\Support\ItemFreshness;
 use App\Support\RecipeFeedback;
 use Illuminate\Http\Request;
@@ -173,10 +174,10 @@ class RecipeController extends Controller
             ->orderBy('name')
             ->get();
 
-        $expiringDaysByIcon = $this->expiringItemIcons($user);
+        $expiring = $this->expiringItems($user);
 
         $rankScored = function (bool $applyMealTypeFilter, bool $applyFoodFocusFilter) use (
-            $recipes, $mealType, $foodFocus, $vibes, $hasScoringCriteria, $expiringDaysByIcon
+            $recipes, $mealType, $foodFocus, $vibes, $hasScoringCriteria, $expiring
         ) {
             return $recipes
                 ->when($applyMealTypeFilter && $mealType, fn ($c) => $c->where('meal_type', $mealType))
@@ -185,7 +186,7 @@ class RecipeController extends Controller
                 ))
                 // Always scored against the real (un-relaxed) selection, regardless of which
                 // filters this particular pass is applying.
-                ->map(fn ($r) => ['recipe' => $r, 'score' => $this->scoreRecipe($r, $vibes, $foodFocus, $expiringDaysByIcon)])
+                ->map(fn ($r) => ['recipe' => $r, 'score' => $this->scoreRecipe($r, $vibes, $foodFocus, $expiring)])
                 ->when($hasScoringCriteria, fn ($c) => $c->filter(fn ($x) => $x['score'] > 0))
                 ->sortByDesc('score');
         };
@@ -222,7 +223,8 @@ class RecipeController extends Controller
         ]);
     }
 
-    private function scoreRecipe(Recipe $recipe, array $vibes, array $foodFocus, array $expiringDaysByIcon): float
+    /** @param  list<array{name: string, icon: ?string, days: int}>  $expiring */
+    private function scoreRecipe(Recipe $recipe, array $vibes, array $foodFocus, array $expiring): float
     {
         $score = 0;
 
@@ -244,10 +246,13 @@ class RecipeController extends Controller
 
         if (in_array('use_it_up', $vibes, true)) {
             foreach ($recipe->ingredients ?? [] as $ingredient) {
-                $icon = $ingredient['icon'] ?? null;
-                if ($icon && isset($expiringDaysByIcon[$icon])) {
+                // The soonest-expiring stocked item that covers this ingredient (IngredientMatch).
+                $days = collect($expiring)
+                    ->filter(fn ($i) => IngredientMatch::covers($i['name'], $i['icon'], $ingredient))
+                    ->min('days');
+                if ($days !== null) {
                     // 0-3 days out -> weight 3 down to 0, matching the spec's urgency curve.
-                    $score += max(0, 3 - $expiringDaysByIcon[$icon]);
+                    $score += max(0, 3 - $days);
                 }
             }
         }
@@ -256,30 +261,26 @@ class RecipeController extends Controller
     }
 
     /**
-     * icon => soonest days-until-expiry, across the user's own items that have an expiry_date
-     * set (items with no date set carry no urgency signal either way). Recipes don't resolve
-     * to specific item ids anywhere in this app - ingredient matching is icon-string equality
-     * everywhere else too (see frontend's getRecipesView/openMarkRecipeMade), so this mirrors
-     * that same heuristic server-side rather than inventing a new matching mechanism.
+     * The user's items with an expiry (items with no date carry no urgency signal either way),
+     * with days until they expire - matched against ingredients by IngredientMatch, the same rule
+     * the app uses for Tonight's pick and Chef's plan.
+     *
+     * @return list<array{name: string, icon: ?string, days: int}>
      */
-    private function expiringItemIcons($user): array
+    private function expiringItems($user): array
     {
+        $out = [];
         $items = Item::query()
             ->whereHas('section.fridge.members', fn ($q) => $q->where('users.id', $user->id))
             ->get();
-
-        $byIcon = [];
         foreach ($items as $item) {
             $days = ItemFreshness::effectiveDaysUntilExpiry($item);
-            if ($days === null) {
-                continue;
-            }
-            if (! isset($byIcon[$item->icon]) || $days < $byIcon[$item->icon]) {
-                $byIcon[$item->icon] = $days;
+            if ($days !== null) {
+                $out[] = ['name' => (string) $item->name, 'icon' => $item->icon, 'days' => (int) $days];
             }
         }
 
-        return $byIcon;
+        return $out;
     }
 
     public function markMade(Request $request, Recipe $recipe)

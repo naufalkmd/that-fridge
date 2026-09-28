@@ -75,7 +75,8 @@ class RecipeImporter
             'minutes' => $minutes,
             'category' => $category,
             'icon' => null,
-            'ingredients' => array_map(fn ($n) => ['name' => $n, 'icon' => FoodIconMatcher::guess($n) ?? 'leftovers'], $ingredientNames),
+            // 'generic' when unknown: a fallback icon never counts as a match (IngredientMatch).
+            'ingredients' => array_map(fn ($n) => ['name' => $n, 'icon' => FoodIconMatcher::guess($n) ?? 'generic'], $ingredientNames),
             'steps' => $steps,
             'attachments' => $r['image'] ? [['type' => 'image', 'url' => $r['image']]] : [],
         ]);

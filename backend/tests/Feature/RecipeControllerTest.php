@@ -170,12 +170,12 @@ class RecipeControllerTest extends TestCase
         $this->assertEquals(['Never Made'], $names->all());
     }
 
-    private function itemExpiringIn(User $user, string $icon, int $days): void
+    private function itemExpiringIn(User $user, string $icon, int $days, ?string $name = null): void
     {
         $fridge = Fridge::create(['user_id' => $user->id, 'name' => 'Fridge']);
         $section = Section::create(['fridge_id' => $fridge->id, 'name' => 'General']);
         $section->items()->create([
-            'name' => ucfirst($icon),
+            'name' => $name ?? ucfirst($icon),
             'icon' => $icon,
             'location' => 'fridge',
             'quantity' => 1,
@@ -196,6 +196,19 @@ class RecipeControllerTest extends TestCase
         $names = collect($response->json('exact'))->pluck('name');
         $this->assertTrue($names->contains('Uses Expiring'));
         $this->assertFalse($names->contains('No Overlap'));
+    }
+
+    public function test_use_it_up_matches_by_name_but_never_on_a_fallback_icon(): void
+    {
+        $user = User::factory()->create();
+        $this->itemExpiringIn($user, 'generic', 1, 'Chicken thighs'); // unknown icon, known name
+        $byName = $this->recipeFor($user, ['name' => 'Chicken stew', 'ingredients' => [['name' => 'Chicken thigh', 'icon' => 'generic']]]);
+        $fallbackOnly = $this->recipeFor($user, ['name' => 'Tamarind soup', 'ingredients' => [['name' => 'Tamarind', 'icon' => 'generic']]]);
+
+        $names = collect($this->actingAs($user)->getJson('/api/recipes/suggest?vibes[]=use_it_up')->json('exact'))->pluck('name');
+
+        $this->assertTrue($names->contains('Chicken stew'));
+        $this->assertFalse($names->contains('Tamarind soup')); // sharing "generic" isn't a match
     }
 
     public function test_suggest_puts_relaxed_matches_in_the_similar_bucket_not_exact(): void

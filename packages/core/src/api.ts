@@ -500,6 +500,12 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.get<CreditsResult>("/me/credits");
   }
 
+  /** The server's food group for each name (rules + earlier answers, no AI, free); null where unsure. */
+  async function classifyFoodGroups(items: { name: string; icon?: string | null }[]): Promise<(NutritionCategory | null)[]> {
+    const res = await http.post<{ groups: (NutritionCategory | null)[] }>("/food-groups/classify", { items });
+    return res.groups;
+  }
+
   /** Settings' "Send feedback" form. `email` is a free-typed contact address, not necessarily
    *  the signed-in account's own - the sender may want a reply somewhere else. */
   function sendFeedback(email: string, message: string): Promise<void> {
@@ -1354,6 +1360,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     deleteChatSession,
     deleteAllChatSessions,
     sendFeedback,
+    classifyFoodGroups,
     tipFeedback,
     getCalendar,
     clearCalendarHistory,

@@ -10,9 +10,14 @@
 //   Organizer  - keep the inventory in order: food groups, storage spots.
 
 import {
+  FRESHNESS_AT_RISK,
+  coversIngredient,
   guessFoodIcon,
   normalizeItemName,
   nutritionCategoryForIcon,
+  rankRecipesToCook,
+  recipeCoverage,
+  sameFood,
   type FlatItem,
   type NutritionCategory,
   type Recipe,
@@ -38,8 +43,8 @@ export type MissionTask =
   | { kind: "running-low"; id: string; item: FlatItem; uses: number }
   /** Shopkeeper: a restock suggestion (a recipe you're close to, or a habit). */
   | { kind: "restock"; id: string; rec: ShoppingRecommendation }
-  /** Organizer: an item with no food group. */
-  | { kind: "sort-group"; id: string; item: FlatItem }
+  /** Organizer: an item with no food group; `suggested` is the server's classifier's answer. */
+  | { kind: "sort-group"; id: string; item: FlatItem; suggested?: NutritionCategory | null }
   /** Organizer: items with blank details (weight, calories, the user's own custom fields). */
   | { kind: "fill-details"; id: string; items: { item: FlatItem; missing: string[] }[] }
   /** Organizer: offer the AI storage check (costs credits, asks first). */
@@ -52,14 +57,11 @@ export type MissionAgent = "Guardian" | "Chef" | "Shopkeeper" | "Organizer";
 /** Tasks per mission: short enough to finish in half a minute. */
 export const MISSION_SIZE = 5;
 
-/** Freshness below this counts as about to turn (same line as the Guardian panel's "at risk"). */
-export const AT_RISK = 30;
-
-const has = (items: Pick<FlatItem, "name" | "icon">[], ing: RecipeIngredient) =>
-  items.some((i) => i.icon === ing.icon || normalizeItemName(i.name) === normalizeItemName(ing.name));
+/** Freshness below this counts as about to turn - the app-wide line (see core's domain.ts). */
+const AT_RISK = FRESHNESS_AT_RISK;
 
 const usesItem = (recipe: Recipe, item: Pick<FlatItem, "name" | "icon">) =>
-  recipe.ingredients.some((ing) => ing.icon === item.icon || normalizeItemName(ing.name) === normalizeItemName(item.name));
+  recipe.ingredients.some((ing) => coversIngredient(item, ing));
 
 // ---- Guardian ------------------------------------------------------------------
 
@@ -95,7 +97,10 @@ export function guardianTasks(items: FlatItem[], recipes: Recipe[]): MissionTask
       const recipe =
         recipes
           .filter((r) => usesItem(r, item))
-          .map((r) => ({ r, have: r.ingredients.filter((ing) => has(items, ing)).length / Math.max(1, r.ingredients.length) }))
+          .map((r) => {
+            const c = recipeCoverage(r, items);
+            return { r, have: c.have / Math.max(1, c.total) };
+          })
           .sort((a, b) => b.have - a.have)[0]?.r ?? null;
       return { kind: "rescue", id: `rescue-${item.id}`, item, recipe, canFreeze: canFreeze(item) };
     });
@@ -105,25 +110,20 @@ export function guardianTasks(items: FlatItem[], recipes: Recipe[]): MissionTask
 
 // ---- Chef ----------------------------------------------------------------------
 
-/**
- * Recipes worth cooking now: each scores 2 points for every ingredient that's about to turn and
- * 1 for coverage, so a dish that rescues the spinach beats one that merely uses the pantry.
- */
+/** Recipes worth cooking now, ranked by the app-wide rule (core's rankRecipesToCook). */
 export function chefTasks(items: FlatItem[], recipes: Recipe[]): MissionTask[] {
   const expiring = items.filter((i) => i.days >= 0 && i.freshness < AT_RISK);
-  const ranked = recipes
-    .filter((r) => r.ingredients.length > 0)
-    .map((recipe) => {
-      const have = recipe.ingredients.filter((ing) => has(items, ing)).length;
-      const rescues = expiring.filter((i) => usesItem(recipe, i));
-      const missing = recipe.ingredients.filter((ing) => !has(items, ing));
-      const score = rescues.length * 2 + have / recipe.ingredients.length;
-      return { recipe, have, total: recipe.ingredients.length, rescues, missing, score };
-    })
-    .filter((x) => x.have > 0)
-    .sort((a, b) => b.score - a.score)
+  const ranked: MissionTask[] = rankRecipesToCook(recipes, items)
     .slice(0, 3)
-    .map((x): MissionTask => ({ kind: "cook", id: `cook-${x.recipe.id}`, ...x }));
+    .map((x) => ({
+      kind: "cook",
+      id: `cook-${x.recipe.id}`,
+      recipe: x.recipe,
+      have: x.have,
+      total: x.total,
+      missing: x.missing,
+      rescues: x.rescues as FlatItem[],
+    }));
 
   // Expiring food no recipe uses: ask Chef for an idea rather than let it go.
   const uncovered = expiring.filter((i) => !ranked.some((t) => t.kind === "cook" && t.rescues.some((r) => r.id === i.id)));
@@ -144,7 +144,7 @@ export function shopkeeperTasks(
 
   // On the list, but a fresh one is already at home.
   for (const entry of open) {
-    const item = items.find((i) => normalizeItemName(i.name) === normalizeItemName(entry.name) && i.freshness >= AT_RISK);
+    const item = items.find((i) => sameFood(i.name, entry.name) && i.freshness >= AT_RISK);
     if (item) out.push({ kind: "list-have", id: `have-${entry.id}`, entry, item });
   }
 
@@ -284,7 +284,9 @@ export function defaultChoice(t: MissionTask, index: number): { action: string |
     case "restock":
       return { action: "add", ticked: true };
     case "sort-group": {
-      const group = localFoodGroup(t.item);
+      // The server's classifier first (the same one that files items when they're added), then
+      // the icon's own group while that answer is on its way.
+      const group = t.suggested ?? localFoodGroup(t.item);
       return group ? { action: `group:${group}`, ticked: true } : { action: null, ticked: false };
     }
     case "fill-details":

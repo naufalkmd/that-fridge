@@ -5,3 +5,4 @@ export * from "./domain";
 export * from "./home";
 export * from "./progress";
 export * from "./food-icons";
+export * from "./recipeMatch";

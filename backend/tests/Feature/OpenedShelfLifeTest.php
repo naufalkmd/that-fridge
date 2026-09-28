@@ -116,8 +116,8 @@ class OpenedShelfLifeTest extends TestCase
         $daysFor = new \ReflectionMethod(KitchenScoreService::class, 'daysFor');
         $this->assertSame(2, $daysFor->invoke(app(KitchenScoreService::class), $item->fresh()));
 
-        $icons = new \ReflectionMethod(RecipeController::class, 'expiringItemIcons');
-        $this->assertSame(['milk' => 2], $icons->invoke(app(RecipeController::class), $user));
+        $expiring = new \ReflectionMethod(RecipeController::class, 'expiringItems');
+        $this->assertSame([['name' => 'Milk', 'icon' => 'milk', 'days' => 2]], $expiring->invoke(app(RecipeController::class), $user));
 
         $this->assertSame(2, ItemRemovalOutcome::classify($item->fresh())['predicted_days']);
     }

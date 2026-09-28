@@ -7,7 +7,6 @@ import {
   flyStart,
   gridCells,
   padBox,
-  sameItem,
   sceneSpace,
   shotLabel,
   spaceLocation,
@@ -16,6 +15,7 @@ import {
   type SweepDetection,
   type SweepShotInput,
 } from "../sweep";
+import { sameFood } from "@thatfridge/core";
 
 describe("fitFrame", () => {
   it("fits a portrait photo by height and centers it", () => {
@@ -127,17 +127,17 @@ describe("spaces", () => {
   });
 });
 
-describe("sameItem", () => {
+describe("sameFood (shared with the whole app, see core/recipeMatch)", () => {
   it("matches plurals and extra words", () => {
-    expect(sameItem("Eggs", "egg")).toBe(true);
-    expect(sameItem("Milk", "Whole milk")).toBe(true);
-    expect(sameItem("Greek yogurt", "yogurt")).toBe(true);
+    expect(sameFood("Eggs", "egg")).toBe(true);
+    expect(sameFood("Milk", "Whole milk")).toBe(true);
+    expect(sameFood("Greek yogurt", "yogurt")).toBe(true);
   });
 
   it("doesn't match different things or tiny words", () => {
-    expect(sameItem("Milk", "Oat cookies")).toBe(false);
-    expect(sameItem("Oat milk", "Almond milk")).toBe(false);
-    expect(sameItem("Ox", "Ox tail")).toBe(false);
+    expect(sameFood("Milk", "Oat cookies")).toBe(false);
+    expect(sameFood("Oat milk", "Almond milk")).toBe(false);
+    expect(sameFood("Ox", "Ox tail")).toBe(false);
   });
 });
 

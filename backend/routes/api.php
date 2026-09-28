@@ -14,6 +14,7 @@ use App\Http\Controllers\CreditController;
 use App\Http\Controllers\ExpiryScanController;
 use App\Http\Controllers\ExploreController;
 use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\FoodGroupController;
 use App\Http\Controllers\FridgeController;
 use App\Http\Controllers\FridgeJoinRequestController;
 use App\Http\Controllers\FridgeMemberController;
@@ -122,6 +123,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Manual-add auto-fill - same reasoning as barcode's throttle above, hits an LLM per call.
     Route::middleware('throttle:20,1')->post('/items/suggest-details', [AgentController::class, 'suggestItemDetails']);
+    // Free: rules + cached answers only (see FoodGroupController).
+    Route::middleware('throttle:30,1')->post('/food-groups/classify', [FoodGroupController::class, 'classify']);
 
     Route::get('/icons/generated', [IconController::class, 'index']);
     Route::get('/icons/shared', [IconController::class, 'shared']);

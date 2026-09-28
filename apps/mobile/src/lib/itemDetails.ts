@@ -1,12 +1,12 @@
-import type { FlatItem } from "@thatfridge/core";
+import { FRESHNESS_AT_RISK, FRESHNESS_WATCH, type FlatItem } from "@thatfridge/core";
 
 // Pure helpers for the item detail screen (no React, no I/O).
 
 /** One short line of advice under the freshness bar. */
 export function freshnessTip(name: string, freshness: number): { text: string; tone: "urgent" | "soon" | "fine" } {
   const lower = name.toLowerCase();
-  if (freshness < 30) return { text: `Use ${lower} today for best quality.`, tone: "urgent" };
-  if (freshness < 60) return { text: `Plan to use ${lower} within the next couple of days.`, tone: "soon" };
+  if (freshness < FRESHNESS_AT_RISK) return { text: `Use ${lower} today for best quality.`, tone: "urgent" };
+  if (freshness < FRESHNESS_WATCH) return { text: `Plan to use ${lower} within the next couple of days.`, tone: "soon" };
   return { text: `${name} is holding up well. No action needed.`, tone: "fine" };
 }
 
