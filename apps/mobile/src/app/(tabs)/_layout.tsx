@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useOnboarding } from "@/lib/onboarding";
 import { FloatingTabBar } from "@/components/tab-bar";
 import { CoachSpotlight } from "@/components/home/CoachSpotlight";
+import { FirstScanGate } from "@/components/onboarding/FirstScanGate";
 import { useTheme } from "@/lib/theme";
 
 // Same order the FloatingTabBar renders in (the [＋] FAB sits between inventory and chat but
@@ -88,6 +89,8 @@ export default function TabsLayout() {
 
       {/* first-run spotlight — remounts on "Replay intro" so the nav tour re-arms */}
       <CoachSpotlight key={onboarding.coachReplayNonce} />
+      {/* once, after sign-in: an empty fridge opens "Let's fill your fridge" */}
+      <FirstScanGate />
     </View>
   );
 }

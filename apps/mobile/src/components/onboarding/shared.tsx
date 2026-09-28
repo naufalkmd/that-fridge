@@ -414,7 +414,7 @@ export function Glow() {
   );
 }
 
-function CrewArt() {
+export function CrewArt() {
   // The live "walking crew" scene from Home, in a non-interactive preview mode.
   return (
     <Animated.View

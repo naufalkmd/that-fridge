@@ -64,6 +64,7 @@ export function CoachSpotlight() {
     coachRects,
     coachTourSeen,
     markCoachTourSeen,
+    firstScanPrompted,
   } = useOnboarding();
   const [step, setStep] = useState(0);
 
@@ -75,6 +76,8 @@ export function CoachSpotlight() {
   const visible =
     ready &&
     seen &&
+    // After "Let's fill your fridge" has had its turn, so the two never overlap.
+    firstScanPrompted &&
     !coachDismissed &&
     !loading &&
     items.length <= ESTABLISHED &&

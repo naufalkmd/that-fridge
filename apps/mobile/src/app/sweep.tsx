@@ -42,6 +42,8 @@ import {
 } from "@thatfridge/core";
 import { api } from "@/lib/api";
 import { useInventory } from "@/lib/inventory";
+import { track } from "@/lib/analytics";
+import { setFridgeReminder } from "@/lib/fridgeReminder";
 import { useScope } from "@/lib/scope";
 import { useTheme } from "@/lib/theme";
 import { RADIUS } from "@/lib/tokens";
@@ -125,7 +127,7 @@ type Stage = "camera" | "reveal" | "grid";
 
 export default function Sweep() {
   const router = useRouter();
-  const { categoryId, mode: modeParam } = useLocalSearchParams<{ categoryId?: string; mode?: string }>();
+  const { categoryId, mode: modeParam, onboarding } = useLocalSearchParams<{ categoryId?: string; mode?: string; onboarding?: string }>();
   const { fridges, items: inventory, ensureSectionId, addManyItems, refresh, lookupBarcode } = useInventory();
   const { scope } = useScope();
   const reduceMotion = useReducedMotion();
@@ -444,7 +446,26 @@ export default function Sweep() {
         cleared.used ? `${cleared.used} marked used` : null,
         cleared.wasted ? `${cleared.wasted} marked tossed` : null,
       ].filter(Boolean);
-      setTimeout(() => Alert.alert("Kitchen updated", `${parts.join(", ")}.`), 300);
+      if (onboarding === "1" && added > 0) {
+        // The first scan after sign-in: the moment to offer the check-in reminder (this used to be
+        // an onboarding step before there was anything to be reminded about).
+        track("onboarding_first_scan_saved", { added });
+        setTimeout(
+          () =>
+            Alert.alert(
+              `${added} item${added === 1 ? "" : "s"} in your fridge`,
+              "Want a quick nudge to check what needs using up?",
+              [
+                { text: "Not now", style: "cancel", onPress: () => void setFridgeReminder("off") },
+                { text: "Twice a week", onPress: () => void setFridgeReminder("twice_weekly") },
+                { text: "Every evening", onPress: () => void setFridgeReminder("evening") },
+              ],
+            ),
+          300,
+        );
+      } else {
+        setTimeout(() => Alert.alert("Kitchen updated", `${parts.join(", ")}.`), 300);
+      }
     } catch (e) {
       setSaving(false);
       Alert.alert("Error", describeError(e, "Couldn't save the scan."));

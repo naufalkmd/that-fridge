@@ -17,17 +17,23 @@ class OnboardingFunnelReport
     /** Ordered funnel steps: [event name, label]. */
     public const STEPS = [
         ['app_open', 'App opened'],
-        ['onboarding_started', 'Onboarding started'],
-        ['onboarding_slide_viewed', 'Slide viewed (any)'],
-        ['onboarding_fridge_step_viewed', 'Reached "name your fridge"'],
-        ['onboarding_fridge_created', '  ...named a fridge'],
-        ['onboarding_fridge_skipped', '  ...skipped naming'],
-        ['onboarding_finished', 'Onboarding finished'],
-        ['onboarding_skipped', 'Onboarding skipped'],
+        // The current flow (2026-09-28): welcome -> sign in -> "Let's fill your fridge" -> first scan.
+        ['welcome_started', 'Welcome screen'],
+        ['welcome_to_signin', '  ...went to email sign-in'],
+        ['welcome_social_auth', '  ...chose Apple / Google'],
         ['signup_completed', 'Signup (email)'],
         ['auth_completed', 'Signup/login (social)'],
         ['login_completed', 'Login (email)'],
-        ['onboarding_hydrated', 'Draft hydrated (Phase 3+)'],
+        ['onboarding_hydrated', 'Draft hydrated'],
+        ['onboarding_first_scan_shown', '"Let\'s fill your fridge" shown'],
+        ['onboarding_first_scan_started', '  ...opened the scan camera'],
+        ['onboarding_first_scan_skipped', '  ...chose "later"'],
+        ['onboarding_first_scan_saved', 'First scan saved'],
+        // Older builds and the post-sign-in fallback route (/onboarding).
+        ['onboarding_started', 'Onboarding started'],
+        ['onboarding_slide_viewed', 'Slide viewed (any)'],
+        ['onboarding_finished', 'Onboarding finished'],
+        ['onboarding_skipped', 'Onboarding skipped'],
     ];
 
     public const AUTH_EVENTS = ['signup_completed', 'login_completed', 'auth_completed'];

@@ -178,6 +178,13 @@ function AppShell({
                                       }}
                                     />
                                     <Stack.Screen
+                                      name="first-scan"
+                                      options={{
+                                        headerShown: false,
+                                        presentation: "fullScreenModal",
+                                      }}
+                                    />
+                                    <Stack.Screen
                                       name="sweep"
                                       options={{
                                         headerShown: false,

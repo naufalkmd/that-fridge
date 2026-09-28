@@ -10,29 +10,34 @@ Everything here is **pure JS** — ships as an EAS Update, no binary, no App Rev
 
 ## The flow
 
+Rebuilt 2026-09-28 to get the user's own food in sooner: 7 pre-sign-in steps became 1, and the
+real first win (a scan) comes straight after sign-in.
+
 ```
 app launch, signedOut ──► onboarding.seen ?
    │ no                                   │ yes
    ▼                                      ▼
-/welcome  (anonymous, 7 steps)          /sign-in
-   1  value carousel — 3 slides; slide 1 = the live walking crew scene (CrewScene showcase)
-   2  "a few quick things" — 3 crew-framed chip questions on one screen (all skippable)
-   3  meet the crew — character-select: switcher of 4 role glyphs, big sprite + role + example
-   4  first-win demo — mock fridge (eggs / spinach / yogurt) → Chef + Guardian lines, no API
-   5  name your fridge  (FridgeStep, stored in the local draft)
-   6  check-in reminder — evening / 2×week / off  (stored in the draft)
-   7  soft wall — "Save your setup": a cross-border-transfer consent checkbox gates inline
-      Apple / Google (email sign-up has its own checkbox on /sign-in); + "I already have an account"
+/welcome  (anonymous)                   /sign-in
+   1  welcome — the live walking crew scene, "Use what you have before it goes bad", three
+      value lines (scan · reminders · the crew), Get started / "I already have an account"
+   2  soft wall — "Save your kitchen": consent checkbox gates inline Apple / Google (email
+      sign-up has its own checkbox on /sign-in)
    │
-   ▼ auth success — hydrateOnboarding() replays the draft once:
-     create fridge(name) if none · POST /me/onboarding {goal,waste,household} · schedule reminder
+   ▼ auth success — hydrateOnboarding() creates the fridge ("My Fridge") if none
    ▼
-Home ──► one 4-stop spotlight tour (+ FAB → Inventory → Crew → Chat)
-     ──► "Getting started" card — a vertical progress path, 7 nodes, opens with account ✓
+Tabs ──► FirstScanGate (once per install): an empty fridge opens /first-scan
+         "Let's fill your fridge" → Photo of fridge / Scan a receipt / Scan barcodes → /sweep
+         (or "I'll add things later"). Someone with items already skips it silently.
+     ──► after that first scan saves: "N items in your fridge — want a nudge?" (the check-in
+         reminder, formerly an onboarding step)
+     ──► the Home spotlight tour + "Getting started" card (the tour waits for the first-scan
+         prompt so the two never overlap)
 ```
 
-"I already have an account" / "Log in" is on every step → `/sign-in`. A user who signs out
-later lands on `/sign-in` (not `/welcome`) because `onboarding.seen` is set.
+Removed: the 3 questions (goal / waste / household — `preferences` tags now stay empty for new
+accounts), meet-the-crew character select, the mock first-win demo, fridge naming and the
+reminder step. Funnel events: `welcome_*`, then `onboarding_first_scan_{shown,started,skipped,saved}`
+(Admin → onboarding funnel).
 
 ## Post-sign-in pieces
 
@@ -49,6 +54,7 @@ later lands on `/sign-in` (not `/welcome`) because `onboarding.seen` is set.
 | Concern | File |
 | --- | --- |
 | Pre-sign-in flow | `src/app/welcome.tsx` |
+| First scan (post sign-in) | `src/app/first-scan.tsx`, `src/components/onboarding/FirstScanGate.tsx` |
 | Shared step components | `src/components/onboarding/shared.tsx` |
 | Post-auth fallback | `src/app/onboarding.tsx` |
 | Local draft (SecureStore) | `src/lib/onboardingDraft.ts` |

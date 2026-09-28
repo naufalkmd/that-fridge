@@ -18,6 +18,7 @@ const COACH_DISMISSED_KEY = "thatfridge_onboarding_coach_dismissed_v1";
 const CHECKLIST_DISMISSED_KEY = "thatfridge_onboarding_checklist_dismissed_v1";
 const CHECKLIST_VISITED_KEY = "thatfridge_onboarding_checklist_visited_v1";
 const COACH_TOUR_SEEN_KEY = "thatfridge_onboarding_coach_tour_seen_v1";
+const FIRST_SCAN_KEY = "thatfridge_onboarding_first_scan_v1";
 
 /** Screen rect of a tab-bar button, published by the tab bar for the coach spotlight. */
 export type Rect = { x: number; y: number; width: number; height: number };
@@ -40,6 +41,9 @@ interface OnboardingValue {
   /** The post-first-item "look around" tour has been shown for a session already. */
   coachTourSeen: boolean;
   markCoachTourSeen: () => Promise<void>;
+  /** The post-sign-in "Let's fill your fridge" screen has been offered (scanned or skipped). */
+  firstScanPrompted: boolean;
+  markFirstScanPrompted: () => Promise<void>;
   /** The Home "Getting started" checklist card was hidden by the user. */
   checklistDismissed: boolean;
   dismissChecklist: () => Promise<void>;
@@ -64,6 +68,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   const [checklistDismissed, setChecklistDismissed] = useState(false);
   const [checklistVisited, setChecklistVisited] = useState<string[]>([]);
   const [coachTourSeen, setCoachTourSeen] = useState(false);
+  const [firstScanPrompted, setFirstScanPrompted] = useState(false);
   const [coachReplayNonce, setCoachReplayNonce] = useState(0);
 
   useEffect(() => {
@@ -73,13 +78,15 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       SecureStore.getItemAsync(CHECKLIST_DISMISSED_KEY).catch(() => null),
       SecureStore.getItemAsync(CHECKLIST_VISITED_KEY).catch(() => null),
       SecureStore.getItemAsync(COACH_TOUR_SEEN_KEY).catch(() => null),
+      SecureStore.getItemAsync(FIRST_SCAN_KEY).catch(() => null),
     ])
-      .then(([s, d, cd, cv, ct]) => {
+      .then(([s, d, cd, cv, ct, fs]) => {
         setSeen(s === "1");
         setCoachDismissed(d === "1");
         setChecklistDismissed(cd === "1");
         setChecklistVisited(cv ? cv.split(",").filter(Boolean) : []);
         setCoachTourSeen(ct === "1");
+        setFirstScanPrompted(fs === "1");
       })
       .finally(() => setReady(true));
   }, []);
@@ -133,6 +140,15 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     }
   }, []);
 
+  const markFirstScanPrompted = useCallback(async () => {
+    setFirstScanPrompted(true);
+    try {
+      await SecureStore.setItemAsync(FIRST_SCAN_KEY, "1");
+    } catch {
+      /* best effort */
+    }
+  }, []);
+
   const dismissChecklist = useCallback(async () => {
     setChecklistDismissed(true);
     try {
@@ -163,6 +179,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     setChecklistDismissed(false);
     setChecklistVisited([]);
     setCoachTourSeen(false);
+    setFirstScanPrompted(false);
     setCoachReplayNonce((n) => n + 1);
     await Promise.all([
       ...[
@@ -170,6 +187,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         CHECKLIST_DISMISSED_KEY,
         CHECKLIST_VISITED_KEY,
         COACH_TOUR_SEEN_KEY,
+        FIRST_SCAN_KEY,
       ].map((k) => SecureStore.deleteItemAsync(k).catch(() => {})),
       clearOnboardingDraft(),
     ]);
@@ -186,6 +204,8 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       setCoachRect,
       coachTourSeen,
       markCoachTourSeen,
+      firstScanPrompted,
+      markFirstScanPrompted,
       checklistDismissed,
       dismissChecklist,
       checklistVisited,
@@ -203,6 +223,8 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       setCoachRect,
       coachTourSeen,
       markCoachTourSeen,
+      firstScanPrompted,
+      markFirstScanPrompted,
       checklistDismissed,
       dismissChecklist,
       checklistVisited,
