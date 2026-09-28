@@ -1,4 +1,4 @@
-import { Pressable, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
@@ -23,34 +23,40 @@ export const SHORTCUTS: Shortcut[] = [
 // The same size as the notification rows' icons (notification-row.tsx): 36pt with a 17pt icon.
 const SIZE = 36;
 
-/** A row of round icon buttons under the fridge banner, sized like the notification icons: white icon, no label. */
+/** A row of round icon buttons under the fridge banner, sized like the notification icons, each labelled underneath. */
 export function Shortcuts() {
   const router = useRouter();
   const { colors } = useTheme();
 
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 4 }}>
+    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
       {SHORTCUTS.map((s) => (
         <Pressable
           key={s.label}
           onPress={() => router.push(s.href)}
           accessibilityRole="button"
           accessibilityLabel={s.label}
-          // 36pt is under the 44pt touch minimum, so the tap area reaches past the circle.
-          hitSlop={8}
+          // Fixed-width columns so the labels never run into each other.
           // A plain style object: NativeWind drops Pressable's style-function form.
-          style={{
-            width: SIZE,
-            height: SIZE,
-            borderRadius: SIZE / 2,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: colors.surface2,
-            borderWidth: 1,
-            borderColor: colors.hairline,
-          }}
+          style={{ width: 64, minHeight: 48, alignItems: "center", gap: 6 }}
         >
-          <Ionicons name={s.icon} size={17} color={colors.ink} />
+          <View
+            style={{
+              width: SIZE,
+              height: SIZE,
+              borderRadius: SIZE / 2,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: colors.surface2,
+              borderWidth: 1,
+              borderColor: colors.hairline,
+            }}
+          >
+            <Ionicons name={s.icon} size={17} color={colors.ink} />
+          </View>
+          <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: "600", color: colors.muted }}>
+            {s.label}
+          </Text>
         </Pressable>
       ))}
     </View>

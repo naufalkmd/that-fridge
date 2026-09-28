@@ -3,15 +3,19 @@ import { useRouter } from "expo-router";
 import Svg, { Circle, G } from "react-native-svg";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { PixelText } from "@/components/brand";
 import { scoreBand } from "@/lib/insights";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 
 // One arc per crew member, in CrewDock's room order (identity, not data).
 const ARC_COLORS: (keyof ThemeColors)[] = ["agentGuardian", "agentChef", "agentOrganizer", "agentShopkeeper"];
 
+// The pill is 32pt tall with a 1pt border, so its rounded end is a 15pt-radius half circle centred
+// 16pt in. The ring sits on that same centre (1pt border + 2pt padding + 13pt) with an even gap
+// around it, so the two curves line up.
+const PILL = 32;
 const SIZE = 26;
-const R = 10.5;
+const STROKE = 2.5;
+const R = SIZE / 2 - STROKE / 2 - 0.5;
 const C = 2 * Math.PI * R;
 const SEG = C / 4 - 2.5;
 
@@ -36,10 +40,10 @@ export function KitchenScorePill({ score, streak = 0 }: { score: number | null; 
         flexDirection: "row",
         alignItems: "center",
         gap: 6,
-        height: 32,
-        paddingLeft: 3,
-        paddingRight: 10,
-        borderRadius: 16,
+        height: PILL,
+        paddingLeft: 2,
+        paddingRight: 11,
+        borderRadius: PILL / 2,
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.hairline,
@@ -47,15 +51,29 @@ export function KitchenScorePill({ score, streak = 0 }: { score: number | null; 
     >
       <View style={{ width: SIZE, height: SIZE, alignItems: "center", justifyContent: "center" }}>
         <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ position: "absolute" }}>
-          <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" stroke={colors.hairlineStrong} strokeWidth={2.5} opacity={0.4} />
+          <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" stroke={colors.hairlineStrong} strokeWidth={STROKE} opacity={0.4} />
           {score !== null &&
             ARC_COLORS.map((c, i) => (
               <G key={c} rotation={-90 + i * 90} origin={`${SIZE / 2}, ${SIZE / 2}`}>
-                <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" stroke={colors[c]} strokeWidth={2.5} strokeDasharray={`${SEG}, ${C - SEG}`} />
+                <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" stroke={colors[c]} strokeWidth={STROKE} strokeDasharray={`${SEG}, ${C - SEG}`} />
               </G>
             ))}
         </Svg>
-        <PixelText style={{ fontSize: 9, color: colors.ink }}>{score ?? "–"}</PixelText>
+        {/* System font, not the pixel font: its extra letter spacing and top padding pushed the digits off-centre. */}
+        <Text
+          style={{
+            width: SIZE,
+            fontSize: 10,
+            lineHeight: 12,
+            fontWeight: "800",
+            textAlign: "center",
+            fontVariant: ["tabular-nums"],
+            includeFontPadding: false,
+            color: colors.ink,
+          }}
+        >
+          {score ?? "–"}
+        </Text>
       </View>
       <Text style={{ fontSize: 12, fontWeight: "700", color: bandColor }}>{score === null ? "Building" : band.label}</Text>
       {streak > 0 && (
