@@ -269,6 +269,12 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
 
 ### Deferred to post-launch (don't work on these before Sep 30)
 
+- [ ] **Simplify overlapping features** (audit 2026-09-28; the order is the plan):
+  1. Remove Organizer's "move items for you" switch - the plan's "Check where they're stored" line does the same, with its cost shown.
+  2. Slim the Crew panels now that Activate acts: Guardian drops "Use first", Shopping drops its Suggestions block, Organizer moves via the item page, the recipe book drops its separate Tonight's pick.
+  3. One headline number ("items rescued this month"); crew scores only inside their Activate sheet; badges fold into Insights.
+  4. Tabs by task (Home · Kitchen · Cook · Shop) with each crew member inside its tab and chat as a floating button - wait for usage data.
+
 - [ ] **Korea launch** — metadata-only fast-follow, no binary re-review. Real blocker: a
   **Korean privacy policy** at `/privacy/ko/` (currently 404) — ~$200–350 for a KR legal
   translator, or ~$300–600 for a PIPA-compliance consultant who adapts rather than translates
