@@ -9,21 +9,19 @@ import { CrewDock } from "@/components/home/CrewDock";
 const layout = { nativeEvent: { layout: { width: 374, height: 80, x: 0, y: 0 } } };
 
 async function renderDock(props: Partial<Parameters<typeof CrewDock>[0]> = {}) {
-  const onExpand = jest.fn();
   const utils = await render(
     <CrewDock
       pending={{ recipe: 3, expiring: 3, lowStock: 0 }}
       score={85}
       streak={6}
       collapsed={false}
-      onExpand={onExpand}
       bottom={100}
       {...props}
     />,
   );
   // The strip sizes itself from its width.
   await fireEvent(screen.getByTestId("crew-strip"), "layout", layout);
-  return { ...utils, onExpand };
+  return utils;
 }
 
 beforeEach(() => jest.clearAllMocks());
@@ -46,9 +44,11 @@ describe("Crew dock", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/eat");
   });
 
-  test("collapsed, the strip is one button that opens it again", async () => {
-    const { onExpand } = await renderDock({ collapsed: true });
-    await fireEvent.press(screen.getByLabelText("Open your crew"));
-    expect(onExpand).toHaveBeenCalled();
+  test("every room opens its crew member's page, open or collapsed", async () => {
+    await renderDock({ collapsed: true });
+    await fireEvent.press(screen.getByLabelText("Open Organizer"));
+    expect(mockNavigate).toHaveBeenCalledWith("/eat?tab=organizer");
+    await fireEvent.press(screen.getByLabelText("Open Chef"));
+    expect(mockNavigate).toHaveBeenCalledWith("/eat?tab=recipes");
   });
 });

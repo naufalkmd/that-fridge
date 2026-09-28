@@ -105,10 +105,7 @@ export default function Home() {
       setCrewCollapsed(next);
     }
   };
-  const expandCrew = () => {
-    crewCollapsedRef.current = false;
-    setCrewCollapsed(false);
-  };
+
   const [heroWidth, setHeroWidth] = useState(0);
   const [heroSlide, setHeroSlide] = useState(0);
   const heroRef = useRef<ScrollView>(null);
@@ -663,7 +660,6 @@ export default function Home() {
           score={overallScore}
           streak={user?.streak ?? 0}
           collapsed={crewCollapsed}
-          onExpand={expandCrew}
           bottom={dockBottom}
         />
         <NotificationUndoSnackbar bottom={dockBottom + 70} />

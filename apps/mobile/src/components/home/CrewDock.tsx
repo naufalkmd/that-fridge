@@ -20,17 +20,20 @@ const GIFS = {
 /** crew-strip.webp is 1527×330. */
 const STRIP_RATIO = 1527 / 330;
 /** Collapsed, only the bottom of the rooms shows: the floor with the crew standing on it. */
-const COLLAPSED_FRACTION = 0.58;
+const COLLAPSED_FRACTION = 0.74;
 /** Where the floor is, as a fraction of the strip's height from the top. */
 const FLOOR = 0.87;
-const SPRITE = 0.42; // sprite size, fraction of the strip's height
+const SPRITE = 0.56; // sprite size, fraction of the strip's height
 
 type CrewId = keyof typeof GIFS;
 type Pending = Record<"expiring" | "lowStock" | "recipe", number>;
 
 type Room = {
   id: CrewId;
-  /** The room's walkable span on the strip, fractions of its width. */
+  name: string;
+  /** The whole room on the strip (what a tap on it covers), fractions of its width. */
+  room: [number, number];
+  /** The part of it the crew member walks, fractions of the strip's width. */
   from: number;
   to: number;
   color: keyof ThemeColors;
@@ -43,11 +46,11 @@ const count = (n: number, text: string) => (n > 0 ? `${n} ${text}` : null);
 
 // Left to right as drawn: kitchen, clinic, stock room, shop.
 export const ROOMS: Room[] = [
-  { id: "chef", from: 0.06, to: 0.22, color: "agentChef", icon: "chef-hat", route: "/eat?tab=recipes", label: (p) => count(p.recipe, "meals") },
-  { id: "guardian", from: 0.31, to: 0.46, color: "agentGuardian", icon: "alert-outline", route: "/eat?tab=guardian", label: (p) => count(p.expiring, "expiring") },
+  { id: "chef", name: "Chef", room: [0, 0.28], from: 0.06, to: 0.22, color: "agentChef", icon: "chef-hat", route: "/eat?tab=recipes", label: (p) => count(p.recipe, "meals") },
+  { id: "guardian", name: "Guardian", room: [0.28, 0.5], from: 0.31, to: 0.46, color: "agentGuardian", icon: "alert-outline", route: "/eat?tab=guardian", label: (p) => count(p.expiring, "expiring") },
   // The Organizer has no count of its own yet: it stands in its room without a pill.
-  { id: "organizer", from: 0.53, to: 0.69, color: "agentOrganizer", icon: "package-variant", route: "/eat?tab=organizer", label: () => null },
-  { id: "shopkeeper", from: 0.76, to: 0.93, color: "agentShopkeeper", icon: "cart-outline", route: "/eat?tab=shopping", label: (p) => count(p.lowStock, "low") },
+  { id: "organizer", name: "Organizer", room: [0.5, 0.73], from: 0.53, to: 0.69, color: "agentOrganizer", icon: "package-variant", route: "/eat?tab=organizer", label: () => null },
+  { id: "shopkeeper", name: "Shopkeeper", room: [0.73, 1], from: 0.76, to: 0.93, color: "agentShopkeeper", icon: "cart-outline", route: "/eat?tab=shopping", label: (p) => count(p.lowStock, "low") },
 ];
 
 /** One crew member pacing back and forth inside their own room. */
@@ -94,21 +97,19 @@ function Walker({ room, width, height }: { room: Room; width: number; height: nu
 /**
  * Home's crew: the four rooms floating above the tab bar with each crew member in theirs and a
  * pill for whatever they're flagging. Open at the top of Home; scrolled down it collapses to the
- * floor of the rooms with a count badge per busy room, and a tap opens it again.
+ * floor of the rooms with a count badge per busy room. Every room opens its crew member's page.
  */
 export function CrewDock({
   pending,
   score,
   streak,
   collapsed,
-  onExpand,
   bottom,
 }: {
   pending: Pending;
   score: number | null;
   streak: number;
   collapsed: boolean;
-  onExpand: () => void;
   /** Distance from the bottom of the screen to just above the tab bar. */
   bottom: number;
 }) {
@@ -180,15 +181,16 @@ export function CrewDock({
                 <Walker key={room.id} room={room} width={width} height={height} />
               ))}
             </Animated.View>
-            {/* Collapsed: the whole strip is one button that opens the dock again. */}
-            {collapsed && (
+            {/* Each room is a button to that crew member's page, open or collapsed. */}
+            {ROOMS.map((room) => (
               <Pressable
-                onPress={onExpand}
+                key={room.id}
+                onPress={() => router.navigate(room.route)}
                 accessibilityRole="button"
-                accessibilityLabel="Open your crew"
-                style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+                accessibilityLabel={`Open ${room.name}`}
+                style={{ position: "absolute", top: 0, bottom: 0, left: room.room[0] * width, width: (room.room[1] - room.room[0]) * width }}
               />
-            )}
+            ))}
             <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 4, left: 0, right: 0 }, badgesStyle]}>
               {ROOMS.map((room) => {
                 const n = room.id === "chef" ? pending.recipe : room.id === "guardian" ? pending.expiring : room.id === "shopkeeper" ? pending.lowStock : 0;

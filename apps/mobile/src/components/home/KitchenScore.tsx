@@ -31,19 +31,19 @@ export function KitchenScorePill({ score, streak = 0 }: { score: number | null; 
       accessibilityRole="button"
       accessibilityLabel={`Kitchen score ${score ?? "not ready yet"}, open Insights`}
       hitSlop={6}
-      style={({ pressed }) => ({
+      // A plain style object: NativeWind drops Pressable's style-function form.
+      style={{
         flexDirection: "row",
         alignItems: "center",
-        gap: 7,
-        paddingVertical: 3,
+        gap: 6,
+        height: 32,
         paddingLeft: 3,
-        paddingRight: 9,
+        paddingRight: 10,
         borderRadius: 16,
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.hairline,
-        opacity: pressed ? 0.7 : 1,
-      })}
+      }}
     >
       <View style={{ width: SIZE, height: SIZE, alignItems: "center", justifyContent: "center" }}>
         <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ position: "absolute" }}>
