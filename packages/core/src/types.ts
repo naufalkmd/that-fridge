@@ -140,6 +140,10 @@ export interface Recipe {
   isMine: boolean;
   ownerName: string | null;
   ownerUsername: string | null;
+  /** Imported recipes (Explore): the page it came from, the site, the cook when known. */
+  sourceUrl?: string | null;
+  sourceName?: string | null;
+  author?: string | null;
 }
 
 export interface FridgeStyleDef {

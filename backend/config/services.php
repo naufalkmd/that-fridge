@@ -42,6 +42,13 @@ return [
         'photo_scan_model' => env('OPENROUTER_PHOTO_SCAN_MODEL', 'anthropic/claude-haiku-4.5'),
     ],
 
+    // Recipe database for automatic imports into Explore (app:import-recipes). The public test key
+    // "1" is for development only; production needs a supporter key (themealdb.com/api.php).
+    'themealdb' => [
+        'key' => env('THEMEALDB_KEY', '1'),
+        'enabled' => (bool) env('RECIPE_IMPORT_ENABLED', false),
+    ],
+
     'fal' => [
         'key' => env('FAL_KEY'),
         // fal.ai does not report a cost per call, so the admin dashboard estimates one (US$ per call). Adjust if fal's prices change.

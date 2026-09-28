@@ -169,6 +169,21 @@ export default function RecipeDetail() {
             by @{recipe.ownerUsername}
           </Text>
         )}
+        {/* Credit for an imported recipe, linking to the original page. */}
+        {recipe.sourceUrl && (
+          <Pressable
+            onPress={() => void Linking.openURL(recipe.sourceUrl!)}
+            hitSlop={6}
+            accessibilityRole="link"
+            accessibilityLabel={`Original recipe on ${recipe.sourceName ?? "the web"}`}
+            style={{ alignSelf: "center", marginTop: 2 }}
+          >
+            <Text style={{ textAlign: "center", fontSize: 11.5, color: BLUE }}>
+              {recipe.author ? `By ${recipe.author} · ` : "From "}
+              {recipe.sourceName ?? "the original"} ↗
+            </Text>
+          </Pressable>
+        )}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4, marginBottom: 18 }}>
           <Text style={{ fontSize: 12.5, color: FAINT }}>
             {recipe.minutes} min{caloriesSuffix(recipe, true)} · {haveCount}/{ingredients.length} ready

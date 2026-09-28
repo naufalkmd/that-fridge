@@ -32,6 +32,10 @@ class RecipeResource extends JsonResource
             'vibes' => $this->vibes ?? [],
             'foodFocus' => $this->food_focus ?? [],
             'madeCount' => $this->made_count,
+            // Credit for imported recipes: the page it came from, the site, the cook (when known).
+            'sourceUrl' => $this->source_url,
+            'sourceName' => $this->source_name,
+            'author' => $this->author,
             'isCustom' => $this->user_id !== null,
             // Real ownership, distinct from isCustom (curated-vs-not) - a favorited recipe
             // belonging to someone else is isCustom: true but isMine: false, which is what

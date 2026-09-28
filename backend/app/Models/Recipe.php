@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 #[ObservedBy([RecipeObserver::class])]
-#[Fillable(['user_id', 'name', 'minutes', 'category', 'icon', 'icon_url', 'ingredients', 'steps', 'attachments', 'meal_type', 'vibes', 'food_focus', 'made_count'])]
+#[Fillable(['user_id', 'external_id', 'source_url', 'source_name', 'author', 'name', 'minutes', 'category', 'icon', 'icon_url', 'ingredients', 'steps', 'attachments', 'meal_type', 'vibes', 'food_focus', 'made_count'])]
 class Recipe extends Model
 {
     protected function casts(): array
