@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Console\Commands\ImportRecipes;
 use App\Models\ExploreItem;
 use App\Models\Recipe;
 use App\Models\User;
 use App\Services\RecipeImport\RecipeImporter;
+use App\Services\RecipeImport\RecipeImportRunner;
 use App\Services\RecipeImport\TheMealDbSource;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -83,11 +83,11 @@ class RecipeImportTest extends TestCase
     public function test_each_run_carries_on_from_where_the_last_stopped(): void
     {
         $this->fakeApi([$this->meal('1', 'Apam balik'), $this->meal('2', 'Asam pedas'), $this->meal('3', 'Ayam goreng')]);
-        Cache::forget(ImportRecipes::CURSOR_KEY);
+        Cache::forget(RecipeImportRunner::CURSOR_KEY);
 
         $this->artisan('app:import-recipes', ['--limit' => 2])->assertSuccessful();
         $this->assertSame(2, Recipe::count());
-        $this->assertSame(0, Cache::get(ImportRecipes::CURSOR_KEY)); // letter "a" not finished yet
+        $this->assertSame(0, Cache::get(RecipeImportRunner::CURSOR_KEY)); // letter "a" not finished yet
 
         $this->artisan('app:import-recipes', ['--limit' => 2])->assertSuccessful();
         $this->assertSame(3, Recipe::count());

@@ -44,6 +44,7 @@ return [
 
     // Recipe database for automatic imports into Explore (app:import-recipes). The public test key
     // "1" is for development only; production needs a supporter key (themealdb.com/api.php).
+    // `enabled` is only the default: the schedule is set in Admin → Recipe import.
     'themealdb' => [
         'key' => env('THEMEALDB_KEY', '1'),
         'enabled' => (bool) env('RECIPE_IMPORT_ENABLED', false),

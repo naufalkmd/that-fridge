@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\RecipeImport\RecipeImportSettings;
 use App\Support\JobHeartbeat;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -21,9 +22,9 @@ $heartbeat(Schedule::command('app:fill-recipe-calories', ['--limit' => 50])->dai
 $heartbeat(Schedule::command('app:grant-monthly-credits')->monthlyOn(1, '00:15'), 'app:grant-monthly-credits');
 $heartbeat(Schedule::command('app:run-due-machines')->everyFiveMinutes(), 'app:run-due-machines');
 
-// Explore recipes from TheMealDB, as drafts an admin publishes. Off until RECIPE_IMPORT_ENABLED is
-// set (and a supporter THEMEALDB_KEY: the public test key is for development).
-Schedule::command('app:import-recipes --limit=20')
-    ->dailyAt('03:40')
+// Explore recipes from TheMealDB, as drafts an admin publishes. On/off, the time and the batch
+// size are set in Admin → Recipe import; checked every minute, runs once a day at that time.
+Schedule::command('app:import-recipes --scheduled')
+    ->everyMinute()
     ->withoutOverlapping()
-    ->when(fn () => (bool) config('services.themealdb.enabled'));
+    ->when(fn () => RecipeImportSettings::dueNow());
