@@ -7,6 +7,7 @@ use App\Http\Controllers\RecipeController;
 use App\Models\AdminAuditLog;
 use App\Models\Recipe;
 use App\Support\IconPicker;
+use App\Support\RecipeIconGeneration;
 use App\Support\RecipeIcons;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -116,6 +117,9 @@ class RecipeResource extends Resource
                     ),
                 Tables\Filters\SelectFilter::make('meal_type')
                     ->options(self::mealTypeOptions()),
+                Tables\Filters\Filter::make('missing_icon')
+                    ->label('Missing icon (curated)')
+                    ->query(fn ($query) => $query->whereIn('recipes.id', RecipeIconGeneration::missing()->select('id'))),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -136,6 +140,17 @@ class RecipeResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('generateIcons')
+                        ->label('Generate AI icons')
+                        ->icon('heroicon-m-sparkles')
+                        ->requiresConfirmation()
+                        ->modalDescription('Draws a new AI icon for each selected recipe in the background, replacing any it has (about $'.number_format(RecipeIconGeneration::COST_USD, 3).' each).')
+                        ->deselectRecordsAfterCompletion()
+                        ->action(function ($records) {
+                            $n = RecipeIconGeneration::queue($records->take(RecipeIconGeneration::MAX_BATCH)->pluck('id'), (int) auth()->id(), true);
+                            AdminAuditLog::record('queued_recipe_icons', null, ['count' => $n, 'scope' => 'selected']);
+                            Notification::make()->success()->title("Generating {$n} icons")->body('Refresh in a few minutes.')->send();
+                        }),
                     Tables\Actions\DeleteBulkAction::make()
                         ->after(fn ($records) => $records->each(fn ($r) => AdminAuditLog::record('deleted', $r, ['name' => $r->name]))),
                 ]),
