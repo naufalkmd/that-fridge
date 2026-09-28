@@ -23,7 +23,9 @@ class AiBalances extends Page implements HasForms
 
     protected static ?string $navigationIcon = 'heroicon-o-banknotes';
 
-    protected static ?string $navigationGroup = 'Insights';
+    protected static ?string $navigationGroup = 'AI';
+
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $navigationLabel = 'AI balances';
 

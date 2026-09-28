@@ -25,9 +25,11 @@ class ProductResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-qr-code';
 
-    protected static ?string $navigationGroup = 'Content';
+    protected static ?string $navigationGroup = 'Food data';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 4;
+
+    protected static ?string $navigationLabel = 'Products (barcodes)';
 
     public static function form(Form $form): Form
     {

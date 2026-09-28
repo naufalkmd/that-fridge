@@ -27,13 +27,13 @@ class RecipeImport extends Page implements HasForms
 
     protected static ?string $navigationIcon = 'heroicon-o-arrow-down-tray';
 
-    protected static ?string $navigationGroup = 'Content';
+    protected static ?string $navigationGroup = 'Recipes & Explore';
 
     protected static ?string $navigationLabel = 'Recipe import';
 
     protected static ?string $title = 'Recipe import';
 
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 4;
 
     protected static string $view = 'filament.pages.recipe-import';
 

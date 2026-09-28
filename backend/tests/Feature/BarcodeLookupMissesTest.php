@@ -60,7 +60,7 @@ class BarcodeLookupMissesTest extends TestCase
         $this->scan(User::factory()->create(), '9556001234567');
         $admin = User::factory()->create(['email' => 'admin@example.com']);
 
-        $this->actingAs($admin, 'web')->get('/admin/algorithm-insights')
+        $this->actingAs($admin, 'web')->get('/admin/products')
             ->assertOk()
             ->assertSee("Barcodes we couldn't find")
             ->assertSee('9556001234567')

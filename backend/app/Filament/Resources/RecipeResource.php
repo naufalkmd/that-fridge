@@ -30,7 +30,7 @@ class RecipeResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-book-open';
 
-    protected static ?string $navigationGroup = 'Content';
+    protected static ?string $navigationGroup = 'Recipes & Explore';
 
     protected static ?int $navigationSort = 1;
 

@@ -2,23 +2,20 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\AdminAuditLog;
-use App\Models\Product;
 use App\Services\AlgorithmInsightsReport;
 use App\Support\AdminCacheKeys;
-use App\Support\FoodIconMatcher;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
-use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
 
 class AlgorithmInsights extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar-square';
 
     protected static ?string $navigationGroup = 'Insights';
+
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $title = 'Algorithm insights';
 
@@ -78,17 +75,6 @@ class AlgorithmInsights extends Page
             fn () => app(AlgorithmInsightsReport::class)->gaps());
     }
 
-    public function barcodeLookupMisses(): array
-    {
-        return Cache::flexible(AdminCacheKeys::BARCODE_LOOKUP_MISSES, AdminCacheKeys::DASHBOARD_TTL,
-            fn () => app(AlgorithmInsightsReport::class)->barcodeLookupMisses());
-    }
-
-    public function barcodeMisses(): array
-    {
-        return app(AlgorithmInsightsReport::class)->barcodeMisses();
-    }
-
     public function mount(): void
     {
         $this->algo = $this->algos()[0] ?? '';
@@ -130,40 +116,5 @@ class AlgorithmInsights extends Page
     {
         return Cache::flexible(AdminCacheKeys::RETENTION, AdminCacheKeys::DASHBOARD_TTL,
             fn () => app(AlgorithmInsightsReport::class)->retention());
-    }
-
-    public function iconMisses(): array
-    {
-        return Cache::flexible(AdminCacheKeys::ICON_MISSES, AdminCacheKeys::DASHBOARD_TTL,
-            fn () => app(AlgorithmInsightsReport::class)->iconMisses());
-    }
-
-    public function iconRequests(): array
-    {
-        return app(AlgorithmInsightsReport::class)->iconRequests();
-    }
-
-    /**
-     * Promote a shared unknown barcode to a Product. Only a pair the queue itself shows
-     * (>= MIN_USERS people typed the same name) can be promoted; the admin can refine the
-     * name/icon afterwards in Products.
-     */
-    public function createProduct(string $barcode, string $name): void
-    {
-        $shown = collect($this->barcodeMisses())
-            ->contains(fn ($row) => (string) $row['guess'] === $barcode && (string) $row['name_key'] === $name);
-        if (! $shown || Product::where('barcode', $barcode)->exists()) {
-            Notification::make()->title('Not available to add')->warning()->send();
-
-            return;
-        }
-
-        $product = Product::create([
-            'barcode' => $barcode,
-            'name' => Str::title($name),
-            'icon' => FoodIconMatcher::guess($name) ?? 'generic',
-        ]);
-        AdminAuditLog::record('created_product_from_insights', $product, ['barcode' => $barcode, 'name' => $product->name]);
-        Notification::make()->title('Product created')->body('Refine the name and icon in Products.')->success()->send();
     }
 }

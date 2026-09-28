@@ -23,7 +23,7 @@ class AdminTodoResource extends Resource
 
     protected static ?string $navigationGroup = 'Insights';
 
-    protected static ?string $navigationLabel = 'To-do';
+    protected static ?string $navigationLabel = 'Launch to-do';
 
     protected static ?string $modelLabel = 'to-do';
 

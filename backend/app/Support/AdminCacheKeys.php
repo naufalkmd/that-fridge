@@ -30,8 +30,6 @@ final class AdminCacheKeys
 
     public const ALGORITHM_HEALTH = 'admin:algorithm-health';
 
-    public const ICON_MISSES = 'admin:icon-misses:180';
-
     public const ICON_SUGGESTIONS = 'admin:icon-suggestions:180';
 
     public const BARCODE_LOOKUP_MISSES = 'admin:barcode-lookup-misses:180';

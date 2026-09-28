@@ -59,18 +59,9 @@ class IconMissesTest extends TestCase
         $this->assertSame(1, $misses['hidden']); // salak: only one person so far
     }
 
-    public function test_the_admin_page_lists_them_with_a_link_to_make_the_icon(): void
+    public function test_icon_studio_prefills_the_prompt_from_the_link(): void
     {
-        foreach (range(1, 3) as $i) {
-            $this->addItem(User::factory()->create(), 'Rambutan');
-        }
         $admin = User::factory()->create(['email' => 'admin@example.com']);
-
-        $this->actingAs($admin, 'web')->get('/admin/algorithm-insights')
-            ->assertOk()
-            ->assertSee('Items with no icon')
-            ->assertSee('rambutan')
-            ->assertSee('icon-studio?prompt=rambutan', false);
 
         $this->actingAs($admin, 'web')->get('/admin/icon-studio?prompt=rambutan')->assertOk()->assertSee('rambutan');
     }

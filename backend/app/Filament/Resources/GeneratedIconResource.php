@@ -27,13 +27,13 @@ class GeneratedIconResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-sparkles';
 
-    protected static ?string $navigationGroup = 'Content';
+    protected static ?string $navigationGroup = 'Icons';
 
-    protected static ?string $navigationLabel = 'AI icons';
+    protected static ?string $navigationLabel = 'Generated icons';
 
     protected static ?string $modelLabel = 'AI icon';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 3;
 
     public static function table(Table $table): Table
     {

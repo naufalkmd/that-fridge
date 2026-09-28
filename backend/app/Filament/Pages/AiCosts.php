@@ -4,6 +4,9 @@ namespace App\Filament\Pages;
 
 use App\Filament\Resources\ApiUsageLogResource;
 use App\Filament\Resources\UserResource;
+use App\Filament\Widgets\AiSpendByFeatureChart;
+use App\Filament\Widgets\AiSpendChart;
+use App\Filament\Widgets\CreditSpendChart;
 use App\Services\AiCostReport;
 use App\Support\AdminCacheKeys;
 use Filament\Facades\Filament;
@@ -19,7 +22,9 @@ class AiCosts extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-calculator';
 
-    protected static ?string $navigationGroup = 'Insights';
+    protected static ?string $navigationGroup = 'AI';
+
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $navigationLabel = 'AI costs';
 
@@ -37,6 +42,12 @@ class AiCosts extends Page
         $user = Filament::auth()->user();
 
         return $user !== null && $user->canAccessPanel(Filament::getCurrentPanel());
+    }
+
+    /** The spend charts (moved off the dashboard) under the tables. */
+    protected function getFooterWidgets(): array
+    {
+        return [AiSpendChart::class, AiSpendByFeatureChart::class, CreditSpendChart::class];
     }
 
     public function period(): int

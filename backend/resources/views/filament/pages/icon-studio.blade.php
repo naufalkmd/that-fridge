@@ -53,6 +53,24 @@
         @endif
     </x-filament::section>
 
+    @php($icons = $this->iconRequests())
+    <x-filament::section heading="Icon requests" description="What people generate icons for (free text they typed), shown only when {{ \App\Services\AlgorithmInsightsReport::MIN_USERS }}+ different people asked. Good ones can be promoted from Generated icons." collapsible collapsed>
+        @if (count($icons) === 0)
+            <p class="text-sm text-gray-500">No shared icon requests yet.</p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead><tr><th class="p-2">Prompt</th><th class="p-2">Requests</th><th class="p-2">Users</th></tr></thead>
+                    <tbody>
+                    @foreach ($icons as $row)
+                        <tr class="border-t border-gray-200 dark:border-gray-700"><td class="p-2">{{ $row['prompt'] }}</td><td class="p-2">{{ $row['requests'] }}</td><td class="p-2">{{ $row['users'] }}</td></tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </x-filament::section>
+
     @php($picked = $this->assignments())
     @if (count($picked) > 0)
         <x-filament::section heading="Icons you've picked" description="New items, scans and barcode products with these names get this icon." collapsible>

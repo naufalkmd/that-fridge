@@ -33,13 +33,13 @@ class RecipeStudio extends Page implements HasForms
 
     protected static ?string $navigationIcon = 'heroicon-o-sparkles';
 
-    protected static ?string $navigationGroup = 'Content';
+    protected static ?string $navigationGroup = 'Recipes & Explore';
 
     protected static ?string $navigationLabel = 'Recipe studio';
 
     protected static ?string $title = 'Recipe studio';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 3;
 
     protected static string $view = 'filament.pages.recipe-studio';
 

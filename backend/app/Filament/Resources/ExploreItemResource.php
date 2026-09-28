@@ -33,11 +33,24 @@ class ExploreItemResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-magnifying-glass';
 
-    protected static ?string $navigationGroup = 'Content';
+    protected static ?string $navigationGroup = 'Recipes & Explore';
 
     protected static ?string $navigationLabel = 'Explore';
 
     protected static ?int $navigationSort = 2;
+
+    /** Drafts waiting to be published (imported recipes land here). */
+    public static function getNavigationBadge(): ?string
+    {
+        $drafts = ExploreItem::where('status', 'draft')->count();
+
+        return $drafts > 0 ? (string) $drafts : null;
+    }
+
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'Drafts waiting to be published';
+    }
 
     public static function form(Form $form): Form
     {

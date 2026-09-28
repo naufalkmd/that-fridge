@@ -21,7 +21,9 @@ class ApiUsageLogResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-receipt-percent';
 
-    protected static ?string $navigationGroup = 'Insights';
+    protected static ?string $navigationGroup = 'AI';
+
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $navigationLabel = 'AI call log';
 

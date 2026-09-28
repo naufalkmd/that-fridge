@@ -21,7 +21,7 @@ class ItemResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
 
-    protected static ?string $navigationGroup = 'Fridge data';
+    protected static ?string $navigationGroup = 'Food data';
 
     protected static ?int $navigationSort = 2;
 

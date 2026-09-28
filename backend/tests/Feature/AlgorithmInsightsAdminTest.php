@@ -3,11 +3,9 @@
 namespace Tests\Feature;
 
 use App\Filament\Pages\AlgorithmInsights;
-use App\Models\AdminAuditLog;
 use App\Models\AlgoFeedbackEvent;
 use App\Models\AnalyticsEvent;
 use App\Models\GeneratedIcon;
-use App\Models\Product;
 use App\Models\User;
 use App\Services\AlgorithmInsightsReport;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -136,32 +134,16 @@ class AlgorithmInsightsAdminTest extends TestCase
         $this->assertNull($cohort['d30']); // 10 days old: D30 hasn't matured
     }
 
-    public function test_page_renders_for_admin_and_creates_a_product_only_for_qualifying_barcodes(): void
+    public function test_page_renders_for_admin_and_points_to_where_the_lists_moved(): void
     {
         config(['app.admin_emails' => ['admin@example.com'], 'app.algo_feedback_enabled' => true]);
-        $admin = User::factory()->create(['email' => 'admin@example.com']);
-        $this->actingAs($admin);
-
-        foreach (User::factory()->count(3)->create() as $user) {
-            $this->event($user, 'barcode', 'miss_named', ['guess' => '1234567890123', 'name_key' => 'mystery oat milk']);
-        }
-        $this->event($admin, 'barcode', 'miss_named', ['guess' => '999', 'name_key' => 'lonely thing']);
+        $this->actingAs(User::factory()->create(['email' => 'admin@example.com']));
 
         Livewire::test(AlgorithmInsights::class)
             ->assertSuccessful()
             ->assertSee('Data health')->assertSee('Outcome metrics')->assertSee('Retention')
-            ->assertSee('Rule suggestions')->assertSee('Icon requests')->assertSee('mystery oat milk')
-            ->call('createProduct', '999', 'lonely thing') // only 1 person: refused
-            ->call('createProduct', '1234567890123', 'mystery oat milk');
-
-        $this->assertDatabaseMissing('products', ['barcode' => '999']);
-        $this->assertDatabaseHas('products', ['barcode' => '1234567890123', 'name' => 'Mystery Oat Milk']);
-        $this->assertSame(1, Product::count());
-        $this->assertDatabaseHas('admin_audit_logs', ['action' => 'created_product_from_insights']);
-        $this->assertSame(1, AdminAuditLog::where('action', 'created_product_from_insights')->count());
-
-        // A second click on an already-created barcode is a no-op, not a duplicate.
-        Livewire::test(AlgorithmInsights::class)->call('createProduct', '1234567890123', 'mystery oat milk');
-        $this->assertSame(1, Product::count());
+            ->assertSee('Rule suggestions')
+            ->assertDontSee("Barcodes we couldn't find")->assertDontSee('Items with no icon')
+            ->assertSee('Products (barcodes)')->assertSee('Icon studio');
     }
 }

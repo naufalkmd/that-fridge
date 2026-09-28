@@ -40,13 +40,22 @@ class IconStudio extends Page implements HasForms
 
     protected static ?string $navigationIcon = 'heroicon-o-paint-brush';
 
-    protected static ?string $navigationGroup = 'Content';
+    protected static ?string $navigationGroup = 'Icons';
 
     protected static ?string $navigationLabel = 'Icon studio';
 
     protected static ?string $title = 'Icon studio';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 1;
+
+    /** Foods waiting for an icon - only once the list has been worked out (never computed for the sidebar). */
+    public static function getNavigationBadge(): ?string
+    {
+        $cached = Cache::get(AdminCacheKeys::ICON_SUGGESTIONS);
+        $count = is_array($cached) ? count($cached) : 0;
+
+        return $count > 0 ? (string) $count : null;
+    }
 
     protected static string $view = 'filament.pages.icon-studio';
 
@@ -76,6 +85,12 @@ class IconStudio extends Page implements HasForms
                 ->helperText('One item, described simply. The pixel-art style is added for you.')
                 ->required()->maxLength(80),
         ]);
+    }
+
+    /** Free text people generate icons for, shared by MIN_USERS+ people (moved from Algorithm insights). */
+    public function iconRequests(): array
+    {
+        return app(AlgorithmInsightsReport::class)->iconRequests();
     }
 
     /** Names users couldn't get a right icon for - see AlgorithmInsightsReport::iconSuggestions. */
@@ -251,7 +266,6 @@ class IconStudio extends Page implements HasForms
     {
         IconAssignments::flush();
         Cache::forget(AdminCacheKeys::ICON_SUGGESTIONS);
-        Cache::forget(AdminCacheKeys::ICON_MISSES);
     }
 
     /** Put a suggested name in the prompt, ready to generate. */
