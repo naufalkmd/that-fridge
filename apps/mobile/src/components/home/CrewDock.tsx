@@ -17,8 +17,8 @@ const GIFS = {
   shopkeeper: require("../../../assets/images/thatfridge/shopkeeper.gif"),
 } as const;
 
-/** crew-strip.webp is 1527×330. */
-const STRIP_RATIO = 1527 / 330;
+/** crew-strip.webp is 1527×329. */
+const STRIP_RATIO = 1527 / 329;
 /** Collapsed, only the bottom of the rooms shows: the floor with the crew standing on it. */
 const COLLAPSED_FRACTION = 0.74;
 /** Where the floor is, as a fraction of the strip's height from the top. */
