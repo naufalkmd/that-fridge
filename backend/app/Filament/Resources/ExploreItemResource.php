@@ -9,6 +9,7 @@ use App\Models\Recipe;
 use App\Models\SharedIcon;
 use App\Models\User;
 use App\Services\MachineDraftValidator;
+use App\Support\RecipeIcons;
 use Closure;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -73,6 +74,21 @@ class ExploreItemResource extends Resource
         return $table
             ->defaultSort('position')
             ->columns([
+                // The picture people see: a recipe's icon (as the app draws it) or a shared icon.
+                Tables\Columns\ImageColumn::make('preview')
+                    ->label('')
+                    ->getStateUsing(fn (ExploreItem $record) => match ($record->type) {
+                        'recipe' => RecipeIcons::imageUrl(Recipe::find($record->ref_id)),
+                        'icon' => SharedIcon::find($record->ref_id)?->image_url,
+                        default => null,
+                    })
+                    ->size(36)
+                    ->extraImgAttributes(['style' => 'image-rendering:pixelated']),
+                // Imported recipes carry a photo, handy when reviewing drafts.
+                Tables\Columns\ImageColumn::make('photo')
+                    ->getStateUsing(fn (ExploreItem $record) => $record->type === 'recipe' ? RecipeIcons::photoUrl(Recipe::find($record->ref_id)) : null)
+                    ->size(36)
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('title')->searchable()->limit(50),
                 Tables\Columns\TextColumn::make('type')->badge()->formatStateUsing(fn ($state) => self::typeOptions()[$state] ?? $state)->sortable(),
                 Tables\Columns\IconColumn::make('featured')->boolean(),

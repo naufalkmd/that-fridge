@@ -6,6 +6,8 @@ use App\Filament\Resources\RecipeResource\Pages;
 use App\Http\Controllers\RecipeController;
 use App\Models\AdminAuditLog;
 use App\Models\Recipe;
+use App\Support\IconPicker;
+use App\Support\RecipeIcons;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -39,14 +41,33 @@ class RecipeResource extends Resource
                 Forms\Components\TextInput::make('minutes')->required()->numeric()->minValue(0),
                 Forms\Components\TextInput::make('category')->maxLength(255),
                 Forms\Components\Select::make('meal_type')->options(self::mealTypeOptions()),
-                Forms\Components\TextInput::make('icon')->maxLength(255),
+                Forms\Components\Select::make('icon')
+                    ->label('Icon')
+                    ->options(fn () => IconPicker::packOptions())
+                    ->searchable()
+                    ->allowHtml()
+                    ->placeholder('From the first ingredient')
+                    ->helperText('A pack icon. An AI icon (if the recipe has one) shows instead.'),
+                Forms\Components\Placeholder::make('looks_like')
+                    ->label('In the app')
+                    ->content(fn (?Recipe $record) => IconPicker::preview(RecipeIcons::imageUrl($record), 56))
+                    ->visibleOn('edit'),
+                Forms\Components\Placeholder::make('photo')
+                    ->label('Photo')
+                    ->content(fn (?Recipe $record) => IconPicker::preview(RecipeIcons::photoUrl($record), 96))
+                    ->visible(fn (?Recipe $record) => RecipeIcons::photoUrl($record) !== null),
                 Forms\Components\Select::make('user_id')
                     ->relationship('user', 'email')
                     ->searchable()
                     ->placeholder('Curated (everyone)'),
                 Forms\Components\Repeater::make('ingredients')
                     ->schema([
-                        Forms\Components\TextInput::make('icon')->required(),
+                        Forms\Components\Select::make('icon')
+                            ->options(fn () => IconPicker::packOptions())
+                            ->searchable()
+                            ->allowHtml()
+                            ->default('generic')
+                            ->required(),
                         Forms\Components\TextInput::make('name')->required(),
                     ])
                     ->columns(2)
@@ -64,7 +85,16 @@ class RecipeResource extends Resource
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
-                Tables\Columns\ImageColumn::make('icon_url')->label('')->size(36),
+                // What the recipe looks like in the app (AI icon, pack icon, first ingredient, name guess).
+                Tables\Columns\ImageColumn::make('preview')
+                    ->label('')
+                    ->getStateUsing(fn (Recipe $record) => RecipeIcons::imageUrl($record))
+                    ->size(36)
+                    ->extraImgAttributes(['style' => 'image-rendering:pixelated']),
+                Tables\Columns\ImageColumn::make('photo')
+                    ->getStateUsing(fn (Recipe $record) => RecipeIcons::photoUrl($record))
+                    ->size(36)
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('id')->sortable(),
                 Tables\Columns\TextColumn::make('name')->searchable(),
                 Tables\Columns\TextColumn::make('meal_type')->badge()->placeholder('-')->toggleable(),

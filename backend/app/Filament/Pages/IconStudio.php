@@ -14,6 +14,7 @@ use App\Support\AdminCacheKeys;
 use App\Support\AlgoFeedback;
 use App\Support\FoodIconMatcher;
 use App\Support\IconAssignments;
+use App\Support\IconPicker;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms;
@@ -135,9 +136,7 @@ class IconStudio extends Page implements HasForms
     /** @return array<string, array<string, string>> Select options, grouped, as HTML with a preview. */
     public function iconChoices(string $name): array
     {
-        $option = fn (?string $url, string $label) => '<span style="display:flex;align-items:center;gap:8px">'
-            .($url ? '<img src="'.e($url).'" alt="" style="width:28px;height:28px;image-rendering:pixelated">' : '')
-            .'<span>'.e($label).'</span></span>';
+        $option = fn (?string $url, string $label) => IconPicker::option($url, $label);
 
         $groups = [];
         $made = $this->userIconsFor($name, 12);
