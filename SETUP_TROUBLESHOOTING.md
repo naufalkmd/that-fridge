@@ -481,6 +481,21 @@ Server side: `GOOGLE_CLIENT_IDS` in the VPS `.env` must list both the iOS and We
 
 ---
 
+## Server storage
+
+### An AI icon made in the admin shows "?" (its `/storage/icons/...png` link is 404)
+
+The queue worker runs as `deploy`; PHP-FPM runs as `www-data`. `storage/app/public/icons/` was
+created by FPM (the app's icon generation), so the worker couldn't write into it - and the
+public disk has `'throw' => false`, so the refused write returned `false` and the link was saved
+anyway. Fixed 2026-09-28: `generateIcon()` now fails on a refused write or a non-image download;
+queued recipe icons save to `queued-icons/`, which `scripts/deploy.sh` creates as `deploy`; a
+migration cleared the dead links. Any future **worker-written** folder needs the same treatment,
+or give both users access once (as root, e.g. DigitalOcean's droplet console):
+`setfacl -R -m u:deploy:rwX,u:www-data:rwX storage && setfacl -R -d -m u:deploy:rwX,u:www-data:rwX storage`.
+
+---
+
 ## How to keep this file current
 
 When you hit an error that costs more than ~10 minutes, add an entry: the **exact symptom**

@@ -62,8 +62,12 @@ class IconGenerationService
      * ['ok' => false, 'reason' => ...] - there's no honest "mock" image to fall back to
      * (unlike PhotoService's mock text data), so a missing/failed key surfaces as a real
      * failure the frontend can show a message for.
+     *
+     * $folder: where on the media disk it's saved. The queue worker runs as a different system
+     * user from the web server and can't write into "icons/" (the web server created it), so
+     * queued generations use their own folder - see GenerateRecipeIcon and scripts/deploy.sh.
      */
-    public function generateIcon(string $prompt, int $userId, string $kind = 'icon'): array
+    public function generateIcon(string $prompt, int $userId, string $kind = 'icon', string $folder = 'icons'): array
     {
         // Describe the food first, so a dish from any cuisine is drawn as itself rather than as
         // the image model's guess from the name; falls back to the name as typed.
@@ -84,9 +88,22 @@ class IconGenerationService
 
         try {
             $bytes = Http::get($imageUrl)->body();
+            // Not a picture (an error page or JSON from the image service): fail rather than
+            // save it as a .png that never displays.
+            if (@imagecreatefromstring($bytes) === false) {
+                Log::error('Generated icon download was not an image', ['url' => $imageUrl]);
+
+                return ['ok' => false, 'reason' => 'not_image'];
+            }
             $bytes = $this->toPixelArt($bytes);
-            $path = 'icons/'.Str::uuid().'.png';
-            Storage::disk($disk)->put($path, $bytes);
+            $path = $folder.'/'.Str::uuid().'.png';
+            // The disk doesn't throw ('throw' => false): a refused write only returns false, and
+            // without this check the icon would be recorded with a URL that 404s.
+            if (! Storage::disk($disk)->put($path, $bytes)) {
+                Log::error('Failed to store generated icon', ['disk' => $disk, 'path' => $path]);
+
+                return ['ok' => false, 'reason' => 'storage'];
+            }
         } catch (\Exception $e) {
             Log::error('Failed to download generated icon', ['error' => $e->getMessage()]);
 

@@ -39,6 +39,9 @@ php artisan view:cache
 php artisan event:cache
 php artisan filament:optimize                          # caches Filament components + Blade icons
 php artisan storage:link --force
+# The queue worker (this user) saves generated recipe icons here. Creating it as this user means
+# the web server (www-data) never owns it, which would lock the worker out - see GenerateRecipeIcon.
+mkdir -p storage/app/public/queued-icons
 
 echo "==> restart workers + reload php-fpm"
 php artisan queue:restart                              # graceful: worker finishes its job, then systemd respawns it

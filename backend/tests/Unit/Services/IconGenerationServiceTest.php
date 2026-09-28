@@ -6,9 +6,11 @@ use App\Models\GeneratedIcon;
 use App\Models\User;
 use App\Services\FalClient;
 use App\Services\IconGenerationService;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
 use Tests\TestCase;
 
 class IconGenerationServiceTest extends TestCase
@@ -99,6 +101,51 @@ class IconGenerationServiceTest extends TestCase
         app(IconGenerationService::class)->generateIcon('a ripe tomato', User::factory()->create()->id);
 
         $this->assertStringStartsWith('a ripe tomato, flat vector icon', $prompts[0]);
+    }
+
+    private function fakeFal(string $body): void
+    {
+        Http::fake(['cdn.test/*' => Http::response($body, 200)]);
+        $this->mock(FalClient::class, function ($m) {
+            $m->shouldReceive('generate')->andReturn(['ok' => true, 'image_url' => 'https://cdn.test/raw.png']);
+            $m->shouldReceive('removeBackground')->andReturn(['ok' => false]);
+        });
+    }
+
+    public function test_it_saves_into_the_folder_it_is_given(): void
+    {
+        Storage::fake('public');
+        $this->fakeFal($this->png());
+
+        $result = app(IconGenerationService::class)->generateIcon('tomato', User::factory()->create()->id, 'recipe', 'queued-icons');
+
+        $path = GeneratedIcon::findOrFail($result['generated_icon_id'])->image_path;
+        $this->assertStringStartsWith('queued-icons/', $path);
+        Storage::disk('public')->assertExists($path);
+    }
+
+    public function test_a_download_that_is_not_an_image_fails_and_records_nothing(): void
+    {
+        Storage::fake('public');
+        $this->fakeFal('{"detail":"Internal error"}');
+
+        $result = app(IconGenerationService::class)->generateIcon('tomato', User::factory()->create()->id);
+
+        $this->assertSame(['ok' => false, 'reason' => 'not_image'], $result);
+        $this->assertSame(0, GeneratedIcon::count());
+    }
+
+    public function test_a_refused_save_fails_instead_of_recording_a_link_to_nothing(): void
+    {
+        $this->fakeFal($this->png());
+        $disk = Mockery::mock(Filesystem::class);
+        $disk->shouldReceive('put')->andReturn(false); // what a permission error looks like with 'throw' => false
+        Storage::shouldReceive('disk')->andReturn($disk);
+
+        $result = app(IconGenerationService::class)->generateIcon('tomato', User::factory()->create()->id);
+
+        $this->assertSame(['ok' => false, 'reason' => 'storage'], $result);
+        $this->assertSame(0, GeneratedIcon::count());
     }
 
     private function png(): string

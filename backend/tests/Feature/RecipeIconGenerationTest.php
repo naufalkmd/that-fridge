@@ -11,6 +11,7 @@ use App\Services\IconGenerationService;
 use App\Support\RecipeIconGeneration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -82,5 +83,33 @@ class RecipeIconGenerationTest extends TestCase
 
         $this->assertSame('https://cdn.test/new.png', $bare->fresh()->icon_url);
         $this->assertSame('https://cdn.test/keep.png', $done->fresh()->icon_url);
+    }
+
+    public function test_the_queued_job_saves_into_the_folder_the_worker_can_write(): void
+    {
+        $r = $this->recipe();
+        $this->mock(IconGenerationService::class, fn ($m) => $m->shouldReceive('generateIcon')
+            ->once()->with('Nasi lemak', $this->admin->id, 'recipe', GenerateRecipeIcon::QUEUED_FOLDER)
+            ->andReturn(['ok' => true, 'image_url' => 'https://cdn.test/new.png']));
+
+        (new GenerateRecipeIcon($r->id, $this->admin->id))->handle(app(IconGenerationService::class));
+
+        $this->assertSame('https://cdn.test/new.png', $r->fresh()->icon_url);
+    }
+
+    public function test_the_cleanup_clears_links_to_icons_that_were_never_saved(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('icons/kept.png', 'x');
+        $url = fn ($p) => Storage::disk('public')->url($p);
+        $missing = $this->recipe(['name' => 'Apple pie', 'icon_url' => $url('icons/gone.png')]);
+        $kept = $this->recipe(['name' => 'Laksa', 'icon_url' => $url('icons/kept.png')]);
+        $elsewhere = $this->recipe(['name' => 'Roti', 'icon_url' => 'https://cdn.test/a.png']);
+
+        (require database_path('migrations/2026_09_29_000010_clear_missing_recipe_icons.php'))->up();
+
+        $this->assertNull($missing->fresh()->icon_url);
+        $this->assertSame($url('icons/kept.png'), $kept->fresh()->icon_url);
+        $this->assertSame('https://cdn.test/a.png', $elsewhere->fresh()->icon_url);
     }
 }
