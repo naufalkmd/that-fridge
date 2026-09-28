@@ -3,7 +3,11 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-
 import { ApiError, type ExploreItem } from "@thatfridge/core";
 
 const mockPush = jest.fn();
-jest.mock("expo-router", () => ({ useRouter: () => ({ back: jest.fn(), push: mockPush }) }));
+let mockParams: { type?: string } = {};
+jest.mock("expo-router", () => ({
+  useRouter: () => ({ back: jest.fn(), push: mockPush }),
+  useLocalSearchParams: () => mockParams,
+}));
 jest.mock("react-native-safe-area-context", () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -56,6 +60,7 @@ afterAll(() => jest.useRealTimers());
 beforeEach(() => {
   jest.clearAllMocks();
   mockScope = "all";
+  mockParams = {};
   mockGetExplore.mockResolvedValue({ featured: [machine], items: [item({}), machine, plan, icon] });
 });
 
@@ -72,6 +77,14 @@ describe("Explore screen", () => {
     for (const label of ["Recipes", "Machines", "Meal plans", "Food icons"]) expect(screen.getAllByText(label)).toHaveLength(2); // the chip and the section heading
     expect(screen.getByLabelText("Recipe: Chicken rice")).toBeTruthy();
     expect(screen.getByLabelText("Food icon: Tomato")).toBeTruthy();
+  });
+
+  test("opening from the recipe book starts on recipes", async () => {
+    mockParams = { type: "recipe" };
+    await render(<Explore />);
+    await settle();
+
+    expect(mockGetExplore).toHaveBeenCalledWith({ q: undefined, type: "recipe" });
   });
 
   test("typing searches after a short pause, with no featured block", async () => {
