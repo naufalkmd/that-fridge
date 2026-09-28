@@ -126,11 +126,6 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(PushToken::class);
     }
 
-    public function goal(): HasOne
-    {
-        return $this->hasOne(UserGoal::class);
-    }
-
     public function organizerTally(): HasOne
     {
         return $this->hasOne(OrganizerTally::class);

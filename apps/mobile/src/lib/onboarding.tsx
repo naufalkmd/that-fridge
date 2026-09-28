@@ -10,9 +10,8 @@ import * as SecureStore from "expo-secure-store";
 
 import { clearOnboardingDraft } from "@/lib/onboardingDraft";
 
-// First-run onboarding is a per-device, local-only flag — same pattern as
-// `lib/chatQuota.ts`. Seeing the intro again after a reinstall is acceptable.
-// Bump the key suffix if the carousel changes enough to be worth re-showing.
+// First-run onboarding is a set of per-device, local-only flags (SecureStore). Seeing the intro
+// again after a reinstall is acceptable. Bump a key suffix if its step changes enough to re-show.
 const SEEN_KEY = "thatfridge_onboarding_v1";
 const COACH_DISMISSED_KEY = "thatfridge_onboarding_coach_dismissed_v1";
 const CHECKLIST_DISMISSED_KEY = "thatfridge_onboarding_checklist_dismissed_v1";

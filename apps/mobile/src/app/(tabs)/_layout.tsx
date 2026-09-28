@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { Redirect, Tabs, usePathname, useRouter } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -53,6 +53,13 @@ export default function TabsLayout() {
       });
   }, [pathname, go]);
 
+  // Signed in on a device that never saw the intro (an existing account on a new phone): there's
+  // nothing to show them - mark it seen so FirstScanGate and the Home tour can run.
+  const { seen, ready, markSeen } = onboarding;
+  useEffect(() => {
+    if (status === "signedIn" && ready && !seen) void markSeen();
+  }, [status, ready, seen, markSeen]);
+
   if (status === "loading" || (status === "signedIn" && !onboarding.ready)) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
@@ -61,7 +68,6 @@ export default function TabsLayout() {
     );
   }
   if (status === "signedOut") return <Redirect href="/sign-in" />;
-  if (!onboarding.seen) return <Redirect href="/onboarding" />;
 
   return (
     <View style={{ flex: 1 }}>

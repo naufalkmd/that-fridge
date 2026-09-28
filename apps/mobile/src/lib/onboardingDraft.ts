@@ -1,17 +1,12 @@
 import * as SecureStore from "expo-secure-store";
 
-// Pre-sign-in onboarding choices, held locally until the user creates an account — then
-// hydrateFromOnboarding() replays them to the server and clears this. Per-device,
-// best-effort, same pattern as lib/chatQuota.ts. See apps/mobile/ONBOARDING.md.
+// Pre-sign-in onboarding state, held locally until the user creates an account; hydrateOnboarding()
+// then creates their fridge and clears it. Per-device, best-effort. See apps/mobile/ONBOARDING.md.
+// (The old answers - goal, waste, household, fridge name, reminder - left with their steps.)
 
 const KEY = "thatfridge_onboarding_draft_v1";
 
 export type OnboardingDraft = {
-  goal?: "waste_less" | "cook_smarter" | "organize" | "save_money";
-  wasteFrequency?: "weekly" | "monthly" | "rarely";
-  household?: "solo" | "partner" | "household" | "roommates";
-  fridgeName?: string;
-  reminder?: { cadence: "evening" | "twice_weekly" } | null;
   completedAt?: string;
 };
 
@@ -33,7 +28,7 @@ export async function patchOnboardingDraft(
     const current = (await getOnboardingDraft()) ?? {};
     await SecureStore.setItemAsync(KEY, JSON.stringify({ ...current, ...patch }));
   } catch {
-    /* best effort — a lost answer just means a plainer first session */
+    /* best effort */
   }
 }
 

@@ -54,12 +54,12 @@ export default function Welcome() {
     track("welcome_step_viewed", { step });
   }, [step]);
 
-  // Mark the intro seen (so the post-sign-in /onboarding route doesn't replay it). Called before
-  // every hand-off to auth.
+  // Mark the intro seen (so a later sign-out lands on /sign-in, not here). Called before every
+  // hand-off to auth.
   const commitDraft = useCallback(async () => {
     if (preview) return;
     try {
-      await patchOnboardingDraft({ reminder: null, completedAt: new Date().toISOString() });
+      await patchOnboardingDraft({ completedAt: new Date().toISOString() });
       await markSeen();
     } catch {
       /* best effort */

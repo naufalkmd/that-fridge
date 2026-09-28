@@ -54,7 +54,6 @@ class PhotoService
             }
 
             return [
-                'photo_scan_id' => rand(1, 100000),
                 'file_path' => $path,
                 'file_url' => Storage::disk($disk)->temporaryUrl($path, now()->addMinutes(30)),
                 'status' => 'processed',

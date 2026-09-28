@@ -49,7 +49,7 @@ import { useRecipes } from "@/lib/recipes";
 import { useKitchenScore } from "@/lib/kitchenScore";
 import { useNotifications } from "@/lib/notifications";
 import { useToast } from "@/lib/toast";
-import { useAgentInsight } from "@/lib/agentInsight";
+import { setCrewTip, useCrewTip } from "@/lib/crewTips";
 import { useTheme, type ThemeColors } from "@/lib/theme";
 import { PixelText } from "@/components/brand";
 import { FridgeScopePicker } from "@/components/fridge-scope";
@@ -116,7 +116,6 @@ function tabColors(colors: ThemeColors): Record<Tab, string> {
   };
 }
 
-const insightOverride = new Map<ChatAgentName, string>();
 
 /** The score each crew member looks after, as named in its mission sheet. */
 const SCORE_LABEL: Record<Tab, string> = {
@@ -303,14 +302,12 @@ export default function Crew() {
 
   const scoped = useMemo(() => scopeItems(items, scope), [items, scope]);
   const showFridgeTags = scope === "all";
-  const insight = useAgentInsight(meta.agent, scoped, false);
+  const tip = useCrewTip(meta.agent);
   const [activating, setActivating] = useState(false);
   const [dismissed, setDismissed] = useState<
     Partial<Record<ChatAgentName, boolean>>
   >({});
-  const shownInsight = dismissed[meta.agent]
-    ? null
-    : (insightOverride.get(meta.agent) ?? insight.text);
+  const shownInsight = dismissed[meta.agent] ? null : tip;
 
   // Organizer's on-demand "misplaced items" sweep (asks first: it costs credits).
   const sweep = useOrganizerSweep();
@@ -403,7 +400,7 @@ export default function Crew() {
           compact: true,
         },
       );
-      insightOverride.set(meta.agent, res.agent_response);
+      setCrewTip(meta.agent, res.agent_response);
     } catch (e) {
       // Same weekly cap as Quick Chat (compact calls count against it too) - surface it here
       // too instead of failing silently, since this is the only other place a free user can

@@ -24,5 +24,8 @@ export default function Index() {
     return <Redirect href={onboarding.seen ? "/sign-in" : "/welcome"} />;
   }
 
-  return <Redirect href={onboarding.seen ? "/home" : "/onboarding"} />;
+  // Signed in: straight home. A device that never saw the intro (e.g. logging into an existing
+  // account on a new phone) gets it marked seen by the tabs layout; an empty fridge still gets
+  // "Let's fill your fridge" from FirstScanGate.
+  return <Redirect href="/home" />;
 }

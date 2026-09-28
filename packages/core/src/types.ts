@@ -268,20 +268,6 @@ export interface UsageHistoryEntry {
   lastAt: number;
 }
 
-// money_saved is deliberately not offered - there's no price data anywhere in the schema
-// (see backend/API.md's "User goal" section), so it can't be computed without inventing a
-// number.
-export type GoalMetricType = "waste_rate" | "items_rescued" | "freshness_at_use";
-export type GoalPeriod = "weekly" | "monthly";
-
-export interface UserGoal {
-  metricType: GoalMetricType;
-  targetValue: number;
-  period: GoalPeriod;
-  isActive: boolean;
-  updatedAt: number;
-}
-
 // Cumulative, all-time - backs the Tidiness score. itemsCheckedTotal === 0 means Organizer
 // hasn't run a sweep yet, same "not enough data" meaning as a null waste/balance score.
 export interface OrganizerTally {

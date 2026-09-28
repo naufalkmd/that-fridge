@@ -322,13 +322,6 @@ function AppShell({
                                         presentation: "modal",
                                       }}
                                     />
-                                    <Stack.Screen
-                                      name="onboarding"
-                                      options={{
-                                        headerShown: false,
-                                        gestureEnabled: false,
-                                      }}
-                                    />
                                   </Stack>
                                   <OfflineBanner />
                                 </NotesProvider>
@@ -385,7 +378,7 @@ function ImprovementNotice() {
 // individually degrades gracefully today, but nothing stops a *future* screen from fetching
 // by route param with no fallback. This is the one place that actually enforces it: whenever
 // the session isn't signed in, bounce off anything outside this allowlist.
-const PUBLIC_ROUTES = ["/", "/welcome", "/sign-in", "/forgot-password", "/onboarding"];
+const PUBLIC_ROUTES = ["/", "/welcome", "/sign-in", "/forgot-password"];
 
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(`${p}/`));

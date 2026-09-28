@@ -21,8 +21,6 @@ import type {
   FridgeMember,
   FridgeNote,
   FridgeNoteColor,
-  GoalMetricType,
-  GoalPeriod,
   Item,
   Machine,
   MachineDraftResult,
@@ -36,7 +34,6 @@ import type {
   NotificationEvent,
   NotificationPrefs,
   NutritionCategory,
-  OnboardingPrefs,
   OrganizerTally,
   ProfileFields,
   Recipe,
@@ -48,7 +45,6 @@ import type {
   ShoppingItem,
   StorageLocation,
   UsageHistoryEntry,
-  UserGoal,
   UserSearchResult,
   Vibe,
   WeightUnit,
@@ -504,14 +500,6 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.get<CreditsResult>("/me/credits");
   }
 
-  /** Merge the coarse onboarding answer tags into the user's preferences. */
-  async function saveOnboardingProfile(
-    prefs: OnboardingPrefs,
-  ): Promise<CurrentUser> {
-    const res = await http.post<{ user: CurrentUser }>("/me/onboarding", prefs);
-    return res.user;
-  }
-
   /** Settings' "Send feedback" form. `email` is a free-typed contact address, not necessarily
    *  the signed-in account's own - the sender may want a reply somewhere else. */
   function sendFeedback(email: string, message: string): Promise<void> {
@@ -552,9 +540,9 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
       /** A PDF to attach (one per message) — same Blob-not-placeholder requirement as
        *  `images` above. `name` is shown back to the model as the document's filename. */
       pdf?: { blob: Blob; name: string };
-      /** One-shot crew tip fetch (Home tip cards / "Activate {agent}") - asks the server for
-       * a short plain-text reply and skips saving it into chat history/sessions. Still counts
-       * against the free weekly quota, same as a real Quick Chat message. */
+      /** One-shot crew tip ("Ask {agent} for a tip" on the Crew tab) - asks the server for a
+       * short plain-text reply and skips saving it into chat history/sessions. The server
+       * doesn't charge credits for it and caches the reply for the rest of the day. */
       compact?: boolean;
       /** The chat's active fridge — the default target for tool writes (add to shopping,
        * leave a note, clear expired). Omit when chatting across all fridges. */
@@ -1163,18 +1151,7 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     return http.del(`/notes/${id}`).then(() => undefined);
   }
 
-  // ---- goals + badges + organizer -------------------------------------------
-  function getUserGoal(): Promise<UserGoal> {
-    return http.get<UserGoal>("/user-goal");
-  }
-  function updateUserGoal(data: {
-    metricType?: GoalMetricType;
-    targetValue?: number;
-    period?: GoalPeriod;
-    isActive?: boolean;
-  }): Promise<UserGoal> {
-    return http.patch<UserGoal>("/user-goal", data);
-  }
+  // ---- badges + organizer -------------------------------------------
   function getBadges(): Promise<BadgeProgress[]> {
     return http.get<BadgeProgress[]>("/badges");
   }
@@ -1363,8 +1340,6 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     createFridgeNote,
     updateFridgeNote,
     deleteFridgeNote,
-    getUserGoal,
-    updateUserGoal,
     getBadges,
     postBadgeProgress,
     incrementOrganizerTally,
@@ -1378,7 +1353,6 @@ export function createApi(http: HttpClient, tokens: TokenStore) {
     getChatSessionMessages,
     deleteChatSession,
     deleteAllChatSessions,
-    saveOnboardingProfile,
     sendFeedback,
     tipFeedback,
     getCalendar,

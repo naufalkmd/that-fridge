@@ -38,7 +38,7 @@ import { useShopping } from "@/lib/shopping";
 import { useKitchenScore } from "@/lib/kitchenScore";
 import { useStaleCache } from "@/lib/useStaleCache";
 import { useSocial } from "@/lib/social";
-import { useAgentInsight } from "@/lib/agentInsight";
+import { useCrewTip } from "@/lib/crewTips";
 import { usePro } from "@/lib/pro";
 import { useTheme } from "@/lib/theme";
 import { PixelText } from "@/components/brand";
@@ -788,13 +788,9 @@ function CrewTip({
     Shopkeeper: colors.agentShopkeeper,
     Chef: colors.agentChef,
   };
-  // enabled: false — Home never fires the AI call itself, only shows one if it's already
-  // cached from the user tapping "Activate {agent}" on the Crew tab this session (agentInsight's
-  // cache is a shared module-level singleton). Otherwise this always falls back to `fallback`
-  // (deterministic, computed from real data, zero cost) instead of eagerly hitting /chat on
-  // every Home mount - that was firing 3 real LLM calls on every cold app launch regardless of
-  // whether the fridge had changed since the last one.
-  const insight = useAgentInsight(agent, items, false);
+  // The tip the user asked this crew member for on the Crew tab this session, if any; otherwise
+  // the deterministic fallback (computed from real data, no AI call).
+  const tip = useCrewTip(agent);
   return (
     <NotificationCard
       icon={TIP_ICON[agent]}
@@ -803,13 +799,7 @@ function CrewTip({
       onPress={onPress}
       onAction={onDismiss}
     >
-      {insight.text ? (
-        <MarkdownText text={insight.text} size={13} />
-      ) : insight.loading ? (
-        <Text style={{ fontSize: 13, color: colors.faint }}>{agent} is thinking…</Text>
-      ) : (
-        fallback
-      )}
+      {tip ? <MarkdownText text={tip} size={13} /> : fallback}
     </NotificationCard>
   );
 }

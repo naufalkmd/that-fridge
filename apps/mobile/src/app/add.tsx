@@ -30,7 +30,6 @@ import {
   ItemCard,
   blankDraft,
   isoInDays,
-  takeStashedDrafts,
   toCreatePayload,
   useDraftItems,
   type DraftStore,
@@ -106,37 +105,24 @@ export default function Add() {
     method?: string;
   }>();
 
-  // Fully-edited drafts handed over from a multi-scan barcode session (/scan → "Done").
-  const [stashed] = useState(() =>
-    params.method === "barcode-batch" ? takeStashedDrafts() : [],
-  );
-
-  // Jump straight to the review list when prefilled from a barcode scan (single or batch).
+  // Jump straight to the form when prefilled (e.g. a name passed in).
   const [method, setMethod] = useState<Method | null>(
-    params.name || stashed.length
+    params.name
       ? "manual"
       : // Scans happen in /sweep now; any other method param lands on the picker.
         (params.method === "manual" ? "manual" : null),
   );
 
-  const drafts = useDraftItems(() =>
-    stashed.length
-      ? stashed
-      : [
-          blankDraft({
-            name: params.name ?? "",
-            icon: params.name
-              ? (guessFoodIcon(params.name) ?? "generic")
-              : "generic",
-            location: (params.location as StorageLocation) ?? "fridge",
-            category: (params.category as NutritionCategory) ?? null,
-            categoryId: params.categoryId ?? null,
-            expiryDate: params.shelfLife
-              ? isoInDays(Number(params.shelfLife))
-              : null,
-          }),
-        ],
-  );
+  const drafts = useDraftItems(() => [
+    blankDraft({
+      name: params.name ?? "",
+      icon: params.name ? (guessFoodIcon(params.name) ?? "generic") : "generic",
+      location: (params.location as StorageLocation) ?? "fridge",
+      category: (params.category as NutritionCategory) ?? null,
+      categoryId: params.categoryId ?? null,
+      expiryDate: params.shelfLife ? isoInDays(Number(params.shelfLife)) : null,
+    }),
+  ]);
   const [saving, setSaving] = useState(false);
 
   // Names in this draft that already sit in the fridge — so the user knows a new
@@ -307,7 +293,6 @@ export default function Add() {
       ) : (
         <DraftList
           drafts={drafts}
-          scanMode={false}
           categoryId={params.categoryId ?? null}
           notice={dupNames.length ? <DuplicateNotice names={dupNames} /> : null}
           intro={
@@ -330,10 +315,8 @@ export default function Add() {
 
 function DraftList({
   drafts,
-  scanMode,
   notice,
   intro,
-  emptyText,
   addLabel,
   submitLabel,
   submitting,
@@ -341,10 +324,8 @@ function DraftList({
   categoryId,
 }: {
   drafts: DraftStore;
-  scanMode: boolean;
   notice?: React.ReactNode;
   intro: React.ReactNode;
-  emptyText?: string;
   addLabel: string;
   submitLabel: (count: number) => string;
   submitting: boolean;
@@ -362,9 +343,7 @@ function DraftList({
     blue: BLUE,
     onAccent: CANVAS,
   } = useTheme().colors;
-  const count = scanMode
-    ? drafts.items.filter((d) => d.checked && d.name.trim()).length
-    : drafts.items.filter((d) => d.name.trim()).length;
+  const count = drafts.items.filter((d) => d.name.trim()).length;
 
   return (
     <View style={{ flex: 1 }}>
@@ -396,35 +375,14 @@ function DraftList({
           )}
         </View>
 
-        {drafts.items.length === 0 && emptyText ? (
-          <Text
-            style={{
-              fontSize: 13,
-              color: FAINT,
-              textAlign: "center",
-              marginVertical: 20,
-            }}
-          >
-            {emptyText}
-          </Text>
-        ) : (
-          <View style={{ gap: 12 }}>
+        <View style={{ gap: 12 }}>
             {drafts.items.map((d, i) => (
               <ItemCard
                 key={d.id}
                 item={d}
                 autoFocus={!d.name && i === drafts.items.length - 1}
                 onChange={(p) => drafts.set(d.id, p)}
-                onToggle={
-                  scanMode
-                    ? () => drafts.set(d.id, { checked: !d.checked })
-                    : undefined
-                }
-                onRemove={
-                  scanMode || drafts.items.length > 1
-                    ? () => drafts.remove(d.id)
-                    : undefined
-                }
+                onRemove={drafts.items.length > 1 ? () => drafts.remove(d.id) : undefined}
                 onAutoFill={() => drafts.fillOne(d)}
                 autoFilling={drafts.fillingId === d.id || drafts.fillingAll}
                 onScanDate={() => drafts.scanDate(d)}
@@ -454,7 +412,6 @@ function DraftList({
               </Text>
             </Pressable>
           </View>
-        )}
       </ScrollView>
 
       <View

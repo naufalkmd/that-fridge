@@ -34,11 +34,11 @@ class UsageHistoryController extends Controller
             'icon' => ['required', 'string', 'max:255'],
             // Both optional and both fed straight from data the frontend already has at the
             // moment an item is removed (Item.days / Item.freshness) - not invented. They back
-            // the "items rescued" / "average freshness at use" goal metrics (see UserGoal).
+            // the freshness-at-use figures (Waste Saver score, Insights).
             'daysRemaining' => ['sometimes', 'nullable', 'integer'],
             'freshness' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100'],
             // The item's nutrition category at the moment it was used - feeds the Food
-            // Balance goal metric's variety calculation. Optional; older/uncategorized items
+            // Balance score's variety calculation. Optional; older/uncategorized items
             // just won't contribute a category for that use.
             'category' => ['sometimes', 'nullable', 'string', Rule::in(self::NUTRITION_CATEGORIES)],
         ]);

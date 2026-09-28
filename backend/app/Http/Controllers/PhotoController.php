@@ -52,7 +52,6 @@ class PhotoController extends Controller
         ]);
 
         return response()->json([
-            'photo_scan_id' => $result['photo_scan_id'],
             'status' => $result['status'],
             'file_url' => $result['file_url'],
             'detected_items' => $result['detected_items'],

@@ -280,13 +280,13 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
   translate-from-scratch — Fiverr/Upwork $30–80 for a review pass, ProZ.com for real legal
   translators. App UI strings (once i18n is wired) via Crowdin/Lokalise/Weblate, ~$150–300 for a
   full KO set.
-- [ ] Onboarding polish — personalized payoff copy from stored `preferences` tags + a peak-end
-  "you're all set" beat, and contextual coach-marks (crew tabs in `/eat`, drag-to-reorder in
-  Inventory, Kitchen Score). Waits on `app:onboarding-funnel` data. See
-  `apps/mobile/ONBOARDING.md` → "Still open."
+- [ ] Onboarding polish — a peak-end "you're all set" beat after the first scan, and contextual
+  coach-marks (crew tabs in `/eat`, drag-to-reorder in Inventory, Kitchen Score). The 1.3.4 flow
+  no longer asks the goal/waste/household questions, so any personalisation has to come from what
+  people scan. Waits on `app:onboarding-funnel` data. See `apps/mobile/ONBOARDING.md`.
 - [ ] Personal-goal feature, done right (old Goal screen removed for v1). If rebuilt: one
-  intuitive metric ("items rescued"), a live Home card, an honest timeframe. Backend
-  `user_goals`/`UserGoalController`/`progress.ts` still exist, unused by the client.
+  intuitive metric ("items rescued"), a live Home card, an honest timeframe. The old goal API,
+  `user_goals` table and client goal code were removed on `feature/fridge-sweep` (2026-09-28).
 - [ ] Turn on low-balance email alerts on the OpenRouter + fal.ai dashboards (the spend-ceiling
   system itself is done).
 - [ ] Photographic recipe hero image — an optional full-bleed photo (`image_url`, `flux/schnell`

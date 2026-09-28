@@ -280,18 +280,6 @@ export function useDraftItems(initial: () => Draft[]) {
 
 export type DraftStore = ReturnType<typeof useDraftItems>;
 
-// Hand-off buffer: /scan writes fully-edited drafts on "Done", a fresh /add mount
-// reads them once (cleared on read so a back-nav doesn't reload stale scans).
-let stash: Draft[] = [];
-export function stashDrafts(items: Draft[]): void {
-  stash = items;
-}
-export function takeStashedDrafts(): Draft[] {
-  const out = stash;
-  stash = [];
-  return out;
-}
-
 // ---- the shared item card ----------------------------------------------
 
 export function ItemCard({

@@ -1,20 +1,17 @@
-import type { Fridge, OnboardingPrefs } from "@thatfridge/core";
+import type { Fridge } from "@thatfridge/core";
 
 import { api } from "@/lib/api";
 import { track } from "@/lib/analytics";
-import { setFridgeReminder } from "@/lib/fridgeReminder";
-import { ensureNotificationPermission } from "@/lib/localNotifications";
 import { clearOnboardingDraft, getOnboardingDraft } from "@/lib/onboardingDraft";
 
-// Replays the pre-sign-in onboarding draft to the server after the first successful auth.
-// See apps/mobile/ONBOARDING.md. Best-effort throughout — a failure logs a beacon and moves
-// on; the Home "Getting started" checklist is the backstop.
+// Runs once after the first successful auth that followed /welcome: makes sure the account has a
+// fridge. See apps/mobile/ONBOARDING.md. Best-effort - a failure logs a beacon and moves on;
+// "Let's fill your fridge" and the Home "Getting started" card are the backstop.
 
 /**
- * Create the user's first fridge with the name they chose in onboarding — or return an
- * existing one. Always checks the server first, so the two callers (hydrateOnboarding
- * right after auth, and inventory's ensureFridgeId on first-item-add) can never both
- * create one. Clears the draft once a fridge is confirmed.
+ * Return the user's first fridge, creating "My Fridge" if they have none. Always checks the server
+ * first, so the two callers (hydrateOnboarding right after auth, and inventory's ensureFridgeId on
+ * first-item-add) can never both create one. Clears the draft once a fridge is confirmed.
  */
 export async function ensureOnboardingFridge(): Promise<Fridge | null> {
   try {
@@ -23,8 +20,7 @@ export async function ensureOnboardingFridge(): Promise<Fridge | null> {
       await clearOnboardingDraft();
       return existing[0];
     }
-    const draft = await getOnboardingDraft();
-    const fridge = await api.createFridge(draft?.fridgeName?.trim() || "My Fridge");
+    const fridge = await api.createFridge("My Fridge");
     await clearOnboardingDraft();
     return fridge;
   } catch {
@@ -35,43 +31,6 @@ export async function ensureOnboardingFridge(): Promise<Fridge | null> {
 export async function hydrateOnboarding(): Promise<void> {
   const draft = await getOnboardingDraft();
   if (!draft) return;
-
-  const failures: string[] = [];
-
-  // 1. Preference tags (kept as tags — no concrete UserGoal is seeded, decision §10.4).
-  const prefs: OnboardingPrefs = {};
-  if (draft.goal) prefs.goal = draft.goal;
-  if (draft.wasteFrequency) prefs.waste_frequency = draft.wasteFrequency;
-  if (draft.household) prefs.household = draft.household;
-  if (Object.keys(prefs).length > 0) {
-    try {
-      await api.saveOnboardingProfile(prefs);
-    } catch {
-      failures.push("preferences");
-    }
-  }
-
-  // 2. First fridge (server-checked, so it can't collide with ensureFridgeId).
-  if (!(await ensureOnboardingFridge())) failures.push("fridge");
-
-  // 3. "Check your fridge" reminder — ask for notification permission in context, then
-  //    schedule the chosen cadence. A skip (`reminder` null/absent) does nothing.
-  if (draft.reminder?.cadence) {
-    try {
-      if (await ensureNotificationPermission()) {
-        await setFridgeReminder(draft.reminder.cadence);
-      } else {
-        failures.push("reminder_permission");
-      }
-    } catch {
-      failures.push("reminder");
-    }
-  }
-
-  track("onboarding_hydrated", {
-    named_fridge: !!draft.fridgeName,
-    goal: draft.goal ?? null,
-    reminder: draft.reminder?.cadence ?? null,
-    failures: failures.length ? failures : null,
-  });
+  const fridge = await ensureOnboardingFridge();
+  track("onboarding_hydrated", { failures: fridge ? null : ["fridge"] });
 }

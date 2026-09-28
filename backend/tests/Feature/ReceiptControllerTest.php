@@ -44,7 +44,7 @@ class ReceiptControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJsonStructure(['receipt_id', 'status', 'file_url', 'detected_items']);
+        $response->assertJsonStructure(['status', 'file_url', 'detected_items']);
         $this->assertSame(7, $user->fresh()->ai_credits);
     }
 

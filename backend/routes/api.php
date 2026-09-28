@@ -19,7 +19,6 @@ use App\Http\Controllers\FridgeJoinRequestController;
 use App\Http\Controllers\FridgeMemberController;
 use App\Http\Controllers\FridgeNoteController;
 use App\Http\Controllers\IconController;
-use App\Http\Controllers\IngestionController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ItemOutcomeController;
 use App\Http\Controllers\MachineController;
@@ -39,7 +38,6 @@ use App\Http\Controllers\ShoppingItemController;
 use App\Http\Controllers\TipFeedbackController;
 use App\Http\Controllers\UsageHistoryController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\UserGoalController;
 use Illuminate\Support\Facades\Route;
 
 // Auth routes (public)
@@ -95,13 +93,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // TRACK B: Ingestion & Agents
     Route::prefix('sections/{section}')->group(function () {
-        Route::post('items/manual', [IngestionController::class, 'store']);
         // Barcode scan calls an OpenRouter classification step per lookup on top of the
         // OpenFoodFacts request - same floor-against-hammering reasoning as the vision routes
         // below, just a lighter cap since it's cheaper per call.
         Route::middleware('throttle:20,1')->post('items/barcode', [BarcodeController::class, 'scan']);
         // receipt/photo/expiry-scan all hit OpenRouter Vision per call - throttled the same as
-        // /chat, on top of the isPro()/weekly-cap gating inside each controller.
+        // /chat, on top of the AI-credit charge inside each controller.
         Route::middleware('throttle:15,1')->post('items/receipt/scan', [ReceiptController::class, 'scan']);
         Route::middleware('throttle:15,1')->post('items/photo/scan', [PhotoController::class, 'scan']);
         Route::middleware('throttle:15,1')->post('items/expiry-scan', [ExpiryScanController::class, 'scan']);
@@ -112,7 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [AgentController::class, 'history']);
         // Rate-limited: every call here hits an LLM, unlike the plain-DB-read routes below.
         // Same reasoning as /icons/generate's throttle - protects against a script hammering
-        // the endpoint directly, not meant to replace the client-side weekly quota (chatQuota.ts).
+        // the endpoint directly; what a message costs is metered in AI credits (CreditCost).
         Route::middleware('throttle:15,1')->post('/', [AgentController::class, 'send']);
         // Polled about once a second while a reply is on its way - a cache read, no model call.
         Route::middleware('throttle:120,1')->get('/progress/{turn}', [AgentController::class, 'progress']);
@@ -210,9 +207,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/push-tokens', [PushTokenController::class, 'store']);
     Route::delete('/push-tokens', [PushTokenController::class, 'destroy']);
-
-    Route::get('/user-goal', [UserGoalController::class, 'show']);
-    Route::patch('/user-goal', [UserGoalController::class, 'update']);
 
     Route::get('/score-snapshots', [ScoreSnapshotController::class, 'index']);
 

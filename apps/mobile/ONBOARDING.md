@@ -41,8 +41,9 @@ reminder step. Funnel events: `welcome_*`, then `onboarding_first_scan_{shown,st
 
 ## Post-sign-in pieces
 
-- **`app/onboarding.tsx`** — a thin fallback (carousel + name-fridge) for accounts created
-  before `/welcome` shipped, and for "Replay intro". Shares components with `/welcome`.
+- **Signed in without having seen the intro** (an existing account on a new phone): the tabs
+  layout just marks it seen — there's nothing to show; `FirstScanGate` still offers the first scan
+  for an empty fridge. (The old `/onboarding` carousel + name-your-fridge fallback is gone.)
 - **`components/home/CoachSpotlight.tsx`** — the one-time 4-stop tour, runs on the first Home
   visit for a fridge with ≤ 6 items. `coach_tour_seen_v1` persists on first show.
 - **`components/home/GettingStarted.tsx`** — the progress-path card. Hidden once every step is
@@ -56,7 +57,6 @@ reminder step. Funnel events: `welcome_*`, then `onboarding_first_scan_{shown,st
 | Pre-sign-in flow | `src/app/welcome.tsx` |
 | First scan (post sign-in) | `src/app/first-scan.tsx`, `src/components/onboarding/FirstScanGate.tsx` |
 | Shared step components | `src/components/onboarding/shared.tsx` |
-| Post-auth fallback | `src/app/onboarding.tsx` |
 | Local draft (SecureStore) | `src/lib/onboardingDraft.ts` |
 | Draft → server on first auth | `src/lib/hydrateOnboarding.ts` |
 | Gating flags + replay | `src/lib/onboarding.tsx` |
@@ -64,7 +64,7 @@ reminder step. Funnel events: `welcome_*`, then `onboarding_first_scan_{shown,st
 | Home checklist | `src/components/home/GettingStarted.tsx` |
 | Check-in reminder | `src/lib/fridgeReminder.ts` |
 | Analytics | `src/lib/analytics.ts` → `POST /events`; `php artisan app:onboarding-funnel` |
-| Backend | `users.preferences` JSON, `POST /me/onboarding`, `AnalyticsEvent` model |
+| Backend | `AnalyticsEvent` model; `POST /me/onboarding` + `users.preferences` tags are kept for older app builds (1.3.3 and earlier still send the answers) |
 
 ## Persistence
 
@@ -77,7 +77,7 @@ All flags and the draft are **per-device** (SecureStore = iOS Keychain, survives
 ## Replay
 
 Profile → Settings → **"Replay intro & tips"** → `replayOnboarding()` re-arms the Home
-spotlight / tour / checklist (keeps `seen`, so no `/onboarding` bounce) and opens
+spotlight / tour / checklist / first-scan prompt (keeps `seen`) and opens
 `/welcome?preview=1` — a non-destructive walk: no draft write, no auth, every hand-off just
 closes back to Profile. A "PREVIEW — tap to exit" pill is shown throughout.
 

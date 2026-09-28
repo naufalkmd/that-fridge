@@ -44,7 +44,7 @@ class PhotoControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJsonStructure(['photo_scan_id', 'status', 'file_url', 'detected_items']);
+        $response->assertJsonStructure(['status', 'file_url', 'detected_items']);
         $this->assertSame(7, $user->fresh()->ai_credits);
     }
 
