@@ -34,6 +34,8 @@ final class AdminCacheKeys
 
     public const ICON_SUGGESTIONS = 'admin:icon-suggestions:180';
 
+    public const BARCODE_LOOKUP_MISSES = 'admin:barcode-lookup-misses:180';
+
     public const RETENTION = 'admin:retention:8w';
 
     public const FEEDBACK_BADGE = 'admin:badge:feedback';

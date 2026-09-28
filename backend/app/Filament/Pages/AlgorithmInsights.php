@@ -78,6 +78,12 @@ class AlgorithmInsights extends Page
             fn () => app(AlgorithmInsightsReport::class)->gaps());
     }
 
+    public function barcodeLookupMisses(): array
+    {
+        return Cache::flexible(AdminCacheKeys::BARCODE_LOOKUP_MISSES, AdminCacheKeys::DASHBOARD_TTL,
+            fn () => app(AlgorithmInsightsReport::class)->barcodeLookupMisses());
+    }
+
     public function barcodeMisses(): array
     {
         return app(AlgorithmInsightsReport::class)->barcodeMisses();

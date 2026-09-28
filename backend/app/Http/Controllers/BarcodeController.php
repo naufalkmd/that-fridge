@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Section;
 use App\Services\BarcodeService;
+use App\Support\AlgoFeedback;
 use Illuminate\Http\Request;
 
 class BarcodeController extends Controller
@@ -32,6 +33,12 @@ class BarcodeController extends Controller
         $product = $this->barcodeService->lookup($barcode);
 
         if (! $product) {
+            // Every barcode the product database doesn't know, named or not: the admin's
+            // "Barcodes we couldn't find" list (Algorithm insights). A barcode isn't personal.
+            AlgoFeedback::record($request->user(), 'barcode', [
+                'kind' => 'lookup_miss', 'guess' => mb_substr((string) $barcode, 0, 64), 'source' => 'scan',
+            ]);
+
             return response()->json([
                 'error' => 'Barcode not found in database',
                 'barcode' => $barcode,

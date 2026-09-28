@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AlgoFeedbackEvent;
 use App\Models\AnalyticsEvent;
 use App\Models\GeneratedIcon;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -81,6 +82,50 @@ final class AlgorithmInsightsReport
             ->orderByDesc('users')
             ->limit(100)
             ->get()->toArray();
+    }
+
+    /**
+     * Barcodes people scanned that no product source knew, most scanned first, minus any that
+     * have since been added to Products. Barcodes aren't personal, so they show from the first
+     * scan; what people named them only shows under the usual MIN_USERS rule (barcodeMisses).
+     *
+     * @return list<array{barcode: string, scans: int, users: int, named: int, shared_name: ?string, last_seen: string}>
+     */
+    public function barcodeLookupMisses(int $days = 180): array
+    {
+        $since = now()->subDays($days);
+        $rows = AlgoFeedbackEvent::query()
+            ->where('algo', 'barcode')
+            ->where('kind', 'lookup_miss')
+            ->where('occurred_at', '>=', $since)
+            ->whereNotNull('guess')
+            ->whereNotIn('guess', Product::query()->whereNotNull('barcode')->select('barcode'))
+            ->select('guess')
+            ->selectRaw('count(*) as scans, count(distinct user_id) as users, max(occurred_at) as last_seen')
+            ->groupBy('guess')
+            ->orderByDesc('users')
+            ->orderByDesc('scans')
+            ->limit(100)
+            ->get();
+
+        $named = AlgoFeedbackEvent::query()
+            ->where('algo', 'barcode')
+            ->where('kind', 'miss_named')
+            ->where('occurred_at', '>=', $since)
+            ->whereIn('guess', $rows->pluck('guess'))
+            ->selectRaw('guess, count(distinct user_id) as n')
+            ->groupBy('guess')
+            ->pluck('n', 'guess');
+        $shared = collect($this->barcodeMisses($days))->sortByDesc('users')->unique('guess')->keyBy('guess');
+
+        return $rows->map(fn ($r) => [
+            'barcode' => (string) $r->guess,
+            'scans' => (int) $r->scans,
+            'users' => (int) $r->users,
+            'named' => (int) ($named[$r->guess] ?? 0),
+            'shared_name' => isset($shared[$r->guess]) ? (string) $shared[$r->guess]['name_key'] : null,
+            'last_seen' => (string) $r->last_seen,
+        ])->values()->all();
     }
 
     /** @return list<string> */

@@ -298,3 +298,28 @@ export function buildSweepResults<T extends TrackedItem>(
 
   return { rows, missing, emptyShots };
 }
+
+/**
+ * The barcode's on-screen rect from the camera's result: its bounds, or the box around its corner
+ * points when the bounds come back empty (which happens). Padded a little so the brackets sit
+ * just outside the bars. Null when neither is usable - the strip frame then stays as the guide.
+ */
+export function barcodeRect(r: { bounds?: { origin: { x: number; y: number }; size: { width: number; height: number } }; cornerPoints?: { x: number; y: number }[] }): Rect | null {
+  let x: number, y: number, w: number, h: number;
+  if (r.bounds && r.bounds.size.width > 4 && r.bounds.size.height > 4) {
+    ({ x, y } = r.bounds.origin);
+    ({ width: w, height: h } = r.bounds.size);
+  } else if (r.cornerPoints && r.cornerPoints.length >= 2) {
+    const xs = r.cornerPoints.map((p) => p.x);
+    const ys = r.cornerPoints.map((p) => p.y);
+    x = Math.min(...xs);
+    y = Math.min(...ys);
+    w = Math.max(...xs) - x;
+    h = Math.max(...ys) - y;
+    if (w < 4 || h < 4) return null;
+  } else {
+    return null;
+  }
+  const pad = 10;
+  return { x: x - pad, y: y - pad, w: w + pad * 2, h: Math.max(h, 24) + pad * 2 };
+}

@@ -1,4 +1,5 @@
 import {
+  barcodeRect,
   buildSweepResults,
   boxToRect,
   cropStyle,
@@ -237,5 +238,24 @@ describe("buildSweepResults", () => {
   it("treats a tracked item with no location as in the fridge", () => {
     const { rows } = buildSweepResults([shot("a", "fridge", [det("Jam")])], [{ id: "t1", name: "Jam" }]);
     expect(rows[0].match?.id).toBe("t1");
+  });
+});
+
+describe("barcodeRect", () => {
+  it("pads the camera's bounds", () => {
+    expect(barcodeRect({ bounds: { origin: { x: 100, y: 200 }, size: { width: 150, height: 60 } } })).toEqual({ x: 90, y: 190, w: 170, h: 80 });
+  });
+
+  it("falls back to the corner points when the bounds are empty", () => {
+    const r = barcodeRect({
+      bounds: { origin: { x: 0, y: 0 }, size: { width: 0, height: 0 } },
+      cornerPoints: [{ x: 50, y: 40 }, { x: 150, y: 44 }, { x: 148, y: 90 }, { x: 52, y: 86 }],
+    });
+    expect(r).toEqual({ x: 40, y: 30, w: 120, h: 70 });
+  });
+
+  it("gives up when there's nothing usable", () => {
+    expect(barcodeRect({})).toBeNull();
+    expect(barcodeRect({ cornerPoints: [{ x: 5, y: 5 }] })).toBeNull();
   });
 });

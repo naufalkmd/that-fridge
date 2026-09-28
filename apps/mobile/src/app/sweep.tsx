@@ -57,6 +57,7 @@ import {
   MAX_SHOTS,
   MODES,
   SPACES,
+  barcodeRect,
   boxToRect,
   buildSweepResults,
   cropStyle,
@@ -107,6 +108,9 @@ type Shot = {
 
 /** Something the user typed in because the scan missed it. */
 type Extra = { key: string; name: string; location: StorageLocation; space: Space };
+
+/** What a barcode lookup came to: drives the tracking box's colour. */
+type BarcodeResult = "found" | "unknown" | "error" | "busy" | "repeat";
 
 /** A barcode the product database didn't know; saved only once the user names it. */
 type Unnamed = { key: string; code: string; name: string };
@@ -237,10 +241,16 @@ export default function Sweep() {
     noteTimer.current = setTimeout(() => setBarcodeNote(null), 2200);
   }
 
-  async function onBarcode(code: string) {
+  /** Look a barcode up; resolves to what happened so the camera can colour its tracking box. */
+  async function onBarcode(code: string): Promise<BarcodeResult> {
     const now = Date.now();
-    if (lookingUp.current) return;
-    if (lastCode.current.code === code && now - lastCode.current.at < BARCODE_REPEAT_MS) return;
+    if (lookingUp.current) return "busy";
+    // The same barcode still in view is one product: the window restarts on every sighting, so a
+    // second one counts only after it has left the frame (or another barcode came between).
+    if (lastCode.current.code === code && now - lastCode.current.at < BARCODE_REPEAT_MS) {
+      lastCode.current.at = now;
+      return "repeat";
+    }
     lastCode.current = { code, at: now };
     lookingUp.current = true;
     try {
@@ -261,15 +271,17 @@ export default function Sweep() {
         },
       ]);
       note(`Added ${p.name}`, true);
+      return "found";
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         setUnnamed((prev) => (prev.some((u) => u.code === code) ? prev : [...prev, { key: `u${now}`, code, name: "" }]));
         note("Unknown product. You can name it at the end", false);
-      } else {
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        note("Couldn't look that up. Try again", false);
+        return "unknown";
       }
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      note("Couldn't look that up. Try again", false);
+      return "error";
     } finally {
       lookingUp.current = false;
     }
@@ -477,7 +489,7 @@ export default function Sweep() {
         shots={shots}
         mode={mode}
         onMode={setMode}
-        onBarcode={(code) => void onBarcode(code)}
+        onBarcode={onBarcode}
         barcodeCount={barcodes.length + unnamed.length}
         barcodeNote={barcodeNote}
         space={space}
@@ -580,7 +592,7 @@ function CameraStage({
   shots: Shot[];
   mode: CaptureMode;
   onMode: (m: CaptureMode) => void;
-  onBarcode: (code: string) => void;
+  onBarcode: (code: string) => Promise<BarcodeResult>;
   /** Barcodes scanned so far, known or not. */
   barcodeCount: number;
   /** The last barcode's result, shown briefly mid-screen. */
@@ -604,6 +616,37 @@ function CameraStage({
 
   const barcode = mode === "barcode";
   const full = shots.length >= MAX_SHOTS;
+  // Where the camera last saw a barcode, and what its lookup came to.
+  const [tracked, setTracked] = useState<{ rect: Rect; code: string; at: number } | null>(null);
+  const [codeState, setCodeState] = useState<Record<string, "looking" | "found" | "unknown">>({});
+
+  const lastTrack = useRef(0);
+
+  function onScanned(r: { data: string; bounds?: { origin: { x: number; y: number }; size: { width: number; height: number } }; cornerPoints?: { x: number; y: number }[] }) {
+    // The camera reports many times a second; move the box at most ~12 times a second.
+    const now = Date.now();
+    const rect = barcodeRect(r);
+    if (rect && now - lastTrack.current > 80) {
+      lastTrack.current = now;
+      setTracked({ rect, code: r.data, at: now });
+    }
+    if (codeState[r.data] === "found" || codeState[r.data] === "unknown") {
+      void onBarcode(r.data);
+      return;
+    }
+    setCodeState((s) => ({ ...s, [r.data]: s[r.data] ?? "looking" }));
+    void onBarcode(r.data).then((res) => {
+      if (res === "found" || res === "unknown") setCodeState((s) => ({ ...s, [r.data]: res }));
+      else if (res === "error") setCodeState(({ [r.data]: _, ...rest }) => rest);
+    });
+  }
+
+  // The box fades once the barcode has left the frame.
+  useEffect(() => {
+    if (!tracked) return;
+    const t = setTimeout(() => setTracked((cur) => (cur && Date.now() - cur.at >= 600 ? null : cur)), 650);
+    return () => clearTimeout(t);
+  }, [tracked]);
   const inSpace = shots.filter((s) => s.kind === "photo" && s.space === space).length;
   const receipts = shots.filter((s) => s.kind === "receipt").length;
   const modeInfo = MODES.find((m) => m.key === mode)!;
@@ -675,13 +718,16 @@ function CameraStage({
         facing="back"
         onCameraReady={() => setReady(true)}
         barcodeScannerSettings={barcode ? { barcodeTypes: [...BARCODE_TYPES] } : undefined}
-        onBarcodeScanned={barcode ? ({ data }) => onBarcode(data) : undefined}
+        onBarcodeScanned={barcode ? onScanned : undefined}
       />
 
       <View style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }} pointerEvents="none">
         {mode === "photo" && <HudGrid rect={frame} />}
         <HudCorners rect={frame} />
-        {(barcode || !full) && <ScanLine key={mode} rect={frame} duration={barcode ? 900 : 2200} band={barcode ? 40 : 70} />}
+        {(barcode || !full) && !(barcode && tracked) && <ScanLine key={mode} rect={frame} duration={barcode ? 900 : 2200} band={barcode ? 40 : 70} />}
+        {barcode && tracked && (
+          <TrackingBox rect={tracked.rect} state={codeState[tracked.code] ?? "looking"} />
+        )}
         {barcodeNote && barcode && (
           <Animated.View
             entering={FadeIn.duration(150)}
@@ -1690,5 +1736,45 @@ function EditRowSheet({
         <Text style={{ fontSize: 14, fontWeight: "700", color: onAccent }}>Done</Text>
       </Pressable>
     </BottomSheet>
+  );
+}
+
+/** Brackets that follow a barcode around the frame: cyan while it's looked up or once found, amber if unknown. */
+function TrackingBox({ rect, state }: { rect: Rect; state: "looking" | "found" | "unknown" }) {
+  const x = useSharedValue(rect.x);
+  const y = useSharedValue(rect.y);
+  const w = useSharedValue(rect.w);
+  const h = useSharedValue(rect.h);
+  const pulse = useSharedValue(1);
+  useEffect(() => {
+    const spring = { damping: 18, stiffness: 260 };
+    x.value = withSpring(rect.x, spring);
+    y.value = withSpring(rect.y, spring);
+    w.value = withSpring(rect.w, spring);
+    h.value = withSpring(rect.h, spring);
+  }, [rect.x, rect.y, rect.w, rect.h, x, y, w, h]);
+  useEffect(() => {
+    // A small "lock" pop when the lookup settles.
+    if (state !== "looking") pulse.value = withSequence(withTiming(1.12, { duration: 90 }), withSpring(1));
+  }, [state, pulse]);
+  const style = useAnimatedStyle(() => ({
+    left: x.value,
+    top: y.value,
+    width: w.value,
+    height: h.value,
+    transform: [{ scale: pulse.value }],
+  }));
+  const color = state === "unknown" ? HUD_WARN : HUD;
+  const c = { position: "absolute" as const, width: 18, height: 18, borderColor: color };
+  return (
+    <Animated.View style={[{ position: "absolute" }, style]}>
+      <View style={{ ...c, left: 0, top: 0, borderLeftWidth: 3, borderTopWidth: 3 }} />
+      <View style={{ ...c, right: 0, top: 0, borderRightWidth: 3, borderTopWidth: 3 }} />
+      <View style={{ ...c, left: 0, bottom: 0, borderLeftWidth: 3, borderBottomWidth: 3 }} />
+      <View style={{ ...c, right: 0, bottom: 0, borderRightWidth: 3, borderBottomWidth: 3 }} />
+      {state === "looking" && (
+        <View style={{ position: "absolute", left: 6, right: 6, top: "50%", height: 2, backgroundColor: color, opacity: 0.9 }} />
+      )}
+    </Animated.View>
   );
 }
