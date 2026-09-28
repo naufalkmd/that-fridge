@@ -49,6 +49,7 @@ import { KitchenScore } from "@/components/home/KitchenScore";
 import { GettingStarted } from "@/components/home/GettingStarted";
 import { CrewScene } from "@/components/home/CrewScene";
 import { FridgeNotes } from "@/components/home/FridgeNotes";
+import { Shortcuts } from "@/components/home/Shortcuts";
 import { SwipeRow } from "@/components/swipe-row";
 import { NotificationCard, NotificationRow } from "@/components/notification-row";
 import { NotificationUndoSnackbar } from "@/components/notification-undo-snackbar";
@@ -313,10 +314,9 @@ export default function Home() {
             </View>
           </View>
 
-          {/* fridge scope picker + calendar button (right-aligned, directly under the bell) */}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          {/* fridge scope picker (Calendar moved into the shortcuts under the banner) */}
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
             <FridgeScopePicker />
-            <HeaderIcon icon="calendar-outline" dot={false} onPress={() => router.push("/calendar")} />
           </View>
 
           {/* first-run checklist — hides itself once complete or dismissed */}
@@ -544,6 +544,9 @@ export default function Home() {
               ))}
             </View>
           </View>
+
+          {/* shortcuts to the places otherwise only reachable from Profile */}
+          <Shortcuts />
 
           {/* your kitchen this week */}
           <KitchenScore input={scoreInput} snapshots={scoreSnapshots} streak={user?.streak ?? 0} />
