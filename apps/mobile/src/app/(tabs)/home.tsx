@@ -73,7 +73,7 @@ export default function Home() {
   const { events, prefs, requestRemove } = useNotifications();
   const { items: shoppingItems } = useShopping();
   const { scope, setScope } = useScope();
-  const { usageHistory, organizerTally, scoreSnapshots } = useKitchenScore();
+  const { usageHistory, organizerTally } = useKitchenScore();
   const { pendingCount } = useSocial();
   const { isPro } = usePro();
   const {
@@ -548,8 +548,8 @@ export default function Home() {
           {/* shortcuts to the places otherwise only reachable from Profile */}
           <Shortcuts />
 
-          {/* your kitchen this week */}
-          <KitchenScore input={scoreInput} snapshots={scoreSnapshots} streak={user?.streak ?? 0} />
+          {/* kitchen score: one slim row, the breakdown is in Insights */}
+          <KitchenScore input={scoreInput} streak={user?.streak ?? 0} />
 
           {/* meet your crew */}
           <View>
