@@ -12,12 +12,12 @@ type Shortcut = {
 };
 
 // The places people otherwise only find in Profile's settings list. Five fit a phone's width
-// without scrolling; Insights and Badges stay in Profile (checked now and then, not daily).
+// without scrolling. Shopping has its own crew tip and getting-started step; Badges stays in Profile.
 export const SHORTCUTS: Shortcut[] = [
   { label: "Explore", icon: "compass-outline", href: "/explore", tint: "accent" },
   { label: "Calendar", icon: "calendar-outline", href: "/calendar", tint: "blue" },
   { label: "Meal plan", icon: "restaurant-outline", href: "/meal-plan", tint: "warn" },
-  { label: "Shopping", icon: "cart-outline", href: "/shopping", tint: "good" },
+  { label: "Insights", icon: "stats-chart-outline", href: "/insights", tint: "good" },
   { label: "Kitchen Lab", icon: "flask-outline", href: "/kitchen-lab", tint: "agentOrganizer" },
 ];
 

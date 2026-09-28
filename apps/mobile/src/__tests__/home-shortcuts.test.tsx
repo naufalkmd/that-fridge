@@ -17,7 +17,7 @@ describe("Home shortcuts", () => {
       await fireEvent.press(screen.getByLabelText(s.label));
       expect(mockPush).toHaveBeenLastCalledWith(s.href);
     }
-    expect(SHORTCUTS.map((s) => s.label)).toEqual(["Explore", "Calendar", "Meal plan", "Shopping", "Kitchen Lab"]);
+    expect(SHORTCUTS.map((s) => s.label)).toEqual(["Explore", "Calendar", "Meal plan", "Insights", "Kitchen Lab"]);
   });
 
   test("every shortcut points at a screen that exists", () => {
