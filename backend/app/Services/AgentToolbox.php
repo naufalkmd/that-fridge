@@ -1242,7 +1242,7 @@ class AgentToolbox
     private function listRecipes(User $user, array $args): string
     {
         $recipes = Recipe::query()
-            ->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $user->id))
+            ->usableBy($user)
             ->when(isset($args['search']), fn ($q) => $q->where('name', 'like', '%'.$args['search'].'%'))
             ->orderBy('name')->limit(60)->get(['id', 'name', 'minutes', 'ingredients']);
 
@@ -1775,7 +1775,7 @@ class AgentToolbox
     /** @return Builder<Recipe> */
     private function recipesFor(User $user)
     {
-        return Recipe::query()->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $user->id));
+        return Recipe::query()->usableBy($user);
     }
 
     private function getRecipe(User $user, array $args): string

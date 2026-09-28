@@ -121,7 +121,7 @@ class MealAutofillService
     private function recipes(User $user)
     {
         return Recipe::query()
-            ->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $user->id))
+            ->usableBy($user)
             ->orderByRaw('case when user_id is null then 1 else 0 end')
             ->orderByDesc('made_count')
             ->limit(40)

@@ -962,7 +962,9 @@ function RecipesPanel() {
               color: FAINT,
             }}
           >
-            No recipes here yet.
+            {recipes.length === 0
+              ? "Your recipe book is empty. Find recipes in Explore, or ask Chef to write one."
+              : "No recipes here yet."}
           </Text>
         ) : (
           filtered.map(({ r, have, total, ready }, i) => (
@@ -1063,6 +1065,26 @@ function RecipesPanel() {
             </Pressable>
           ))
         )}
+      </View>
+
+      {/* The book is just your own recipes now; more live in Explore, or Chef can write one. */}
+      <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
+        <Pressable
+          onPress={() => router.push({ pathname: "/explore", params: { type: "recipe" } })}
+          accessibilityRole="button"
+          style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderCurve: "continuous", borderRadius: 8, backgroundColor: SURFACE, borderWidth: 1, borderColor: HAIRLINE }}
+        >
+          <MaterialCommunityIcons name="compass-outline" size={16} color={BLUE} />
+          <Text style={{ fontSize: 13, fontWeight: "700", color: INK }}>Find in Explore</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => router.push("/recipe-form")}
+          accessibilityRole="button"
+          style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderCurve: "continuous", borderRadius: 8, backgroundColor: SURFACE, borderWidth: 1, borderColor: HAIRLINE }}
+        >
+          <MaterialCommunityIcons name="chef-hat" size={16} color={AMBER} />
+          <Text style={{ fontSize: 13, fontWeight: "700", color: INK }}>Ask Chef for one</Text>
+        </Pressable>
       </View>
     </View>
   );

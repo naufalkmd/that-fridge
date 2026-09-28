@@ -45,9 +45,10 @@ class RecipeController extends Controller
     {
         $user = $request->user();
 
+        // The user's own book: their recipes and anything they favourited. Curated recipes live in
+        // Explore now ("Use" copies one in), so they no longer fill everyone's book.
         $recipes = Recipe::query()
-            ->where(fn ($q) => $q->whereNull('user_id')
-                ->orWhere('user_id', $user->id)
+            ->where(fn ($q) => $q->where('user_id', $user->id)
                 ->orWhereHas('favoritedBy', fn ($q2) => $q2->where('users.id', $user->id)))
             ->with([
                 'favoritedBy' => fn ($q) => $q->where('users.id', $user->id),
@@ -164,9 +165,9 @@ class RecipeController extends Controller
         $foodFocus = $data['food_focus'] ?? [];
         $hasScoringCriteria = ! empty($vibes) || ! empty($foodFocus);
 
+        // Suggestions still draw on the curated library (from Explore), not just the user's book.
         $recipes = Recipe::query()
-            ->where(fn ($q) => $q->whereNull('user_id')
-                ->orWhere('user_id', $user->id)
+            ->where(fn ($q) => $q->usableBy($user)
                 ->orWhereHas('favoritedBy', fn ($q2) => $q2->where('users.id', $user->id)))
             ->with('user:id,name,username')
             ->orderBy('name')

@@ -139,7 +139,7 @@ class MachineDraftValidator
         $recipeId = $config['recipe_id'] ?? null;
         if ($recipeId !== null) {
             $visible = Recipe::query()
-                ->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $user->id))
+                ->usableBy($user)
                 ->whereKey($recipeId)
                 ->exists();
             if (! $visible) {

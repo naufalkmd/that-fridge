@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
@@ -39,7 +39,11 @@ export default function Explore() {
   const { scope } = useScope();
 
   const [query, setQuery] = useState("");
-  const [type, setType] = useState<ExploreType | null>(null);
+  // "Find in Explore" on the recipe book opens straight onto recipes.
+  const { type: typeParam } = useLocalSearchParams<{ type?: string }>();
+  const [type, setType] = useState<ExploreType | null>(() =>
+    EXPLORE_TYPES.some((t) => t.key === typeParam) ? (typeParam as ExploreType) : null,
+  );
   // The last unfiltered browse is kept for the session, so coming back to Explore is instant while it refreshes.
   const [featured, setFeatured] = useState<ExploreItem[]>(lastBrowse?.featured ?? []);
   const [items, setItems] = useState<ExploreItem[]>(lastBrowse?.items ?? []);
