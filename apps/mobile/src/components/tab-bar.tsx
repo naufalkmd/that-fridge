@@ -55,6 +55,12 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // Generous touch area so a near-miss on the icon still registers — the pill itself is small,
 // and the gaps between pills otherwise belong to nothing.
+/** The floating bar's gap from the screen's bottom edge (safe area, or 10 without one, plus 6). */
+export const tabBarBottom = (safeAreaBottom: number) => (safeAreaBottom || 10) + 6;
+/** Its height (6 padding + 38 tab + 6 padding + 2 border), and how far the ＋ button rises above it. */
+export const TAB_BAR_HEIGHT = 52;
+export const TAB_FAB_RISE = 22;
+
 const TAB_HIT_SLOP = { top: 16, bottom: 16, left: 16, right: 16 } as const;
 
 const Tab = memo(function Tab({
@@ -236,7 +242,7 @@ function FloatingTabBarBase({ state, navigation }: TabBarProps) {
           borderWidth: 1,
           borderColor: colors.hairline,
         },
-        { bottom: (insets.bottom || 10) + 6 },
+        { bottom: tabBarBottom(insets.bottom) },
       ]}
     >
       {renderTab("home")}

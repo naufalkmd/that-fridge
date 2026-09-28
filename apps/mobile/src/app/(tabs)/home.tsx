@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 import { Image } from "expo-image";
@@ -24,6 +24,7 @@ import {
   freshColor,
   fridgeHeroViews,
   guardianItem,
+  getOverallScore,
   kitchenScoreResults,
   lowStockItem,
   type FridgeStyleKey,
@@ -45,9 +46,9 @@ import { PixelText } from "@/components/brand";
 import { MarkdownText } from "@/components/markdown-text";
 import { SectionHeader, Skeleton } from "@/components/ui";
 import { FridgeScopePicker } from "@/components/fridge-scope";
-import { KitchenScore } from "@/components/home/KitchenScore";
 import { GettingStarted } from "@/components/home/GettingStarted";
-import { CrewScene } from "@/components/home/CrewScene";
+import { CrewDock } from "@/components/home/CrewDock";
+import { tabBarBottom, TAB_BAR_HEIGHT, TAB_FAB_RISE } from "@/components/tab-bar";
 import { FridgeNotes } from "@/components/home/FridgeNotes";
 import { Shortcuts } from "@/components/home/Shortcuts";
 import { SwipeRow } from "@/components/swipe-row";
@@ -92,6 +93,22 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [suggestions, setSuggestions] = useState<Recipe[] | null>(null);
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
+  // The crew dock floats above the tab bar: open at the top of Home, collapsed once scrolled.
+  const insets = useSafeAreaInsets();
+  const dockBottom = tabBarBottom(insets.bottom) + TAB_BAR_HEIGHT + TAB_FAB_RISE - 6;
+  const [crewCollapsed, setCrewCollapsed] = useState(false);
+  const crewCollapsedRef = useRef(false);
+  const onHomeScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const next = e.nativeEvent.contentOffset.y > 40;
+    if (next !== crewCollapsedRef.current) {
+      crewCollapsedRef.current = next;
+      setCrewCollapsed(next);
+    }
+  };
+  const expandCrew = () => {
+    crewCollapsedRef.current = false;
+    setCrewCollapsed(false);
+  };
   const [heroWidth, setHeroWidth] = useState(0);
   const [heroSlide, setHeroSlide] = useState(0);
   const heroRef = useRef<ScrollView>(null);
@@ -171,15 +188,7 @@ export default function Home() {
     [scoped, scopedEvents, shoppingItems, usageHistory, organizerTally],
   );
 
-  const scoreByKey = useMemo(() => {
-    const r = kitchenScoreResults(scoreInput);
-    return {
-      waste: r.find((x) => x.key === "waste")!.score,
-      balance: r.find((x) => x.key === "balance")!.score,
-      organizer: r.find((x) => x.key === "organizer")!.score,
-      shopkeeper: r.find((x) => x.key === "shopkeeper")!.score,
-    };
-  }, [scoreInput]);
+  const overallScore = useMemo(() => getOverallScore(kitchenScoreResults(scoreInput)), [scoreInput]);
 
   const pendingByKind = useMemo(() => {
     const acc = { expiring: 0, lowStock: 0, recipe: 0 };
@@ -224,8 +233,11 @@ export default function Home() {
     <GestureDetector gesture={swipeToProfile}>
       <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
         <ScrollView
-          contentContainerClassName="px-6 pt-4 pb-36"
-          contentContainerStyle={{ gap: 22 }}
+          contentContainerClassName="px-6 pt-4"
+          // Room for the collapsed crew dock under the last card.
+          contentContainerStyle={{ gap: 22, paddingBottom: dockBottom + 80 }}
+          onScroll={onHomeScroll}
+          scrollEventThrottle={32}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -548,14 +560,6 @@ export default function Home() {
           {/* shortcuts to the places otherwise only reachable from Profile */}
           <Shortcuts />
 
-          {/* kitchen score: one slim row, the breakdown is in Insights */}
-          <KitchenScore input={scoreInput} streak={user?.streak ?? 0} />
-
-          {/* meet your crew */}
-          <View>
-            <SectionHeader>Your crew</SectionHeader>
-            <CrewScene pendingByKind={pendingByKind} scoreByKey={scoreByKey} />
-          </View>
 
           {/* One Notifications section, one card style: the server events (same
               NotificationsProvider state / swipe-delete row as the full /notifications screen)
@@ -654,7 +658,15 @@ export default function Home() {
           {/* fridge notes — read-only squares; compose/edit lives on the Organizer tab */}
           <FridgeNotes variant="grid" />
         </ScrollView>
-        <NotificationUndoSnackbar bottom={90} />
+        <CrewDock
+          pending={pendingByKind}
+          score={overallScore}
+          streak={user?.streak ?? 0}
+          collapsed={crewCollapsed}
+          onExpand={expandCrew}
+          bottom={dockBottom}
+        />
+        <NotificationUndoSnackbar bottom={dockBottom + 70} />
       </SafeAreaView>
     </GestureDetector>
   );
