@@ -20,7 +20,8 @@ export const SHORTCUTS: Shortcut[] = [
   { label: "Kitchen Lab", icon: "flask-outline", href: "/kitchen-lab" },
 ];
 
-const SIZE = 48;
+// The same size as the notification rows' icons (notification-row.tsx): 36pt with a 17pt icon.
+const SIZE = 36;
 
 /** A row of round icon buttons under the fridge banner, sized like the notification icons: white icon, no label. */
 export function Shortcuts() {
@@ -35,7 +36,8 @@ export function Shortcuts() {
           onPress={() => router.push(s.href)}
           accessibilityRole="button"
           accessibilityLabel={s.label}
-          hitSlop={6}
+          // 36pt is under the 44pt touch minimum, so the tap area reaches past the circle.
+          hitSlop={8}
           // A plain style object: NativeWind drops Pressable's style-function form.
           style={{
             width: SIZE,
@@ -48,7 +50,7 @@ export function Shortcuts() {
             borderColor: colors.hairline,
           }}
         >
-          <Ionicons name={s.icon} size={21} color={colors.ink} />
+          <Ionicons name={s.icon} size={17} color={colors.ink} />
         </Pressable>
       ))}
     </View>
