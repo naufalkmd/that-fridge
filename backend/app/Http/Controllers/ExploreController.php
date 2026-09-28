@@ -78,7 +78,9 @@ class ExploreController extends Controller
         $source = Recipe::query()->whereNull('user_id')->find($item->ref_id);
         abort_if($source === null, 404);
 
-        $copy = $source->replicate(['user_id', 'made_count', 'attachments', 'icon_url']);
+        // external_id stays with the imported original (it's unique); the copy keeps the credit
+        // (source link, site, cook) so the recipe page still links back.
+        $copy = $source->replicate(['user_id', 'made_count', 'attachments', 'icon_url', 'external_id']);
         $copy->user_id = $request->user()->id;
         $copy->made_count = 0;
         $copy->save();

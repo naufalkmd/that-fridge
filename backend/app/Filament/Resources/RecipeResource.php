@@ -126,7 +126,7 @@ class RecipeResource extends Resource
                     ->requiresConfirmation()
                     ->modalDescription('Makes a copy every user can see. The original stays with its owner. Photos and the AI icon are not copied, since they belong to the owner\'s uploads.')
                     ->action(function (Recipe $record) {
-                        $copy = $record->replicate(['user_id', 'made_count', 'attachments', 'icon_url']);
+                        $copy = $record->replicate(['user_id', 'made_count', 'attachments', 'icon_url', 'external_id']);
                         $copy->user_id = null;
                         $copy->made_count = 0;
                         $copy->save();
