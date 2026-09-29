@@ -496,6 +496,19 @@ or give both users access once (as root, e.g. DigitalOcean's droplet console):
 
 ---
 
+## Rate limits
+
+### Quick Chat replies "Too Many Attempts." on an ordinary second message
+
+That's Laravel's 429 text. An unnamed `throttle:N,M` keys its counter by user (or IP) alone, so
+every throttled route shared one counter, checked against each route's own cap - a slow reply's
+~1/s `/chat/progress` polls filled the 15/min `/chat` send limit (and `/memory/extract`, whose
+429 the app swallows). Same thing pre-sign-in: `/events` batches counted against `/login`'s 6/min.
+Fixed 2026-09-29: every throttle in `routes/api.php` names its bucket (`throttle:15,1,chat-send`);
+`RouteThrottleTest` fails if a new one doesn't. Clears on its own within 60s.
+
+---
+
 ## How to keep this file current
 
 When you hit an error that costs more than ~10 minutes, add an entry: the **exact symptom**
