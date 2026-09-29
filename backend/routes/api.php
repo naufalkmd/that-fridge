@@ -41,6 +41,11 @@ use App\Http\Controllers\UsageHistoryController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
+// Every 'throttle:N,M' carries a third arg, its bucket name. Without it Laravel keys the counter
+// by user (or IP) alone, so every throttled route shares one counter checked against each
+// route's own cap - Quick Chat's 1/s progress polls were eating the 15/min send limit. A new
+// throttled route needs its own name (RouteThrottleTest fails otherwise).
+
 // Auth routes (public)
 Route::post('/auth/apple', [AuthController::class, 'apple']);
 Route::post('/auth/google', [AuthController::class, 'google']);
@@ -50,14 +55,14 @@ Route::post('/webhooks/revenuecat', [RevenueCatWebhookController::class, 'handle
 // First-party analytics ingest. Public so pre-sign-in onboarding events get through (an
 // anonymous caller can only write the funnel events - see ANON_EVENT_PREFIXES); batched
 // client-side, so 12 requests/min per IP is plenty (each carries up to 25 events).
-Route::middleware('throttle:12,1')->post('/events', [AnalyticsController::class, 'store']);
+Route::middleware('throttle:12,1,events')->post('/events', [AnalyticsController::class, 'store']);
 // /register has its own named limiter (per-minute floor + a per-day-per-IP cap on new
 // accounts, since each one carries free AI credits - see AppServiceProvider).
 Route::middleware('throttle:register')->post('/register', [AuthController::class, 'register']);
 
 // Rate-limited: /login is brute-forceable; /forgot-password sends an email,
 // /reset-password is brute-forceable too.
-Route::middleware('throttle:6,1')->group(function () {
+Route::middleware('throttle:6,1,auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/forgot-password', [PasswordResetController::class, 'forgot']);
     Route::post('/reset-password', [PasswordResetController::class, 'reset']);
@@ -69,18 +74,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/me/credits', [CreditController::class, 'show']);
     Route::patch('/me/improvement-preferences', [AuthController::class, 'updateImprovementPreferences']);
-    Route::middleware('throttle:60,1')->post('/tip-feedback', [TipFeedbackController::class, 'store']);
-    Route::middleware('throttle:60,1')->get('/calendar', [CalendarController::class, 'index']);
-    Route::middleware('throttle:30,1')->delete('/calendar/history', [CalendarController::class, 'clearHistory']);
-    Route::middleware('throttle:60,1')->group(function () {
+    Route::middleware('throttle:60,1,tip-feedback')->post('/tip-feedback', [TipFeedbackController::class, 'store']);
+    Route::middleware('throttle:60,1,calendar')->get('/calendar', [CalendarController::class, 'index']);
+    Route::middleware('throttle:30,1,calendar-clear')->delete('/calendar/history', [CalendarController::class, 'clearHistory']);
+    Route::middleware('throttle:60,1,meal-entries')->group(function () {
         Route::get('/meal-entries/estimate', [MealEntryController::class, 'estimate']);
         Route::post('/meal-entries/autofill', [MealEntryController::class, 'autofill']);
         Route::post('/meal-entries', [MealEntryController::class, 'store']);
         Route::patch('/meal-entries/{mealEntry}', [MealEntryController::class, 'update']);
         Route::delete('/meal-entries/{mealEntry}', [MealEntryController::class, 'destroy']);
     });
-    Route::middleware('throttle:60,1')->get('/explore', [ExploreController::class, 'index']);
-    Route::middleware('throttle:30,1')->post('/explore/{item}/use', [ExploreController::class, 'use']);
+    Route::middleware('throttle:60,1,explore')->get('/explore', [ExploreController::class, 'index']);
+    Route::middleware('throttle:30,1,explore-use')->post('/explore/{item}/use', [ExploreController::class, 'use']);
     Route::patch('/me/meal-slots', [AuthController::class, 'updateMealSlots']);
     Route::delete('/me/improvement-data', [AuthController::class, 'deleteImprovementData']);
     Route::patch('/item-outcomes/{itemOutcome}', [ItemOutcomeController::class, 'correct']);
@@ -88,21 +93,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/me/onboarding', [AuthController::class, 'onboarding']);
     // Name / username edits are rate-limited per rolling 30 days in the controller; the
     // throttle here is just an anti-hammering floor.
-    Route::middleware('throttle:12,1')->patch('/me/profile', [AuthController::class, 'updateProfile']);
+    Route::middleware('throttle:12,1,profile')->patch('/me/profile', [AuthController::class, 'updateProfile']);
     Route::delete('/me', [AuthController::class, 'destroy']);
-    Route::middleware('throttle:6,1')->post('/feedback', [FeedbackController::class, 'store']);
+    Route::middleware('throttle:6,1,feedback')->post('/feedback', [FeedbackController::class, 'store']);
 
     // TRACK B: Ingestion & Agents
     Route::prefix('sections/{section}')->group(function () {
         // Barcode scan calls an OpenRouter classification step per lookup on top of the
         // OpenFoodFacts request - same floor-against-hammering reasoning as the vision routes
         // below, just a lighter cap since it's cheaper per call.
-        Route::middleware('throttle:20,1')->post('items/barcode', [BarcodeController::class, 'scan']);
+        Route::middleware('throttle:20,1,barcode')->post('items/barcode', [BarcodeController::class, 'scan']);
         // receipt/photo/expiry-scan all hit OpenRouter Vision per call - throttled the same as
         // /chat, on top of the AI-credit charge inside each controller.
-        Route::middleware('throttle:15,1')->post('items/receipt/scan', [ReceiptController::class, 'scan']);
-        Route::middleware('throttle:15,1')->post('items/photo/scan', [PhotoController::class, 'scan']);
-        Route::middleware('throttle:15,1')->post('items/expiry-scan', [ExpiryScanController::class, 'scan']);
+        Route::middleware('throttle:15,1,receipt-scan')->post('items/receipt/scan', [ReceiptController::class, 'scan']);
+        Route::middleware('throttle:15,1,photo-scan')->post('items/photo/scan', [PhotoController::class, 'scan']);
+        Route::middleware('throttle:15,1,expiry-scan')->post('items/expiry-scan', [ExpiryScanController::class, 'scan']);
     });
 
     // Chat history is per-user, so it needs auth to know whose history to read/write.
@@ -111,9 +116,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // Rate-limited: every call here hits an LLM, unlike the plain-DB-read routes below.
         // Same reasoning as /icons/generate's throttle - protects against a script hammering
         // the endpoint directly; what a message costs is metered in AI credits (CreditCost).
-        Route::middleware('throttle:15,1')->post('/', [AgentController::class, 'send']);
+        Route::middleware('throttle:15,1,chat-send')->post('/', [AgentController::class, 'send']);
         // Polled about once a second while a reply is on its way - a cache read, no model call.
-        Route::middleware('throttle:120,1')->get('/progress/{turn}', [AgentController::class, 'progress']);
+        Route::middleware('throttle:120,1,chat-progress')->get('/progress/{turn}', [AgentController::class, 'progress']);
         Route::patch('/{chatHistory}/feedback', [AgentController::class, 'rateReply']);
         Route::get('/sessions', [AgentController::class, 'sessions']);
         Route::get('/sessions/{sessionId}', [AgentController::class, 'sessionMessages']);
@@ -122,16 +127,16 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Manual-add auto-fill - same reasoning as barcode's throttle above, hits an LLM per call.
-    Route::middleware('throttle:20,1')->post('/items/suggest-details', [AgentController::class, 'suggestItemDetails']);
+    Route::middleware('throttle:20,1,suggest-details')->post('/items/suggest-details', [AgentController::class, 'suggestItemDetails']);
     // Free: rules + cached answers only (see FoodGroupController).
-    Route::middleware('throttle:30,1')->post('/food-groups/classify', [FoodGroupController::class, 'classify']);
+    Route::middleware('throttle:30,1,food-groups')->post('/food-groups/classify', [FoodGroupController::class, 'classify']);
 
     Route::get('/icons/generated', [IconController::class, 'index']);
     Route::get('/icons/shared', [IconController::class, 'shared']);
     Route::delete('/icons/generated/{generatedIcon}', [IconController::class, 'destroy']);
     // Icon generation calls fal.ai per request, so it's throttled tighter than the other
     // (free/local) rate-limited endpoint - each hit is a real, billable API call.
-    Route::middleware('throttle:10,1')->post('/icons/generate', [IconController::class, 'generate']);
+    Route::middleware('throttle:10,1,icon-generate')->post('/icons/generate', [IconController::class, 'generate']);
 
     Route::get('/fridges', [FridgeController::class, 'index']);
     Route::post('/fridges', [FridgeController::class, 'store']);
@@ -160,7 +165,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Find-a-friend: search is throttled (first rate-limited endpoint in this app) since it's
     // the only user-enumeration surface - everything else requires already knowing/being a
     // member of something.
-    Route::middleware('throttle:20,1')->get('/users/search', [UserController::class, 'search']);
+    Route::middleware('throttle:20,1,user-search')->get('/users/search', [UserController::class, 'search']);
     Route::get('/users/{user:username}/profile', [UserController::class, 'profile']);
     Route::post('/users/{user:username}/block', [BlockController::class, 'store']);
     Route::delete('/users/{user:username}/block', [BlockController::class, 'destroy']);
@@ -183,18 +188,18 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Both hit an LLM per call - throttled like /chat and /items/suggest-details, vision
     // slightly tighter than text (same 20/text vs. 15/vision split as everywhere else).
-    Route::middleware('throttle:20,1')->post('/items/{item}/estimate-calories', [CalorieController::class, 'estimate']);
-    Route::middleware('throttle:15,1')->post('/items/{item}/scan-label', [CalorieController::class, 'scanLabel']);
-    Route::middleware('throttle:20,1')->post('/items/{item}/autofill', [ItemController::class, 'autofill']);
+    Route::middleware('throttle:20,1,estimate-calories')->post('/items/{item}/estimate-calories', [CalorieController::class, 'estimate']);
+    Route::middleware('throttle:15,1,scan-label')->post('/items/{item}/scan-label', [CalorieController::class, 'scanLabel']);
+    Route::middleware('throttle:20,1,item-autofill')->post('/items/{item}/autofill', [ItemController::class, 'autofill']);
 
     // Kitchen Lab Machines - draft hits an LLM (throttled like the AI routes above); the
     // rest are plain CRUD on the saved automation, no AI involved.
     Route::get('/machines', [MachineController::class, 'index']);
-    Route::middleware('throttle:20,1')->post('/machines/draft', [MachineController::class, 'draft']);
+    Route::middleware('throttle:20,1,machine-draft')->post('/machines/draft', [MachineController::class, 'draft']);
     Route::post('/machines', [MachineController::class, 'store']);
     Route::patch('/machines/{machine}', [MachineController::class, 'update']);
-    Route::middleware('throttle:20,1')->post('/machines/{machine}/run', [MachineController::class, 'run']);
-    Route::middleware('throttle:20,1')->post('/machines/{machine}/dry-run', [MachineController::class, 'dryRun']);
+    Route::middleware('throttle:20,1,machine-run')->post('/machines/{machine}/run', [MachineController::class, 'run']);
+    Route::middleware('throttle:20,1,machine-dry-run')->post('/machines/{machine}/dry-run', [MachineController::class, 'dryRun']);
     Route::get('/machines/{machine}/runs', [MachineController::class, 'runs']);
     Route::post('/machines/{machine}/runs/{run}/undo', [MachineController::class, 'undoRun']);
     Route::delete('/machines/{machine}/runs/{run}', [MachineController::class, 'destroyRun']);
@@ -231,7 +236,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/memory', [MemoryController::class, 'show']);
     // Hits an LLM per call - throttled like /chat and /items/suggest-details.
-    Route::middleware('throttle:15,1')->post('/memory/extract', [MemoryController::class, 'extract']);
+    Route::middleware('throttle:15,1,memory-extract')->post('/memory/extract', [MemoryController::class, 'extract']);
     Route::delete('/memory', [MemoryController::class, 'destroy']);
     Route::delete('/memory/facts/{index}', [MemoryController::class, 'destroyFact']);
 
@@ -239,9 +244,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/recipes', [RecipeController::class, 'store']);
     Route::get('/recipes/suggest', [RecipeController::class, 'suggest']);
     // Each call writes a file (up to 20MB) - throttle so a script can't fill the disk.
-    Route::middleware('throttle:20,1')->post('/recipes/attachments', [RecipeController::class, 'uploadAttachment']);
+    Route::middleware('throttle:20,1,recipe-attachments')->post('/recipes/attachments', [RecipeController::class, 'uploadAttachment']);
     Route::post('/recipes/import-link', [RecipeController::class, 'importFromLink']);
-    Route::middleware('throttle:10,1')->post('/recipes/ask-chef', [RecipeController::class, 'askChef']);
+    Route::middleware('throttle:10,1,ask-chef')->post('/recipes/ask-chef', [RecipeController::class, 'askChef']);
     // After /suggest so that literal path still wins; before the {recipe} write routes.
     Route::get('/recipes/{recipe}', [RecipeController::class, 'show']);
     Route::patch('/recipes/{recipe}', [RecipeController::class, 'update']);
