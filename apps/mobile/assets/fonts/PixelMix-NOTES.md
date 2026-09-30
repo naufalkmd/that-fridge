@@ -25,7 +25,8 @@ Devpost submission can both ask for proof of a commercial font licence.
    nowhere, so it was **removed on 2026-08-28** (file + the `useFonts` entry in
    `src/app/_layout.tsx` + the `expo-font` plugin list in `app.config.ts`). If a bold is ever
    needed, obtain an official one from font@andrewtyler.net — do not synthesize.
-   (`apps/web` still ships its own `pixelmix_bold.ttf`; drop that when the web app is retired.)
+   `apps/web`'s own `pixelmix_bold.ttf` and the dead `pixel-bold` Tailwind family were removed
+   on 2026-09-30.
 
 ## File provenance
 

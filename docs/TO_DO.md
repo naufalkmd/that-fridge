@@ -307,7 +307,7 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
 - [ ] Web deployment: `expo export -p web`, wide-viewport (≥900px) layouts, retire legacy
   `apps/web`.
 - [ ] PixelMix font: get written confirmation the desktop EULA covers app/web embedding (email
-  font@andrewtyler.net), drop the unused unofficial `PixelMix-Bold.ttf`.
+  font@andrewtyler.net).
 
   <details>
   <summary>Draft email — font@andrewtyler.net</summary>

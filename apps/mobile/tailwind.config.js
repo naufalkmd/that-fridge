@@ -42,7 +42,6 @@ module.exports = {
       },
       fontFamily: {
         pixel: ["PixelMix"],
-        "pixel-bold": ["PixelMix-Bold"],
       },
     },
   },
