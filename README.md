@@ -1,5 +1,11 @@
 # ThatFridge
 
+Know what's in your fridge, use it before it expires, and plan meals from it — with your
+household. A mobile app (Expo / React Native, iOS-first) backed by a Laravel API.
+
+Everything needed to run it locally is in this repo — source, assets, seed data and setup
+instructions below. Licensed under the [MIT License](LICENSE).
+
 ## Stack
 
 pnpm + turborepo monorepo:
@@ -94,6 +100,21 @@ The quick version below assumes you know the stack.
 
    The mobile app talks to the backend via `EXPO_PUBLIC_API_URL`, set in `apps/mobile/.env` (defaults to `http://127.0.0.1:8000/api` if unset). On a physical device, point it at your machine's LAN IP, not `127.0.0.1`.
 
+## Optional service keys
+
+The app runs locally with none of these set — core features (fridges, items, crew, notes,
+recipes, notifications) work against the seeded database. Each key only switches on the
+feature next to it:
+
+| Where                      | Key                                              | Enables                                   |
+| -------------------------- | ------------------------------------------------ | ----------------------------------------- |
+| `backend/.env`             | `OPENROUTER_API_KEY`                             | AI Chef chat, recipe ideas, photo + receipt scans |
+| `backend/.env`             | `FAL_KEY`                                        | AI-generated item/recipe icons            |
+| `backend/.env`             | `RESEND_API_KEY`                                 | Real email (otherwise mail goes to the log) |
+| `backend/.env`             | `REVENUECAT_WEBHOOK_SECRET`                      | Subscription webhooks                     |
+| `apps/mobile/.env`         | `EXPO_PUBLIC_RC_IOS_KEY` / `_ANDROID_KEY`        | Paywall / in-app purchases                |
+| `apps/mobile/.env`         | `EXPO_PUBLIC_GOOGLE_*`, `GOOGLE_IOS_URL_SCHEME`  | Google Sign-In (button hides when unset)  |
+
 ## Trying login against the API directly
 
 Before wiring up a frontend, you can confirm the backend works with `curl` (backend must be running via `php artisan serve`, defaults to `http://127.0.0.1:8000`):
@@ -137,6 +158,19 @@ Skip it for one push with `git push --no-verify`.
 
 ## Requirements
 
-- PHP 8.2+, Composer
-- Node 18+
+- PHP 8.4+, Composer
+- Node 20+, pnpm 10
 - Docker
+
+## License
+
+ThatFridge's source code is released under the [MIT License](LICENSE).
+
+Bundled third-party assets keep their own licences, which sit next to the files:
+
+- **Inter Tight, Instrument Serif** (`apps/legal/assets/fonts/`) — SIL Open Font License 1.1
+- **Lenis** (`apps/legal/assets/vendor/`) — MIT
+- **PixelMix** by Andrew Tyler (`apps/mobile/assets/fonts/`, `apps/web/app/fonts/pixelmix/`) —
+  *not* covered by the MIT License. Included unmodified for building and judging this project;
+  see the licence files in those folders. Reuse it elsewhere only under its own terms
+  (contact font@andrewtyler.net).
