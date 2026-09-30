@@ -13,7 +13,7 @@ _Last updated: 2026-09-27._
 | `apps/mobile/RELEASE.md` | one-time release setup (App Store Connect API key, `EXPO_TOKEN`) + OTA/build commands |
 | `backend/DEPLOY.md` | deploying the API to the production VPS |
 | `apps/legal/README.md` | the `thatfridge.com` static site |
-| `TO_DO.md` | the launch plan + parity status |
+| `docs/TO_DO.md` | the launch plan + parity status |
 
 ---
 
@@ -423,7 +423,7 @@ brew cleanup -s
 Needs, in order: (1) a dev build (not Expo Go); (2) `EXPO_PUBLIC_RC_IOS_KEY` in
 `apps/mobile/.env`; (3) an **offering with packages** configured in the RevenueCat dashboard;
 (4) a published **Paywall** design on that offering (otherwise the custom fallback list shows).
-Entitlement id is `thatfridge_pro`. See `TO_DO.md` §3 for the full dashboard checklist.
+Entitlement id is `thatfridge_pro`. See `docs/TO_DO.md` §3 for the full dashboard checklist.
 
 ### `new NativeEventEmitter() requires a non-null argument`
 
@@ -493,6 +493,19 @@ queued recipe icons save to `queued-icons/`, which `scripts/deploy.sh` creates a
 migration cleared the dead links. Any future **worker-written** folder needs the same treatment,
 or give both users access once (as root, e.g. DigitalOcean's droplet console):
 `setfacl -R -m u:deploy:rwX,u:www-data:rwX storage && setfacl -R -d -m u:deploy:rwX,u:www-data:rwX storage`.
+
+---
+
+## Rate limits
+
+### Quick Chat replies "Too Many Attempts." on an ordinary second message
+
+That's Laravel's 429 text. An unnamed `throttle:N,M` keys its counter by user (or IP) alone, so
+every throttled route shared one counter, checked against each route's own cap - a slow reply's
+~1/s `/chat/progress` polls filled the 15/min `/chat` send limit (and `/memory/extract`, whose
+429 the app swallows). Same thing pre-sign-in: `/events` batches counted against `/login`'s 6/min.
+Fixed 2026-09-29: every throttle in `routes/api.php` names its bucket (`throttle:15,1,chat-send`);
+`RouteThrottleTest` fails if a new one doesn't. Clears on its own within 60s.
 
 ---
 

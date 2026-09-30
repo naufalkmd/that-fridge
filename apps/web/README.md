@@ -2,7 +2,7 @@
 
 **Legacy — frozen.** The product is `apps/mobile`; this Next.js app predates the iOS-first
 pivot and isn't actively developed. It stays here (and buildable) only until
-`apps/mobile` ships a web output via `react-native-web` and this is retired — see `TO_DO.md`
+`apps/mobile` ships a web output via `react-native-web` and this is retired — see `docs/TO_DO.md`
 → "Web deployment". Don't add new features here; port to `apps/mobile`/`packages/core` instead.
 
 ## Run

@@ -6,9 +6,8 @@ Bought via Sellfy ($25 one-time). The governing licence is now `PixelMix-EULA.do
 **supersedes** the old `LICENSE.txt` (CC BY-NC-ND).
 
 Full notes — including the two open caveats (app/web embedding needs written confirmation
-from font@andrewtyler.net; the bold is not an official file and the EULA forbids DIY weights)
+from font@andrewtyler.net; there is no official bold and the EULA forbids DIY weights)
 — live in `apps/mobile/assets/fonts/PixelMix-NOTES.md`.
 
-`apps/web` is frozen during the iOS sprint, so `pixelmix_bold.ttf` and its `weight: "700"`
-entry in `app/layout.tsx` are left in place for now. Drop both when `apps/web` is de-frozen
-or retired (the mobile app already dropped its unofficial bold).
+The unofficial `pixelmix_bold.ttf` that used to sit here was removed on 2026-09-30 (it was
+never applied to any text). Only the regular weight ships.

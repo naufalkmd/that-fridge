@@ -1,6 +1,6 @@
 # ThatFridge — mobile (Expo / React Native)
 
-iOS-first native app. See `../../TO_DO.md` for the plan, scope, and role split.
+iOS-first native app. See `../../docs/TO_DO.md` for the plan, scope, and role split.
 
 ## Run
 

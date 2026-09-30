@@ -189,7 +189,7 @@ php artisan filament:optimize # caches the admin panel's components + icons
 > there is no history before that. OpenRouter's cost is real; fal.ai's is an estimate from the
 > two `FAL_COST_*` values. The OpenRouter balance tile uses the same key (`/credits`, then `/key`).
 > The migration also seeds the **To-do** list (Insights → To-do, and the top of the dashboard)
-> with the launch checklist; tick items off there instead of in `TO_DO.md`.
+> with the launch checklist; tick items off there instead of in `docs/TO_DO.md`.
 
 > **Content studios (`/admin` → Content):** *Recipe studio* has Chef write a recipe from a description, lets you edit the draft, then
 > saves it as a curated recipe (optionally with a generated icon and a place in Explore). *Icon studio* generates pixel-art food icons

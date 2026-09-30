@@ -19,7 +19,6 @@ const geistMono = Geist_Mono({
 const pixelmix = localFont({
   src: [
     { path: "./fonts/pixelmix/pixelmix.ttf", weight: "400", style: "normal" },
-    { path: "./fonts/pixelmix/pixelmix_bold.ttf", weight: "700", style: "normal" },
   ],
   variable: "--font-pixel",
   display: "swap",

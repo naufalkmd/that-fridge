@@ -280,7 +280,7 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
   translator, or ~$300–600 for a PIPA-compliance consultant who adapts rather than translates
   (keep an "English version prevails" clause). Also needs a _separate, unticked_ cross-border
   consent checkbox on every sign-in path gated on KR locale, KR pricing (₩3,900/₩25,000), KR
-  listing metadata + screenshots (captions in `SCREENSHOTS.md` §6), and re-checking the KR
+  listing metadata + screenshots (captions in `app-store/SCREENSHOTS.md` §6), and re-checking the KR
   storefront in ASC → Availability.
 - [ ] **Translation sourcing** (KR policy above, later a KR/MS app UI): paid native review beats
   translate-from-scratch — Fiverr/Upwork $30–80 for a review pass, ProZ.com for real legal
@@ -307,7 +307,7 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
 - [ ] Web deployment: `expo export -p web`, wide-viewport (≥900px) layouts, retire legacy
   `apps/web`.
 - [ ] PixelMix font: get written confirmation the desktop EULA covers app/web embedding (email
-  font@andrewtyler.net), drop the unused unofficial `PixelMix-Bold.ttf`.
+  font@andrewtyler.net).
 
   <details>
   <summary>Draft email — font@andrewtyler.net</summary>
@@ -622,7 +622,7 @@ thatfridge/                  (monorepo — pnpm workspaces + turborepo)
    patterns — the published paywall is already built to spec; the code fallback UI (used only
    pre-dashboard-config / Expo Go) got an explicit auto-renewal disclosure line added too.
 2. **Guideline 4.2 (thin-wrapper rejection).** Low risk for a real RN app with substantial
-   native feature use; a written rebuttal is on hand in `STORE_LISTING.md` §3 if needed.
+   native feature use; a written rebuttal is on hand in `app-store/STORE_LISTING.md` §3 if needed.
 3. **Shipaton "first public release" timing.** No public TestFlight/Play link or press before
    the store listing is live.
 4. **The deadline is a wall.** Sep 30, no extensions; be ready for same-day resubmits if rejected.

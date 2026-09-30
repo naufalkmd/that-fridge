@@ -1,7 +1,7 @@
 import type { ExpoConfig } from "expo/config";
 
 // iOS-first. Android keys are kept so `eas build -p android` works later, but Android
-// is a post-launch effort — see TO_DO.md §7.
+// is a post-launch effort — see docs/TO_DO.md §7.
 const config: ExpoConfig = {
   name: "ThatFridge",
   slug: "thatfridge",
@@ -46,7 +46,7 @@ const config: ExpoConfig = {
     },
   },
   // Universal: the same screens render on the web via react-native-web. Live web
-  // deployment is a post-launch fast-follow — see TO_DO.md.
+  // deployment is a post-launch fast-follow — see docs/TO_DO.md.
   web: {
     bundler: "metro",
     output: "single",
