@@ -1,4 +1,4 @@
-// Logic for the kitchen scan (src/app/sweep.tsx, plan in SCAN_PLAN.md): which space each shot is
+// Logic for the kitchen scan (src/app/sweep.tsx, plan in docs/SCAN_PLAN.md): which space each shot is
 // of, merging what the shots found, comparing it with what's already tracked, plus the geometry
 // for the reveal - where a detected item sits on the photo, how to crop it into a square tile and
 // where the tiles land. Pure functions, so all of it is testable without rendering.

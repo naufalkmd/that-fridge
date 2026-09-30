@@ -58,14 +58,14 @@ Set up two addresses (real mailboxes or forwarding aliases):
 - The app collects cross-border-transfer consent on **every** sign-up path (email checkbox;
   a notice + affirmative action before Apple / Google) — recorded server-side as
   `users.data_transfer_consented_at`.
-- Breach-notification process: `INCIDENT_RESPONSE.md` at the repo root.
+- Breach-notification process: `docs/INCIDENT_RESPONSE.md`.
 
 ## Korea (PIPA) — still needed before a KR launch
 
 - **Korean translation** at `/privacy/ko/index.html` (the English policy links to it).
 - PIPA wants the cross-border consent as a *separate, explicit, unticked checkbox* on **every**
   path including Apple/Google login — stronger than the notice-plus-affirmative-action that
-  satisfies MY/UK/CH. Gate it on KR locale. Tracked in `TO_DO.md` → Korea rollout.
+  satisfies MY/UK/CH. Gate it on KR locale. Tracked in `docs/TO_DO.md` → Korea rollout.
 
 ## Deploy
 

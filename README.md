@@ -11,9 +11,11 @@ instructions below. Licensed under the [MIT License](LICENSE).
 pnpm + turborepo monorepo:
 
 - `backend/` — Laravel API (npm/composer, not in the pnpm workspace)
-- `apps/web/` — Next.js app (still npm-managed; frozen during the iOS sprint — see `TO_DO.md`)
+- `apps/web/` — Next.js app (still npm-managed; frozen during the iOS sprint — see `docs/TO_DO.md`)
 - `apps/mobile/` — Expo / React Native app (iOS-first)
 - `packages/core/` — shared logic (API client, types, domain rules)
+- `docs/` — internal planning notes, launch checklist and App Store listing drafts (not
+  needed to build or run the app)
 - Postgres + Redis via Docker Compose
 
 ## Getting started
