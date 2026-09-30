@@ -15,5 +15,5 @@ Shared, framework-agnostic logic for the ThatFridge web and mobile apps.
 `apps/mobile` is the primary consumer. `apps/web/lib/thatfridge/` still has its own copy of
 several modules not yet migrated here (`badges.ts`, `goals.ts`, `image.ts`, `scoring.ts`,
 `selectors.ts`, `streak.ts`, `theme.ts`, `useThatFridge.ts`, `utils.ts`, `apiClient.ts`) — see
-`TO_DO.md` → "apps/web/lib/thatfridge → packages/core extraction" for that remaining scope.
+`docs/TO_DO.md` → "apps/web/lib/thatfridge → packages/core extraction" for that remaining scope.
 Don't add new consumers of the web copy in the meantime.

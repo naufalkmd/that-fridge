@@ -1,6 +1,6 @@
 # ThatFridge — App Store screenshot plan (draft, 2026-09-06)
 
-The marketing screenshot set for the App Store product page. Companion to `STORE_LISTING.md`
+The marketing screenshot set for the App Store product page. Companion to `docs/app-store/STORE_LISTING.md`
 (copy) and `RELEASE.md` (build mechanics). Nothing here ships in the app — it's a build sheet
 for the 10 PNGs uploaded to App Store Connect (per localization).
 
@@ -13,13 +13,13 @@ Grounded in the real screens: `src/app/(tabs)/home.tsx`, `chat.tsx`, `inventory.
 
 | Field | Value |
 | --- | --- |
-| Size | **1320 × 2868 px**, portrait, 6.9" slot only — Apple auto-scales it down to every smaller iPhone size (matches TO_DO.md) |
+| Size | **1320 × 2868 px**, portrait, 6.9" slot only — Apple auto-scales it down to every smaller iPhone size (matches docs/TO_DO.md) |
 | Format | PNG or JPEG, **RGB, no alpha channel**, flattened |
 | Count | 3-10 per localization. **Plan: 10 frames — the full slot.** First 2-3 are what shows in search results; frame 1 is a brand Intro, so frame 2 (Home) does the heavy lifting there |
 | Device source | iPhone 16 Pro Max simulator renders at exactly 1320×2868 @ 6.9" — no scaling math |
 | Localizations | `en-US` (default), `ko` (**required** — Korean downloads depend on it), `ms` (nice-to-have). Same layouts, translated captions + re-seeded Korean UI is *not* needed (v1 UI is English-only — locked decision), so `ko`/`ms` screenshots reuse the English app screens with translated **caption bands only** |
 
-> Device frames: Apple *allows* them, but TO_DO.md commits to a frameless treatment. Plan
+> Device frames: Apple *allows* them, but docs/TO_DO.md commits to a frameless treatment. Plan
 > below is frameless — the screen sits in a rounded card, caption band above. If that changes,
 > the only delta is wrapping each screen bitmap in an iPhone 16 bezel PNG.
 
@@ -141,7 +141,7 @@ screens; let the green/amber/red read as-is.
 
 ## 3. Shot list
 
-Order is the upload order. Captions echo `STORE_LISTING.md` §2 so the page is consistent.
+Order is the upload order. Captions echo `docs/app-store/STORE_LISTING.md` §2 so the page is consistent.
 This is the full 10-slot set — no room left for the optional frames without a swap (see below).
 
 | # | Screen | Seeded state to capture | Eyebrow | Headline | Subhead |
@@ -173,7 +173,7 @@ This is the full 10-slot set — no room left for the optional frames without a 
 
 ## 4. Pre-capture setup
 
-1. **Demo data**: log in as `keira@thatfridge.test` (the *new* password — see TO_DO.md). It's
+1. **Demo data**: log in as `keira@thatfridge.test` (the *new* password — see docs/TO_DO.md). It's
    pre-seeded with a fridge + 7 recipes across all zones, no alcohol references. Before shooting:
    - Add 1-2 items with a near-term expiry so **frame 4 (Inventory)** shows amber/red freshness bars.
    - Send the **frame 5 (Chat)** "What can I cook tonight?" message once so it's in history, then screenshot the reply.
@@ -241,7 +241,7 @@ Either way the raw PNGs are the input; nothing here touches the app.
 
 ---
 
-## 7. Add to TO_DO.md
+## 7. Add to docs/TO_DO.md
 
 The existing screenshot checkbox becomes:
 

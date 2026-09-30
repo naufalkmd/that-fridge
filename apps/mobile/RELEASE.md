@@ -60,7 +60,7 @@ TestFlight. Trigger it by **pushing a tag** (`git tag v1.1.0 && git push --tags`
   processing (~15–30 min).
 - **External testers** (≤10,000, email or public link) need a one-time **Beta App Review** per
   version (~1–2 days). Don't use a *public* TestFlight link before the store listing is live
-  (Shipaton "brand-new app" rule — see `TO_DO.md` §1).
+  (Shipaton "brand-new app" rule — see `docs/TO_DO.md` §1).
 
 ## Google Play (Android, automated)
 
@@ -72,7 +72,7 @@ Google Play's **internal test track as a draft release** (`eas.json` →
 
 The one-time setup below is done — the Google Play service account is stored in EAS
 (`eas credentials` → Android → production → Google Service Account), so builds auto-submit
-without any manual step. Android release itself is still in progress otherwise (see `TO_DO.md` →
+without any manual step. Android release itself is still in progress otherwise (see `docs/TO_DO.md` →
 "Android" — closed testing, RevenueCat Android app, etc.), this just covers the build pipe.
 
 ### One-time setup
@@ -83,7 +83,7 @@ without any manual step. Android release itself is still in progress otherwise (
 2. **Create the app record** in Play Console — package name `app.thatfridge` (must match
    `apps/mobile/app.config.ts` → `android.package`, already set). Fill in the store listing,
    content rating questionnaire, and **Data Safety form** (Google's equivalent of Apple's App
-   Privacy labels — same underlying data-collection facts as `STORE_LISTING.md`/App Privacy, just
+   Privacy labels — same underlying data-collection facts as `docs/app-store/STORE_LISTING.md`/App Privacy, just
    Google's own question format).
 
 3. **First upload must be manual** — Play Console requires the *first* APK/AAB for a new app to
@@ -124,7 +124,7 @@ without any manual step. Android release itself is still in progress otherwise (
 - Promote to production manually in Play Console once verified; that's a deliberate manual gate,
   not automated by this workflow.
 - Don't make it publicly testable before the store listing is live (same Shipaton "brand-new
-  app" concern as iOS — see `TO_DO.md` §1).
+  app" concern as iOS — see `docs/TO_DO.md` §1).
 
 ## OTA updates (no rebuild)
 

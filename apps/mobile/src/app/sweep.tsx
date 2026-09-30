@@ -80,7 +80,7 @@ import {
   type SweepDetection,
 } from "@/lib/sweep";
 
-// Scan your kitchen (plan: SCAN_PLAN.md). One camera with three modes the user can switch between
+// Scan your kitchen (plan: docs/SCAN_PLAN.md). One camera with three modes the user can switch between
 // mid-session: Photo (shots of any space - fridge, freezer, pantry or a grocery haul - each an
 // ordinary photo scan, POST items/photo/scan, 3 credits), Receipt (POST items/receipt/scan, 3
 // credits; its items are a grocery haul) and Barcode (live, free, looked up as it's seen). Scans

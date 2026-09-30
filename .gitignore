@@ -29,6 +29,6 @@ packages/*/dist/
 PixelMix_sellfy/
 
 # LaTeX build artifacts
-apps/mobile/app-review.aux
-apps/mobile/app-review.log
-apps/mobile/app-review.out
+docs/app-store/app-review.aux
+docs/app-store/app-review.log
+docs/app-store/app-review.out
