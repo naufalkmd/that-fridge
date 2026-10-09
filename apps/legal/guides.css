@@ -1,0 +1,56 @@
+/* Food storage guides (/guides/ and /guides/<food>/), on top of site.css + doc.css.
+   Same reading column as the legal pages; this only adds the answer callout, the guide cards,
+   the small print under tables and the closing App Store block. */
+
+/* Short answer: pixel food icon beside the one-paragraph answer. */
+.doc-body .answer {
+  display: grid; grid-template-columns: 48px 1fr; gap: 16px; align-items: start;
+  margin: 0 0 8px; padding: 20px 22px;
+  background: var(--nav); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 4px;
+}
+.answer img { width: 48px; height: 48px; }
+.answer p { margin: 0; font-size: 18px; line-height: 1.55; }
+.answer p + p { margin-top: 8px; font-size: 15px; color: var(--ink-2); }
+
+.doc-body .small { margin: -8px 0 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+.doc-body td:first-child { font-weight: 500; }
+
+/* Guide cards (hub + "More guides"). */
+.doc-body .guide-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 12px;
+  margin: 20px 0 0; padding: 0; list-style: none;
+}
+.doc-body .guide-grid li { margin: 0; }
+.guide-grid a {
+  display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: start; height: 100%;
+  padding: 16px; background: var(--nav); border: 1px solid var(--line); border-radius: 8px;
+  text-decoration: none; transition: border-color 200ms var(--ease), transform 200ms var(--ease);
+}
+.guide-grid a:hover { border-color: var(--ink); transform: translateY(-2px); color: var(--ink); }
+.guide-grid img { width: 40px; height: 40px; }
+.guide-grid b { display: block; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
+.guide-grid span { display: block; margin-top: 2px; font-size: 14px; line-height: 1.45; color: var(--ink-2); }
+
+/* Closing block: Guardian + App Store badge on the dark night colour used across the site. */
+.guide-cta {
+  display: grid; grid-template-columns: 112px 1fr; gap: 20px; align-items: center;
+  margin: 56px 0 0; padding: 24px; background: var(--night-2); color: var(--nav); border-radius: 16px;
+}
+.guide-cta img.px { width: 96px; height: 96px; margin: 0 auto; }
+.guide-cta .cta-title { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 600; letter-spacing: -0.025em; color: var(--nav); }
+.guide-cta .cta-title em.s { color: #7fdce8; }
+.guide-cta p { margin: 6px 0 14px; font-size: 15px; line-height: 1.5; color: rgba(255, 253, 248, 0.72); }
+.guide-cta .store-badge { display: inline-block; line-height: 0; border-radius: 10px; }
+.guide-cta .store-badge img { height: 44px; width: auto; }
+.guide-cta :focus-visible { outline-color: var(--nav); box-shadow: none; }
+
+@media (max-width: 480px) {
+  .guide-cta { grid-template-columns: 1fr; text-align: center; }
+  .doc-body .answer { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .guide-grid a { transition: none; }
+}
+@media print {
+  .guide-cta { display: none; }
+}

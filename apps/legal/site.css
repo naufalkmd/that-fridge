@@ -252,7 +252,9 @@ html.vt-back::view-transition-new(root) { animation: vt-in-left 520ms var(--vt-e
 .js .side.on li:nth-child(n+7) { transition-delay: 360ms; }
 
 .panel {
-  min-width: 0; overflow: hidden;
+  /* clip, not just hidden: hidden boxes can still be scrolled sideways by focus/scrollIntoView when a
+     child pokes out (the CTA crew start 80px off to the side before they walk in). */
+  min-width: 0; overflow: hidden; overflow: clip;
   margin: 16px 16px 16px 0; border-radius: 20px;
   background: var(--paper);
   box-shadow: 0 0 0 1px var(--line);
@@ -273,7 +275,7 @@ html.vt-back::view-transition-new(root) { animation: vt-in-left 520ms var(--vt-e
   color: var(--paper); white-space: nowrap; text-align: center;
   transform: translateY(0.08em);
 }
-.foot .wrap { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 32px; }
+.foot .wrap { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; }
 .foot .brand span { color: var(--nav); }
 .foot p { margin: 12px 0 0; max-width: 22em; }
 .foot h2 { font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; margin: 0 0 10px; color: var(--nav); font-weight: 700; }

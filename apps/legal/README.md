@@ -9,6 +9,10 @@ Static pages for the marketing/legal domain `thatfridge.com`:
 | `/privacy/pdpa/` | `privacy/pdpa/index.html` — bilingual (BM + EN) Section 7 PDPA notice for Malaysia |
 | `/terms/` | `terms/index.html` — Terms of Service + EULA (Guideline 3.1.2 + Apple LAEULA additions) |
 | `/support/` | `support/index.html` — App Store **Support URL** |
+| `/ms/` | `ms/index.html` — the landing page in Bahasa Melayu (hand-kept copy of `index.html`) |
+| `/guides/` | `guides/**` + `guides.css` — food storage guides, **generated** by `scripts/gen-guides.py` |
+| `/press/` | `press/index.html` + `press/press.css` — press kit (`assets/press/` holds the downloads) |
+| — | `sitemap.xml` + `robots.txt` — also written by `scripts/gen-guides.py` |
 
 Every page shares one theme: `site.css` (tokens, nav, scene header, side index + panel, footer)
 and `site.js` (smooth scroll, hide-on-scroll nav, side index, reveals). On top of that,
@@ -22,6 +26,35 @@ just navigate normally. The App Store link (`id6806239306`) appears several time
 `index.html` — search for the id to change them all. App screenshots in `assets/shots/` are
 built from the 1320×2868 App Store PNGs as AVIF + WebP at 480/720/1080px wide (`<picture>` +
 `srcset`, so each device downloads one size). Crew sprites are lossless animated WebP.
+
+### Landing growth pieces (keep these true)
+
+- **Campaign tags.** Every App Store link has `?ct=<placement>` (hero, nav, sticky, qr, calculator,
+  pricing-free, pricing-pro, cta, footer, guide-<slug>, press, ms-*). App Store Connect only
+  attributes them once `&pt=<provider token>` is added too: App Store Connect → Apps → App Analytics →
+  Campaigns shows your token. Add it to each link (search `ct=`) and to `scripts/gen-guides.py`.
+- **QR code** (`assets/app-qr.svg`) encodes `…id6806239306?ct=qr`. It only shows on desktop with a
+  mouse (hero card + final CTA). Regenerate it if the App Store URL ever changes.
+- **Sticky "Get the app" bar** shows on phones between the hero and the final CTA.
+- **"And there's more inside"** grid in `#inside`: one line per app feature. Keep it in step with the app.
+- **Waste calculator** (`#cost`) runs entirely in the page. Household kg = UNEP's 79 kg × people;
+  money = the visitor's own items × price × 52. The Pro comparison only shows in US$.
+- **FAQ** (`#faq`): the FAQPage JSON-LD in `<head>` must match the visible answers word for word.
+  Edit both together, and keep answers in line with `/support/`, `/privacy/` and `#pricing`.
+- **Android waitlist** (`#android`) posts JSON to `https://api.thatfridge.com/api/waitlist`
+  (contract in `backend/API.md`). It needs the backend deployed + migrated, and CORS allows only
+  thatfridge.com / www. The privacy policy's "Android waitlist" section promises one email and
+  deleting the list after it goes out — honour that when Android ships.
+- **Guides** are generated: edit `scripts/gen-guides.py`, run `python3 scripts/gen-guides.py`.
+  Every storage time cites FoodSafety.gov / USDA FoodKeeper / FSIS; don't add a value you can't source.
+- **Bahasa Melayu page** (`/ms/`) is a manual copy. When the English landing changes, change it too.
+
+The `#demo` section embeds the YouTube demo (id `RVUh1htzhM0`, in the section markup + the
+VideoObject JSON-LD in `<head>`). The poster in `assets/demo/` is self-hosted (AVIF + WebP at
+720/1280, from the video's YouTube thumbnail) and the play button is a plain YouTube link, so
+the page makes no third-party requests until someone presses play; only then does the inline
+script load the `youtube-nocookie.com` player. To swap the video: change the id, the `1:58`
+label, the JSON-LD `duration`/`uploadDate`, and re-export the poster.
 
 Smooth scrolling uses Lenis **1.3.26**, vendored at `assets/vendor/lenis-1.3.26.min.js` (MIT,
 licence alongside) so the page never depends on a CDN. Fonts still come from Google Fonts.

@@ -7,6 +7,9 @@
 <meta name="description" content="ThatFridge tracks your fridge, freezer and pantry with an AI crew that tells you what to use first, what to cook tonight and what you're running low on. On the App Store.">
 <meta name="theme-color" content="#15110d">
 <link rel="canonical" href="https://thatfridge.com/">
+<link rel="alternate" hreflang="en" href="https://thatfridge.com/">
+<link rel="alternate" hreflang="ms" href="https://thatfridge.com/ms/">
+<link rel="alternate" hreflang="x-default" href="https://thatfridge.com/">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <meta name="apple-itunes-app" content="app-id=6806239306">
@@ -19,6 +22,34 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoObject",
+  "name": "ThatFridge: full app demo",
+  "description": "A walkthrough of ThatFridge: add food by receipt, barcode or photo, get expiry reminders, and let the crew suggest what to cook from what you already have.",
+  "thumbnailUrl": "https://thatfridge.com/assets/demo/poster-1280.webp",
+  "uploadDate": "2026-09-28T07:36:21-07:00",
+  "duration": "PT1M57S",
+  "contentUrl": "https://www.youtube.com/watch?v=RVUh1htzhM0",
+  "embedUrl": "https://www.youtube-nocookie.com/embed/RVUh1htzhM0"
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "Is ThatFridge free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The free plan covers fridge and pantry tracking, expiry alerts and 50 AI credits a month. Pro adds 400 credits a month that roll over, more than one fridge and a shared household fridge, for US$2.99 a month or US$19.99 a year, with a 7-day free trial for new subscribers." } },
+    { "@type": "Question", "name": "What are AI credits?", "acceptedAnswer": { "@type": "Answer", "text": "Every AI action spends credits: crew chat, receipt and fridge-photo scans, and icon generation. Free accounts get 50 a month, Pro gets 400, and you can top up with credit packs anytime." } },
+    { "@type": "Question", "name": "Is there an Android version?", "acceptedAnswer": { "@type": "Answer", "text": "Not yet. It's in the works. Join the Android waitlist and we'll email you once when it's out." } },
+    { "@type": "Question", "name": "What happens to my fridge photos and receipts?", "acceptedAnswer": { "@type": "Answer", "text": "When you scan a receipt or a fridge photo, the image is uploaded to our server and sent to an AI vision provider to read the items. Images stay on our server so the feature keeps working, and you can delete the items anytime. Read the privacy policy." } },
+    { "@type": "Question", "name": "Can my household share a fridge?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, with Pro. Invite someone by username from a fridge's manage screen, and everyone in it sees and edits the same items and notes." } },
+    { "@type": "Question", "name": "How do I cancel the free trial?", "acceptedAnswer": { "@type": "Answer", "text": "Subscriptions are billed by Apple. On your iPhone go to Settings, tap your name, then Subscriptions, ThatFridge, Cancel Subscription. Cancel at least 24 hours before the trial ends and you won't be charged." } }
+  ]
+}
+</script>
 
 <link rel="preload" href="/assets/fonts/inter-tight-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/instrument-serif-italic-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -31,9 +62,11 @@
 <body>
 <a class="skip" href="#main">Skip to content</a>
 
-<!-- App Store link lives in three places below: search for "id6806239306". -->
+<!-- App Store links: search for "id6806239306". Each has its own ?ct= campaign tag (announce, nav, hero, calculator,
+     pricing-free, pricing-pro, cta, footer, sticky, qr) so App Store Connect > App Analytics > Sources
+     shows which one converts. Add &pt=<provider token> to each once you have it (see README). -->
 <header class="top" id="top">
-  <a class="announce" href="https://apps.apple.com/app/thatfridge/id6806239306" rel="noopener">
+  <a class="announce" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=announce" rel="noopener">
     Now on the <u>App Store</u> for iPhone
     <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 9 9 3M4 3h5v5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
   </a>
@@ -48,7 +81,7 @@
     </a>
     <div class="nav-right">
       <a href="/support/">Support</a>
-      <a class="btn btn-sm" href="https://apps.apple.com/app/thatfridge/id6806239306" rel="noopener">Get the app</a>
+      <a class="btn btn-sm" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=nav" rel="noopener">Get the app</a>
     </div>
   </nav>
 </header>
@@ -89,10 +122,21 @@
           Guardian's got your fridge.
         </p>
         <div class="card-foot">
-          <a class="store-badge" href="https://apps.apple.com/app/thatfridge/id6806239306" rel="noopener">
-            <img src="/assets/app-store-badge.svg" alt="Download on the App Store" width="150" height="50">
-          </a>
+          <div class="card-ctas">
+            <a class="store-badge" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=hero" rel="noopener">
+              <img src="/assets/app-store-badge.svg" alt="Download on the App Store" width="150" height="50">
+            </a>
+            <a class="demo-link" href="#demo">
+              <svg viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path d="M5 3h2v1h2v1h2v1h2v4h-2v1H9v1H7v1H5z"/></svg>
+              Watch the demo <span>1:58</span>
+            </a>
+          </div>
           <p class="stack" aria-hidden="true">That<span>Fridge</span></p>
+          <!-- Desktop visitors can't install from here: give their iPhone camera something to scan. -->
+          <p class="qr">
+            <img src="/assets/app-qr.svg" alt="QR code linking to ThatFridge on the App Store" width="74" height="74">
+            <span>On a computer?<br>Scan with your iPhone.</span>
+          </p>
         </div>
       </div>
     </div>
@@ -108,12 +152,15 @@
     <nav class="side" id="side" aria-label="On this page">
       <ol>
         <li><a href="#why">Why it matters</a></li>
+        <li><a href="#demo">Watch the demo</a></li>
         <li><a href="#how">How it works</a></li>
         <li><a href="#inside">Inside the app</a></li>
         <li><a href="#crew">The crew</a></li>
         <li><a href="#benefits">Why people keep it</a></li>
+        <li><a href="#cost">What waste costs</a></li>
         <li><a href="#pricing">Pricing</a></li>
         <li><a href="#team">From the team</a></li>
+        <li><a href="#faq">Questions</a></li>
         <li><a href="#get">Get the app</a></li>
       </ol>
       <p class="side-milk" id="side-milk">
@@ -138,6 +185,50 @@
           Source: <a href="https://www.unep.org/resources/publication/food-waste-index-report-2024" rel="noopener">UNEP Food Waste Index Report 2024</a>
         </p>
       </div>
+    </div>
+  </section>
+
+  <!-- Demo video: a dark "fridge cinema". The poster is self-hosted and the play button is a plain
+       YouTube link, so the page makes no third-party requests until someone presses play; then the
+       script below swaps in the youtube-nocookie player. Video id lives here + the JSON-LD: search
+       for "RVUh1htzhM0". The crew peek over the screen and duck into their seats once it plays. -->
+  <section class="sec demo" id="demo" aria-labelledby="demo-title">
+    <div class="demo-grain" aria-hidden="true"></div>
+    <div class="wrap">
+      <div class="demo-head rv">
+        <div>
+          <p class="eyebrow">Watch the demo</p>
+          <h2 id="demo-title">The whole app in <em class="s">under two minutes.</em></h2>
+        </div>
+        <p class="lede">Scan it, track it, cook it. See the crew run a real fridge, start to finish.</p>
+      </div>
+      <div class="theater rv rv-d1" id="theater">
+        <div class="dolly">
+          <picture class="glow" aria-hidden="true">
+            <source type="image/avif" srcset="/assets/demo/poster-720.avif">
+            <img src="/assets/demo/poster-720.webp" alt="" width="1280" height="720" loading="lazy" decoding="async">
+          </picture>
+          <div class="screen" id="demo-screen">
+            <a class="play" id="demo-play" href="https://www.youtube.com/watch?v=RVUh1htzhM0" rel="noopener">
+              <picture>
+                <source type="image/avif" srcset="/assets/demo/poster-720.avif 720w, /assets/demo/poster-1280.avif 1280w" sizes="(max-width: 1180px) 92vw, 1000px">
+                <img src="/assets/demo/poster-1280.webp" srcset="/assets/demo/poster-720.webp 720w, /assets/demo/poster-1280.webp 1280w" sizes="(max-width: 1180px) 92vw, 1000px" alt="" width="1280" height="720" loading="lazy" decoding="async">
+              </picture>
+              <span class="play-btn" aria-hidden="true">
+                <svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 3h2v1h2v1h2v1h2v4h-2v1H9v1H7v1H5z"/></svg>
+              </span>
+              <span class="play-label"><b>Play the demo</b><span>1:58</span></span>
+            </a>
+          </div>
+          <ul class="audience" aria-hidden="true">
+            <li class="seat-guardian"><img class="px" src="/assets/crew/guardian.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></li>
+            <li class="seat-chef"><img class="px" src="/assets/crew/chef.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></li>
+            <li class="seat-organizer"><img class="px" src="/assets/crew/organizer.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></li>
+            <li class="seat-shopkeeper"><img class="px" src="/assets/crew/shopkeeper.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></li>
+          </ul>
+        </div>
+      </div>
+      <p class="demo-fine rv">Plays from YouTube once you press play. <a href="https://www.youtube.com/watch?v=RVUh1htzhM0" rel="noopener">Watch on YouTube</a></p>
     </div>
   </section>
 
@@ -234,6 +325,18 @@
           </figure>
         </li>
       </ul>
+      <!-- Everything else in the app that the screenshots don't show. Keep each line true to the app. -->
+      <div class="also">
+        <h3 class="also-title rv">And there's more inside.</h3>
+        <ul class="also-grid">
+          <li class="rv"><img class="px" src="/assets/food/carrot.png" alt="" width="32" height="32" loading="lazy" decoding="async"><b>Weekly meal plan</b><span>Plan the week day by day, then tick meals off as you cook them.</span></li>
+          <li class="rv rv-d1"><img class="px" src="/assets/food/eggs.png" alt="" width="32" height="32" loading="lazy" decoding="async"><b>Shopping list</b><span>Shopkeeper keeps what's running low on the list, so you buy only what's missing.</span></li>
+          <li class="rv rv-d2"><img class="px" src="/assets/food/apple.png" alt="" width="32" height="32" loading="lazy" decoding="async"><b>Insights</b><span>Used up versus thrown out, week by week. Watch the bin side shrink.</span></li>
+          <li class="rv"><img class="px" src="/assets/food/cheese.png" alt="" width="32" height="32" loading="lazy" decoding="async"><b>Explore</b><span>Browse community recipes and meal plans, and make any of them your own.</span></li>
+          <li class="rv rv-d1"><img class="px" src="/assets/food/milk.png" alt="" width="32" height="32" loading="lazy" decoding="async"><b>Kitchen Lab</b><span>Automate it in one sentence: "Notify me when stock drops below 2."</span></li>
+          <li class="rv rv-d2"><img class="px" src="/assets/food/spinach.png" alt="" width="32" height="32" loading="lazy" decoding="async"><b>Chat with the crew</b><span>Ask anything and attach items, recipes or a meal-plan week as context.</span></li>
+        </ul>
+      </div>
     </div>
   </section>
 
@@ -316,6 +419,60 @@
 
   <!-- Pricing: mirrors the in-app paywall (apps/mobile/src/app/paywall.tsx). USD list prices;
        the App Store charges the local equivalent. Keep in sync with the paywall + Terms §3. -->
+  <!-- Waste calculator: the visitor's own numbers, not ours. Household kg uses the UNEP figure cited
+       in "Why it matters"; the money line is items x price x 52 from their inputs. Script below. -->
+  <section class="sec cost" id="cost" aria-labelledby="cost-title">
+    <div class="wrap">
+      <div class="cost-head rv">
+        <p class="eyebrow">What waste costs</p>
+        <h2 id="cost-title">What's your bin <em class="s">really</em> costing you?</h2>
+        <p class="lede">Three quick guesses. We'll do the maths, with nothing sent anywhere.</p>
+      </div>
+      <form class="calc rv rv-d1" id="calc" aria-describedby="calc-note">
+        <div class="calc-in">
+          <fieldset class="calc-row">
+            <legend>People at home</legend>
+            <div class="stepper">
+              <button type="button" data-step="-1" aria-label="Fewer people">&minus;</button>
+              <output id="calc-people" aria-live="polite">2</output>
+              <button type="button" data-step="1" aria-label="More people">+</button>
+            </div>
+          </fieldset>
+          <div class="calc-row">
+            <label for="calc-items">Food you throw out in a typical week</label>
+            <div class="range">
+              <input type="range" id="calc-items" min="0" max="15" value="3">
+              <output for="calc-items" id="calc-items-out">3 items</output>
+            </div>
+            <p class="bin" id="calc-bin" aria-hidden="true"></p>
+          </div>
+          <div class="calc-row">
+            <label for="calc-price">Average price of each item</label>
+            <div class="price">
+              <select id="calc-cur" aria-label="Currency">
+                <option value="USD">US$</option>
+                <option value="MYR">RM</option>
+              </select>
+              <input type="number" id="calc-price" min="0" max="500" step="0.5" value="3" inputmode="decimal">
+            </div>
+          </div>
+        </div>
+        <div class="receipt" aria-live="polite">
+          <p class="receipt-head"><span>Your bin, per year</span><span>est.</span></p>
+          <p class="receipt-total" id="calc-total">US$156</p>
+          <ul class="receipt-lines">
+            <li><span>Items thrown out</span><b id="calc-count">156</b></li>
+            <li><span>Global average for <span id="calc-hh">2 people</span></span><b id="calc-kg">158 kg</b></li>
+            <li class="receipt-pro" id="calc-pro"><span>ThatFridge Pro, per year</span><b>US$19.99</b></li>
+          </ul>
+          <p class="receipt-say" id="calc-say">Pro pays for itself if it saves you 7 items a year.</p>
+          <a class="btn" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=calculator" rel="noopener">Let the crew fix that</a>
+        </div>
+      </form>
+      <p class="calc-note" id="calc-note">Your guesses, your numbers. The kilogram line uses UNEP's 79 kg of food wasted per person, per year, at home (<a href="https://www.unep.org/resources/publication/food-waste-index-report-2024" rel="noopener">Food Waste Index Report 2024</a>). Pro is shown in US dollars; the App Store shows your local price.</p>
+    </div>
+  </section>
+
   <section class="sec pricing" id="pricing" aria-labelledby="pricing-title">
     <div class="wrap">
       <div class="pricing-head rv">
@@ -342,7 +499,7 @@
             <li><img class="px" src="/assets/food/spinach.png" alt="" width="16" height="16" loading="lazy" decoding="async"><span><b>50 AI credits</b> a month for crew chat, scans and icons</span></li>
             <li><img class="px" src="/assets/food/carrot.png" alt="" width="16" height="16" loading="lazy" decoding="async">Top up with credit packs anytime</li>
           </ul>
-          <a class="btn btn-ghost" href="https://apps.apple.com/app/thatfridge/id6806239306" rel="noopener">Download free</a>
+          <a class="btn btn-ghost" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=pricing-free" rel="noopener">Download free</a>
         </article>
 
         <article class="plan plan-pro rv rv-d1" aria-labelledby="plan-pro">
@@ -364,7 +521,7 @@
             <li><img class="px" src="/assets/food/eggs.png" alt="" width="16" height="16" loading="lazy" decoding="async">Own more than one fridge</li>
             <li><img class="px" src="/assets/food/apple.png" alt="" width="16" height="16" loading="lazy" decoding="async">Host a shared fridge for your household</li>
           </ul>
-          <a class="btn" href="https://apps.apple.com/app/thatfridge/id6806239306" rel="noopener">Start 7-day free trial</a>
+          <a class="btn" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=pricing-pro" rel="noopener">Start 7-day free trial</a>
           <p class="plan-note">
             <span class="yearly">Free for 7 days, then $19.99/year.</span>
             <span class="monthly">Free for 7 days, then $2.99/month.</span>
@@ -406,15 +563,85 @@
   </section>
 
   <!-- Final CTA: all four crew around the fridge. -->
+  <!-- FAQ: the doubts that stop a download. Answers match /support/, /privacy/ and the pricing section.
+       The FAQPage JSON-LD in <head> must mirror this text exactly: edit both together. -->
+  <section class="sec faq" id="faq" aria-labelledby="faq-title">
+    <div class="wrap">
+      <div class="rv">
+        <p class="eyebrow">Questions</p>
+        <h2 id="faq-title">Before you <em class="s">download.</em></h2>
+      </div>
+      <div class="faq-list">
+        <details class="rv">
+          <summary>Is ThatFridge free?</summary>
+          <p>Yes. The free plan covers fridge and pantry tracking, expiry alerts and 50 AI credits a month. Pro adds 400 credits a month that roll over, more than one fridge and a shared household fridge, for US$2.99 a month or US$19.99 a year, with a 7-day free trial for new subscribers.</p>
+        </details>
+        <details class="rv">
+          <summary>What are AI credits?</summary>
+          <p>Every AI action spends credits: crew chat, receipt and fridge-photo scans, and icon generation. Free accounts get 50 a month, Pro gets 400, and you can top up with credit packs anytime.</p>
+        </details>
+        <details class="rv">
+          <summary>Is there an Android version?</summary>
+          <p>Not yet. It's in the works. <a href="#android">Join the Android waitlist</a> and we'll email you once when it's out.</p>
+        </details>
+        <details class="rv">
+          <summary>What happens to my fridge photos and receipts?</summary>
+          <p>When you scan a receipt or a fridge photo, the image is uploaded to our server and sent to an AI vision provider to read the items. Images stay on our server so the feature keeps working, and you can delete the items anytime. <a href="/privacy/">Read the privacy policy</a>.</p>
+        </details>
+        <details class="rv">
+          <summary>Can my household share a fridge?</summary>
+          <p>Yes, with Pro. Invite someone by username from a fridge's manage screen, and everyone in it sees and edits the same items and notes.</p>
+        </details>
+        <details class="rv">
+          <summary>How do I cancel the free trial?</summary>
+          <p>Subscriptions are billed by Apple. On your iPhone go to Settings, tap your name, then Subscriptions, ThatFridge, Cancel Subscription. Cancel at least 24 hours before the trial ends and you won't be charged.</p>
+        </details>
+      </div>
+      <p class="faq-more rv">Something else? <a href="/support/">See all support answers</a> or email <a href="mailto:support@thatfridge.com">support@thatfridge.com</a>.</p>
+    </div>
+  </section>
+
+  <!-- Android waitlist: posts to the API (POST /api/waitlist, see backend/API.md). The "website" field is a
+       spam trap hidden from people. Without JS the form shows the email fallback instead. -->
+  <section class="sec android" id="android" aria-labelledby="android-title">
+    <div class="wrap">
+      <div class="android-card rv">
+        <div>
+          <p class="eyebrow">On Android?</p>
+          <h2 id="android-title">The crew is learning <em class="s">Android.</em></h2>
+          <p class="lede">Leave your email and we'll send one message when it's ready. Nothing else.</p>
+        </div>
+        <form class="wait" id="wait" action="https://api.thatfridge.com/api/waitlist" method="post" novalidate>
+          <label class="wait-label" for="wait-email">Email</label>
+          <div class="wait-row">
+            <input type="email" id="wait-email" name="email" autocomplete="email" placeholder="you@example.com" required maxlength="254">
+            <button class="btn" type="submit">Notify me</button>
+          </div>
+          <label class="wait-hp" aria-hidden="true">Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+          <label class="wait-consent">
+            <input type="checkbox" name="consent" value="1" required>
+            <span>Email me once when ThatFridge is on Android. See the <a href="/privacy/#android-waitlist">privacy policy</a>; unsubscribe anytime.</span>
+          </label>
+          <p class="wait-msg" id="wait-msg" role="status"></p>
+        </form>
+        <noscript><p class="wait-msg">Email <a href="mailto:support@thatfridge.com?subject=Android%20waitlist">support@thatfridge.com</a> with the subject "Android waitlist" and we'll add you.</p></noscript>
+      </div>
+    </div>
+  </section>
+
   <section class="sec cta" id="get" aria-labelledby="cta-title">
     <div class="wrap">
       <div class="cta-card rv">
         <div>
           <h2 id="cta-title">Open the fridge. Let the crew handle <em class="s">the rest.</em></h2>
-          <a class="store-badge" href="https://apps.apple.com/app/thatfridge/id6806239306" rel="noopener">
+          <a class="store-badge" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=cta" rel="noopener">
             <img src="/assets/app-store-badge.svg" alt="Download on the App Store" width="150" height="50">
           </a>
-          <p class="fine">Free for iPhone. ThatFridge Pro starts with a 7-day free trial for new subscribers.</p>
+          <p class="qr qr-cta">
+            <img src="/assets/app-qr.svg" alt="QR code linking to ThatFridge on the App Store" width="96" height="96" loading="lazy">
+            <span>On a computer? Point your iPhone camera here.</span>
+          </p>
+          <p class="fine">Free for iPhone. ThatFridge Pro starts with a 7-day free trial for new subscribers. Android is <a href="#android">on the way</a>.</p>
         </div>
         <div class="fridge-stage" aria-hidden="true">
           <img class="fridge px" src="/assets/fridge.webp" alt="" width="896" height="1152" loading="lazy" decoding="async">
@@ -431,6 +658,13 @@
   </div>
 
 </main>
+
+<!-- Phones: a "Get the app" bar once the hero is gone; hides again at the final CTA and footer. -->
+<div class="sticky-get" id="sticky-get" hidden>
+  <img class="px" src="/assets/crew/guardian.webp" alt="" width="48" height="48">
+  <p><b>ThatFridge</b><span>Free on the App Store</span></p>
+  <a class="btn btn-sm" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=sticky" rel="noopener">Get the app</a>
+</div>
 
 <footer class="foot">
   <div class="wrap">
@@ -451,7 +685,16 @@
       <ul>
         <li><a href="/support/">Support &amp; FAQ</a></li>
         <li><a href="mailto:support@thatfridge.com">support@thatfridge.com</a></li>
-        <li><a href="https://apps.apple.com/app/thatfridge/id6806239306" rel="noopener">App Store</a></li>
+        <li><a href="https://apps.apple.com/app/thatfridge/id6806239306?ct=footer" rel="noopener">App Store</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2>More</h2>
+      <ul>
+        <li><a href="/guides/">Food storage guides</a></li>
+        <li><a href="/press/">Press kit</a></li>
+        <li><a href="https://www.youtube.com/@ThatFridge-co" rel="noopener">YouTube</a></li>
+        <li><a href="/ms/" hreflang="ms" lang="ms">Bahasa Melayu</a></li>
       </ul>
     </div>
     <p class="legal-line">&copy; <span id="y">2026</span> ThatFridge. All rights reserved. App Store is a service mark of Apple Inc.</p>
@@ -470,11 +713,11 @@
   var hero = document.querySelector('.hero');
 
   // Milk countdown under the side index follows the active section.
-  var days = ['10 days left', '8 days left', '7 days left', '6 days left', '5 days left', '3 days left', '2 days left', 'use it today'];
+  // Counts down from 10 days to 2 across the index, whatever its length; the last section is "use it today".
   var daysEl = document.getElementById('side-days');
   var milk = document.getElementById('side-milk');
   TF.onActive(function (i, n) {
-    daysEl.textContent = days[Math.min(i, days.length - 1)];
+    daysEl.textContent = i >= n - 1 ? 'use it today' : Math.round(10 - (i * 8) / Math.max(1, n - 2)) + ' days left';
     milk.classList.toggle('urgent', i === n - 1);
   });
   // Testimonial marquee: clone the set once so the CSS loop (-50%) is seamless. Clones are hidden from AT.
@@ -492,6 +735,127 @@
       toggle.setAttribute('aria-pressed', String(paused));
       toggle.textContent = paused ? 'Play quotes' : 'Pause quotes';
     });
+  }
+
+  // Demo video: swap the poster link for the no-cookie player on click. Modified clicks (new tab)
+  // and no-JS visitors just follow the link to YouTube. The poster stays until the player loads.
+  var play = document.getElementById('demo-play');
+  play.addEventListener('click', function (e) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    var f = document.createElement('iframe');
+    f.src = 'https://www.youtube-nocookie.com/embed/RVUh1htzhM0?autoplay=1&rel=0&playsinline=1';
+    f.title = 'ThatFridge demo video';
+    f.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture';
+    f.allowFullscreen = true;
+    f.referrerPolicy = 'strict-origin-when-cross-origin';
+    f.addEventListener('load', function () {
+      f.classList.add('ready');
+      setTimeout(function () { play.remove(); }, reduce ? 0 : 500);
+    });
+    document.getElementById('demo-screen').appendChild(f);
+    document.getElementById('theater').classList.add('playing');
+    f.focus();
+  });
+
+  // Waste calculator: the visitor's own guesses, worked out here. Nothing is sent anywhere.
+  var calc = document.getElementById('calc');
+  if (calc) {
+    var $ = function (id) { return document.getElementById(id); };
+    var PRO_USD = 19.99, KG_PER_PERSON = 79, FOOD = ['milk', 'spinach', 'eggs', 'cheese', 'carrot', 'apple'];
+    var DEFAULT_PRICE = { USD: 3, MYR: 10 };
+    var people = 2, priceEdited = false;
+    var items = $('calc-items'), price = $('calc-price'), cur = $('calc-cur'), bin = $('calc-bin');
+    var money = function (v, c) {
+      var n = v >= 100 ? Math.round(v).toLocaleString('en') : v.toFixed(2).replace(/\.00$/, '');
+      return (c === 'MYR' ? 'RM' : 'US$') + n;
+    };
+    var render = function () {
+      var n = +items.value, p = Math.max(0, +price.value || 0), c = cur.value;
+      $('calc-items-out').textContent = n + (n === 1 ? ' item' : ' items');
+      $('calc-people').textContent = people;
+      $('calc-total').textContent = money(n * p * 52, c);
+      $('calc-count').textContent = (n * 52).toLocaleString('en');
+      $('calc-hh').textContent = people + (people === 1 ? ' person' : ' people');
+      $('calc-kg').textContent = (KG_PER_PERSON * people) + ' kg';
+      // Pro's local price isn't known here, so the comparison only runs in US dollars.
+      $('calc-pro').hidden = c !== 'USD';
+      var k = Math.ceil(PRO_USD / p);
+      $('calc-say').textContent = !n || !p ? 'Nothing in the bin? The crew would still like to meet you.'
+        : c === 'USD' ? 'Pro pays for itself if it saves you ' + k + (k === 1 ? ' item' : ' items') + ' a year.'
+        : 'Saving even a few of those a month adds up fast.';
+      // One pixel food per binned item; add or remove only the difference so the rest don't re-animate.
+      while (bin.children.length > n) bin.removeChild(bin.lastChild);
+      while (bin.children.length < n) {
+        var img = document.createElement('img');
+        img.className = 'px'; img.alt = ''; img.width = 24; img.height = 24;
+        img.src = '/assets/food/' + FOOD[bin.children.length % FOOD.length] + '.png';
+        bin.appendChild(img);
+      }
+    };
+    calc.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-step]');
+      if (b) { people = Math.min(10, Math.max(1, people + +b.getAttribute('data-step'))); render(); }
+    });
+    items.addEventListener('input', render);
+    price.addEventListener('input', function () { priceEdited = true; render(); });
+    cur.addEventListener('change', function () { if (!priceEdited) price.value = DEFAULT_PRICE[cur.value]; render(); });
+    calc.addEventListener('submit', function (e) { e.preventDefault(); });
+    render();
+  }
+
+  // Android waitlist: JSON to the API; same success message for new and existing emails (the API does too).
+  var wait = document.getElementById('wait');
+  if (wait) {
+    var waitMsg = document.getElementById('wait-msg');
+    var say = function (text, bad, focus) {
+      waitMsg.textContent = text;
+      waitMsg.classList.toggle('bad', !!bad);
+      if (focus) { focus.setAttribute('aria-invalid', 'true'); focus.focus(); }
+    };
+    wait.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var email = wait.elements.email, consent = wait.elements.consent, btn = wait.querySelector('button');
+      email.removeAttribute('aria-invalid'); consent.removeAttribute('aria-invalid');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) return say('Please check your email address.', true, email);
+      if (!consent.checked) return say('Please tick the box so we can email you.', true, consent);
+      btn.disabled = true;
+      say('Adding you...');
+      fetch(wait.action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ email: email.value.trim(), consent: true, source: 'landing', website: wait.elements.website.value })
+      }).then(function (r) {
+        if (r.ok) {
+          wait.classList.add('done');
+          say("You're on the list. We'll email you once, when Android is ready.");
+          return;
+        }
+        if (r.status === 429) return say('Too many tries. Please wait a minute and try again.', true);
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          var errs = j.errors || {};
+          say((errs.email || errs.consent || [])[0] || 'Something went wrong. Please try again.', true);
+        });
+      }).catch(function () {
+        say("Couldn't reach us. Please try again, or email support@thatfridge.com.", true);
+      }).then(function () { btn.disabled = false; });
+    });
+  }
+
+  // Phones: sticky "Get the app" bar between the hero and the final CTA / footer.
+  var sticky = document.getElementById('sticky-get');
+  if (sticky && 'IntersectionObserver' in window) {
+    var heroGone = false, endSeen = {};
+    var syncSticky = function () {
+      var on = heroGone && !endSeen.get && !endSeen.foot;
+      sticky.classList.toggle('on', on);
+      sticky.inert = !on;
+    };
+    sticky.hidden = false;
+    syncSticky();
+    new IntersectionObserver(function (e) { heroGone = !e[0].isIntersecting; syncSticky(); }).observe(hero);
+    new IntersectionObserver(function (es) { endSeen.get = es[0].isIntersecting; syncSticky(); }).observe(document.getElementById('get'));
+    new IntersectionObserver(function (es) { endSeen.foot = es[0].isIntersecting; syncSticky(); }).observe(document.querySelector('.foot'));
   }
 
   // Living hero: the crew wander their rooms. Same floor paths as apps/web CrewScene.tsx, in % of
