@@ -975,6 +975,26 @@ Stores the message in `feedback` (survives account deletion - `user_id` is nulla
 
 ---
 
+## Android waitlist
+
+### `POST /waitlist`
+
+Public (no token). The "Tell me when Android is out" form on thatfridge.com. CORS allows `https://thatfridge.com` and `https://www.thatfridge.com`. Throttled to 5 requests/min per IP (bucket `waitlist`), **429** past that.
+
+**Body**
+```json
+{ "email": "me@example.com", "consent": true, "source": "landing", "website": "" }
+```
+`consent` must be accepted (`true`, `1`, `"on"`, `"yes"`). `source` is optional, max 40 chars, `[a-z0-9_-]`. `website` is a honeypot: leave it empty (hide the input from people).
+
+**201** `{ "ok": true }`
+
+The same **201** comes back for an email already on the list (no row added, the first signup's `source` is kept) and for a filled honeypot (nothing stored), so the form can't be used to check who signed up. Stores the email lowercased, `consented_at`, and a country from Cloudflare's `CF-IPCountry` header (`XX`/`T1` dropped). No IP is stored. Admin: Users → Android waitlist.
+
+**422** — validation failure on `email` (not RFC-valid, over 254 chars) or `consent` (missing/false), standard error shape below.
+
+---
+
 ## Error shape
 
 Validation errors (422):

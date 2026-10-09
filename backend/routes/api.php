@@ -39,6 +39,7 @@ use App\Http\Controllers\ShoppingItemController;
 use App\Http\Controllers\TipFeedbackController;
 use App\Http\Controllers\UsageHistoryController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WaitlistController;
 use Illuminate\Support\Facades\Route;
 
 // Every 'throttle:N,M' carries a third arg, its bucket name. Without it Laravel keys the counter
@@ -59,6 +60,9 @@ Route::middleware('throttle:12,1,events')->post('/events', [AnalyticsController:
 // /register has its own named limiter (per-minute floor + a per-day-per-IP cap on new
 // accounts, since each one carries free AI credits - see AppServiceProvider).
 Route::middleware('throttle:register')->post('/register', [AuthController::class, 'register']);
+// Android waitlist form on thatfridge.com (public, CORS-allowed in config/cors.php). 5/min per IP
+// is plenty for a person and keeps a script from flooding the list.
+Route::middleware('throttle:5,1,waitlist')->post('/waitlist', [WaitlistController::class, 'store']);
 
 // Rate-limited: /login is brute-forceable; /forgot-password sends an email,
 // /reset-password is brute-forceable too.
