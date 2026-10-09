@@ -477,6 +477,9 @@
     </div>
   </section>
 
+  <!-- Pricing as shelf price tags. Yearly/Monthly is CSS only (:has on the radios): .swap stacks both
+       versions and rolls between them. The crossed-out price must stay 12 x the monthly price
+       (2.99 x 12 = 35.88, which is where "Save 44%" comes from): update all three together. -->
   <section class="sec pricing" id="pricing" aria-labelledby="pricing-title">
     <div class="wrap">
       <div class="pricing-head rv">
@@ -487,20 +490,29 @@
         </div>
         <fieldset class="billing" aria-label="Tempoh bil">
           <input type="radio" name="billing" id="bill-yearly" value="yearly" checked>
-          <label for="bill-yearly">Tahunan <span class="save">Jimat 44%</span></label>
+          <label for="bill-yearly">Tahunan</label>
           <input type="radio" name="billing" id="bill-monthly" value="monthly">
           <label for="bill-monthly">Bulanan</label>
+          <span class="billing-knob" aria-hidden="true"></span>
+          <span class="save-sticker">Jimat 44%</span>
         </fieldset>
       </div>
 
       <div class="plans">
-        <article class="plan rv" aria-labelledby="plan-free">
+        <article class="plan plan-free rv" aria-labelledby="plan-free">
+          <span class="plan-peek" aria-hidden="true"><img class="px" src="/assets/crew/guardian.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></span>
           <h3 id="plan-free">Percuma</h3>
-          <p class="plan-price"><b>US$0</b><span>pelan percuma</span></p>
+          <p class="plan-price">
+            <span class="price-row"><span class="tag"><span class="cur">US$</span><b>0</b></span><span class="per">pelan percuma</span></span>
+          </p>
           <p class="plan-for">Semua yang anda perlukan supaya tak terlupa makanan lagi.</p>
+          <div class="meter" data-fill="1">
+            <p class="meter-label"><b>50</b> kredit AI sebulan</p>
+            <span class="meter-bar" aria-hidden="true"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i></span>
+            <p class="meter-note">untuk sembang krew, imbasan dan ikon</p>
+          </div>
           <ul class="plan-list">
             <li><img class="px" src="/assets/food/milk.png" alt="" width="16" height="16" loading="lazy" decoding="async">Penjejakan peti sejuk &amp; pantri dengan amaran tarikh luput</li>
-            <li><img class="px" src="/assets/food/spinach.png" alt="" width="16" height="16" loading="lazy" decoding="async"><span><b>50 kredit AI</b> sebulan untuk sembang krew, imbasan dan ikon</span></li>
             <li><img class="px" src="/assets/food/carrot.png" alt="" width="16" height="16" loading="lazy" decoding="async">Tambah nilai dengan pek kredit bila-bila masa</li>
           </ul>
           <a class="btn btn-ghost" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=ms-pricing-free" rel="noopener">Muat turun percuma</a>
@@ -508,27 +520,31 @@
 
         <article class="plan plan-pro rv rv-d1" aria-labelledby="plan-pro">
           <p class="plan-flag">Percubaan percuma 7 hari</p>
-          <img class="plan-sprite px" src="/assets/crew/chef.webp" alt="" width="96" height="96" loading="lazy" decoding="async">
+          <span class="plan-peek" aria-hidden="true"><img class="px" src="/assets/crew/chef.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></span>
           <h3 id="plan-pro">Pro</h3>
           <p class="plan-price">
-            <span class="yearly"><b>US$19.99</b><span>setahun</span></span>
-            <span class="monthly"><b>US$2.99</b><span>sebulan</span></span>
+            <span class="sr-only yearly-sr">US$19.99 setahun</span><span class="sr-only monthly-sr">US$2.99 sebulan</span>
+            <span class="swap roll" aria-hidden="true">
+              <span class="yearly price-row"><span class="tag"><span class="cur">US$</span><b>19</b><sup>.99</sup></span><span class="per">setahun</span></span>
+              <span class="monthly price-row"><span class="tag"><span class="cur">US$</span><b>2</b><sup>.99</sup></span><span class="per">sebulan</span></span>
+            </span>
+            <s class="was"><span class="sr-only">Asal, harga bulanan untuk setahun: </span>US$35.88</s>
           </p>
-          <p class="plan-for">
-            <span class="yearly">Hanya US$1.67 sebulan, dibilkan setahun sekali.</span>
-            <span class="monthly">Bayar bulan ke bulan. Batal bila-bila masa.</span>
-          </p>
+          <p class="plan-for"><span class="swap"><span class="yearly">Hanya US$1.67 sebulan, dibilkan setahun sekali.</span><span class="monthly">Bayar bulan ke bulan. Batal bila-bila masa.</span></span></p>
+          <div class="meter" data-fill="8">
+            <p class="meter-label"><b>400</b> kredit AI sebulan</p>
+            <span class="meter-bar" aria-hidden="true"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i></span>
+            <p class="meter-note">8&times; lebih bantuan krew</p>
+          </div>
           <ul class="plan-list">
             <li><img class="px" src="/assets/food/milk.png" alt="" width="16" height="16" loading="lazy" decoding="async">Semua dalam pelan Percuma</li>
-            <li><img class="px" src="/assets/food/spinach.png" alt="" width="16" height="16" loading="lazy" decoding="async"><span><b>400 kredit AI</b> sebulan, 8&times; lebih bantuan krew</span></li>
             <li><img class="px" src="/assets/food/cheese.png" alt="" width="16" height="16" loading="lazy" decoding="async">Kredit yang tidak digunakan dibawa ke bulan seterusnya</li>
             <li><img class="px" src="/assets/food/eggs.png" alt="" width="16" height="16" loading="lazy" decoding="async">Miliki lebih daripada satu peti sejuk</li>
             <li><img class="px" src="/assets/food/apple.png" alt="" width="16" height="16" loading="lazy" decoding="async">Kongsi peti sejuk dengan isi rumah anda</li>
           </ul>
           <a class="btn" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=ms-pricing-pro" rel="noopener">Mula percubaan percuma 7 hari</a>
           <p class="plan-note">
-            <span class="yearly">Percuma 7 hari, kemudian US$19.99/tahun.</span>
-            <span class="monthly">Percuma 7 hari, kemudian US$2.99/bulan.</span>
+            <span class="swap"><span class="yearly">Percuma 7 hari, kemudian US$19.99/tahun.</span><span class="monthly">Percuma 7 hari, kemudian US$2.99/bulan.</span></span>
             Diperbaharui secara automatik; batal bila-bila masa dalam tetapan Apple ID anda.
           </p>
         </article>

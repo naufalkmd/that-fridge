@@ -473,6 +473,9 @@
     </div>
   </section>
 
+  <!-- Pricing as shelf price tags. Yearly/Monthly is CSS only (:has on the radios): .swap stacks both
+       versions and rolls between them. The crossed-out price must stay 12 x the monthly price
+       (2.99 x 12 = 35.88, which is where "Save 44%" comes from): update all three together. -->
   <section class="sec pricing" id="pricing" aria-labelledby="pricing-title">
     <div class="wrap">
       <div class="pricing-head rv">
@@ -483,20 +486,29 @@
         </div>
         <fieldset class="billing" aria-label="Billing period">
           <input type="radio" name="billing" id="bill-yearly" value="yearly" checked>
-          <label for="bill-yearly">Yearly <span class="save">Save 44%</span></label>
+          <label for="bill-yearly">Yearly</label>
           <input type="radio" name="billing" id="bill-monthly" value="monthly">
           <label for="bill-monthly">Monthly</label>
+          <span class="billing-knob" aria-hidden="true"></span>
+          <span class="save-sticker">Save 44%</span>
         </fieldset>
       </div>
 
       <div class="plans">
-        <article class="plan rv" aria-labelledby="plan-free">
+        <article class="plan plan-free rv" aria-labelledby="plan-free">
+          <span class="plan-peek" aria-hidden="true"><img class="px" src="/assets/crew/guardian.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></span>
           <h3 id="plan-free">Free</h3>
-          <p class="plan-price"><b>$0</b><span>free plan</span></p>
+          <p class="plan-price">
+            <span class="price-row"><span class="tag"><span class="cur">$</span><b>0</b></span><span class="per">free plan</span></span>
+          </p>
           <p class="plan-for">Everything you need to stop forgetting food.</p>
+          <div class="meter" data-fill="1">
+            <p class="meter-label"><b>50</b> AI credits a month</p>
+            <span class="meter-bar" aria-hidden="true"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i></span>
+            <p class="meter-note">for crew chat, scans and icons</p>
+          </div>
           <ul class="plan-list">
             <li><img class="px" src="/assets/food/milk.png" alt="" width="16" height="16" loading="lazy" decoding="async">Fridge &amp; pantry tracking with expiry alerts</li>
-            <li><img class="px" src="/assets/food/spinach.png" alt="" width="16" height="16" loading="lazy" decoding="async"><span><b>50 AI credits</b> a month for crew chat, scans and icons</span></li>
             <li><img class="px" src="/assets/food/carrot.png" alt="" width="16" height="16" loading="lazy" decoding="async">Top up with credit packs anytime</li>
           </ul>
           <a class="btn btn-ghost" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=pricing-free" rel="noopener">Download free</a>
@@ -504,27 +516,31 @@
 
         <article class="plan plan-pro rv rv-d1" aria-labelledby="plan-pro">
           <p class="plan-flag">7-day free trial</p>
-          <img class="plan-sprite px" src="/assets/crew/chef.webp" alt="" width="96" height="96" loading="lazy" decoding="async">
+          <span class="plan-peek" aria-hidden="true"><img class="px" src="/assets/crew/chef.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></span>
           <h3 id="plan-pro">Pro</h3>
           <p class="plan-price">
-            <span class="yearly"><b>$19.99</b><span>per year</span></span>
-            <span class="monthly"><b>$2.99</b><span>per month</span></span>
+            <span class="sr-only yearly-sr">$19.99 per year</span><span class="sr-only monthly-sr">$2.99 per month</span>
+            <span class="swap roll" aria-hidden="true">
+              <span class="yearly price-row"><span class="tag"><span class="cur">$</span><b>19</b><sup>.99</sup></span><span class="per">per year</span></span>
+              <span class="monthly price-row"><span class="tag"><span class="cur">$</span><b>2</b><sup>.99</sup></span><span class="per">per month</span></span>
+            </span>
+            <s class="was"><span class="sr-only">Was, the monthly price over a year: </span>$35.88</s>
           </p>
-          <p class="plan-for">
-            <span class="yearly">Just $1.67 a month, billed yearly.</span>
-            <span class="monthly">Pay month to month. Cancel anytime.</span>
-          </p>
+          <p class="plan-for"><span class="swap"><span class="yearly">Just $1.67 a month, billed yearly.</span><span class="monthly">Pay month to month. Cancel anytime.</span></span></p>
+          <div class="meter" data-fill="8">
+            <p class="meter-label"><b>400</b> AI credits a month</p>
+            <span class="meter-bar" aria-hidden="true"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i></span>
+            <p class="meter-note">8&times; more crew help</p>
+          </div>
           <ul class="plan-list">
             <li><img class="px" src="/assets/food/milk.png" alt="" width="16" height="16" loading="lazy" decoding="async">Everything in Free</li>
-            <li><img class="px" src="/assets/food/spinach.png" alt="" width="16" height="16" loading="lazy" decoding="async"><span><b>400 AI credits</b> a month, 8&times; more crew help</span></li>
             <li><img class="px" src="/assets/food/cheese.png" alt="" width="16" height="16" loading="lazy" decoding="async">Unused credits roll over each month</li>
             <li><img class="px" src="/assets/food/eggs.png" alt="" width="16" height="16" loading="lazy" decoding="async">Own more than one fridge</li>
             <li><img class="px" src="/assets/food/apple.png" alt="" width="16" height="16" loading="lazy" decoding="async">Host a shared fridge for your household</li>
           </ul>
           <a class="btn" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=pricing-pro" rel="noopener">Start 7-day free trial</a>
           <p class="plan-note">
-            <span class="yearly">Free for 7 days, then $19.99/year.</span>
-            <span class="monthly">Free for 7 days, then $2.99/month.</span>
+            <span class="swap"><span class="yearly">Free for 7 days, then $19.99/year.</span><span class="monthly">Free for 7 days, then $2.99/month.</span></span>
             Renews automatically; cancel anytime in your Apple ID settings.
           </p>
         </article>
