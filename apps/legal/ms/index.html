@@ -1,0 +1,931 @@
+<!doctype html>
+<!-- Bahasa Malaysia copy of /index.html. Same markup, CSS and script logic: when the English page
+     changes, mirror the change here. App Store links use ?ct=ms-<tag>; waitlist source is "landing-ms". -->
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ThatFridge: aplikasi peti sejuk yang mengingati untuk anda</title>
+<meta name="description" content="ThatFridge menjejak peti sejuk, peti beku dan pantri anda dengan krew AI yang memberitahu apa yang perlu diguna dahulu, apa yang hendak dimasak malam ini dan apa yang hampir habis. Di App Store.">
+<meta name="theme-color" content="#15110d">
+<link rel="canonical" href="https://thatfridge.com/ms/">
+<link rel="alternate" hreflang="en" href="https://thatfridge.com/">
+<link rel="alternate" hreflang="ms" href="https://thatfridge.com/ms/">
+<link rel="alternate" hreflang="x-default" href="https://thatfridge.com/">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta name="apple-itunes-app" content="app-id=6806239306">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://thatfridge.com/ms/">
+<meta property="og:locale" content="ms_MY">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:title" content="ThatFridge: aplikasi peti sejuk yang mengingati untuk anda">
+<meta property="og:description" content="Tahu isi peti sejuk anda sebelum membuka pintunya. Krew AI yang membantu anda kurangkan pembaziran makanan.">
+<meta property="og:image" content="https://thatfridge.com/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoObject",
+  "name": "ThatFridge: demo penuh aplikasi",
+  "description": "Panduan ThatFridge (dalam Bahasa Inggeris): tambah makanan melalui resit, kod bar atau foto, dapatkan peringatan tarikh luput, dan biar krew cadangkan apa yang hendak dimasak daripada bahan yang sudah ada.",
+  "thumbnailUrl": "https://thatfridge.com/assets/demo/poster-1280.webp",
+  "uploadDate": "2026-09-28T07:36:21-07:00",
+  "duration": "PT1M57S",
+  "contentUrl": "https://www.youtube.com/watch?v=RVUh1htzhM0",
+  "embedUrl": "https://www.youtube-nocookie.com/embed/RVUh1htzhM0"
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "Adakah ThatFridge percuma?", "acceptedAnswer": { "@type": "Answer", "text": "Ya. Pelan percuma merangkumi penjejakan peti sejuk dan pantri, amaran tarikh luput dan 50 kredit AI sebulan. Pro menambah 400 kredit sebulan yang dibawa ke bulan seterusnya, lebih daripada satu peti sejuk dan peti sejuk isi rumah yang dikongsi, pada harga US$2.99 sebulan atau US$19.99 setahun, dengan percubaan percuma 7 hari untuk pelanggan baharu. App Store memaparkan harga dalam mata wang tempatan anda." } },
+    { "@type": "Question", "name": "Apakah itu kredit AI?", "acceptedAnswer": { "@type": "Answer", "text": "Setiap tindakan AI menggunakan kredit: sembang dengan krew, imbasan resit dan foto peti sejuk, serta penjanaan ikon. Akaun percuma mendapat 50 sebulan, Pro mendapat 400, dan anda boleh tambah nilai dengan pek kredit pada bila-bila masa." } },
+    { "@type": "Question", "name": "Adakah versi Android?", "acceptedAnswer": { "@type": "Answer", "text": "Belum lagi. Ia sedang dibangunkan. Sertai senarai menunggu Android dan kami akan e-mel anda sekali sahaja apabila ia dilancarkan." } },
+    { "@type": "Question", "name": "Apa yang berlaku kepada foto peti sejuk dan resit saya?", "acceptedAnswer": { "@type": "Answer", "text": "Apabila anda mengimbas resit atau foto peti sejuk, imej itu dimuat naik ke pelayan kami dan dihantar kepada penyedia penglihatan AI untuk membaca item. Imej disimpan di pelayan kami supaya ciri ini terus berfungsi, dan anda boleh memadam item tersebut pada bila-bila masa. Baca dasar privasi (dalam Bahasa Inggeris)." } },
+    { "@type": "Question", "name": "Bolehkah isi rumah saya berkongsi peti sejuk?", "acceptedAnswer": { "@type": "Answer", "text": "Boleh, dengan Pro. Jemput seseorang menggunakan nama pengguna dari skrin urus peti sejuk, dan semua orang di dalamnya boleh melihat serta menyunting item dan nota yang sama." } },
+    { "@type": "Question", "name": "Bagaimana cara membatalkan percubaan percuma?", "acceptedAnswer": { "@type": "Answer", "text": "Langganan dibilkan oleh Apple. Pada iPhone anda, pergi ke Seting, ketik nama anda, kemudian Langganan, ThatFridge, Batalkan Langganan. Batalkan sekurang-kurangnya 24 jam sebelum percubaan tamat dan anda tidak akan dicaj." } }
+  ]
+}
+</script>
+
+<link rel="preload" href="/assets/fonts/inter-tight-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/instrument-serif-italic-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" as="image" href="/assets/scene.avif" type="image/avif" fetchpriority="high">
+<link rel="stylesheet" href="/site.css">
+<link rel="stylesheet" href="/home.css">
+<script>document.documentElement.classList.add('js');</script>
+<script src="/transitions.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Langkau ke kandungan</a>
+
+<!-- App Store links: search for "id6806239306". Each has its own ?ct= campaign tag (announce, nav, hero,
+     pricing-free, pricing-pro, cta, footer, sticky, qr) so App Store Connect > App Analytics > Sources
+     shows which one converts. Add &pt=<provider token> to each once you have it (see README). -->
+<header class="top" id="top">
+  <a class="announce" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=ms-announce" rel="noopener">
+    Kini di <u>App Store</u> untuk iPhone
+    <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 9 9 3M4 3h5v5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+  </a>
+  <nav class="nav" aria-label="Utama">
+    <div class="nav-links">
+      <a href="/privacy/">Privasi</a>
+      <a href="/terms/">Terma</a>
+    </div>
+    <a class="brand" href="/ms/" aria-label="Laman utama ThatFridge">
+      <img src="/assets/logo.svg" alt="" width="30" height="31">
+      <span>ThatFridge</span>
+    </a>
+    <div class="nav-right">
+      <a href="/support/">Sokongan</a>
+      <a class="btn btn-sm" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=ms-nav" rel="noopener">Dapatkan aplikasi</a>
+    </div>
+  </nav>
+</header>
+
+<main id="main">
+
+  <!-- Hero: product promise first, crew personality second. -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-bg" aria-hidden="true">
+      <!-- Stage = the scene at its native 1180:842 ratio, scaled to cover. Crew walk the same
+           floor paths as apps/web CrewScene.tsx (percent of the stage). -->
+      <div class="stage" id="stage">
+        <picture><source srcset="/assets/scene.avif" type="image/avif"><img class="px" src="/assets/scene.webp" alt="" width="1180" height="842" fetchpriority="high"></picture>
+        <img class="walker px" data-crew="chef" src="/assets/crew/chef.webp" alt="" width="48" height="48">
+        <img class="walker px" data-crew="organizer" src="/assets/crew/organizer.webp" alt="" width="48" height="48">
+        <img class="walker px" data-crew="guardian" src="/assets/crew/guardian.webp" alt="" width="48" height="48">
+        <img class="walker px" data-crew="shopkeeper" src="/assets/crew/shopkeeper.webp" alt="" width="48" height="48">
+      </div>
+    </div>
+
+    <div class="card-wrap">
+      <img class="peek px" src="/assets/crew/guardian.webp" alt="" width="144" height="144" aria-hidden="true">
+      <div class="hero-card">
+        <h1 id="hero-title">Aplikasi peti sejuk yang ingat barang yang anda <em class="s">terlupa</em> sudah beli.</h1>
+        <p class="crew-line">
+          <span class="crew-dots" aria-hidden="true"><i class="d-guardian"></i><i class="d-chef"></i><i class="d-organizer"></i><i class="d-shopkeeper"></i></span>Kenali krew yang menjaganya.
+        </p>
+        <div class="ticket">
+          <p class="ticket-head"><span>Peti Sejuk Rumah</span><span>Guna dahulu</span></p>
+          <ul>
+            <li><img class="px" src="/assets/food/milk.png" alt="" width="32" height="32"><span>Susu</span><b class="pill p-red">2 hari</b></li>
+            <li><img class="px" src="/assets/food/spinach.png" alt="" width="32" height="32"><span>Bayam</span><b class="pill p-amber">3 hari</b></li>
+            <li><img class="px" src="/assets/food/eggs.png" alt="" width="32" height="32"><span>Telur</span><b class="pill p-green">6 hari</b></li>
+          </ul>
+        </div>
+        <p class="poster-sprite">
+          <img class="px" src="/assets/crew/guardian.webp" alt="" width="48" height="48">
+          Guardian jaga peti sejuk anda.
+        </p>
+        <div class="card-foot">
+          <div class="card-ctas">
+            <a class="store-badge" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=ms-hero" rel="noopener">
+              <img src="/assets/app-store-badge.svg" alt="Muat turun di App Store" width="150" height="50">
+            </a>
+            <a class="demo-link" href="#demo">
+              <svg viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path d="M5 3h2v1h2v1h2v1h2v4h-2v1H9v1H7v1H5z"/></svg>
+              Tonton demo <span>1:58</span>
+            </a>
+          </div>
+          <p class="stack" aria-hidden="true">That<span>Fridge</span></p>
+          <!-- Desktop visitors can't install from here: give their iPhone camera something to scan. -->
+          <p class="qr">
+            <img src="/assets/app-qr.svg" alt="Kod QR ke ThatFridge di App Store" width="74" height="74">
+            <span>Guna komputer?<br>Imbas dengan iPhone anda.</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p class="hero-tag">Buka aplikasi <em class="s">sebelum</em> buka pintu peti sejuk.</p>
+
+  </section>
+
+  <!-- Everything after the hero: sticky left index + rounded content panel (desktop only).
+       The index fades in once the hero has scrolled away; the section in view grows to heading size.
+       Footer countdown keeps the expiry story: milk goes from 10 days left to "use it today". -->
+  <div class="after-hero">
+    <nav class="side" id="side" aria-label="Di halaman ini">
+      <ol>
+        <li><a href="#why">Kenapa penting</a></li>
+        <li><a href="#demo">Tonton demo</a></li>
+        <li><a href="#how">Cara ia berfungsi</a></li>
+        <li><a href="#inside">Dalam aplikasi</a></li>
+        <li><a href="#crew">Krew</a></li>
+        <li><a href="#benefits">Kenapa orang kekal guna</a></li>
+        <li><a href="#cost">Kos pembaziran</a></li>
+        <li><a href="#pricing">Harga</a></li>
+        <li><a href="#team">Daripada pasukan</a></li>
+        <li><a href="#faq">Soalan</a></li>
+        <li><a href="#get">Dapatkan aplikasi</a></li>
+      </ol>
+      <p class="side-milk" id="side-milk">
+        <img class="px" src="/assets/food/milk.png" alt="" width="16" height="16">
+        <span>Susu: <b id="side-days">tinggal 10 hari</b></span>
+      </p>
+    </nav>
+    <div class="panel">
+
+  <!-- Why it matters: the stat is evidence, the voice stays ThatFridge. -->
+  <section class="sec why" id="why" aria-labelledby="why-title">
+    <div class="wrap">
+      <div class="rv">
+        <p class="eyebrow">Kenapa penting</p>
+        <h2 id="why-title">Kita membazir lebih banyak makanan <em class="s">daripada yang kita sangka.</em></h2>
+      </div>
+      <div class="why-copy rv rv-d1">
+        <p>Kadang-kadang bukan sebab kita tak peduli.</p>
+        <p>Kita cuma terlupa bayam<img class="inline-food px" src="/assets/food/spinach.png" alt="" width="32" height="32"> itu ada di situ.</p>
+        <p class="source">
+          <strong>79 kg</strong> makanan dibazirkan setiap orang, setiap tahun, di rumah.<br>
+          Sumber: <a href="https://www.unep.org/resources/publication/food-waste-index-report-2024" rel="noopener">UNEP Food Waste Index Report 2024</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Demo video: a dark "fridge cinema". The poster is self-hosted and the play button is a plain
+       YouTube link, so the page makes no third-party requests until someone presses play; then the
+       script below swaps in the youtube-nocookie player. Video id lives here + the JSON-LD: search
+       for "RVUh1htzhM0". The crew peek over the screen and duck into their seats once it plays. -->
+  <section class="sec demo" id="demo" aria-labelledby="demo-title">
+    <div class="demo-grain" aria-hidden="true"></div>
+    <div class="wrap">
+      <div class="demo-head rv">
+        <div>
+          <p class="eyebrow">Tonton demo</p>
+          <h2 id="demo-title">Seluruh aplikasi dalam <em class="s">kurang dua minit.</em></h2>
+        </div>
+        <p class="lede">Imbas, jejak, masak. Lihat krew menguruskan peti sejuk sebenar, dari mula hingga akhir.</p>
+      </div>
+      <div class="theater rv rv-d1" id="theater">
+        <div class="dolly">
+          <picture class="glow" aria-hidden="true">
+            <source type="image/avif" srcset="/assets/demo/poster-720.avif">
+            <img src="/assets/demo/poster-720.webp" alt="" width="1280" height="720" loading="lazy" decoding="async">
+          </picture>
+          <div class="screen" id="demo-screen">
+            <a class="play" id="demo-play" href="https://www.youtube.com/watch?v=RVUh1htzhM0" rel="noopener">
+              <picture>
+                <source type="image/avif" srcset="/assets/demo/poster-720.avif 720w, /assets/demo/poster-1280.avif 1280w" sizes="(max-width: 1180px) 92vw, 1000px">
+                <img src="/assets/demo/poster-1280.webp" srcset="/assets/demo/poster-720.webp 720w, /assets/demo/poster-1280.webp 1280w" sizes="(max-width: 1180px) 92vw, 1000px" alt="" width="1280" height="720" loading="lazy" decoding="async">
+              </picture>
+              <span class="play-btn" aria-hidden="true">
+                <svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path d="M5 3h2v1h2v1h2v1h2v4h-2v1H9v1H7v1H5z"/></svg>
+              </span>
+              <span class="play-label"><b>Main demo</b><span>1:58</span></span>
+            </a>
+          </div>
+          <ul class="audience" aria-hidden="true">
+            <li class="seat-guardian"><img class="px" src="/assets/crew/guardian.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></li>
+            <li class="seat-chef"><img class="px" src="/assets/crew/chef.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></li>
+            <li class="seat-organizer"><img class="px" src="/assets/crew/organizer.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></li>
+            <li class="seat-shopkeeper"><img class="px" src="/assets/crew/shopkeeper.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></li>
+          </ul>
+        </div>
+      </div>
+      <p class="demo-fine rv">Video dalam Bahasa Inggeris, dimainkan dari YouTube selepas anda tekan main. <a href="https://www.youtube.com/watch?v=RVUh1htzhM0" rel="noopener">Tonton di YouTube</a></p>
+    </div>
+  </section>
+
+  <!-- How it works: three steps, each owned by a crew member. -->
+  <section class="sec how" id="how" aria-labelledby="how-title">
+    <div class="wrap">
+      <div class="how-head rv">
+        <div>
+          <p class="eyebrow">Cara ia berfungsi</p>
+          <h2 id="how-title">Tambah. Lupakan. <em class="s">Kami tak lupa.</em></h2>
+        </div>
+        <p class="lede">Masukkan makanan sekali. Krew akan memerhatikannya sehingga habis dimakan.</p>
+      </div>
+      <ol class="steps">
+        <li class="step rv">
+          <div class="step-top">
+            <span class="step-num">01</span>
+            <span class="sprite-tile t-organizer"><img class="px" src="/assets/crew/organizer.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></span>
+          </div>
+          <h3>Tambah</h3>
+          <p class="who c-organizer">Organizer menyusunnya</p>
+          <p>Empat cara untuk tambah, dan setiap item masuk ke rak yang betul.</p>
+          <ul class="ways">
+            <li>Imbas resit</li><li>Imbas kod bar</li><li>Foto peti sejuk</li><li>Taip sendiri</li>
+          </ul>
+        </li>
+        <li class="step rv rv-d1">
+          <div class="step-top">
+            <span class="step-num">02</span>
+            <span class="sprite-tile t-guardian"><img class="px" src="/assets/crew/guardian.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></span>
+          </div>
+          <h3>Jejak</h3>
+          <p class="who c-guardian">Guardian pantau tarikh</p>
+          <p>Peringatan tarikh luput dan stok rendah memberitahu apa yang perlu diguna dahulu, sebelum ia rosak.</p>
+          <ul class="snip" aria-label="Contoh peringatan">
+            <li><img class="px" src="/assets/food/milk.png" alt="" width="32" height="32" loading="lazy" decoding="async"><span>Susu</span><b class="pill p-red">2 hari</b></li>
+            <li><img class="px" src="/assets/food/spinach.png" alt="" width="32" height="32" loading="lazy" decoding="async"><span>Bayam</span><b class="pill p-amber">3 hari</b></li>
+          </ul>
+        </li>
+        <li class="step rv rv-d2">
+          <div class="step-top">
+            <span class="step-num">03</span>
+            <span class="sprite-tile t-chef"><img class="px" src="/assets/crew/chef.webp" alt="" width="96" height="96" loading="lazy" decoding="async"></span>
+          </div>
+          <h3>Makan</h3>
+          <p class="who c-chef">Chef rancang makan malam</p>
+          <p>Ciri "What to eat" mengubah bahan yang sudah ada menjadi makan malam, bermula dengan yang hampir luput.</p>
+          <div class="snip-card" aria-label="Contoh cadangan">
+            <b>Telur dadar bayam</b>
+            <span>Guna 3 item yang hampir luput</span>
+            <span class="snip-icons" aria-hidden="true">
+              <img class="px" src="/assets/food/eggs.png" alt="" width="32" height="32" loading="lazy" decoding="async"><img class="px" src="/assets/food/spinach.png" alt="" width="32" height="32" loading="lazy" decoding="async"><img class="px" src="/assets/food/cheese.png" alt="" width="32" height="32" loading="lazy" decoding="async">
+            </span>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Real app preview: proves this is a utility, not a game. -->
+  <section class="sec preview" id="inside" aria-labelledby="preview-title">
+    <div class="wrap">
+      <div class="rv">
+        <p class="eyebrow">Dalam aplikasi</p>
+        <h2 id="preview-title">Apa yang krew <em class="s">sebenarnya</em> buat.</h2>
+        <p class="lede">Skrin sebenar daripada aplikasi iPhone (dalam Bahasa Inggeris).</p>
+      </div>
+      <ul class="shots" id="shots">
+        <li class="rv">
+          <figure>
+            <picture>
+              <source type="image/avif" srcset="/assets/shots/home-480.avif 480w, /assets/shots/home-720.avif 720w, /assets/shots/home-1080.avif 1080w" sizes="(max-width: 860px) min(72vw, 300px), 345px">
+              <img src="/assets/shots/home-720.webp" srcset="/assets/shots/home-480.webp 480w, /assets/shots/home-720.webp 720w, /assets/shots/home-1080.webp 1080w" sizes="(max-width: 860px) min(72vw, 300px), 345px" alt="Skrin utama ThatFridge: peti sejuk seni piksel dengan 7 item, 5 hampir luput dan 5 cadangan." width="1320" height="2868" loading="lazy" decoding="async">
+            </picture>
+            <figcaption><b>Peti sejuk anda sepintas lalu</b>Item, tarikh luput dan apa yang hendak dimasak sebaik sahaja anda buka aplikasi.</figcaption>
+          </figure>
+        </li>
+        <li class="rv rv-d1">
+          <figure>
+            <picture>
+              <source type="image/avif" srcset="/assets/shots/add-480.avif 480w, /assets/shots/add-720.avif 720w, /assets/shots/add-1080.avif 1080w" sizes="(max-width: 860px) min(72vw, 300px), 345px">
+              <img src="/assets/shots/add-720.webp" srcset="/assets/shots/add-480.webp 480w, /assets/shots/add-720.webp 720w, /assets/shots/add-1080.webp 1080w" sizes="(max-width: 860px) min(72vw, 300px), 345px" alt="Helaian tambah item di sebelah imbasan kod bar yang mengecam sekotak susu." width="1320" height="2868" loading="lazy" decoding="async">
+            </picture>
+            <figcaption><b>Tambah dalam beberapa saat</b>Resit, kod bar, foto peti sejuk atau taip.</figcaption>
+          </figure>
+        </li>
+        <li class="rv rv-d2">
+          <figure>
+            <picture>
+              <source type="image/avif" srcset="/assets/shots/score-480.avif 480w, /assets/shots/score-720.avif 720w, /assets/shots/score-1080.avif 1080w" sizes="(max-width: 860px) min(72vw, 300px), 345px">
+              <img src="/assets/shots/score-720.webp" srcset="/assets/shots/score-480.webp 480w, /assets/shots/score-720.webp 720w, /assets/shots/score-1080.webp 1080w" sizes="(max-width: 860px) min(72vw, 300px), 345px" alt="Skor Dapur mingguan 74 daripada 100 dengan skor berasingan daripada Guardian, Chef, Organizer dan Shopkeeper." width="1320" height="2868" loading="lazy" decoding="async">
+            </picture>
+            <figcaption><b>Skor Dapur mingguan</b>Setiap ahli krew menilai satu tabiat. Kurangkan pembaziran, bina rentetan.</figcaption>
+          </figure>
+        </li>
+      </ul>
+      <!-- Everything else in the app that the screenshots don't show. Keep each line true to the app. -->
+      <div class="also">
+        <h3 class="also-title rv">Dan banyak lagi di dalamnya.</h3>
+        <ul class="also-grid">
+          <li class="rv"><img class="px" src="/assets/food/carrot.png" alt="" width="32" height="32" loading="lazy" decoding="async"><b>Pelan makan mingguan</b><span>Rancang minggu anda hari demi hari, kemudian tandakan setiap hidangan apabila siap dimasak.</span></li>
+          <li class="rv rv-d1"><img class="px" src="/assets/food/eggs.png" alt="" width="32" height="32" loading="lazy" decoding="async"><b>Senarai beli-belah</b><span>Shopkeeper masukkan barang yang hampir habis ke dalam senarai, jadi anda beli apa yang perlu sahaja.</span></li>
+          <li class="rv rv-d2"><img class="px" src="/assets/food/apple.png" alt="" width="32" height="32" loading="lazy" decoding="async"><b>Cerapan</b><span>Habis diguna berbanding dibuang, minggu demi minggu. Lihat bahagian tong sampah semakin kecil.</span></li>
+          <li class="rv"><img class="px" src="/assets/food/cheese.png" alt="" width="32" height="32" loading="lazy" decoding="async"><b>Explore</b><span>Layari resipi dan pelan makan komuniti, dan jadikan mana-mana satu milik anda.</span></li>
+          <li class="rv rv-d1"><img class="px" src="/assets/food/milk.png" alt="" width="32" height="32" loading="lazy" decoding="async"><b>Kitchen Lab</b><span>Automasikan dengan satu ayat: "Beritahu saya apabila stok kurang daripada 2."</span></li>
+          <li class="rv rv-d2"><img class="px" src="/assets/food/spinach.png" alt="" width="32" height="32" loading="lazy" decoding="async"><b>Sembang dengan krew</b><span>Tanya apa sahaja dan lampirkan item, resipi atau seminggu pelan makan sebagai konteks.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Meet the crew -->
+  <section class="sec" id="crew" aria-labelledby="crew-title">
+    <div class="wrap">
+      <div class="rv">
+        <p class="eyebrow">Krew</p>
+        <h2 id="crew-title">Kenali empat sekawan <em class="s">dalam peti sejuk anda.</em></h2>
+        <p class="lede">Setiap seorang menjaga tabiat yang berbeza. Sembang dengan sesiapa sahaja dalam aplikasi.</p>
+      </div>
+      <ul class="crew-grid">
+        <li class="mate rv" style="--c: var(--guardian)">
+          <div class="sprite-tile t-guardian"><img class="px" src="/assets/crew/guardian.webp" alt="" width="144" height="144" loading="lazy" decoding="async"></div>
+          <h3>Guardian</h3>
+          <p class="role c-guardian">Penyelamat makanan</p>
+          <p class="does">Tahu apa yang akan luput dahulu dan pastikan anda gunakannya dahulu.</p>
+          <blockquote class="bubble">"Habiskan susu dulu. Tinggal dua hari."</blockquote>
+        </li>
+        <li class="mate rv rv-d1" style="--c: var(--chef)">
+          <div class="sprite-tile t-chef"><img class="px" src="/assets/crew/chef.webp" alt="" width="144" height="144" loading="lazy" decoding="async"></div>
+          <h3>Chef</h3>
+          <p class="role c-chef">Makanan seimbang</p>
+          <p class="does">Cadangkan apa yang hendak dimasak malam ini dengan bahan yang sudah ada.</p>
+          <blockquote class="bubble">"Telur, bayam, keju. Jadilah telur dadar."</blockquote>
+        </li>
+        <li class="mate rv rv-d2" style="--c: var(--organizer)">
+          <div class="sprite-tile t-organizer"><img class="px" src="/assets/crew/organizer.webp" alt="" width="144" height="144" loading="lazy" decoding="async"></div>
+          <h3>Organizer</h3>
+          <p class="role c-organizer">Kekemasan</p>
+          <p class="does">Simpan setiap item di rak yang betul supaya tiada yang tersorok di belakang.</p>
+          <blockquote class="bubble">"Yogurt letak balik di rak atas."</blockquote>
+        </li>
+        <li class="mate rv rv-d3" style="--c: var(--shopkeeper)">
+          <div class="sprite-tile t-shopkeeper"><img class="px" src="/assets/crew/shopkeeper.webp" alt="" width="144" height="144" loading="lazy" decoding="async"></div>
+          <h3>Shopkeeper</h3>
+          <p class="role c-shopkeeper">Senarai beli-belah</p>
+          <p class="does">Kesan barang yang hampir habis dan pastikan senarai sentiasa tepat.</p>
+          <blockquote class="bubble">"Beras dah habis. Dah masuk senarai."</blockquote>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Benefits: three groups instead of a grid of small features. -->
+  <section class="sec benefits" id="benefits" aria-labelledby="benefits-title">
+    <div class="wrap">
+      <div class="rv">
+        <p class="eyebrow">Kenapa orang kekal guna</p>
+        <h2 id="benefits-title">Kurang meneka. <em class="s">Kurang membazir.</em></h2>
+      </div>
+      <div class="groups">
+        <div class="group rv">
+          <h3>Sentiasa tahu</h3>
+          <ul>
+            <li><img class="px" src="/assets/food/cheese.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Setiap peti sejuk anda <span class="pro-tag">Pro</span></b><span>Peti sejuk, peti beku dan pantri, masing-masing dengan rupa tersendiri.</span></div></li>
+            <li><img class="px" src="/assets/food/eggs.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Dikongsi dengan isi rumah <span class="pro-tag">Pro</span></b><span>Semua orang nampak rak yang sama. Tiada lagi beli dua kali.</span></div></li>
+            <li><img class="px" src="/assets/food/milk.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Peringatan tarikh luput</b><span>Peringatan sebelum ia rosak, bukan selepas.</span></div></li>
+          </ul>
+        </div>
+        <div class="group rv rv-d1">
+          <h3>Kurangkan pembaziran</h3>
+          <ul>
+            <li><img class="px" src="/assets/food/spinach.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Cadangan guna dahulu</b><span>Apa yang patut dimakan seterusnya, disusun ikut yang hampir rosak.</span></div></li>
+            <li><img class="px" src="/assets/food/carrot.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Resipi daripada rak anda</b><span>Masak dengan apa yang ada sebelum beli lagi.</span></div></li>
+            <li><img class="px" src="/assets/food/apple.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Matlamat, lencana dan rentetan</b><span>Skor Dapur mingguan yang menjadikannya tabiat.</span></div></li>
+          </ul>
+        </div>
+        <div class="group rv rv-d2">
+          <h3>Anda yang kawal</h3>
+          <ul>
+            <li><img class="px" src="/assets/food/cheese.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Dasar privasi yang mudah difahami</b><span><a href="/privacy/">Baca apa sebenarnya yang kami kumpul</a> dan sebabnya (dalam Bahasa Inggeris).</span></div></li>
+            <li><img class="px" src="/assets/food/eggs.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Padam bila-bila masa</b><span>Padam akaun dan data anda dari Profil, dalam satu langkah.</span></div></li>
+            <li><img class="px" src="/assets/food/milk.png" alt="" width="32" height="32" loading="lazy" decoding="async"><div><b>Notis PDPA Malaysia</b><span><a href="/privacy/pdpa/">Dalam Bahasa Melayu dan Bahasa Inggeris.</a></span></div></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing: mirrors the in-app paywall (apps/mobile/src/app/paywall.tsx). USD list prices;
+       the App Store charges the local equivalent. Keep in sync with the paywall + Terms §3. -->
+  <!-- Waste calculator: the visitor's own numbers, not ours. Household kg uses the UNEP figure cited
+       in "Why it matters"; the money line is items x price x 52 from their inputs. Script below. -->
+  <section class="sec cost" id="cost" aria-labelledby="cost-title">
+    <div class="wrap">
+      <div class="cost-head rv">
+        <p class="eyebrow">Kos pembaziran</p>
+        <h2 id="cost-title">Berapa <em class="s">sebenarnya</em> kos tong sampah anda?</h2>
+        <p class="lede">Tiga tekaan pantas. Kami kira untuk anda, tanpa menghantar apa-apa ke mana-mana.</p>
+      </div>
+      <form class="calc rv rv-d1" id="calc" aria-describedby="calc-note">
+        <div class="calc-in">
+          <fieldset class="calc-row">
+            <legend>Bilangan orang di rumah</legend>
+            <div class="stepper">
+              <button type="button" data-step="-1" aria-label="Kurangkan orang">&minus;</button>
+              <output id="calc-people" aria-live="polite">2</output>
+              <button type="button" data-step="1" aria-label="Tambah orang">+</button>
+            </div>
+          </fieldset>
+          <div class="calc-row">
+            <label for="calc-items">Makanan yang anda buang dalam seminggu biasa</label>
+            <div class="range">
+              <input type="range" id="calc-items" min="0" max="15" value="3">
+              <output for="calc-items" id="calc-items-out">3 item</output>
+            </div>
+            <p class="bin" id="calc-bin" aria-hidden="true"></p>
+          </div>
+          <div class="calc-row">
+            <label for="calc-price">Purata harga setiap item</label>
+            <div class="price">
+              <select id="calc-cur" aria-label="Mata wang">
+                <option value="MYR" selected>RM</option>
+                <option value="USD">US$</option>
+              </select>
+              <input type="number" id="calc-price" min="0" max="500" step="0.5" value="10" inputmode="decimal">
+            </div>
+          </div>
+        </div>
+        <div class="receipt" aria-live="polite">
+          <p class="receipt-head"><span>Tong sampah anda, setahun</span><span>anggaran</span></p>
+          <p class="receipt-total" id="calc-total">RM1,560</p>
+          <ul class="receipt-lines">
+            <li><span>Item dibuang</span><b id="calc-count">156</b></li>
+            <li><span>Purata global untuk <span id="calc-hh">2 orang</span></span><b id="calc-kg">158 kg</b></li>
+            <li class="receipt-pro" id="calc-pro" hidden><span>ThatFridge Pro, setahun</span><b>US$19.99</b></li>
+          </ul>
+          <p class="receipt-say" id="calc-say">Selamatkan beberapa item sebulan pun, jimatnya cepat bertambah.</p>
+          <a class="btn" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=ms-calculator" rel="noopener">Biar krew uruskan</a>
+        </div>
+      </form>
+      <p class="calc-note" id="calc-note">Tekaan anda, angka anda. Baris kilogram menggunakan angka UNEP, iaitu 79 kg makanan dibazirkan setiap orang, setiap tahun, di rumah (<a href="https://www.unep.org/resources/publication/food-waste-index-report-2024" rel="noopener">Food Waste Index Report 2024</a>). Harga Pro ditunjukkan dalam dolar AS; App Store memaparkan harga dalam mata wang tempatan anda.</p>
+    </div>
+  </section>
+
+  <section class="sec pricing" id="pricing" aria-labelledby="pricing-title">
+    <div class="wrap">
+      <div class="pricing-head rv">
+        <div>
+          <p class="eyebrow">Harga</p>
+          <h2 id="pricing-title">Percuma untuk bermula. <em class="s">Pro</em> bila dah ketagih.</h2>
+          <p class="lede">Jejak peti sejuk anda secara percuma. Naik taraf ke Pro untuk lebih bantuan krew, lebih banyak peti sejuk dan seisi rumah.</p>
+        </div>
+        <fieldset class="billing" aria-label="Tempoh bil">
+          <input type="radio" name="billing" id="bill-yearly" value="yearly" checked>
+          <label for="bill-yearly">Tahunan <span class="save">Jimat 44%</span></label>
+          <input type="radio" name="billing" id="bill-monthly" value="monthly">
+          <label for="bill-monthly">Bulanan</label>
+        </fieldset>
+      </div>
+
+      <div class="plans">
+        <article class="plan rv" aria-labelledby="plan-free">
+          <h3 id="plan-free">Percuma</h3>
+          <p class="plan-price"><b>US$0</b><span>pelan percuma</span></p>
+          <p class="plan-for">Semua yang anda perlukan supaya tak terlupa makanan lagi.</p>
+          <ul class="plan-list">
+            <li><img class="px" src="/assets/food/milk.png" alt="" width="16" height="16" loading="lazy" decoding="async">Penjejakan peti sejuk &amp; pantri dengan amaran tarikh luput</li>
+            <li><img class="px" src="/assets/food/spinach.png" alt="" width="16" height="16" loading="lazy" decoding="async"><span><b>50 kredit AI</b> sebulan untuk sembang krew, imbasan dan ikon</span></li>
+            <li><img class="px" src="/assets/food/carrot.png" alt="" width="16" height="16" loading="lazy" decoding="async">Tambah nilai dengan pek kredit bila-bila masa</li>
+          </ul>
+          <a class="btn btn-ghost" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=ms-pricing-free" rel="noopener">Muat turun percuma</a>
+        </article>
+
+        <article class="plan plan-pro rv rv-d1" aria-labelledby="plan-pro">
+          <p class="plan-flag">Percubaan percuma 7 hari</p>
+          <img class="plan-sprite px" src="/assets/crew/chef.webp" alt="" width="96" height="96" loading="lazy" decoding="async">
+          <h3 id="plan-pro">Pro</h3>
+          <p class="plan-price">
+            <span class="yearly"><b>US$19.99</b><span>setahun</span></span>
+            <span class="monthly"><b>US$2.99</b><span>sebulan</span></span>
+          </p>
+          <p class="plan-for">
+            <span class="yearly">Hanya US$1.67 sebulan, dibilkan setahun sekali.</span>
+            <span class="monthly">Bayar bulan ke bulan. Batal bila-bila masa.</span>
+          </p>
+          <ul class="plan-list">
+            <li><img class="px" src="/assets/food/milk.png" alt="" width="16" height="16" loading="lazy" decoding="async">Semua dalam pelan Percuma</li>
+            <li><img class="px" src="/assets/food/spinach.png" alt="" width="16" height="16" loading="lazy" decoding="async"><span><b>400 kredit AI</b> sebulan, 8&times; lebih bantuan krew</span></li>
+            <li><img class="px" src="/assets/food/cheese.png" alt="" width="16" height="16" loading="lazy" decoding="async">Kredit yang tidak digunakan dibawa ke bulan seterusnya</li>
+            <li><img class="px" src="/assets/food/eggs.png" alt="" width="16" height="16" loading="lazy" decoding="async">Miliki lebih daripada satu peti sejuk</li>
+            <li><img class="px" src="/assets/food/apple.png" alt="" width="16" height="16" loading="lazy" decoding="async">Kongsi peti sejuk dengan isi rumah anda</li>
+          </ul>
+          <a class="btn" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=ms-pricing-pro" rel="noopener">Mula percubaan percuma 7 hari</a>
+          <p class="plan-note">
+            <span class="yearly">Percuma 7 hari, kemudian US$19.99/tahun.</span>
+            <span class="monthly">Percuma 7 hari, kemudian US$2.99/bulan.</span>
+            Diperbaharui secara automatik; batal bila-bila masa dalam tetapan Apple ID anda.
+          </p>
+        </article>
+      </div>
+
+      <p class="pricing-fine rv">Setiap tindakan AI menggunakan kredit: sembang krew, imbasan resit dan foto peti sejuk, penjanaan ikon. Harga dalam USD; App Store memaparkan harga dalam mata wang tempatan anda. Percubaan percuma untuk pelanggan baharu. Lihat <a href="/terms/">Terma</a> (dalam Bahasa Inggeris).</p>
+    </div>
+  </section>
+
+  <!-- From the team: marquee of quotes. These are the team's own words, labelled as such, NOT
+       customer reviews (no stars, no invented customers). DRAFT copy: Keira, Joey and Naufal
+       must approve their quote. Swap in real App Store reviews once you have them. -->
+  <section class="sec team" id="team" aria-labelledby="team-title">
+    <div class="wrap rv">
+      <p class="eyebrow">Daripada pasukan</p>
+      <h2 id="team-title">Dibina oleh orang yang <em class="s">penat</em> asyik membuang makanan.</h2>
+      <p class="lede">Kami guna ThatFridge di dapur sendiri setiap hari. Inilah yang berubah.</p>
+      <button class="marquee-toggle" id="marquee-toggle" type="button" aria-pressed="false" aria-controls="marquee-track" hidden>Jeda petikan</button>
+    </div>
+    <div class="marquee rv rv-d1">
+      <ul class="marquee-track" id="marquee-track">
+        <li class="quote">
+          <p>"Dulu hari Ahad bermakna jumpa bekas misteri di belakang peti sejuk. Sekarang Guardian ingatkan saya dua hari sebelum apa-apa rosak, dan saya betul-betul masak."</p>
+          <p class="who-q"><img class="px" src="/assets/crew/guardian.webp" alt="" width="48" height="48" loading="lazy" decoding="async"><span><b>Keira</b> · Pasukan ThatFridge</span></p>
+        </li>
+        <li class="quote">
+          <p>"Saya imbas resit masa masih keluarkan barang dari beg. Sepuluh saat, dan sejak itu saya tak pernah taip tarikh luput lagi."</p>
+          <p class="who-q"><img class="px" src="/assets/crew/organizer.webp" alt="" width="48" height="48" loading="lazy" decoding="async"><span><b>Joey</b> · Pasukan ThatFridge</span></p>
+        </li>
+        <li class="quote">
+          <p>"Peti sejuk rumah sewa kami dulu huru-hara. Sekarang semua orang nampak rak yang sama, dan tiada siapa balik bawa botol kicap yang ketiga."</p>
+          <p class="who-q"><img class="px" src="/assets/crew/shopkeeper.webp" alt="" width="48" height="48" loading="lazy" decoding="async"><span><b>Naufal</b> · Pasukan ThatFridge</span></p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Final CTA: all four crew around the fridge. -->
+  <!-- FAQ: the doubts that stop a download. Answers match /support/, /privacy/ and the pricing section.
+       The FAQPage JSON-LD in <head> must mirror this text exactly: edit both together. -->
+  <section class="sec faq" id="faq" aria-labelledby="faq-title">
+    <div class="wrap">
+      <div class="rv">
+        <p class="eyebrow">Soalan</p>
+        <h2 id="faq-title">Sebelum anda <em class="s">muat turun.</em></h2>
+      </div>
+      <div class="faq-list">
+        <details class="rv">
+          <summary>Adakah ThatFridge percuma?</summary>
+          <p>Ya. Pelan percuma merangkumi penjejakan peti sejuk dan pantri, amaran tarikh luput dan 50 kredit AI sebulan. Pro menambah 400 kredit sebulan yang dibawa ke bulan seterusnya, lebih daripada satu peti sejuk dan peti sejuk isi rumah yang dikongsi, pada harga US$2.99 sebulan atau US$19.99 setahun, dengan percubaan percuma 7 hari untuk pelanggan baharu. App Store memaparkan harga dalam mata wang tempatan anda.</p>
+        </details>
+        <details class="rv">
+          <summary>Apakah itu kredit AI?</summary>
+          <p>Setiap tindakan AI menggunakan kredit: sembang dengan krew, imbasan resit dan foto peti sejuk, serta penjanaan ikon. Akaun percuma mendapat 50 sebulan, Pro mendapat 400, dan anda boleh tambah nilai dengan pek kredit pada bila-bila masa.</p>
+        </details>
+        <details class="rv">
+          <summary>Adakah versi Android?</summary>
+          <p>Belum lagi. Ia sedang dibangunkan. <a href="#android">Sertai senarai menunggu Android</a> dan kami akan e-mel anda sekali sahaja apabila ia dilancarkan.</p>
+        </details>
+        <details class="rv">
+          <summary>Apa yang berlaku kepada foto peti sejuk dan resit saya?</summary>
+          <p>Apabila anda mengimbas resit atau foto peti sejuk, imej itu dimuat naik ke pelayan kami dan dihantar kepada penyedia penglihatan AI untuk membaca item. Imej disimpan di pelayan kami supaya ciri ini terus berfungsi, dan anda boleh memadam item tersebut pada bila-bila masa. <a href="/privacy/">Baca dasar privasi</a> (dalam Bahasa Inggeris).</p>
+        </details>
+        <details class="rv">
+          <summary>Bolehkah isi rumah saya berkongsi peti sejuk?</summary>
+          <p>Boleh, dengan Pro. Jemput seseorang menggunakan nama pengguna dari skrin urus peti sejuk, dan semua orang di dalamnya boleh melihat serta menyunting item dan nota yang sama.</p>
+        </details>
+        <details class="rv">
+          <summary>Bagaimana cara membatalkan percubaan percuma?</summary>
+          <p>Langganan dibilkan oleh Apple. Pada iPhone anda, pergi ke Seting, ketik nama anda, kemudian Langganan, ThatFridge, Batalkan Langganan. Batalkan sekurang-kurangnya 24 jam sebelum percubaan tamat dan anda tidak akan dicaj.</p>
+        </details>
+      </div>
+      <p class="faq-more rv">Ada soalan lain? <a href="/support/">Lihat semua jawapan sokongan</a> (dalam Bahasa Inggeris) atau e-mel <a href="mailto:support@thatfridge.com">support@thatfridge.com</a>.</p>
+    </div>
+  </section>
+
+  <!-- Android waitlist: posts to the API (POST /api/waitlist, see backend/API.md). The "website" field is a
+       spam trap hidden from people. Without JS the form shows the email fallback instead. -->
+  <section class="sec android" id="android" aria-labelledby="android-title">
+    <div class="wrap">
+      <div class="android-card rv">
+        <div>
+          <p class="eyebrow">Guna Android?</p>
+          <h2 id="android-title">Krew sedang belajar <em class="s">Android.</em></h2>
+          <p class="lede">Tinggalkan e-mel anda dan kami akan hantar satu mesej apabila ia sedia. Itu sahaja.</p>
+        </div>
+        <form class="wait" id="wait" action="https://api.thatfridge.com/api/waitlist" method="post" novalidate>
+          <label class="wait-label" for="wait-email">E-mel</label>
+          <div class="wait-row">
+            <input type="email" id="wait-email" name="email" autocomplete="email" placeholder="anda@contoh.com" required maxlength="254">
+            <button class="btn" type="submit">Beritahu saya</button>
+          </div>
+          <label class="wait-hp" aria-hidden="true">Laman web <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+          <label class="wait-consent">
+            <input type="checkbox" name="consent" value="1" required>
+            <span>E-mel saya sekali apabila ThatFridge ada di Android. Lihat <a href="/privacy/#android-waitlist">dasar privasi</a> (dalam Bahasa Inggeris); berhenti langgan bila-bila masa.</span>
+          </label>
+          <p class="wait-msg" id="wait-msg" role="status"></p>
+        </form>
+        <noscript><p class="wait-msg">E-mel <a href="mailto:support@thatfridge.com?subject=Android%20waitlist">support@thatfridge.com</a> dengan subjek "Android waitlist" dan kami akan tambah anda.</p></noscript>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec cta" id="get" aria-labelledby="cta-title">
+    <div class="wrap">
+      <div class="cta-card rv">
+        <div>
+          <h2 id="cta-title">Buka peti sejuk. Biar krew uruskan <em class="s">selebihnya.</em></h2>
+          <a class="store-badge" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=ms-cta" rel="noopener">
+            <img src="/assets/app-store-badge.svg" alt="Muat turun di App Store" width="150" height="50">
+          </a>
+          <p class="qr qr-cta">
+            <img src="/assets/app-qr.svg" alt="Kod QR ke ThatFridge di App Store" width="96" height="96" loading="lazy">
+            <span>Guna komputer? Halakan kamera iPhone anda ke sini.</span>
+          </p>
+          <p class="fine">Percuma untuk iPhone. ThatFridge Pro bermula dengan percubaan percuma 7 hari untuk pelanggan baharu. Android <a href="#android">akan datang</a>.</p>
+        </div>
+        <div class="fridge-stage" aria-hidden="true">
+          <img class="fridge px" src="/assets/fridge.webp" alt="" width="896" height="1152" loading="lazy" decoding="async">
+          <img class="mate-sprite ms-guardian px" src="/assets/crew/guardian.webp" alt="" width="96" height="96" loading="lazy" decoding="async">
+          <img class="mate-sprite ms-chef px" src="/assets/crew/chef.webp" alt="" width="96" height="96" loading="lazy" decoding="async">
+          <img class="mate-sprite ms-organizer px" src="/assets/crew/organizer.webp" alt="" width="96" height="96" loading="lazy" decoding="async">
+          <img class="mate-sprite ms-shopkeeper px" src="/assets/crew/shopkeeper.webp" alt="" width="96" height="96" loading="lazy" decoding="async">
+        </div>
+      </div>
+    </div>
+  </section>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- Phones: a "Get the app" bar once the hero is gone; hides again at the final CTA and footer. -->
+<div class="sticky-get" id="sticky-get" hidden>
+  <img class="px" src="/assets/crew/guardian.webp" alt="" width="48" height="48">
+  <p><b>ThatFridge</b><span>Percuma di App Store</span></p>
+  <a class="btn btn-sm" href="https://apps.apple.com/app/thatfridge/id6806239306?ct=ms-sticky" rel="noopener">Dapatkan aplikasi</a>
+</div>
+
+<footer class="foot">
+  <div class="wrap">
+    <div>
+      <a class="brand" href="/ms/" aria-label="Laman utama ThatFridge"><img src="/assets/logo.svg" alt="" width="30" height="31"><span>ThatFridge</span></a>
+      <p>Tahu isi peti sejuk anda. Kurangkan pembaziran makanan.</p>
+    </div>
+    <div>
+      <h2>Undang-undang</h2>
+      <ul>
+        <li><a href="/privacy/">Dasar Privasi (EN)</a></li>
+        <li><a href="/privacy/pdpa/">Notis PDPA (BM + EN)</a></li>
+        <li><a href="/terms/">Terma Perkhidmatan &amp; EULA (EN)</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Bantuan</h2>
+      <ul>
+        <li><a href="/support/">Sokongan &amp; Soalan Lazim (EN)</a></li>
+        <li><a href="mailto:support@thatfridge.com">support@thatfridge.com</a></li>
+        <li><a href="https://apps.apple.com/app/thatfridge/id6806239306?ct=ms-footer" rel="noopener">App Store</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Lagi</h2>
+      <ul>
+        <li><a href="/guides/">Panduan simpan makanan (EN)</a></li>
+        <li><a href="/press/">Kit media (EN)</a></li>
+        <li><a href="https://www.youtube.com/@ThatFridge-co" rel="noopener">YouTube</a></li>
+        <li><a href="/" hreflang="en" lang="en">English</a></li>
+      </ul>
+    </div>
+    <p class="legal-line">&copy; <span id="y">2026</span> ThatFridge. Hak cipta terpelihara. App Store ialah tanda perkhidmatan Apple Inc.</p>
+  </div>
+  <p class="foot-mark" aria-hidden="true">ThatFridge</p>
+</footer>
+
+<!-- Lenis 1.3.26, vendored (no CDN dependency): eased, constant-pace wheel/trackpad scrolling.
+     Touch stays native. Page works without it. To upgrade, replace the file and bump the name. -->
+<script src="/assets/vendor/lenis-1.3.26.min.js"></script>
+<script src="/site.js"></script>
+<script>
+// Landing-only behaviour. Nav, smooth scroll, side index and reveals come from site.js.
+(function () {
+  var reduce = TF.reduce;
+  var hero = document.querySelector('.hero');
+
+  // Milk countdown under the side index follows the active section.
+  // Counts down from 10 days to 2 across the index, whatever its length; the last section is "use it today".
+  var daysEl = document.getElementById('side-days');
+  var milk = document.getElementById('side-milk');
+  TF.onActive(function (i, n) {
+    daysEl.textContent = i >= n - 1 ? 'guna hari ini' : 'tinggal ' + Math.round(10 - (i * 8) / Math.max(1, n - 2)) + ' hari';
+    milk.classList.toggle('urgent', i === n - 1);
+  });
+  // Testimonial marquee: clone the set once so the CSS loop (-50%) is seamless. Clones are hidden from AT.
+  var track = document.querySelector('.marquee-track');
+  if (track && !reduce) {
+    Array.prototype.slice.call(track.children).forEach(function (li) {
+      var c = li.cloneNode(true); c.setAttribute('aria-hidden', 'true'); track.appendChild(c);
+    });
+    track.classList.add('run');
+    // WCAG 2.2.2: moving content needs a pause control (hover/focus pause alone isn't enough).
+    var toggle = document.getElementById('marquee-toggle');
+    toggle.hidden = false;
+    toggle.addEventListener('click', function () {
+      var paused = track.classList.toggle('paused');
+      toggle.setAttribute('aria-pressed', String(paused));
+      toggle.textContent = paused ? 'Main petikan' : 'Jeda petikan';
+    });
+  }
+
+  // Demo video: swap the poster link for the no-cookie player on click. Modified clicks (new tab)
+  // and no-JS visitors just follow the link to YouTube. The poster stays until the player loads.
+  var play = document.getElementById('demo-play');
+  play.addEventListener('click', function (e) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    var f = document.createElement('iframe');
+    f.src = 'https://www.youtube-nocookie.com/embed/RVUh1htzhM0?autoplay=1&rel=0&playsinline=1';
+    f.title = 'Video demo ThatFridge';
+    f.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture';
+    f.allowFullscreen = true;
+    f.referrerPolicy = 'strict-origin-when-cross-origin';
+    f.addEventListener('load', function () {
+      f.classList.add('ready');
+      setTimeout(function () { play.remove(); }, reduce ? 0 : 500);
+    });
+    document.getElementById('demo-screen').appendChild(f);
+    document.getElementById('theater').classList.add('playing');
+    f.focus();
+  });
+
+  // Waste calculator: the visitor's own guesses, worked out here. Nothing is sent anywhere.
+  var calc = document.getElementById('calc');
+  if (calc) {
+    var $ = function (id) { return document.getElementById(id); };
+    var PRO_USD = 19.99, KG_PER_PERSON = 79, FOOD = ['milk', 'spinach', 'eggs', 'cheese', 'carrot', 'apple'];
+    var DEFAULT_PRICE = { USD: 3, MYR: 10 };
+    var people = 2, priceEdited = false;
+    var items = $('calc-items'), price = $('calc-price'), cur = $('calc-cur'), bin = $('calc-bin');
+    var money = function (v, c) {
+      var n = v >= 100 ? Math.round(v).toLocaleString('en') : v.toFixed(2).replace(/\.00$/, '');
+      return (c === 'MYR' ? 'RM' : 'US$') + n;
+    };
+    var render = function () {
+      var n = +items.value, p = Math.max(0, +price.value || 0), c = cur.value;
+      $('calc-items-out').textContent = n + ' item';
+      $('calc-people').textContent = people;
+      $('calc-total').textContent = money(n * p * 52, c);
+      $('calc-count').textContent = (n * 52).toLocaleString('en');
+      $('calc-hh').textContent = people + ' orang';
+      $('calc-kg').textContent = (KG_PER_PERSON * people) + ' kg';
+      // Pro's local price isn't known here, so the comparison only runs in US dollars.
+      $('calc-pro').hidden = c !== 'USD';
+      var k = Math.ceil(PRO_USD / p);
+      $('calc-say').textContent = !n || !p ? 'Tiada yang dibuang? Krew tetap nak berkenalan dengan anda.'
+        : c === 'USD' ? 'Pro berbaloi jika ia menyelamatkan ' + k + ' item setahun.'
+        : 'Selamatkan beberapa item sebulan pun, jimatnya cepat bertambah.';
+      // One pixel food per binned item; add or remove only the difference so the rest don't re-animate.
+      while (bin.children.length > n) bin.removeChild(bin.lastChild);
+      while (bin.children.length < n) {
+        var img = document.createElement('img');
+        img.className = 'px'; img.alt = ''; img.width = 24; img.height = 24;
+        img.src = '/assets/food/' + FOOD[bin.children.length % FOOD.length] + '.png';
+        bin.appendChild(img);
+      }
+    };
+    calc.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-step]');
+      if (b) { people = Math.min(10, Math.max(1, people + +b.getAttribute('data-step'))); render(); }
+    });
+    items.addEventListener('input', render);
+    price.addEventListener('input', function () { priceEdited = true; render(); });
+    cur.addEventListener('change', function () { if (!priceEdited) price.value = DEFAULT_PRICE[cur.value]; render(); });
+    calc.addEventListener('submit', function (e) { e.preventDefault(); });
+    render();
+  }
+
+  // Android waitlist: JSON to the API; same success message for new and existing emails (the API does too).
+  var wait = document.getElementById('wait');
+  if (wait) {
+    var waitMsg = document.getElementById('wait-msg');
+    var say = function (text, bad, focus) {
+      waitMsg.textContent = text;
+      waitMsg.classList.toggle('bad', !!bad);
+      if (focus) { focus.setAttribute('aria-invalid', 'true'); focus.focus(); }
+    };
+    wait.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var email = wait.elements.email, consent = wait.elements.consent, btn = wait.querySelector('button');
+      email.removeAttribute('aria-invalid'); consent.removeAttribute('aria-invalid');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) return say('Sila semak alamat e-mel anda.', true, email);
+      if (!consent.checked) return say('Sila tandakan kotak supaya kami boleh e-mel anda.', true, consent);
+      btn.disabled = true;
+      say('Sedang menambah anda...');
+      fetch(wait.action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ email: email.value.trim(), consent: true, source: 'landing-ms', website: wait.elements.website.value })
+      }).then(function (r) {
+        if (r.ok) {
+          wait.classList.add('done');
+          say('Anda sudah dalam senarai. Kami akan e-mel anda sekali, apabila Android sedia.');
+          return;
+        }
+        if (r.status === 429) return say('Terlalu banyak cubaan. Sila tunggu seminit dan cuba lagi.', true);
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          var errs = j.errors || {};
+          say(errs.email ? 'Sila semak alamat e-mel anda.' : errs.consent ? 'Sila tandakan kotak supaya kami boleh e-mel anda.' : 'Ada masalah. Sila cuba lagi.', true);
+        });
+      }).catch(function () {
+        say('Tidak dapat menghubungi kami. Sila cuba lagi, atau e-mel support@thatfridge.com.', true);
+      }).then(function () { btn.disabled = false; });
+    });
+  }
+
+  // Phones: sticky "Get the app" bar between the hero and the final CTA / footer.
+  var sticky = document.getElementById('sticky-get');
+  if (sticky && 'IntersectionObserver' in window) {
+    var heroGone = false, endSeen = {};
+    var syncSticky = function () {
+      var on = heroGone && !endSeen.get && !endSeen.foot;
+      sticky.classList.toggle('on', on);
+      sticky.inert = !on;
+    };
+    sticky.hidden = false;
+    syncSticky();
+    new IntersectionObserver(function (e) { heroGone = !e[0].isIntersecting; syncSticky(); }).observe(hero);
+    new IntersectionObserver(function (es) { endSeen.get = es[0].isIntersecting; syncSticky(); }).observe(document.getElementById('get'));
+    new IntersectionObserver(function (es) { endSeen.foot = es[0].isIntersecting; syncSticky(); }).observe(document.querySelector('.foot'));
+  }
+
+  // Living hero: the crew wander their rooms. Same floor paths as apps/web CrewScene.tsx, in % of
+  // the stage. Walk point to point in order, then back; pause between steps. Paused off-screen.
+  var PATHS = {
+    chef: [[12.4,28.4],[15.87,27.65],[30,26.91],[35.6,28.4],[47.33,28.03],[41.2,29.52],[40.13,33.24],[36.4,34.36],[35.6,44.79],[20.4,45.16],[26.53,46.28],[30,50.75],[23.6,44.79],[16.4,44.05],[12.93,39.95]],
+    organizer: [[59.07,29.89],[71.33,29.89],[74.27,31.38],[87.33,31.38],[87.6,40.32],[77.73,40.69],[77.47,33.62]],
+    guardian: [[8.93,77.4],[21.73,77.77],[26,74.42],[27.87,86.71],[18.53,87.08],[18.27,81.12],[36.13,80.75]],
+    shopkeeper: [[59.76,67.38],[67.49,68.13],[68.83,69.99],[73.36,69.62],[75.49,68.5],[80.03,67.75],[84.83,68.5],[87.49,73.34],[87.76,82.28],[87.23,86.38],[83.49,88.99],[65.63,88.99],[62.16,87.13],[57.36,88.24],[57.63,75.58],[53.89,74.46]]
+  };
+  var stage = document.getElementById('stage');
+  var walkers = stage.querySelectorAll('.walker');
+  var heroVisible = true;
+  // Sprite size: whole multiples of the 48px art (crisp pixels), roughly 6.5% of the stage.
+  function sizeWalkers() {
+    var k = Math.max(1, Math.round(stage.offsetWidth * 0.065 / 48));
+    stage.style.setProperty('--walker', (48 * k) + 'px');
+  }
+  sizeWalkers();
+  window.addEventListener('resize', sizeWalkers);
+  walkers.forEach(function (el) {
+    var path = PATHS[el.getAttribute('data-crew')];
+    var i = Math.floor(Math.random() * path.length), dir = 1;
+    function place(p) { el.style.left = p[0] + '%'; el.style.top = p[1] + '%'; }
+    place(path[i]);
+    if (reduce) return;
+    function step() {
+      if (!heroVisible) { setTimeout(step, 800); return; }
+      if (i + dir < 0 || i + dir >= path.length) dir = -dir;
+      var a = path[i], b = path[i + dir];
+      var dist = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      var dur = Math.min(4.5, Math.max(1.2, dist / 5));
+      el.classList.toggle('flip', b[0] < a[0]);
+      el.style.transitionDuration = dur + 's';
+      place(b); i += dir;
+      setTimeout(step, dur * 1000 + 700 + Math.random() * 1900);
+    }
+    setTimeout(step, 400 + Math.random() * 1500);
+  });
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (e) { heroVisible = e[0].isIntersecting; }).observe(hero);
+  }
+
+  // Screenshot parallax: each phone drifts at its own speed (desktop only, not the swipe strip).
+  var shots = document.querySelectorAll('#shots figure');
+  var speeds = [0.06, -0.03, 0.08];
+  var wide = window.matchMedia('(min-width: 861px)');
+  // One rAF per frame; read every position first, then write, so the browser lays out once.
+  var pTicking = false;
+  function parallax() {
+    pTicking = false;
+    if (reduce || !wide.matches) { shots.forEach(function (f) { f.style.transform = ''; }); return; }
+    var vh = window.innerHeight, mid = vh / 2;
+    var rects = Array.prototype.map.call(shots, function (f) { return f.parentNode.getBoundingClientRect(); });
+    if (rects[0].top > vh + 200 || rects[rects.length - 1].bottom < -200) return;
+    rects.forEach(function (r, n) {
+      var off = Math.max(-48, Math.min(48, (r.top + r.height / 2 - mid) * speeds[n]));
+      shots[n].style.transform = 'translate3d(0,' + off.toFixed(1) + 'px,0)';
+    });
+  }
+  window.addEventListener('scroll', function () {
+    if (!pTicking) { pTicking = true; requestAnimationFrame(parallax); }
+  }, { passive: true });
+  window.addEventListener('resize', parallax);
+  parallax();
+})();
+</script>
+</body>
+</html>

@@ -1,11 +1,14 @@
 /* Page transitions (cross-document View Transitions; Chrome/Edge, Safari 18.2+; others just
    navigate). Loaded in <head> so the pagereveal listener exists before the first frame.
    The scene, title card and nav morph between pages; the body drifts in the nav direction:
-   Home -> Privacy (PDPA) -> Terms -> Support (right), or back (left).
+   Home -> Privacy (PDPA) -> Terms -> Support -> Guides (each guide) -> Press (right), or back (left).
    The animations themselves live in site.css. */
 (function () {
-  var ORDER = { '/': 0, '/privacy/': 1, '/privacy/pdpa/': 1.5, '/terms/': 2, '/support/': 3 };
-  function place(url) { return ORDER[new URL(url, location.href).pathname]; }
+  var ORDER = { '/': 0, '/ms/': 0.5, '/privacy/': 1, '/privacy/pdpa/': 1.5, '/terms/': 2, '/support/': 3, '/guides/': 4, '/press/': 5 };
+  function place(url) {
+    var path = new URL(url, location.href).pathname;
+    return path in ORDER ? ORDER[path] : path.indexOf('/guides/') === 0 ? 4.5 : undefined;
+  }
 
   // Shared elements (scene, title card) only morph when they're actually on screen; otherwise
   // they'd fly in from above the viewport. Runs on both sides of the navigation.

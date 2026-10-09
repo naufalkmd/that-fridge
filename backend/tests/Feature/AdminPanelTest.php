@@ -43,6 +43,7 @@ class AdminPanelTest extends TestCase
         $recipe = Recipe::create(['name' => 'Omelet', 'minutes' => 10, 'ingredients' => [['icon' => 'eggs', 'name' => 'Eggs']], 'steps' => ['Whisk.']]);
 
         $feedback = Feedback::create(['user_id' => $admin->id, 'email' => 'a@b.c', 'message' => 'Love it']);
+        \App\Models\AndroidWaitlistSignup::create(['email' => 'droid@example.com', 'country' => 'MY', 'consented_at' => now()]);
 
         $this->actingAs($admin);
 
@@ -51,6 +52,7 @@ class AdminPanelTest extends TestCase
             '/admin/users',
             "/admin/users/{$admin->id}",
             "/admin/users/{$admin->id}/edit",
+            '/admin/android-waitlist',
             '/admin/fridges',
             "/admin/fridges/{$fridge->id}",
             '/admin/items',

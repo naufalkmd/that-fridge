@@ -18,7 +18,8 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [],
+    // thatfridge.com's static site posts its Android waitlist form here (/api/waitlist).
+    'allowed_origins' => ['https://thatfridge.com', 'https://www.thatfridge.com'],
 
     // Matches any localhost/127.0.0.1 origin regardless of port, so this
     // keeps working whichever port `npm run dev` happens to pick.

@@ -1,0 +1,58 @@
+/* Press kit (/press/ only), on top of site.css + doc.css: asset grid, colour swatches, fact sheet. */
+
+.doc-body .lead { font-size: 19px; line-height: 1.6; }
+.doc-body .copy-block {
+  margin: 16px 0; padding: 16px 20px;
+  background: var(--nav); border: 1px solid var(--line); border-radius: 4px;
+}
+.doc-body .copy-block p { margin: 0; }
+.doc-body .copy-block p + p { margin-top: 12px; }
+.copy-label {
+  display: block; margin-bottom: 6px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2);
+}
+
+/* Fact sheet: two-column definition list that stacks on phones. */
+.facts { display: grid; grid-template-columns: 11em 1fr; margin: 20px 0; border-top: 1px solid var(--line); }
+.facts dt, .facts dd { margin: 0; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.facts dt { font-weight: 600; padding-right: 16px; }
+.facts dd { min-width: 0; overflow-wrap: anywhere; }
+
+/* Asset grid */
+.doc-body .assets, .doc-body .swatches { padding-left: 0; }
+.assets { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin: 20px 0; padding: 0; list-style: none; }
+.doc-body .assets li { margin: 0; }
+.asset { margin: 0; height: 100%; display: flex; flex-direction: column; background: var(--nav); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.asset-img { display: grid; place-items: center; aspect-ratio: 4 / 3; padding: 16px; background: var(--paper-2); }
+.asset-img img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
+.asset-img.tall { aspect-ratio: 3 / 4; }
+.asset-img.dark { background: var(--night-2); }
+.asset-img .px { width: 96px; height: 96px; }
+.asset figcaption { padding: 12px 14px 14px; font-size: 14px; line-height: 1.45; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.asset figcaption b { font-weight: 600; }
+.asset figcaption span { color: var(--ink-2); }
+.doc-body .dl { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: auto; padding-top: 4px; }
+.doc-body .dl a { font-weight: 600; }
+
+/* Colour swatches */
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin: 20px 0; padding: 0; list-style: none; }
+.doc-body .swatches li { margin: 0; background: var(--nav); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; font-size: 14px; line-height: 1.35; }
+.swatch-chip { display: block; height: 64px; border-bottom: 1px solid var(--line); }
+.swatches b { display: block; padding: 10px 12px 0; font-weight: 600; }
+.swatches code { display: inline-block; margin: 4px 12px 12px; }
+
+.font-sample { margin: 12px 0; padding: 16px 20px; background: var(--nav); border: 1px solid var(--line); border-radius: 4px; }
+.font-sample .big { display: block; font-size: 32px; line-height: 1.1; letter-spacing: -0.035em; font-weight: 600; }
+.font-sample .big em.s { color: var(--accent); }
+.font-sample span:last-child { font-size: 14px; color: var(--ink-2); }
+
+@media (max-width: 640px) {
+  .facts { grid-template-columns: 1fr; }
+  .facts dt { padding-bottom: 0; border-bottom: 0; }
+  .facts dd { padding-top: 2px; }
+  .assets { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .asset figcaption { padding: 10px; font-size: 13px; }
+}
+
+/* First heading needs no divider above it. */
+.doc-body > h2:first-child { padding-top: 0; border-top: 0; }
