@@ -7,7 +7,9 @@ use App\Models\User;
 use App\Services\AdminStats;
 use App\Services\AiProviderBalance;
 use App\Services\FalClient;
+use App\Services\OpenRouterClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -177,6 +179,74 @@ class AiUsageLoggingTest extends TestCase
 
         $this->assertSame(['Feature 10', 'Feature 9', 'Feature 8', 'Everything else'], array_keys($byFeature));
         $this->assertEqualsWithDelta(0.28, $byFeature['Everything else'], 1e-6); // 1..7
+    }
+
+    public function test_a_spent_key_limit_gets_its_own_reason(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response(['error' => ['message' => 'Key limit exceeded']], 403)]);
+
+        $this->assertSame('forbidden', app(OpenRouterClient::class)->complete([['role' => 'user', 'content' => 'hi']])['reason']);
+        $this->assertSame('forbidden', ApiUsageLog::sole()->reason);
+    }
+
+    public function test_an_empty_balance_gets_its_own_reason(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response(['error' => ['message' => 'Insufficient credits']], 402)]);
+
+        $this->assertSame('out_of_credits', app(OpenRouterClient::class)->complete([['role' => 'user', 'content' => 'hi']])['reason']);
+        $this->assertSame('out_of_credits', ApiUsageLog::sole()->reason);
+    }
+
+    public function test_a_timeout_is_logged_as_a_failed_call(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(fn () => throw new ConnectionException('cURL error 28: Operation timed out'));
+
+        $result = app(OpenRouterClient::class)->complete([['role' => 'user', 'content' => 'hi']]);
+
+        $this->assertSame(['ok' => false, 'reason' => 'exception'], $result);
+        $log = ApiUsageLog::sole();
+        $this->assertFalse($log->ok);
+        $this->assertSame('exception', $log->reason);
+    }
+
+    public function test_the_reply_says_whether_it_was_cut_off(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response(['choices' => [['finish_reason' => 'length', 'message' => ['content' => '{"a":']]]], 200)]);
+
+        $this->assertSame('length', app(OpenRouterClient::class)->complete([['role' => 'user', 'content' => 'hi']])['finish_reason']);
+    }
+
+    public function test_headroom_reports_the_balance_and_the_key_limit(): void
+    {
+        config(['services.openrouter.key' => 'k']);
+        Http::fake([
+            'openrouter.ai/api/v1/credits' => Http::response(['data' => ['total_credits' => 44, 'total_usage' => 34.04]], 200),
+            'openrouter.ai/api/v1/key' => Http::response(['data' => ['usage' => 4.2, 'limit' => 5, 'limit_remaining' => 0.8]], 200),
+        ]);
+
+        $headroom = app(AiProviderBalance::class)->openRouterHeadroom();
+
+        $this->assertEqualsWithDelta(9.96, $headroom['balance'], 0.0001);
+        $this->assertSame(5.0, $headroom['key_limit']);
+        $this->assertSame(0.8, $headroom['key_remaining']);
+
+    }
+
+    public function test_headroom_is_empty_without_a_limit_or_a_readable_account_and_null_without_a_key(): void
+    {
+        config(['services.openrouter.key' => 'k']);
+        Http::fake([
+            'openrouter.ai/api/v1/credits' => Http::response([], 403),
+            'openrouter.ai/api/v1/key' => Http::response(['data' => ['usage' => 4.2, 'limit' => null, 'limit_remaining' => null]], 200),
+        ]);
+        $this->assertSame(['balance' => null, 'key_limit' => null, 'key_remaining' => null], app(AiProviderBalance::class)->openRouterHeadroom());
+
+        config(['services.openrouter.key' => null]);
+        $this->assertNull(app(AiProviderBalance::class)->openRouterHeadroom());
     }
 
     // ---- OpenRouter's own balance ---------------------------------------------------------------

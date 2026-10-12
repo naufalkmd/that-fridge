@@ -30,6 +30,41 @@ class AiProviderBalance
     }
 
     /**
+     * How close OpenRouter is to refusing calls, read live (not cached) for the AI health check: the prepaid account balance, and the
+     * key's own spending limit when one is set. Each figure is null when OpenRouter would not say or there is no such limit.
+     *
+     * @return array{balance: ?float, key_limit: ?float, key_remaining: ?float}|null null when there is no key
+     */
+    public function openRouterHeadroom(): ?array
+    {
+        $key = config('services.openrouter.key');
+        if (! $key) {
+            return null;
+        }
+
+        $headroom = ['balance' => null, 'key_limit' => null, 'key_remaining' => null];
+
+        try {
+            $headers = ['Authorization' => "Bearer {$key}"];
+
+            $credits = Http::withHeaders($headers)->timeout(6)->get('https://openrouter.ai/api/v1/credits');
+            if ($credits->successful() && is_numeric($credits->json('data.total_credits'))) {
+                $headroom['balance'] = max(0.0, (float) $credits->json('data.total_credits') - (float) ($credits->json('data.total_usage') ?? 0));
+            }
+
+            $info = Http::withHeaders($headers)->timeout(6)->get('https://openrouter.ai/api/v1/key');
+            if ($info->successful() && is_numeric($info->json('data.limit'))) {
+                $headroom['key_limit'] = (float) $info->json('data.limit');
+                $headroom['key_remaining'] = is_numeric($info->json('data.limit_remaining')) ? (float) $info->json('data.limit_remaining') : null;
+            }
+        } catch (\Throwable) {
+            // unavailable
+        }
+
+        return $headroom;
+    }
+
+    /**
      * @return array{balance: float, remaining: float, spent_since: float, as_of: Carbon}|null null until a balance has been entered
      */
     public function fal(): ?array

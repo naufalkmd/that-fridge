@@ -19,6 +19,7 @@ class JobHeartbeat
         'app:rollup-algo-stats' => ['label' => 'Algorithm stats rollup', 'every' => 'Daily 04:30'],
         'app:fill-recipe-calories' => ['label' => 'Recipe calories', 'every' => 'Daily 05:00'],
         'app:grant-monthly-credits' => ['label' => 'Monthly credit grant', 'every' => '1st of month 00:15'],
+        'app:check-ai-health' => ['label' => 'AI health check', 'every' => 'Every 10 minutes'],
     ];
 
     public static function record(string $command, bool $ok): void

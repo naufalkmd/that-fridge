@@ -2,7 +2,7 @@
 
 Get ThatFridge running locally, plus every wall we've actually hit and the fix that worked.
 
-_Last updated: 2026-09-27._
+_Last updated: 2026-10-12._
 
 ## Where the other docs live
 
@@ -506,6 +506,30 @@ every throttled route shared one counter, checked against each route's own cap -
 429 the app swallows). Same thing pre-sign-in: `/events` batches counted against `/login`'s 6/min.
 Fixed 2026-09-29: every throttle in `routes/api.php` names its bucket (`throttle:15,1,chat-send`);
 `RouteThrottleTest` fails if a new one doesn't. Clears on its own within 60s.
+
+---
+
+## AI provider (OpenRouter)
+
+### Quick Chat gives no reply and every scan says "nothing found" (credits refunded)
+
+Every AI call is being refused. In `storage/logs/laravel.log`: `OpenRouter API error` with
+`"status":403` and `Key limit exceeded (total limit)`. The API key has a spending limit that
+does not reset, and it was reached (2026-10-10; nobody noticed for two days). `"status":402`
+is the same outage from an empty account balance. Raise or remove the key limit at
+openrouter.ai/settings/keys, or add credit at openrouter.ai/settings/credits; it takes effect at
+once, no deploy. Since 2026-10-12 `app:check-ai-health` (every 10 minutes) emails `AI_ALERT_EMAIL`
+when calls keep failing, when the balance drops below `AI_ALERT_LOW_BALANCE_USD`, or when a key
+limit is down to its last fifth. Admin → AI calls shows each failed call and its reason
+(`forbidden` = key limit, `out_of_credits` = balance).
+
+### A photo of a full fridge scans as "nothing found"
+
+The model's reply was cut off at `max_tokens` (`finish_reason: length`), so the JSON was
+incomplete and the whole scan was thrown away as a failure. Fixed 2026-10-12: the prompt asks
+for compact JSON without the two constant fields (about 45 output tokens an item, down from
+about 93), the limit is 3,500 tokens, and a cut-off reply keeps its complete items. A reply that
+still can't be read is logged as `OpenRouter vision reply was not valid JSON`.
 
 ---
 
