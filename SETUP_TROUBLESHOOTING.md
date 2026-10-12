@@ -521,7 +521,9 @@ openrouter.ai/settings/keys, or add credit at openrouter.ai/settings/credits; it
 once, no deploy. Since 2026-10-12 `app:check-ai-health` (every 10 minutes) emails `AI_ALERT_EMAIL`
 when calls keep failing, when the balance drops below `AI_ALERT_LOW_BALANCE_USD`, or when a key
 limit is down to its last fifth. Admin → AI calls shows each failed call and its reason
-(`forbidden` = key limit, `out_of_credits` = balance).
+(`forbidden` = key limit, `out_of_credits` = balance). To tell users afterwards, write the
+email in Admin → Service notices; its "Users who had a failed AI call" audience picks out only
+the people it happened to.
 
 ### A photo of a full fridge scans as "nothing found"
 
