@@ -19,7 +19,7 @@ class AiOutageNoticeMail extends Mailable
         // From support@ rather than the default sender, so a reply reaches a person.
         return new Envelope(
             from: new Address('support@thatfridge.com', 'ThatFridge'),
-            subject: "ThatFridge's AI features are working again",
+            subject: "Good news: ThatFridge's AI features are back",
         );
     }
 
