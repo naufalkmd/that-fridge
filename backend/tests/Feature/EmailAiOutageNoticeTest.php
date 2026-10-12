@@ -73,7 +73,9 @@ class EmailAiOutageNoticeTest extends TestCase
     {
         $html = (new AiOutageNoticeMail)->render();
 
-        $this->assertStringContainsString('the problem was on our side', $html);
+        $this->assertStringContainsString('AI features were not working', $html);
+        $this->assertStringContainsString('The problem was on our side', $html);
+        $this->assertStringContainsString('fixed now', $html);
         $this->assertStringContainsString('returned to your balance automatically', $html);
         $this->assertStringNotContainsStringIgnoringCase('openrouter', $html);
     }
