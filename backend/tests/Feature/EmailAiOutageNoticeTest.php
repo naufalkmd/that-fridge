@@ -78,5 +78,6 @@ class EmailAiOutageNoticeTest extends TestCase
         $this->assertStringContainsString('fixed now', $html);
         $this->assertStringContainsString('returned to your balance automatically', $html);
         $this->assertStringNotContainsStringIgnoringCase('openrouter', $html);
+        $this->assertStringNotContainsStringIgnoringCase('thanks', $html);
     }
 }
