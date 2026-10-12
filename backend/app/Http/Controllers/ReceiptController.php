@@ -46,8 +46,8 @@ class ReceiptController extends Controller
 
         if ($result['ai_failed']) {
             // The vision call itself failed (not just "no items on this receipt") - refund
-            // since the user got nothing for their credit, but still return normally: an
-            // empty detected_items list already reads as "couldn't find any items" to them.
+            // since the user got nothing for their credit. Still a 200, with `ai_failed` set
+            // so the app can say the scan failed rather than "couldn't find any items".
             $this->credits->grant($request->user(), CreditCost::RECEIPT_SCAN, 'receipt_scan_refund');
         }
 
@@ -62,6 +62,7 @@ class ReceiptController extends Controller
             'status' => $result['status'],
             'file_url' => $result['file_url'],
             'detected_items' => $result['detected_items'],
+            'ai_failed' => $result['ai_failed'],
             'message' => 'Review items, then confirm to add to inventory',
         ], 200);
     }

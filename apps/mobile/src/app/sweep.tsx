@@ -191,6 +191,13 @@ export default function Sweep() {
       const blob = await (await fetch(shot.uri)).blob();
       const scan =
         shot.kind === "receipt" ? await api.scanReceipt(sectionId, blob) : await api.scanFridgePhoto(sectionId, blob);
+      if (scan.ai_failed) {
+        // The AI call failed on our side and the credits were refunded: say so, rather than
+        // showing a shot that looks like it worked and found nothing.
+        updateShot(shot.id, { status: "failed" });
+        Alert.alert("Shot failed", "We couldn't read that shot, so its credits were returned. Try it again.");
+        return;
+      }
       updateShot(shot.id, {
         status: "done",
         scene: shot.kind === "receipt" ? "counter" : (scan.scene ?? null),

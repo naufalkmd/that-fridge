@@ -315,6 +315,9 @@ export interface ScanResult {
   file_url: string;
   detected_items: ScanDetectedItem[];
   message: string;
+  /** True when the AI call itself failed: `detected_items` is empty and the credits were
+   *  refunded. Different from a scan that worked and found nothing (false, still charged). */
+  ai_failed?: boolean;
   /** Fridge-photo scans only: what the photo shows, null when unsure. */
   scene?: "fridge" | "freezer" | "pantry" | "counter" | "unclear" | null;
 }
