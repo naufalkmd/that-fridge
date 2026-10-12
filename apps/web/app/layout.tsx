@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// PixelMix by Andrew Tyler - see app/fonts/pixelmix/NOTES.md for the license situation. Exposed
+// PixelMix by Andrew Tyler - see app/fonts/pixelmix/NOTES.md for the license notes. Exposed
 // as a variable only (not applied to body/html) so it stays opt-in for headers/eyebrows/brand
 // moments, never body copy - it's unreadable at paragraph sizes.
 const pixelmix = localFont({

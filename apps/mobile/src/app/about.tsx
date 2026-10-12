@@ -129,6 +129,35 @@ export default function About() {
             </Pressable>
           ))}
         </View>
+
+        <Text
+          style={{
+            fontSize: 12,
+            fontWeight: "700",
+            letterSpacing: 0.3,
+            color: colors.faint,
+            marginTop: 24,
+            marginBottom: 10,
+          }}
+        >
+          CREDITS
+        </Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingVertical: 14,
+            paddingHorizontal: 14,
+            borderCurve: "continuous", borderRadius: 8,
+            borderWidth: 1,
+            borderColor: colors.hairline,
+            backgroundColor: colors.surface,
+          }}
+        >
+          <Text style={{ fontSize: 13, color: colors.ink }}>Pixel typeface</Text>
+          <Text style={{ fontSize: 13, color: colors.faint }}>PixelMix by Andrew Tyler</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
