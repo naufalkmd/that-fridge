@@ -39,8 +39,8 @@ class PhotoController extends Controller
 
         if ($result['ai_failed']) {
             // The vision call itself failed (not just "nothing identifiable in this photo") -
-            // refund since the user got nothing for their credit, but still return normally:
-            // an empty detected_items list already reads as "couldn't spot any items" to them.
+            // refund since the user got nothing for their credit. Still a 200, with `ai_failed`
+            // set so the app can say the scan failed rather than "couldn't spot any items".
             $this->credits->grant($request->user(), CreditCost::PHOTO_SCAN, 'photo_scan_refund');
         }
 
@@ -55,6 +55,7 @@ class PhotoController extends Controller
             'status' => $result['status'],
             'file_url' => $result['file_url'],
             'detected_items' => $result['detected_items'],
+            'ai_failed' => $result['ai_failed'],
             // What the photo shows (fridge/freezer/pantry/counter/unclear), null when unknown.
             'scene' => $result['scene'] ?? null,
             'message' => 'Review detected items, then confirm to add',

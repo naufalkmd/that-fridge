@@ -30,11 +30,15 @@ class OpenRouterClient
 
     /**
      * Run a chat completion. Returns:
-     *   ['ok' => true, 'content' => string, 'tool_calls' => ?array, 'message' => array]
+     *   ['ok' => true, 'content' => string, 'tool_calls' => ?array, 'message' => array, 'finish_reason' => ?string]
      * or, on failure:
-     *   ['ok' => false, 'reason' => 'no_api_key'|'unauthorized'|'rate_limited'|'server_error'|'api_error'|'exception', 'status' => ?int]
+     *   ['ok' => false, 'reason' => 'no_api_key'|'unauthorized'|'out_of_credits'|'forbidden'|'rate_limited'|'server_error'|'api_error'|'exception', 'status' => ?int]
      * so callers can react differently to a bad key vs. a rate limit vs. a transient
      * error instead of collapsing every failure into the same generic message.
+     *
+     * `finish_reason` is 'length' when the reply was cut off at $maxTokens - a JSON reply is then
+     * incomplete. 'forbidden' is how a key that has hit its spending limit shows up (HTTP 403),
+     * 'out_of_credits' an empty account balance (HTTP 402).
      *
      * Pass $tools (OpenAI function-tool schema) to let the model request a tool call - the
      * raw assistant `message` and any `tool_calls` come back so the caller can run the
@@ -47,11 +51,14 @@ class OpenRouterClient
      * that repeat a long prefix (Quick Chat and its tool rounds); prompts under the model's
      * minimum are simply not cached.
      */
-    public function complete(array $messages, int $maxTokens = 1000, string $model = 'anthropic/claude-haiku-4.5', array $tools = [], bool $cache = false): array
+    public function complete(array $messages, int $maxTokens = 1000, string $model = 'anthropic/claude-haiku-4.5', array $tools = [], bool $cache = false, int $timeout = 30): array
     {
         if (! $this->available()) {
             return ['ok' => false, 'reason' => 'no_api_key'];
         }
+
+        $startedAt = microtime(true);
+        $feature = ApiUsageFeature::resolve();
 
         try {
             $payload = [
@@ -71,13 +78,11 @@ class OpenRouterClient
                 $payload['cache_control'] = ['type' => 'ephemeral'];
             }
 
-            $startedAt = microtime(true);
-            $feature = ApiUsageFeature::resolve();
             $response = Http::withHeaders([
                 'Authorization' => "Bearer {$this->apiKey}",
                 'HTTP-Referer' => config('app.url'),
                 'X-Title' => 'ThatFridge',
-            ])->post($this->baseUrl, $payload);
+            ])->timeout($timeout)->post($this->baseUrl, $payload);
             $latency = (int) round((microtime(true) - $startedAt) * 1000);
 
             if ($response->successful()) {
@@ -96,11 +101,14 @@ class OpenRouterClient
                     'content' => $message['content'] ?? '',
                     'tool_calls' => $message['tool_calls'] ?? null,
                     'message' => $message,
+                    'finish_reason' => $response->json('choices.0.finish_reason'),
                 ];
             }
 
             $reason = match (true) {
                 $response->status() === 401 => 'unauthorized',
+                $response->status() === 402 => 'out_of_credits',
+                $response->status() === 403 => 'forbidden',
                 $response->status() === 429 => 'rate_limited',
                 $response->status() >= 500 => 'server_error',
                 default => 'api_error',
@@ -113,6 +121,12 @@ class OpenRouterClient
 
             return ['ok' => false, 'reason' => $reason, 'status' => $response->status()];
         } catch (\Exception $e) {
+            // A timeout or dropped connection never reaches the logging above; record it too, or
+            // the AI health check can't see it.
+            app(ApiUsageLogger::class)->record([
+                'provider' => 'openrouter', 'feature' => $feature, 'model' => $model, 'ok' => false, 'reason' => 'exception',
+                'latency_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+            ]);
             Log::error('OpenRouter request failed', ['error' => $e->getMessage()]);
 
             return ['ok' => false, 'reason' => 'exception'];

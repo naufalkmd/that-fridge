@@ -42,6 +42,13 @@ return [
         'photo_scan_model' => env('OPENROUTER_PHOTO_SCAN_MODEL', 'anthropic/claude-haiku-4.5'),
     ],
 
+    // Where app:check-ai-health sends its warnings, and how low the OpenRouter balance may get
+    // before it warns. A key spending limit warns at a fifth of the limit remaining.
+    'ai_alerts' => [
+        'to' => env('AI_ALERT_EMAIL', 'support@thatfridge.com'),
+        'low_balance_usd' => (float) env('AI_ALERT_LOW_BALANCE_USD', 5),
+    ],
+
     // Recipe database for automatic imports into Explore (app:import-recipes). The public test key
     // "1" is for development only; production needs a supporter key (themealdb.com/api.php).
     // `enabled` is only the default: the schedule is set in Admin → Recipe import.

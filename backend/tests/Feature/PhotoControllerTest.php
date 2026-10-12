@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ApiUsageLog;
 use App\Models\Fridge;
 use App\Models\Section;
 use App\Models\User;
@@ -9,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class PhotoControllerTest extends TestCase
@@ -168,5 +170,77 @@ class PhotoControllerTest extends TestCase
         $this->assertNull($res->json('scene'));
         $this->assertSame([], $res->json('detected_items'));
         $this->assertSame(7, $user->fresh()->ai_credits); // a successful empty scan is still charged
+    }
+
+    private function scan(User $user): TestResponse
+    {
+        return $this->actingAs($user)->post("/api/sections/{$this->sectionFor($user)->id}/items/photo/scan", [
+            'image' => UploadedFile::fake()->image('fridge.jpg'),
+        ]);
+    }
+
+    public function test_a_reply_cut_off_at_the_token_limit_keeps_the_complete_items(): void
+    {
+        // A very full fridge: the model ran out of tokens part-way through the third item.
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response(['choices' => [[
+            'finish_reason' => 'length',
+            'message' => ['content' => "```json\n".'{"scene":"fridge","items":[{"detected_name":"milk carton","parsed_name":"Milk","confidence":0.95,"condition":null,"box":[260,280,340,380],"storage":"fridge"},'
+                .'{"detected_name":"jar, lid says }] \\"hot\\"","parsed_name":"Chilli Paste","confidence":0.8,"condition":null,"box":[10,20,300,400],"storage":"fridge"},'
+                .'{"detected_name":"green bell pepper","parsed_name":"'],
+        ]]], 200)]);
+        $user = User::factory()->create(['ai_credits' => 10]);
+
+        $res = $this->scan($user)->assertStatus(200);
+
+        $this->assertSame(['Milk', 'Chilli Paste'], array_column($res->json('detected_items'), 'parsed_name'));
+        $this->assertSame('fridge', $res->json('scene'));
+        $this->assertFalse($res->json('ai_failed'));
+        $this->assertSame(7, $user->fresh()->ai_credits); // they got a result, so it is charged
+    }
+
+    public function test_an_unreadable_reply_is_refunded_and_flagged_as_a_failed_scan(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response(['choices' => [['finish_reason' => 'stop', 'message' => ['content' => 'I can see a fridge with some food in it.']]]], 200)]);
+        $user = User::factory()->create(['ai_credits' => 10]);
+
+        $res = $this->scan($user)->assertStatus(200);
+
+        $this->assertTrue($res->json('ai_failed'));
+        $this->assertSame([], $res->json('detected_items'));
+        $this->assertSame(10, $user->fresh()->ai_credits);
+    }
+
+    public function test_a_refused_ai_call_is_refunded_and_flagged_as_a_failed_scan(): void
+    {
+        // What the October 2026 outage looked like: the key had hit its spending limit.
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response(['error' => ['message' => 'Key limit exceeded (total limit).', 'code' => 403]], 403)]);
+        $user = User::factory()->create(['ai_credits' => 10]);
+
+        $res = $this->scan($user)->assertStatus(200);
+
+        $this->assertTrue($res->json('ai_failed'));
+        $this->assertSame(10, $user->fresh()->ai_credits);
+        $this->assertSame('forbidden', ApiUsageLog::sole()->reason);
+    }
+
+    public function test_a_successful_scan_is_not_flagged_as_failed_and_fills_the_constant_fields_itself(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response(['choices' => [['finish_reason' => 'stop', 'message' => [
+            'content' => '{"scene":"fridge","items":[{"detected_name":"milk carton","parsed_name":"Milk","confidence":0.9,"condition":null,"box":[1,2,300,400],"storage":"fridge"}]}',
+        ]]]], 200)]);
+        $user = User::factory()->create(['ai_credits' => 10]);
+
+        $res = $this->scan($user)->assertStatus(200);
+
+        $this->assertFalse($res->json('ai_failed'));
+        // The model is no longer asked to write these two out for every item.
+        $this->assertNull($res->json('detected_items.0.matched_product_id'));
+        $this->assertFalse($res->json('detected_items.0.confirmed'));
+        Http::assertSent(fn ($request) => $request['max_tokens'] === 3500
+            && ! str_contains($request['messages'][0]['content'][0]['text'], 'matched_product_id'));
     }
 }

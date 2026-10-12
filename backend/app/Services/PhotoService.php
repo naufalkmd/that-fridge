@@ -88,9 +88,7 @@ Return ONLY a JSON object (no prose, no markdown fences) with two fields:
 - "items": an array where each element has exactly these fields:
 - "detected_name": what you actually see, in plain words, e.g. "milk bottle", "carton of eggs"
 - "parsed_name": a clean, singular, human-readable product name, e.g. "Milk"
-- "matched_product_id": always null
 - "confidence": your confidence this item was correctly identified, from 0 to 1
-- "confirmed": always false
 - "condition": ONLY for loose fresh vegetables or fruit whose surface is actually visible (not
   behind sealed packaging) - your visual read of its current condition, one of "vibrant",
   "wilting", or "past_best". For everything else (packaged/sealed items, meat, dairy, drinks,
@@ -105,11 +103,15 @@ If you see several of the same item (e.g. three yogurt pots), list each one as i
 
 Only include items you can actually see - do not guess at items that might typically be in a fridge but aren't visible.
 If nothing identifiable is visible, return an empty "items" array.
+Write the JSON compactly: one item per line, with no indentation and no spaces after colons or commas.
 PROMPT;
 
-        // Boxes make the reply longer, hence more room than the 1500-token default.
+        // An item costs about 45 output tokens written compactly (measured on Haiku 4.5; it was
+        // about 93 with indentation and two always-constant fields), so this is room for roughly
+        // 75 items. A fuller photo is cut off and analyzeImage keeps the complete items. The
+        // timeout stays under the app's 45-second upload limit.
         $model = config('services.openrouter.photo_scan_model') ?: 'anthropic/claude-haiku-4.5';
-        $result = $this->vision->analyzeImage($imagePath, $mimeType, $prompt, $model, 3000);
+        $result = $this->vision->analyzeImage($imagePath, $mimeType, $prompt, $model, 3500, 40);
 
         if (! is_array($result)) {
             return null;

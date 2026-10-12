@@ -102,4 +102,19 @@ class ReceiptControllerTest extends TestCase
         $this->assertSame(2, $items[0]['parsed_quantity']);
         $this->assertNull($items[1]['storage']);
     }
+
+    public function test_a_failed_ai_call_is_refunded_and_flagged_as_a_failed_scan(): void
+    {
+        config(['services.openrouter.key' => 'test-key']);
+        Http::fake(['openrouter.ai/*' => Http::response(['error' => ['message' => 'Key limit exceeded']], 403)]);
+        $user = User::factory()->create(['ai_credits' => 10]);
+        $section = $this->sectionFor($user);
+
+        $res = $this->actingAs($user)->post("/api/sections/{$section->id}/items/receipt/scan", [
+            'image' => UploadedFile::fake()->image('receipt.jpg'),
+        ])->assertStatus(200);
+
+        $this->assertTrue($res->json('ai_failed'));
+        $this->assertSame(10, $user->fresh()->ai_credits);
+    }
 }

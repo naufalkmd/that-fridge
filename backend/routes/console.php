@@ -21,6 +21,8 @@ $heartbeat(Schedule::command('app:rollup-algo-stats')->dailyAt('04:30'), 'app:ro
 $heartbeat(Schedule::command('app:fill-recipe-calories', ['--limit' => 50])->dailyAt('05:00'), 'app:fill-recipe-calories');
 $heartbeat(Schedule::command('app:grant-monthly-credits')->monthlyOn(1, '00:15'), 'app:grant-monthly-credits');
 $heartbeat(Schedule::command('app:run-due-machines')->everyFiveMinutes(), 'app:run-due-machines');
+// Emails the operator when AI calls keep failing or the OpenRouter balance is nearly gone.
+$heartbeat(Schedule::command('app:check-ai-health')->everyTenMinutes(), 'app:check-ai-health');
 
 // Explore recipes from TheMealDB, as drafts an admin publishes. On/off, the time and the batch
 // size are set in Admin → Recipe import; checked every minute, runs once a day at that time.
