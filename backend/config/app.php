@@ -138,6 +138,13 @@ return [
         explode(',', (string) env('ADMIN_EMAILS', ''))
     ))),
 
+    // Admins allowed to send a service notice (an email to users) from the panel. Comma-separated;
+    // empty means every admin may. Writing and previewing a notice is open to all admins either way.
+    'notice_sender_emails' => array_values(array_filter(array_map(
+        fn (string $email) => strtolower(trim($email)),
+        explode(',', (string) env('NOTICE_SENDER_EMAILS', ''))
+    ))),
+
     // Enable only after the updated privacy policy and PDPA notice are live.
     'algo_feedback_enabled' => (bool) env('ALGO_FEEDBACK_ENABLED', false),
     'opened_expiry_alerts_enabled' => (bool) env('OPENED_EXPIRY_ALERTS_ENABLED', false),
