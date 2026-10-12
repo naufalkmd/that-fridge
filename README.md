@@ -230,6 +230,7 @@ Bundled third-party assets keep their own licences, which sit next to the files:
 - **Inter Tight, Instrument Serif** (`apps/legal/assets/fonts/`): SIL Open Font License 1.1
 - **Lenis** (`apps/legal/assets/vendor/`): MIT
 - **PixelMix** by Andrew Tyler (`apps/mobile/assets/fonts/`, `apps/web/app/fonts/pixelmix/`):
-  *not* covered by the MIT License. Included unmodified for building and judging this project;
-  see the licence files in those folders. Reuse it elsewhere only under its own terms
-  (contact font@andrewtyler.net).
+  *not* covered by the MIT License. Used under a commercial licence, and included here
+  unmodified with the author's permission so the project can be built and judged; see the
+  licence files in those folders. To use PixelMix in your own work, get your own licence from
+  [andrewtyler.net](https://andrewtyler.net) (font@andrewtyler.net).

@@ -208,6 +208,10 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
 
 ### Product backlog
 
+- [ ] **Ship the PixelMix credit on mobile.** Andrew Tyler confirmed the licence and asked for credit in
+  the app; the "Credits" card is in `apps/mobile/src/app/about.tsx` but not yet built or published.
+  Device-check About, then include it in the next build/OTA.
+
 - [ ] **Recipe calories — deployed (API `1f95d31`) and in the OTA; not yet verified on a device.** Every recipe gets `calories`
   per serving from `RecipeCalories`/`NutritionTable` (table first; the model only when < 70% of the
   ingredients are recognised). Spot-check a few real recipes against expectations, and run
@@ -306,38 +310,6 @@ created and attached in RevenueCat (verified 2026-09-26). The `v*` tag already f
   OTA, no rebuild.
 - [ ] Web deployment: `expo export -p web`, wide-viewport (≥900px) layouts, retire legacy
   `apps/web`.
-- [ ] PixelMix font: get written confirmation the desktop EULA covers app/web embedding (email
-  font@andrewtyler.net).
-
-  <details>
-  <summary>Draft email — font@andrewtyler.net</summary>
-
-  ```
-  Subject: PixelMix licence — confirming app/web embedding coverage
-
-  Hi Andrew,
-
-  I purchased the commercial licence for PixelMix via Sellfy on August 28, 2026 (governed by
-  PixelMix-EULA.docx). I'm using it as the wordmark/logo font in a mobile app called ThatFridge
-  (iOS/Android, built with Expo/React Native) and on its companion website, thatfridge.com.
-
-  The EULA's "Embedding Restrictions" and "No Other Use" sections mention that embedding the
-  font into "application programs" and "web pages" needs an additional licence beyond the base
-  purchase. Could you confirm in writing whether my purchase already covers:
-
-  1. Embedding the font file in a distributed iOS/Android app (bundled into the app binary via
-     expo-font), and
-  2. Serving it via @font-face on a public website
-
-  — or whether an additional licence is needed for either, and if so, how to obtain it?
-
-  Happy to provide the Sellfy order confirmation if useful.
-
-  Thanks,
-  Muhammad Naufal Kamaruddin
-  ```
-
-  </details>
 - [ ] Privacy Policy §11 promises material changes get "surfaced in the app" — nothing does
   that yet.
 - [ ] **Recipe attachments still on the public media disk** (unlike receipts/photos — see
@@ -365,7 +337,7 @@ All on one Claude design canvas, "ThatFridge Designs": https://claude.ai/artifac
 | ------------------------------------------------------------- | ------------ | ------------------------------------------------ |
 | Apple Developer Program                                       | $99/yr       | Paid                                             |
 | Domain —`thatfridge.com`                                   | ~$10.46/yr   | Paid                                             |
-| PixelMix commercial font licence                              | $25 one-time | Paid (embedding confirmation pending, see above) |
+| PixelMix commercial font licence                              | $25 one-time | Paid (app/web/repo use confirmed by author)      |
 | VPS — DigitalOcean SGP1, 2 vCPU/2GB + backups                | $21.60/mo    | Live                                             |
 | Legal site hosting (Cloudflare Workers), email routing        | $0           | Live                                             |
 | Expo EAS — Starter plan (upgraded from free tier)            | $19/mo       | Live (2026-09-18, hit free iOS build quota)      |
